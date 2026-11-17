@@ -34,6 +34,11 @@ import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { archiveFlowStamp, publicInviteClaimReason } from "@/lib/flow-archive";
+import {
+  nextFlowEnforcedChannels,
+  parseFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 
 export const VERIFICATION_WORKSPACE_LABEL = "Verification Workspace";
 
@@ -56,6 +61,7 @@ export type VerificationFlow = {
   /** 4, 8, or 16 actions on the unsys model. */
   actionCatalog: LearningModelSize;
   answersModelSeed?: AuthorUnsysModelSeed | null;
+  enforcedChannels: FlowEnforcedChannels;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -520,6 +526,7 @@ export type VerificationCommand =
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
+      enforcedChannels?: unknown;
       id?: string;
       publicToken?: string;
     }
@@ -537,6 +544,7 @@ export type VerificationCommand =
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
+      enforcedChannels?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
@@ -590,6 +598,7 @@ export function applyVerificationCommand(
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
+      enforcedChannels: parseFlowEnforcedChannels(command.enforcedChannels),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -633,6 +642,10 @@ export function applyVerificationCommand(
           ? parseLearningModelSize(current.actionCatalog)
           : parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(current.answersModelSeed, command.answersModelSeed),
+      enforcedChannels: nextFlowEnforcedChannels(
+        current.enforcedChannels,
+        command.enforcedChannels,
+      ),
       updatedAt: nowIso(),
     };
     return {

@@ -20,6 +20,7 @@ import {
   generateContextCandidates,
 } from "@/lib/context-generation";
 import { startChoicesForFlow, type VerificationFlow } from "@/lib/verification-flow";
+import { DEFAULT_FLOW_ENFORCED_CHANNELS } from "@/lib/flow-channels";
 
 const ROOT = join(__dirname, "../..");
 
@@ -209,8 +210,9 @@ describe("calibration authoring", () => {
     expect(proofRoute).toContain("verificationRun: false");
     expect(proofRoute).not.toContain("pickVerificationFlowQuestion");
     const runner = read("components/CalibrationFlowRunner.tsx");
-    expect(runner).toContain("data-calibrate-voice-challenge");
-    expect(runner).toContain("PracticeVoiceChallenge");
+    expect(runner).toContain("data-calibrate-voice-optional");
+    expect(runner).not.toContain("data-calibrate-voice-challenge");
+    expect(runner).not.toContain("PracticeVoiceChallenge");
     expect(runner).toContain("ProductFlowIdentityForm");
     expect(runner).toContain('kind="calibration"');
     expect(runner).toContain("That identity is already used for this calibration flow.");
@@ -265,6 +267,7 @@ describe("calibration authoring", () => {
       questions: MANUAL_QUESTIONS.map((text, index) => ({ id: `v-${index + 1}`, text })),
       durationMinutes: 15,
       actionCatalog: 4,
+      enforcedChannels: DEFAULT_FLOW_ENFORCED_CHANNELS,
       publicToken: "token-verify",
       createdAt: "2026-10-05T00:00:00.000Z",
       updatedAt: "2026-10-05T00:00:00.000Z",

@@ -710,7 +710,6 @@ export class IleWorkCanvasPowCollector {
   private baseline: IleWorkCanvasScene | null = null;
   private latest: IleWorkCanvasScene | null = null;
   private gestureBusy = false;
-
   reset(scene?: IleWorkCanvasScene | null) {
     const next = scene ? snapshotIleWorkCanvasPowScene(scene) : null;
     this.baseline = next;

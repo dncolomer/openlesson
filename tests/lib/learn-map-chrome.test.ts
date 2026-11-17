@@ -287,8 +287,8 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(tools).toContain("data-ile-webcam-preview");
     expect(tools).toContain("grayscale");
     expect(chrome).toContain("<SessionDataCard");
-    expect(chrome).toContain("onDisableVideo={onTurnOffWebcam}");
-    expect(chrome).toContain("onDisableScreen={onStopScreenCapture}");
+    expect(chrome).toContain("onDisableVideo={enforcedChannels.video ? undefined : onTurnOffWebcam}");
+    expect(chrome).toContain("enforcedChannels.screenshots ? undefined : onStopScreenCapture");
     expect(chrome).toContain("onEnableVideo={() => onEnableWebcam?.()}");
     expect(chrome).toContain("onEnableScreen={() => {");
     expect(chrome).toContain("onEnableMuse={() => {");

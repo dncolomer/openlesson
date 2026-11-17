@@ -473,7 +473,7 @@ describe("session sidebar mode configuration", () => {
       "utf8",
     );
     expect(cardSource).toContain('audio: { index: "01", label: "Audio" }');
-    expect(cardSource).toContain('muse: { index: "02", label: "Muse" }');
+    expect(cardSource).toContain('muse: { index: "02", label: "Muse (EEG)" }');
     expect(cardSource).toContain('video: { index: "03", label: "Video" }');
     expect(cardSource).toContain('screen: { index: "04", label: "Screen" }');
     expect(cardSource).toContain("data-session-data-enable");
@@ -601,20 +601,30 @@ describe("session sidebar mode configuration", () => {
     expect(calibrateSurface).not.toContain("data-calibrate-done-classifying");
     expect(calibrateSurface).not.toContain("<TapSessionSignals");
     expect(prepare).toContain("<TapSessionSignals");
-    expect(prepare).not.toContain("captureAudio");
+    expect(prepare).not.toContain("captureAudio={enforcedChannels.audio}");
+    const calibrateRunner = readFileSync(
+      join(ROOT, "components/CalibrationFlowRunner.tsx"),
+      "utf8",
+    );
+    expect(calibrateRunner).toContain("<TapSessionSignals />");
+    expect(calibrateRunner).not.toContain("enforcedChannels={enforcedChannels}");
     expect(calibrateSurface).toContain("data-calibrate-sounding");
     expect(tap).toContain('? null : "Stash"');
     expect(tap).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(tap).not.toContain("SessionActionsPanel");
     expect(tap).not.toContain("policyTab");
     expect(tap).toContain("<SessionTopicChapter");
-    expect(tap).toContain("<TapSessionSignals captureAudio");
+    expect(tap).toContain("<TapSessionSignals");
+    expect(tap).toContain("captureAudio={audioEnforced}");
+    expect(tap).toContain("enforcedChannels={enforcedChannels}");
+    expect(tap).toContain("onLiveChange={onChannelLive}");
     const signals = readFileSync(join(ROOT, "components/session-view/session-signals.tsx"), "utf8");
     expect(signals).toContain("SessionDataCard");
     expect(signals).toContain("getUserMedia");
     expect(signals).toContain("getDisplayMedia");
     expect(signals).toContain("echoCancellation: true");
-    expect(signals).toContain('setMuseNote("No headset on this mode.")');
+    expect(signals).toContain("MuseAthenaClient");
+    expect(signals).toContain("enforcedChannels");
     expect(signals).not.toContain("<AudioMiniPreview");
     expect(signals).not.toContain("stream={null}");
     const mountEffect = signals.slice(
@@ -624,7 +634,7 @@ describe("session sidebar mode configuration", () => {
     expect(mountEffect).not.toContain("getUserMedia");
     expect(mountEffect).not.toContain("getDisplayMedia");
     expect(signals).toContain("captureAudio");
-    expect(signals).toContain("if (!captureAudio) return;");
+    expect(signals).toContain("if (!wantAudio) return;");
     expect(signals).toContain("void openMic()");
     expect(readFileSync(join(ROOT, "components/thought-ui/ThoughtMemoryPanel.tsx"), "utf8")).not.toContain(
       "Search traces",

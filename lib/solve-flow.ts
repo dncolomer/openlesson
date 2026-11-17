@@ -5,6 +5,11 @@
 
 import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
 import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import {
+  nextFlowEnforcedChannels,
+  parseFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import {
   parseFlowArtifacts,
@@ -33,6 +38,7 @@ export type SolveFlow = {
   durationMinutes: number;
   actionCatalog: LearningModelSize;
   answersModelSeed?: AuthorUnsysModelSeed | null;
+  enforcedChannels: FlowEnforcedChannels;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -121,6 +127,7 @@ export type SolveCommand =
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
+      enforcedChannels?: unknown;
       id?: string;
       publicToken?: string;
     }
@@ -137,6 +144,7 @@ export type SolveCommand =
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
+      enforcedChannels?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null };
@@ -172,6 +180,7 @@ export function applySolveCommand(
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
+      enforcedChannels: parseFlowEnforcedChannels(command.enforcedChannels),
       publicToken: command.publicToken || createSolvePublicToken(),
       createdAt: nowIso(),
       updatedAt: nowIso(),
@@ -214,6 +223,10 @@ export function applySolveCommand(
           ? parseLearningModelSize(current.actionCatalog)
           : parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(current.answersModelSeed, command.answersModelSeed),
+      enforcedChannels: nextFlowEnforcedChannels(
+        current.enforcedChannels,
+        command.enforcedChannels,
+      ),
       updatedAt: nowIso(),
     };
     return {

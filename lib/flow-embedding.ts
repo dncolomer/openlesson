@@ -205,6 +205,25 @@ function compactPolicy(
   };
 }
 
+function isSpeechEmbeddingPowRow(row: FlowPowRow): boolean {
+  const name = textOf(row.tool_name).toLowerCase();
+  const action = textOf(row.tool_action).toLowerCase();
+  const type = textOf(row.type).toLowerCase();
+  return (
+    type === "speech" ||
+    name.includes("speech") ||
+    name === "transcript" ||
+    action.startsWith("speech_")
+  );
+}
+
+/** Canvas-only embedding: drop spoken rows so Path+Text matches Path. */
+export function powRowsForCanvasEmbedding(
+  rows: readonly FlowPowRow[] | null | undefined,
+): FlowPowRow[] {
+  return (rows ?? []).filter((row) => !isSpeechEmbeddingPowRow(row));
+}
+
 export function buildFlowEmbeddingRaw(input: {
   flowKind: FlowKind | string;
   model?: SessionBranchModel | null;
@@ -212,13 +231,16 @@ export function buildFlowEmbeddingRaw(input: {
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
+  /** When false, spoken PoW is omitted so Path+Text equals Path. */
+  audioEnforced?: boolean;
 }): FlowEmbeddingRaw {
   const flowKind = parseFlowKind(input.flowKind);
+  const pow = input.audioEnforced === false ? powRowsForCanvasEmbedding(input.pow) : input.pow;
   return {
     flowKind,
     genModel: compactGenModel(input.model),
     projectedPolicy: compactPolicy(flowKind, input.model, input.sequence),
-    pow: compactPow(input.pow),
+    pow: compactPow(pow),
   };
 }
 
@@ -556,6 +578,7 @@ export function completeFlowEmbedding(input: {
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
+  audioEnforced?: boolean;
 }): FlowEmbeddingRecord {
   return embedFlowOutput(buildFlowEmbeddingRaw(input));
 }

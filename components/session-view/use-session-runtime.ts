@@ -43,7 +43,7 @@ import { createScreenCapture } from "@/lib/screen-capture";
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import { ilePowInterruptionOriginFromTool } from "@/lib/learn-tim-chapter-complete";
 import type { Session, ToolAction, ToolName } from "@/lib/storage";
-import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
+import { isIleSessionLive } from "@/lib/useSessionThoughtInterface";
 
 export type SessionRuntimeInput = {
   sessionRef: { current: Session | null };
@@ -477,7 +477,7 @@ const flushRemainingIlePow = useCallback(
 // Speech + PoW uploads arm only while the learner is actively in-session.
 // Returning users who skip the welcome panel must still call startRecording
 // on entry — otherwise Helios shows "Speech capture off" with no way to arm.
-const powSessionEnabled = isIleSpeechCaptureEnabled({
+const powSessionEnabled = isIleSessionLive({
   isRecording,
   isPaused,
   showWelcomePanel,
@@ -629,12 +629,14 @@ const handleStopScreenCapture = useCallback(() => {
     handleFaceError,
     handleConnectMuse,
     handleDisconnectMuse,
+    eegLastSampleMsRef,
     addSessionLog,
     recordTransferEvent,
     getWorkspaceId,
     logTool,
     logToolRef,
     flushRemainingIlePow,
+    scheduleCanvasPowUpload,
     powSessionEnabled,
     powSessionEnabledRef,
     ilePowContext,

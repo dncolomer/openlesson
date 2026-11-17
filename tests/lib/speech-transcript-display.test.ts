@@ -94,6 +94,14 @@ describe("isIleSpeechCaptureEnabled", () => {
         showWelcomePanel: true,
       }),
     ).toBe(false);
+    expect(
+      isIleSpeechCaptureEnabled({
+        isRecording: true,
+        isPaused: false,
+        showWelcomePanel: false,
+        audioEnforced: false,
+      }),
+    ).toBe(false);
   });
 });
 
@@ -303,7 +311,7 @@ describe("TAP Learning + TAP speech wiring (structural)", () => {
     const viewSrc = readSessionViewSurface();
     expect(viewSrc).toContain("isIleSpeechCaptureEnabled");
     expect(viewSrc).toContain("powSessionEnabled");
-    expect(viewSrc).toContain("enabled: powSessionEnabled");
+    expect(viewSrc).toContain("enabled: speechCaptureEnabled");
     // Returning sessions arm capture without the welcome Play path
     // (settings confirm + map remount both go through decideIleSettingsEnterMap).
     expect(viewSrc).toContain("decideIleSettingsEnterMap");

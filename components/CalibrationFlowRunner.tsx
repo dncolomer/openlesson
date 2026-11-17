@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-identity-form";
 import { ProductFlowSetupScreen } from "@/components/session-view/product-flow-setup-screen";
 import { useAestheticPackages } from "@/components/session-view/use-aesthetic-packages";
@@ -224,6 +223,12 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   }
 
   useEffect(() => {
+    if (!setupConfirmed || sounding) return;
+    if (!pendingRef.current) return;
+    void finishCalibrationStart();
+  }, [setupConfirmed, sounding]);
+
+  useEffect(() => {
     if (!startedAt || stored || timeUp) return;
     const total = durationMinutes * 60;
     const tick = () => {
@@ -342,21 +347,9 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   if (!sounding) {
     return (
       <CalibrationViewport>
-        <section
-          className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
-          data-calibrate-voice-challenge=""
-          data-prepare-briefing-step="challenge"
-        >
-          <div className="w-full max-w-xl">
-            <PracticeVoiceChallenge
-              variant="prepare"
-              onPass={() => {
-                void finishCalibrationStart();
-              }}
-            />
-            {error ? <p className="mt-4 text-center text-sm text-red-300">{error}</p> : null}
-          </div>
-        </section>
+        <SessionPageLoading data-calibrate-voice-optional="">
+          <IleStartLoading t={t} fieldStatus="preparing" />
+        </SessionPageLoading>
       </CalibrationViewport>
     );
   }

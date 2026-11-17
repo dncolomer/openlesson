@@ -23,6 +23,10 @@ import { parseLearningModelSize } from "@/lib/learning-model";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import {
+  OPTIONAL_FLOW_ENFORCED_CHANNELS,
+  serializeFlowEnforcedChannels,
+} from "@/lib/flow-channels";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const CALIBRATION_FLOW_GLOBAL = "__openlessonCalibrationFlowRepository";
@@ -105,6 +109,7 @@ function mapFlow(row: Record<string, unknown>): CalibrationFlow {
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
+    enforcedChannels: { ...OPTIONAL_FLOW_ENFORCED_CHANNELS },
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -190,6 +195,7 @@ async function persistCommand(
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
+      enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -207,6 +213,7 @@ async function persistCommand(
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
+      enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -328,7 +335,7 @@ async function writeFlowRowWithOptionalColumns(
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "topic", "artifacts", "answers_model_seed"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "topic", "artifacts", "answers_model_seed", "enforced_channels"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

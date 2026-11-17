@@ -22,6 +22,7 @@ import {
   type IlePowTypeCounts,
 } from "@/lib/learn-pow-counters";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
+import type { FlowEnforcedChannels } from "@/lib/flow-channels";
 
 type LiveScreenCaptureHandle = {
   captureNow: () => Promise<Blob | null>;
@@ -32,6 +33,8 @@ type LiveScreenCaptureHandle = {
 };
 
 export type SessionLiveStageProps = {
+  audioEnforced?: boolean;
+  enforcedChannels?: FlowEnforcedChannels;
   activeStep: SessionPlanStep | undefined;
   activeTool: Tool;
   allowEndSession: boolean;
@@ -175,6 +178,8 @@ export function SessionLiveStage({
     welcomeOpenNonce,
     workCanvasInsightSlots,
     workspaceId,
+    audioEnforced = true,
+    enforcedChannels,
 }: SessionLiveStageProps) {
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
@@ -185,6 +190,7 @@ export function SessionLiveStage({
         : null}
       <SessionChrome
         t={t}
+        enforcedChannels={enforcedChannels}
         activeTool={activeTool}
         onToolChange={handleIleSessionToolChange}
         isWebcamEnabled={isWebcamEnabled}
@@ -274,6 +280,7 @@ export function SessionLiveStage({
             insightGoalCount={minInsightsPerChapter}
             onStart={() => { void handleWelcomePlay(); }}
             isStarting={isStartingSession}
+            audioEnforced={audioEnforced}
           />
         }
         allowEndSession={allowEndSession}

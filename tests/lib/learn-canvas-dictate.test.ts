@@ -329,11 +329,17 @@ describe("canvas dictate button", () => {
     expect(canvas).toContain("dictateTranscript !== undefined && !viewModeEnabled");
     expect(canvas).toContain(".dictate(");
     expect(canvas).toContain("transcript={dictateTranscript}");
-    expect(read("components/SessionView.tsx")).toContain(
-      "dictateTranscript={sessionThoughtInterface.crystallizableText}",
+    expect(read("components/session-view/session-chapter-canvas.tsx")).toContain(
+      "dictateTranscript={sessionThoughtInterface.crystallizableText",
+    );
+    expect(read("components/session-view/session-chapter-canvas.tsx")).toContain(
+      "getLiveTranscript={sessionThoughtInterface.getFormingText}",
     );
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
       "dictateTranscript={crystallizableText}",
+    );
+    expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
+      "getLiveTranscript={getLiveTranscript}",
     );
   });
 

@@ -59,6 +59,19 @@ import {
   tapSessionRuntimePaths,
   type TapProductKind,
 } from "@/lib/tap-session-runtime";
+import {
+  parseFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
+import {
+  anySensorChannelEnforced,
+  emptyFlowChannelLive,
+  enforcedSensorChannelsMissing,
+  flowEnforcedChannelsKey,
+  sessionPurityArmed,
+  shouldPenalizeEnforcedChannelIdle,
+  type FlowChannelLive,
+} from "@/lib/flow-channel-purity";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { TapScorePhases } from "@/components/tap-score/tap-score-phases";
 import { useTapScoreSession } from "@/components/tap-score/use-tap-score-flow";
@@ -109,6 +122,7 @@ interface TapScoreClientProps {
   verificationToken?: string | null;
   exactProblemOnCanvas?: boolean;
   canvasProblem?: string | null;
+  enforcedChannels?: FlowEnforcedChannels | null;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -139,7 +153,12 @@ export function TapScoreClient({
   verificationToken = null,
   exactProblemOnCanvas = false,
   canvasProblem = null,
+  enforcedChannels: enforcedChannelsProp = null,
 }: TapScoreClientProps) {
+  const enforcedChannels = parseFlowEnforcedChannels(enforcedChannelsProp);
+  const enforcedChannelsKey = flowEnforcedChannelsKey(enforcedChannels);
+  const enforcedChannelsRef = useRef(enforcedChannels);
+  enforcedChannelsRef.current = enforcedChannels;
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
     initialSession,
@@ -265,6 +284,8 @@ export function TapScoreClient({
   const autoStashInFlightRef = useRef(false);
   const contextStashInFlightRef = useRef(false);
   const lastSpeechActivityAtRef = useRef(Date.now());
+  const lastSensorOkAtRef = useRef(Date.now());
+  const channelLiveRef = useRef<FlowChannelLive>(emptyFlowChannelLive());
   const crystallizableTextRef = useRef("");
 
   useEffect(() => {
@@ -343,7 +364,11 @@ export function TapScoreClient({
     notifySpeechResult,
     flushSpeechSegment,
     resetSpeechTracking,
-  } = useTapSpeechProofOfWork(phase === "live", idlePowContext, handleSpeechInterruption);
+  } = useTapSpeechProofOfWork(
+    phase === "live" && enforcedChannels.audio,
+    idlePowContext,
+    handleSpeechInterruption,
+  );
 
   useEffect(() => {
     isTranscriptionActiveRef.current = isTranscriptionActive;
@@ -409,7 +434,7 @@ export function TapScoreClient({
   );
 
   const tapThoughtSpeech = useSessionThoughtInterface({
-    enabled: isTapLiveThoughtSpeechEnabled(phase),
+    enabled: isTapLiveThoughtSpeechEnabled(phase) && enforcedChannels.audio,
     speechLang,
     sessionId: tapSessionId || sessionId || undefined,
     captureKeys: false,
@@ -652,6 +677,7 @@ export function TapScoreClient({
     isSendingRef.current = isSending;
     if (isSending) {
       lastSpeechActivityAtRef.current = Date.now();
+      lastSensorOkAtRef.current = Date.now();
       setTranscriptSilenceMs(0);
       autoStashInFlightRef.current = false;
     }
@@ -659,7 +685,7 @@ export function TapScoreClient({
   }, [isSending, syncLiveClock]);
 
   useEffect(() => {
-    if (phase !== "live") {
+    if (phase !== "live" || !sessionPurityArmed(enforcedChannelsRef.current)) {
       setTranscriptSilenceMs(0);
       autoStashInFlightRef.current = false;
       return;
@@ -667,13 +693,16 @@ export function TapScoreClient({
 
     const liveEnteredAt = Date.now();
     lastSpeechActivityAtRef.current = liveEnteredAt;
+    lastSensorOkAtRef.current = liveEnteredAt;
     canvasLoadingRef.current = true;
     setTranscriptSilenceMs(0);
 
     const tick = window.setInterval(() => {
       if (isEndingRef.current) return;
+      const channels = enforcedChannelsRef.current;
       if (isWithinTapPurityGrace(liveEnteredAt)) {
         lastSpeechActivityAtRef.current = Date.now();
+        lastSensorOkAtRef.current = Date.now();
         setTranscriptSilenceMs(0);
         return;
       }
@@ -684,10 +713,34 @@ export function TapScoreClient({
         imDoneAnsweringBusy: imDoneBusyRef.current,
       })) {
         lastSpeechActivityAtRef.current = Date.now();
+        lastSensorOkAtRef.current = Date.now();
         setTranscriptSilenceMs(0);
         autoStashInFlightRef.current = false;
         return;
       }
+      if (anySensorChannelEnforced(channels)) {
+        const missing = enforcedSensorChannelsMissing(
+          channels,
+          channelLiveRef.current,
+        );
+        if (missing.length === 0) {
+          lastSensorOkAtRef.current = Date.now();
+        } else if (
+          shouldPenalizeEnforcedChannelIdle(
+            Date.now() - lastSensorOkAtRef.current,
+            missing.length,
+            TAP_SILENCE_AUTO_STASH_MS,
+          ) &&
+          !autoStashInFlightRef.current
+        ) {
+          autoStashInFlightRef.current = true;
+          applyPurityHit();
+          lastSensorOkAtRef.current = Date.now();
+          autoStashInFlightRef.current = false;
+          return;
+        }
+      }
+      if (!channels.audio) return;
       const silenceMs = Date.now() - lastSpeechActivityAtRef.current;
       setTranscriptSilenceMs(silenceMs);
       const hasTranscript = Boolean(tapHookFormingText(tapThoughtSpeech));
@@ -714,7 +767,7 @@ export function TapScoreClient({
     }, 100);
 
     return () => window.clearInterval(tick);
-  }, [phase, stashCurrentTranscription, applyPurityHit]);
+  }, [phase, stashCurrentTranscription, applyPurityHit, enforcedChannelsKey]);
 
   useEffect(() => {
     if (phase !== "live") {
@@ -854,6 +907,7 @@ export function TapScoreClient({
   const holdSilenceForWait = useCallback((waiting: boolean) => {
     if (!waiting) return;
     lastSpeechActivityAtRef.current = Date.now();
+    lastSensorOkAtRef.current = Date.now();
     setTranscriptSilenceMs(0);
     autoStashInFlightRef.current = false;
   }, []);
@@ -905,6 +959,12 @@ export function TapScoreClient({
       verificationToken={verificationToken}
       exactProblemOnCanvas={exactProblemOnCanvas}
       canvasProblem={canvasProblem}
+      audioEnforced={enforcedChannels.audio}
+      enforcedChannels={enforcedChannels}
+      onChannelLive={(live) => {
+        channelLiveRef.current = live;
+      }}
+      getLiveTranscript={tapThoughtSpeech.getFormingText}
       policyRef={policyRef}
       durationLocked={durationLocked}
       aestheticPackages={aestheticPackages}

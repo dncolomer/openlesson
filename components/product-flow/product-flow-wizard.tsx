@@ -9,21 +9,24 @@ import {
   DASHBOARD_FLOWS_PATH,
   emptyProductFlowDraft,
   flowAuthorShowsCountdown,
+  flowAuthorShowsEnforcedChannels,
   nextProductFlowWizardStep,
   parseProductFlowKind,
   previousProductFlowWizardStep,
   PRODUCT_FLOW_KINDS,
-  PRODUCT_FLOW_WIZARD_STEPS,
   productFlowDashboardPath,
   productFlowKindLabel,
   productFlowProblem,
   productFlowWizardCanAdvance,
+  productFlowWizardSteps,
   type ProductFlowDraft,
   type ProductFlowKind,
   type ProductFlowWizardStep,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
+  FLOW_COMPACT_GHOST_BTN,
+  FLOW_COMPACT_PRIMARY_BTN,
   FLOW_FORM_INPUT,
   FLOW_PRIMARY_BTN,
   FLOW_SECONDARY_BTN,
@@ -34,12 +37,17 @@ import {
 } from "@/components/product-flow/product-flow-form";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
+import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
+import { FLOW_CHANNEL_IDS, FLOW_CHANNEL_LABELS } from "@/lib/flow-channels";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): string {
   if (step === "name") return "A short name for the dashboard list and the public run.";
   if (step === "model") {
-    return "A simulation of the unsys model for this flow. Edit it by hand, import a seed, or prompt to adapt it.";
+    return "Hidden states and priced edges for this flow. Prompt, attach files, or add a branch by hand.";
+  }
+  if (step === "channels") {
+    return "Audio, Muse (EEG), video, and screenshots this run requires. A required channel with no data flowing invalidates the session.";
   }
   if (step === "publish") {
     return "Review, then publish. The public run asks for identification first.";
@@ -66,6 +74,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
     if (step === "name") return `Name this ${productLabel.toLowerCase()} flow`;
     if (step === "author") return `Author the ${productLabel.toLowerCase()} flow`;
     if (step === "model") return "Adapt the unsys model";
+    if (step === "channels") return "Choose enforced channels";
     return `Publish ${draft.name.trim() || "this flow"}`;
   }, [draft.name, productLabel, step]);
 
@@ -100,6 +109,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           actionCatalog: accepted.actionCatalog,
           durationMinutes: accepted.durationMinutes,
           answersModelSeed: accepted.answersModelSeed,
+          enforcedChannels: accepted.enforcedChannels,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -114,21 +124,24 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
     }
   }
 
+  const compactActions = step === "model";
+  const backBtnClass = compactActions ? FLOW_COMPACT_GHOST_BTN : FLOW_SECONDARY_BTN;
+  const nextBtnClass = compactActions ? FLOW_COMPACT_PRIMARY_BTN : FLOW_PRIMARY_BTN;
   const actions = (
-    <div className="flex flex-wrap gap-3 pt-2">
+    <div className={`flex flex-wrap ${compactActions ? "gap-1.5" : "gap-3 pt-2"}`}>
       {step !== "name" ? (
         <button
           type="button"
-          className={FLOW_SECONDARY_BTN}
+          className={backBtnClass}
           disabled={modelBusy}
-          onClick={() => setStep(previousProductFlowWizardStep(step))}
+          onClick={() => setStep(previousProductFlowWizardStep(step, kind))}
         >
           Back
         </button>
       ) : (
         <button
           type="button"
-          className={FLOW_SECONDARY_BTN}
+          className={backBtnClass}
           onClick={() => router.push(productFlowDashboardPath(kind))}
         >
           Cancel
@@ -140,7 +153,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           disabled={busy || modelBusy || !canAdvance}
           onClick={() => void publish()}
           data-flow-publish=""
-          className={FLOW_PRIMARY_BTN}
+          className={nextBtnClass}
         >
           Publish
         </button>
@@ -148,8 +161,8 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         <button
           type="button"
           disabled={busy || modelBusy || !canAdvance}
-          onClick={() => setStep(nextProductFlowWizardStep(step))}
-          className={FLOW_PRIMARY_BTN}
+          onClick={() => setStep(nextProductFlowWizardStep(step, kind))}
+          className={nextBtnClass}
         >
           Continue
         </button>
@@ -163,15 +176,20 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
       activeTab={dashboardTabForProductSurface(kind)}
     >
       <div
-        className={`mx-auto w-full space-y-6 ${step === "model" ? "max-w-[96rem]" : "max-w-3xl"}`}
+        className={
+          step === "model"
+            ? "mx-auto flex min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden"
+            : "mx-auto w-full max-w-3xl space-y-6"
+        }
         data-flow-wizard=""
         data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}
       >
         <FlowFormHeader
-          kicker={<FlowWizardSteps steps={PRODUCT_FLOW_WIZARD_STEPS} current={step} />}
+          kicker={<FlowWizardSteps steps={productFlowWizardSteps(kind)} current={step} />}
           title={heading}
-          description={wizardDescription(kind, step)}
+          description={step === "model" ? undefined : wizardDescription(kind, step)}
+          compact={step === "model"}
         />
 
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -252,7 +270,10 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         ) : null}
 
         {step === "model" ? (
-          <FlowFormCard data-flow-unsys-step="">
+          <FlowFormCard
+            data-flow-unsys-step=""
+            className="flex min-h-0 flex-1 flex-col space-y-0 overflow-hidden px-0 py-0 sm:px-0 sm:py-0"
+          >
             <FlowUnsysModelStep
               kind={kind}
               name={draft.name}
@@ -262,7 +283,18 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               onChange={(answersModelSeed) => patch({ answersModelSeed })}
               onBusyChange={setModelBusy}
               actions={actions}
+              fillViewport
             />
+          </FlowFormCard>
+        ) : null}
+
+        {step === "channels" && flowAuthorShowsEnforcedChannels(kind) ? (
+          <FlowFormCard data-flow-channels-step="">
+            <FlowChannelsFields
+              value={draft.enforcedChannels}
+              onChange={(enforcedChannels) => patch({ enforcedChannels })}
+            />
+            {actions}
           </FlowFormCard>
         ) : null}
 
@@ -296,6 +328,16 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
                   data-flow-publish-unsys=""
                 >
                   Unsys model
+                </p>
+              ) : null}
+              {flowAuthorShowsEnforcedChannels(kind) ? (
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-publish-channels=""
+                >
+                  {FLOW_CHANNEL_IDS.filter((id) => draft.enforcedChannels[id])
+                    .map((id) => FLOW_CHANNEL_LABELS[id])
+                    .join(" · ") || "Canvas only"}
                 </p>
               ) : null}
             </div>

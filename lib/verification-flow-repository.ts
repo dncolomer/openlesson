@@ -25,6 +25,11 @@ import {
 } from "@/lib/verification-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
 import { parseExactProblemOnCanvas } from "@/lib/product-flow";
+import {
+  parseFlowEnforcedChannels,
+  serializeFlowEnforcedChannels,
+  withEnforcedChannelsMetadata,
+} from "@/lib/flow-channels";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
@@ -105,6 +110,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
+    enforcedChannels: parseFlowEnforcedChannels(row.enforced_channels),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -203,6 +209,7 @@ async function persistCommand(
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
+      enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -220,6 +227,7 @@ async function persistCommand(
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
+      enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -264,9 +272,12 @@ async function persistCommand(
         knowledgeRegionId: null,
         answers: [],
       },
-      metadata: {
-        ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-      },
+      metadata: withEnforcedChannelsMetadata(
+        {
+          ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+        },
+        parseFlowEnforcedChannels(mapped?.enforcedChannels),
+      ),
     });
     if (error) {
       await refundClaimedFlowSession(charged?.billedUserId);
@@ -385,7 +396,7 @@ async function writeVerificationFlow(
       ? supabase.from("verify_flows").insert(body)
       : supabase.from("verify_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed", "enforced_channels"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

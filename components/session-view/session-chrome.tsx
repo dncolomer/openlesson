@@ -26,6 +26,10 @@ import {
   type IlePowDisplayCounts,
 } from "@/lib/learn-pow-counters";
 import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/learn-review-work";
+import {
+  DEFAULT_FLOW_ENFORCED_CHANNELS,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -94,6 +98,7 @@ export type SessionChromeProps = {
   closeReviewReason?: string | null;
   onChapterDoneOverride?: () => void;
   onDismissCloseReview?: () => void;
+  enforcedChannels?: FlowEnforcedChannels;
 };
 
 export function SessionChrome({
@@ -154,6 +159,7 @@ export function SessionChrome({
   closeReviewReason = null,
   onChapterDoneOverride,
   onDismissCloseReview,
+  enforcedChannels = DEFAULT_FLOW_ENFORCED_CHANNELS,
 }: SessionChromeProps) {
   const overlayOpen = isIleMapOverlayTool(activeTool);
   useEffect(() => {
@@ -256,20 +262,24 @@ export function SessionChrome({
                 onEnableMuse={() => {
                   void onConnectMuse?.();
                 }}
-                onDisableMuse={() => onDisconnectMuse?.()}
+                onDisableMuse={
+                  enforcedChannels.muse ? undefined : () => onDisconnectMuse?.()
+                }
                 museStatus={museStatus}
                 museDeviceStatus={museDeviceStatus}
                 museChannelData={museChannelData}
                 bandPowers={bandPowers}
                 videoEnabled={isWebcamEnabled}
                 onEnableVideo={() => onEnableWebcam?.()}
-                onDisableVideo={onTurnOffWebcam}
+                onDisableVideo={enforcedChannels.video ? undefined : onTurnOffWebcam}
                 captureVideo
                 screenEnabled={isScreenCapturing}
                 onEnableScreen={() => {
                   void onStartScreenCapture?.();
                 }}
-                onDisableScreen={onStopScreenCapture}
+                onDisableScreen={
+                  enforcedChannels.screenshots ? undefined : onStopScreenCapture
+                }
                 screenStream={screenShareStream}
               />
             </div>

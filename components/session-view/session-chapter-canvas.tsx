@@ -31,7 +31,7 @@ export function SessionChapterWorkCanvas({
   whiteboardData,
   whiteboardSceneData,
   isHeliosAssistantPending,
-  setWhiteboardData,
+  setWhiteboardData: _setWhiteboardData,
   setCanvasDirtyForHelios,
   sessionRef,
   whiteboardSceneDataRef,
@@ -41,6 +41,9 @@ export function SessionChapterWorkCanvas({
   handleCanvasPowActions,
   handleAskCanvasSelection,
   sessionThoughtInterface,
+  onDictateActive,
+  whiteboardPngRef,
+  scheduleCanvasPowUpload,
   activeStep,
   activeChapterLabel,
   chapterTitle,
@@ -73,7 +76,13 @@ export function SessionChapterWorkCanvas({
   canvasApplyNonce: string | number | null;
   handleCanvasPowActions: (events: IleWorkCanvasPowEvent[]) => void;
   handleAskCanvasSelection: NonNullable<Parameters<typeof WorkCanvas>[0]["onAskSelected"]>;
-  sessionThoughtInterface: { crystallizableText?: string };
+  sessionThoughtInterface: {
+    crystallizableText?: string;
+    getFormingText?: () => string;
+  };
+  onDictateActive?: (active: boolean) => void;
+  whiteboardPngRef?: { current: string | null };
+  scheduleCanvasPowUpload?: () => void;
   activeStep: { id?: string | null } | null | undefined;
   activeChapterLabel: string;
   /** Chapter material for the field. This is not the "Chapter N" label. */
@@ -151,7 +160,7 @@ export function SessionChapterWorkCanvas({
       heliosBusy={isHeliosAssistantPending}
       onLearnerWaitChange={onLearnerWaitChange}
       onCanvasChange={(data) => {
-        setWhiteboardData(data);
+        if (whiteboardPngRef) whiteboardPngRef.current = data;
         setCanvasDirtyForHelios(true);
         if (sessionRef.current) {
           sessionRef.current = {
@@ -159,6 +168,7 @@ export function SessionChapterWorkCanvas({
             metadata: { ...sessionRef.current.metadata, whiteboardData: data },
           };
         }
+        scheduleCanvasPowUpload?.();
       }}
       onSceneChange={(data) => {
         const scene = serializeIleWorkCanvasScene(data);
@@ -169,7 +179,9 @@ export function SessionChapterWorkCanvas({
       applyElementsNonce={canvasApplyNonce}
       onCanvasPowActions={handleCanvasPowActions}
       onAskSelected={handleAskCanvasSelection}
-      dictateTranscript={sessionThoughtInterface.crystallizableText}
+      dictateTranscript={sessionThoughtInterface.crystallizableText ?? ""}
+      getLiveTranscript={sessionThoughtInterface.getFormingText}
+      onDictateActive={onDictateActive}
       sessionMarkMode="learn"
       sessionMarkListKey={`${session.id}:${chapterId}`}
       sessionMarkQuestions={sessionMarkQuestions}

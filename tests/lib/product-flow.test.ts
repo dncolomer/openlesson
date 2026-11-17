@@ -23,6 +23,8 @@ import { applySolveCommand, emptySolveState } from "@/lib/solve-flow";
 import { applyVerificationCommand, emptyVerificationState } from "@/lib/verification-flow";
 import { applyCalibrationCommand, emptyCalibrationState } from "@/lib/calibration-flow";
 import {
+  FLOW_UNSYS_EXPLAINER,
+  FLOW_UNSYS_SCIENCE_HREF,
   FLOW_UNSYS_SEED_PATH,
   nextFlowUnsysSeed,
   parseFlowUnsysSeed,
@@ -31,6 +33,8 @@ import {
 import { definitionUnsysSeedFromBlocks } from "@/lib/definition-unsys-seed";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import {
+  FLOW_COMPACT_GHOST_BTN,
+  FLOW_COMPACT_PRIMARY_BTN,
   FLOW_DANGER_BTN,
   FLOW_PRIMARY_BTN,
 } from "@/components/product-flow/product-flow-form";
@@ -112,10 +116,10 @@ describe("product flow owner_user_id", () => {
   });
 
   it("inserts an unsys model step between author and publish", () => {
-    expect(PRODUCT_FLOW_WIZARD_STEPS).toEqual(["name", "author", "model", "publish"]);
+    expect(PRODUCT_FLOW_WIZARD_STEPS).toEqual(["name", "author", "model", "channels", "publish"]);
     expect(nextProductFlowWizardStep("author")).toBe("model");
-    expect(nextProductFlowWizardStep("model")).toBe("publish");
-    expect(previousProductFlowWizardStep("publish")).toBe("model");
+    expect(nextProductFlowWizardStep("model")).toBe("channels");
+    expect(previousProductFlowWizardStep("publish")).toBe("channels");
     expect(previousProductFlowWizardStep("model")).toBe("author");
     const empty = emptyProductFlowDraft("solve");
     expect(productFlowWizardCanAdvance("model", empty)).toBe(false);
@@ -203,12 +207,39 @@ describe("product flow owner_user_id", () => {
     expect(wizard).toContain("answersModelSeed: accepted.answersModelSeed");
     expect(wizard).toContain("data-flow-unsys-step");
     expect(wizard).toContain("data-flow-publish-unsys");
-    expect(step).toContain('data-flow-unsys-generate=""');
-    expect(step).toContain('data-flow-unsys-import=""');
+    expect(step).toContain('data-flow-unsys-reset=""');
     expect(step).toContain('data-flow-unsys-prompt=""');
+    expect(step).toContain('data-flow-unsys-prompt-files=""');
+    expect(step).toContain('data-flow-unsys-explainer=""');
+    expect(step).toContain("FLOW_UNSYS_SCIENCE_HREF");
+    expect(step).toContain("FLOW_ARTIFACT_ACCEPT");
+    expect(step).not.toContain("Regenerate");
+    expect(step).not.toContain('data-flow-unsys-import=""');
+    expect(step).not.toContain('data-flow-unsys-generate=""');
     expect(step).toContain("FLOW_UNSYS_SEED_PATH");
     expect(step).toContain("WorkspaceUnsysSeedGraph");
     expect(step).toContain("WorkspaceUnsysSeedInspector");
+    expect(step).toContain("showFieldHints");
+    expect(step).toContain("fillViewport");
+    expect(wizard).toContain("fillViewport");
+    expect(step).toContain('data-flow-unsys-controls=""');
+    expect(step).toContain("FLOW_COMPACT_PRIMARY_BTN");
+    expect(step).toContain("FLOW_COMPACT_GHOST_BTN");
+    expect(step).not.toContain("FLOW_PRIMARY_BTN");
+    expect(wizard).toContain("FLOW_COMPACT_PRIMARY_BTN");
+    expect(FLOW_COMPACT_PRIMARY_BTN).toContain("h-7");
+    expect(FLOW_COMPACT_GHOST_BTN).toContain("h-7");
+    expect(FLOW_UNSYS_SCIENCE_HREF).toBe("/science#science-unsys-model");
+    expect(FLOW_UNSYS_EXPLAINER.reset.toLowerCase()).toContain("reset");
+    expect(FLOW_UNSYS_EXPLAINER.question.toLowerCase()).toContain("question");
+    expect(FLOW_UNSYS_EXPLAINER.observation.toLowerCase()).toContain("observation");
+    const graph = read("components/WorkspaceUnsysSeedGraph.tsx");
+    expect(graph).toContain("{branch.title}");
+    expect(graph).not.toContain("branch.question");
+    expect(graph).not.toContain("branch.observation");
+    const inspector = read("components/WorkspaceUnsysSeedInspector.tsx");
+    expect(inspector).toContain("data-author-unsys-branch-question");
+    expect(inspector).toContain("data-author-unsys-branch-observation");
     expect(page).toContain("FlowUnsysModelStep");
     expect(page).toContain("answersModelSeed");
     expect(create).toContain("answersModelSeed: accepted.answersModelSeed");

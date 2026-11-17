@@ -38,9 +38,11 @@ export function ProductSurface({
             router.push(dashboardHrefForTab(tab));
           }}
         />
-        <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
+        <div className="min-w-0 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden">
           <h1 className="sr-only">{label}</h1>
-          <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">{children}</main>
+          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 py-8 sm:px-6 lg:px-8 md:flex md:flex-col">
+            {children}
+          </main>
         </div>
       </div>
     </div>

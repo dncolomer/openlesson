@@ -115,6 +115,7 @@ export type SessionRecordingInput = SessionRecordingState & {
   setError: (e: string | null) => void;
   setIsSaving: (v: boolean) => void;
   whiteboardData: string | null;
+  whiteboardDataRef?: { current: string | null };
   notebookContent: string;
   handlePauseRef: { current: () => Promise<void> };
   openWorkIdsRef: { current: string[] };
@@ -133,6 +134,10 @@ export type SessionRecordingInput = SessionRecordingState & {
       getStream: () => MediaStream | null;
     } | null;
   };
+  captureAudio?: boolean;
+  autoStartMuse?: boolean;
+  autoStartVideo?: boolean;
+  autoStartScreenshots?: boolean;
 };
 
 export function useSessionRecording(input: SessionRecordingInput) {
@@ -149,6 +154,7 @@ export function useSessionRecording(input: SessionRecordingInput) {
     setError,
     setIsSaving,
     whiteboardData,
+    whiteboardDataRef,
     notebookContent,
     handlePauseRef,
     openWorkIdsRef,
@@ -181,6 +187,10 @@ export function useSessionRecording(input: SessionRecordingInput) {
     setIsScreenCapturing,
     museStatus,
     screenCaptureRef,
+    captureAudio = true,
+    autoStartMuse = false,
+    autoStartVideo = false,
+    autoStartScreenshots = false,
   } = input;
 
   useEffect(() => {
@@ -195,28 +205,38 @@ export function useSessionRecording(input: SessionRecordingInput) {
     try {
       setError(null);
       let mediaStream: MediaStream | null = micStreamRef.current;
-      try {
-        if (!mediaStream || mediaStream.getTracks().some((track) => track.readyState === "ended")) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 48000,
-            },
-          });
+      if (captureAudio) {
+        try {
+          if (!mediaStream || mediaStream.getTracks().some((track) => track.readyState === "ended")) {
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 48000,
+              },
+            });
+          }
+          micStreamRef.current = null;
+          setStream(mediaStream);
+        } catch (micErr) {
+          console.warn("[SessionView] Mic unavailable, starting session without live speech:", micErr);
+          setError(t("session.micNotFound"));
+          mediaStream = null;
+          micStreamRef.current = null;
+          setStream(null);
         }
-        micStreamRef.current = null;
-        setStream(mediaStream);
-      } catch (micErr) {
-        console.warn("[SessionView] Mic unavailable, starting session without live speech:", micErr);
-        setError(t("session.micNotFound"));
-        mediaStream = null;
+      } else {
         micStreamRef.current = null;
         setStream(null);
       }
 
       setIsRecording(true);
       setIsPaused(false);
+      if (autoStartMuse) void handleConnectMuse();
+      if (autoStartVideo) setIsWebcamEnabled(true);
+      if (autoStartScreenshots) void screenCaptureRef.current?.start().then((ok) => {
+        if (ok) setIsScreenCapturing(true);
+      });
 
       if (session) {
         updateSessionStatus(session.id, "active").catch(() => {});
@@ -253,7 +273,7 @@ export function useSessionRecording(input: SessionRecordingInput) {
     finalSession.metadata = applyIleOpenWorkIdsToMetadata(
       {
         ...finalSession.metadata,
-        whiteboardData: whiteboardData || undefined,
+        whiteboardData: whiteboardDataRef?.current || whiteboardData || undefined,
         notebookData: notebookContent || undefined,
       } as Record<string, unknown>,
       openWorkIdsRef.current,
@@ -317,18 +337,22 @@ export function useSessionRecording(input: SessionRecordingInput) {
 
     try {
       try {
-        let mediaStream = pausedAudioStreamRef.current;
-        const tracksStillActive = mediaStream?.getTracks().some((track) => track.readyState === "live");
-        if (!mediaStream || !tracksStillActive) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 48000,
-            },
-          });
+        if (captureAudio) {
+          let mediaStream = pausedAudioStreamRef.current;
+          const tracksStillActive = mediaStream?.getTracks().some((track) => track.readyState === "live");
+          if (!mediaStream || !tracksStillActive) {
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 48000,
+              },
+            });
+          }
+          setStream(mediaStream);
+        } else {
+          setStream(null);
         }
-        setStream(mediaStream);
       } catch (micErr) {
         console.warn("[SessionView] Mic unavailable on resume, continuing without live speech:", micErr);
         setError(t("session.micNotFound"));

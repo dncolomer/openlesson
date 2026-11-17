@@ -81,6 +81,7 @@ export function CanvasPromptBar({
   craftInsight,
   setCraftInsightOpen,
   dictateTranscript,
+  getLiveTranscript,
   viewModeEnabled,
   writeDictatedText,
   onDictateActive,
@@ -110,6 +111,7 @@ export function CanvasPromptBar({
   craftInsight?: IleCanvasCraftInsightConfig | null;
   setCraftInsightOpen: (open: boolean) => void;
   dictateTranscript?: string;
+  getLiveTranscript?: () => string;
   viewModeEnabled?: boolean;
   writeDictatedText: (text: string, commit: boolean) => IleWorkCanvasElement[];
   onDictateActive?: (active: boolean) => void;
@@ -197,6 +199,7 @@ export function CanvasPromptBar({
       dictate: dictateOn
         ? {
             transcript: dictateTranscript ?? "",
+            getLiveTranscript,
             write: (text, commit) => {
               writeDictatedRef.current(text, commit);
             },
@@ -227,6 +230,7 @@ export function CanvasPromptBar({
     canvasSelectionActive,
     dictateOn,
     dictateTranscript,
+    getLiveTranscript,
     pointerActive,
     publishCommands,
     showCraftInsight,
@@ -451,6 +455,7 @@ export function CanvasPromptBar({
                     <IleCanvasDictateButton
                       square={rail}
                       transcript={dictateTranscript}
+                      getLiveTranscript={getLiveTranscript}
                       onLiveText={(text) => writeDictatedText(text, false)}
                       onCommit={(text) => writeDictatedText(text, true)}
                       onRun={(text) => {

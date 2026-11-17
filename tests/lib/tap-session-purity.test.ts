@@ -164,6 +164,9 @@ describe("TAP client wires purity UX", () => {
     expect(client).toContain("shouldPenalizeEmptyBarSilence");
     // Live-entry grace so briefing elapsed time / UI settle does not burn purity.
     expect(client).toContain("isWithinTapPurityGrace");
+    expect(client).toContain("sessionPurityArmed(enforcedChannelsRef.current)");
+    expect(client).toContain("enforcedSensorChannelsMissing");
+    expect(client).toContain("enforcedChannelsKey");
     expect(client).toContain("liveEnteredAt");
     const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
       tap: { postSession: { impureTitle: string; impureBody: string; impureTryAgain: string } };
@@ -208,6 +211,8 @@ describe("TAP client wires purity UX", () => {
     expect(ile).toContain("tap-session-purity");
     expect(ile).toContain("TAP_SILENCE_AUTO_STASH_MS");
     expect(ile).toContain("useIleSessionPurity");
+    expect(ile).toContain("sessionPurityArmed(enforcedChannels)");
+    expect(ile).toContain("getSensorLive");
     expect(ile).toContain("shouldAutoStashOnSilence");
     expect(ile).toContain("shouldPenalizeEmptyBarSilence");
     expect(ile).toContain("shouldEvaluateSessionPurity");

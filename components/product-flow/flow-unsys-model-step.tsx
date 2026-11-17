@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { WorkspaceUnsysSeedGraph } from "@/components/WorkspaceUnsysSeedGraph";
 import { WorkspaceUnsysSeedInspector } from "@/components/WorkspaceUnsysSeedInspector";
 import {
@@ -12,15 +13,26 @@ import {
   setAuthorUnsysEdgePrice,
 } from "@/lib/author-unsys-model";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
-import { parseFlowUnsysSeed, FLOW_UNSYS_SEED_PATH } from "@/lib/flow-unsys-seed";
-import type { FlowArtifact } from "@/lib/flow-artifacts";
+import {
+  FLOW_ARTIFACT_ACCEPT,
+  FLOW_ARTIFACT_MAX_COUNT,
+  parseFlowArtifacts,
+  uploadFlowArtifact,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
+import {
+  FLOW_UNSYS_EXPLAINER,
+  FLOW_UNSYS_SCIENCE_HREF,
+  FLOW_UNSYS_SEED_PATH,
+  parseFlowUnsysSeed,
+} from "@/lib/flow-unsys-seed";
 import type { ProductFlowKind } from "@/lib/product-flow";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
+  FLOW_COMPACT_GHOST_BTN,
+  FLOW_COMPACT_PRIMARY_BTN,
   FLOW_FORM_TEXTAREA,
-  FLOW_GHOST_BTN,
-  FLOW_PRIMARY_BTN,
 } from "@/components/product-flow/product-flow-form";
 
 export function FlowUnsysModelStep({
@@ -32,6 +44,7 @@ export function FlowUnsysModelStep({
   onChange,
   onBusyChange,
   actions,
+  fillViewport = false,
 }: {
   kind: ProductFlowKind;
   name: string;
@@ -41,15 +54,18 @@ export function FlowUnsysModelStep({
   onChange: (seed: AuthorUnsysModelSeed | null) => void;
   onBusyChange?: (busy: boolean) => void;
   actions?: ReactNode;
+  fillViewport?: boolean;
 }) {
   const parsed = parseFlowUnsysSeed(seed);
   const [model, setModel] = useState<SessionBranchModel | null>(parsed?.model ?? null);
   const [focusId, setFocusId] = useState(model?.rootId ?? "root");
   const [guidance, setGuidance] = useState("");
+  const [promptFiles, setPromptFiles] = useState<FlowArtifact[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [graphEpoch, setGraphEpoch] = useState(0);
-  const importRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const autoStarted = useRef(false);
 
   useEffect(() => {
@@ -79,12 +95,21 @@ export function FlowUnsysModelStep({
     }
   };
 
-  const generate = async (input?: { parentId?: string; prompt?: string }) => {
+  const generate = async (input?: {
+    parentId?: string;
+    prompt?: string;
+    reset?: boolean;
+  }) => {
     const parentId = input?.parentId;
+    const reset = Boolean(input?.reset);
     setGenerating(true);
     onBusyChange?.(true);
     setError("");
     try {
+      const prompt = reset ? "" : (input?.prompt ?? guidance);
+      const contextFiles = reset
+        ? artifacts
+        : parseFlowArtifacts([...artifacts, ...promptFiles]);
       const response = await fetch(FLOW_UNSYS_SEED_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,8 +117,8 @@ export function FlowUnsysModelStep({
           kind,
           name,
           problem,
-          artifacts,
-          guidance: input?.prompt ?? guidance,
+          artifacts: contextFiles,
+          guidance: prompt,
           ...(parentId && model ? { parentId, seedModel: model } : {}),
         }),
       });
@@ -105,6 +130,10 @@ export function FlowUnsysModelStep({
       if (!sample) throw new Error("The unsys field came back empty.");
       commit(sample, parentId || sample.rootId);
       if (!parentId) setGraphEpoch((value) => value + 1);
+      if (reset) {
+        setGuidance("");
+        setPromptFiles([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "The unsys model could not be generated.");
     } finally {
@@ -121,153 +150,211 @@ export function FlowUnsysModelStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const importFile = async (file: File) => {
+  const attachPromptFiles = async (list: FileList | null) => {
+    if (!list?.length) return;
+    setUploading(true);
     setError("");
     try {
-      const text = await file.text();
-      const parsedJson = JSON.parse(text) as unknown;
-      const imported = parseFlowUnsysSeed(parsedJson);
-      if (!imported) throw new Error("That file is not an unsys model.");
-      commit(imported.model, imported.model.rootId);
-      setGraphEpoch((value) => value + 1);
+      const next = promptFiles.slice();
+      for (const file of Array.from(list)) {
+        if (next.length >= FLOW_ARTIFACT_MAX_COUNT) break;
+        const uploaded = await uploadFlowArtifact({ file });
+        if (next.some((row) => row.xaiFileId === uploaded.xaiFileId)) continue;
+        next.push(uploaded);
+      }
+      setPromptFiles(parseFlowArtifacts(next));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "That file could not be imported.");
+      setError(err instanceof Error ? err.message : "That file could not be attached.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   };
 
-  const disabled = generating;
+  const disabled = generating || uploading;
+  const canApply = Boolean(problem.trim()) && Boolean(guidance.trim() || promptFiles.length);
 
   return (
     <div
-      className="flex min-h-[32rem] flex-col overflow-hidden"
+      className={
+        fillViewport
+          ? "flex h-full min-h-0 flex-col overflow-hidden lg:flex-row"
+          : "flex min-h-[36rem] flex-col overflow-hidden lg:h-[min(68dvh,46rem)] lg:flex-row"
+      }
       data-flow-unsys-model=""
       data-flow-wizard-model=""
+      style={{ overflowAnchor: "none" }}
     >
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-1 pb-3">
-        <button
-          type="button"
-          data-flow-unsys-generate=""
-          className={FLOW_GHOST_BTN}
-          disabled={disabled || !problem.trim()}
-          onClick={() => void generate()}
-        >
-          {generating ? "Generating…" : model ? "Regenerate" : "Generate"}
-        </button>
-        <button
-          type="button"
-          data-flow-unsys-import=""
-          className={FLOW_GHOST_BTN}
-          disabled={disabled}
-          onClick={() => importRef.current?.click()}
-        >
-          Import file
-        </button>
-        {actions ? <div className="ml-auto flex flex-wrap gap-3">{actions}</div> : null}
-        <input
-          ref={importRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          data-flow-unsys-import-input=""
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (file) void importFile(file);
-          }}
-        />
-      </div>
+      <aside
+        className="flex min-h-0 w-full shrink-0 flex-col border-b border-white/10 bg-[#080808] lg:h-full lg:w-[22.5rem] lg:border-b-0 lg:border-r"
+        data-flow-unsys-controls=""
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <div className="space-y-2 text-[12px] leading-relaxed text-neutral-400" data-flow-unsys-explainer="">
+            <p>
+              {FLOW_UNSYS_EXPLAINER.lead}{" "}
+              <Link
+                href={FLOW_UNSYS_SCIENCE_HREF}
+                className="text-neutral-200 underline decoration-white/30 underline-offset-4 hover:text-white"
+                data-flow-unsys-science=""
+              >
+                {FLOW_UNSYS_EXPLAINER.scienceLabel}
+              </Link>
+            </p>
+            <p>{FLOW_UNSYS_EXPLAINER.modify}</p>
+            <p>
+              {FLOW_UNSYS_EXPLAINER.question} {FLOW_UNSYS_EXPLAINER.observation}{" "}
+              {FLOW_UNSYS_EXPLAINER.reset}
+            </p>
+          </div>
 
-      <div className="mt-3 space-y-2">
-        <textarea
-          value={guidance}
-          onChange={(event) => setGuidance(event.target.value)}
-          placeholder="Tell the model how to adapt this unsys field"
-          data-flow-unsys-prompt=""
-          className={`${FLOW_FORM_TEXTAREA} min-h-[4.5rem]`}
-          disabled={disabled}
-        />
-        <button
-          type="button"
-          data-flow-unsys-prompt-apply=""
-          className={FLOW_PRIMARY_BTN}
-          disabled={disabled || !guidance.trim() || !problem.trim()}
-          onClick={() => void generate({ prompt: guidance.trim() })}
-        >
-          Apply prompt
-        </button>
-      </div>
+          <textarea
+            value={guidance}
+            onChange={(event) => setGuidance(event.target.value)}
+            placeholder="Tell the model how to adapt this unsys field"
+            data-flow-unsys-prompt=""
+            className={`${FLOW_FORM_TEXTAREA} mt-4 min-h-[5.5rem]`}
+            disabled={disabled}
+          />
 
-      {error ? (
-        <p className="mt-3 text-sm text-red-300" data-flow-unsys-error="">
-          {error}
-        </p>
-      ) : null}
+          <div className="mt-3 space-y-2" data-flow-unsys-prompt-files="">
+            {promptFiles.map((item) => (
+              <div
+                key={item.xaiFileId}
+                className="flex items-center justify-between gap-2 border border-white/20 px-2 py-1.5"
+                data-flow-unsys-prompt-file=""
+              >
+                <p className="min-w-0 truncate text-xs text-neutral-200">{item.name}</p>
+                <button
+                  type="button"
+                  className={FLOW_COMPACT_GHOST_BTN}
+                  disabled={disabled}
+                  onClick={() =>
+                    setPromptFiles(promptFiles.filter((row) => row.xaiFileId !== item.xaiFileId))
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              data-flow-unsys-prompt-file-add=""
+              className={FLOW_COMPACT_GHOST_BTN}
+              disabled={disabled || promptFiles.length >= FLOW_ARTIFACT_MAX_COUNT}
+              onClick={() => fileRef.current?.click()}
+            >
+              Add files
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              accept={FLOW_ARTIFACT_ACCEPT}
+              className="hidden"
+              data-flow-unsys-prompt-file-input=""
+              onChange={(event) => void attachPromptFiles(event.target.files)}
+            />
+          </div>
 
-      <div className="mt-4 flex min-h-[22rem] flex-1 flex-col overflow-hidden border border-white/20 lg:flex-row">
-        <div className="relative min-h-[22rem] flex-1 overflow-hidden">
-          <div
-            className={
-              generating
-                ? "pointer-events-none absolute inset-0 select-none"
-                : "absolute inset-0"
-            }
-            inert={generating ? true : undefined}
-          >
-            <WorkspaceUnsysSeedGraph
-              key={`flow-unsys:${graphEpoch}`}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              data-flow-unsys-prompt-apply=""
+              className={FLOW_COMPACT_PRIMARY_BTN}
+              disabled={disabled || !canApply}
+              onClick={() => void generate({ prompt: guidance.trim() })}
+            >
+              {generating ? "Generating…" : "Apply"}
+            </button>
+            <button
+              type="button"
+              data-flow-unsys-reset=""
+              className={FLOW_COMPACT_GHOST_BTN}
+              disabled={disabled || !problem.trim()}
+              onClick={() => void generate({ reset: true })}
+            >
+              Reset
+            </button>
+          </div>
+
+          {error ? (
+            <p className="mt-3 text-sm text-red-300" data-flow-unsys-error="">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <WorkspaceUnsysSeedInspector
               model={model}
               focusId={focusId}
               disabled={disabled}
-              onSelect={setFocusId}
+              showFieldHints
+              embedded
+              onChangeTitle={(branchId, title) => {
+                if (!model) return;
+                commit(setAuthorUnsysBranchFields(model, branchId, { title }));
+              }}
+              onChangeQuestion={(branchId, question) => {
+                if (!model) return;
+                commit(setAuthorUnsysBranchFields(model, branchId, { question }));
+              }}
+              onChangeObservation={(branchId, observation) => {
+                if (!model) return;
+                commit(setAuthorUnsysBranchFields(model, branchId, { observation }));
+              }}
+              onChangePrice={(fromId, toId, price) => {
+                if (!model) return;
+                commit(setAuthorUnsysEdgePrice(model, fromId, toId, price));
+              }}
+              onAddBranch={(parentId) => {
+                if (!model) return;
+                const next = addAuthorUnsysBranch(model, parentId, { title: "New hidden state" });
+                const added = next.branches.find(
+                  (branch) => !model.branches.some((row) => row.id === branch.id),
+                );
+                commit(next, added?.id || parentId);
+              }}
+              onGenerateDeeper={(parentId) => void generate({ parentId })}
+              onRemoveBranch={(branchId) => {
+                if (!model) return;
+                const parentId =
+                  model.branches.find((branch) => branch.id === branchId)?.parentId ||
+                  model.rootId;
+                commit(removeAuthorUnsysBranch(model, branchId), parentId);
+              }}
             />
           </div>
-          {generating ? (
-            <div
-              data-flow-unsys-generating=""
-              aria-busy="true"
-              className="absolute inset-0 z-10 cursor-wait bg-white/5 backdrop-blur-[1px]"
-            />
-          ) : null}
         </div>
-        <aside className="flex max-h-[50vh] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-[#080808] lg:max-h-none lg:w-[18rem] lg:border-l lg:border-t-0">
-          <WorkspaceUnsysSeedInspector
+        {actions ? (
+          <div className="shrink-0 border-t border-white/10 px-4 py-2">{actions}</div>
+        ) : null}
+      </aside>
+
+      <div className="relative min-h-[28rem] min-w-0 flex-1 overflow-hidden lg:min-h-0">
+        <div
+          className={
+            generating
+              ? "pointer-events-none absolute inset-0 select-none"
+              : "absolute inset-0"
+          }
+          inert={generating ? true : undefined}
+        >
+          <WorkspaceUnsysSeedGraph
+            key={`flow-unsys:${graphEpoch}`}
             model={model}
             focusId={focusId}
             disabled={disabled}
-            onChangeTitle={(branchId, title) => {
-              if (!model) return;
-              commit(setAuthorUnsysBranchFields(model, branchId, { title }));
-            }}
-            onChangeQuestion={(branchId, question) => {
-              if (!model) return;
-              commit(setAuthorUnsysBranchFields(model, branchId, { question }));
-            }}
-            onChangeObservation={(branchId, observation) => {
-              if (!model) return;
-              commit(setAuthorUnsysBranchFields(model, branchId, { observation }));
-            }}
-            onChangePrice={(fromId, toId, price) => {
-              if (!model) return;
-              commit(setAuthorUnsysEdgePrice(model, fromId, toId, price));
-            }}
-            onAddBranch={(parentId) => {
-              if (!model) return;
-              const next = addAuthorUnsysBranch(model, parentId, { title: "New hidden state" });
-              const added = next.branches.find(
-                (branch) => !model.branches.some((row) => row.id === branch.id),
-              );
-              commit(next, added?.id || parentId);
-            }}
-            onGenerateDeeper={(parentId) => void generate({ parentId })}
-            onRemoveBranch={(branchId) => {
-              if (!model) return;
-              const parentId =
-                model.branches.find((branch) => branch.id === branchId)?.parentId ||
-                model.rootId;
-              commit(removeAuthorUnsysBranch(model, branchId), parentId);
-            }}
+            onSelect={setFocusId}
           />
-        </aside>
+        </div>
+        {generating ? (
+          <div
+            data-flow-unsys-generating=""
+            aria-busy="true"
+            className="absolute inset-0 z-10 cursor-wait bg-white/5 backdrop-blur-[1px]"
+          />
+        ) : null}
       </div>
     </div>
   );

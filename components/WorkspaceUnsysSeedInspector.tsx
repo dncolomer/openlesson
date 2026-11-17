@@ -12,6 +12,8 @@ export function WorkspaceUnsysSeedInspector({
   model,
   focusId,
   disabled = false,
+  showFieldHints = false,
+  embedded = false,
   onChangeTitle,
   onChangeQuestion,
   onChangeObservation,
@@ -23,6 +25,8 @@ export function WorkspaceUnsysSeedInspector({
   model: SessionBranchModel | null;
   focusId: string;
   disabled?: boolean;
+  showFieldHints?: boolean;
+  embedded?: boolean;
   onChangeTitle: (branchId: string, title: string) => void;
   onChangeQuestion: (branchId: string, question: string) => void;
   onChangeObservation: (branchId: string, observation: string) => void;
@@ -32,10 +36,13 @@ export function WorkspaceUnsysSeedInspector({
   onRemoveBranch: (branchId: string) => void;
 }) {
   const focus = inspectAuthorUnsysFocus(model, focusId);
+  const shellClass = embedded
+    ? "flex flex-col"
+    : "flex min-h-0 flex-1 flex-col overflow-y-auto p-3";
   if (!model || !focus) {
     return (
       <div
-        className="flex min-h-0 flex-1 flex-col p-3"
+        className={embedded ? "flex flex-col" : "flex min-h-0 flex-1 flex-col p-3"}
         data-author-unsys-inspector=""
         data-author-unsys-inspector-empty=""
       />
@@ -46,7 +53,7 @@ export function WorkspaceUnsysSeedInspector({
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3"
+      className={shellClass}
       data-author-unsys-inspector=""
       data-author-unsys-inspector-focus={state.id}
     >
@@ -66,6 +73,11 @@ export function WorkspaceUnsysSeedInspector({
         <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
           Question
         </span>
+        {showFieldHints ? (
+          <span className="text-[11px] leading-relaxed text-neutral-500">
+            The interrogative that belongs to this hidden state.
+          </span>
+        ) : null}
         <textarea
           data-author-unsys-branch-question
           value={state.question}
@@ -79,6 +91,11 @@ export function WorkspaceUnsysSeedInspector({
         <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
           Observation
         </span>
+        {showFieldHints ? (
+          <span className="text-[11px] leading-relaxed text-neutral-500">
+            What you would expect to see if the learner occupies this state.
+          </span>
+        ) : null}
         <textarea
           data-author-unsys-branch-observation
           value={state.observation}

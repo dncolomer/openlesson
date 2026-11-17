@@ -28,6 +28,7 @@ export async function GET(
   return NextResponse.json({
     topic: flow.topic,
     exactProblemOnCanvas: flow.exactProblemOnCanvas,
+    enforcedChannels: flow.enforcedChannels,
     questionCount: flow.questions.length,
     durationMinutes: flow.durationMinutes,
     actionCatalog: flow.actionCatalog,
@@ -66,6 +67,7 @@ export async function POST(
     topics: claimed.choices.topics,
     topic: claimed.flow.topic,
     exactProblemOnCanvas: claimed.flow.exactProblemOnCanvas,
+    enforcedChannels: claimed.flow.enforcedChannels,
   });
   } catch (error) {
     const credits = insufficientCreditsResponse(error);

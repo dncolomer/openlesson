@@ -61,6 +61,13 @@ import { useIleSessionPurity } from "@/components/session-view/use-learn-session
 import { IleInsightTrophyStrip } from "@/components/session-view/learn-insight-trophies";
 import { shouldLogIleSidebarToolSwitch } from "@/lib/learn-work-canvas-pow";
 import { ileTimProgressByTileId } from "@/lib/learn-tim-chapter-complete";
+import { sessionEnforcedChannels } from "@/lib/flow-channels";
+import {
+  mediaStreamLive,
+  museSamplesLive,
+  sessionPurityArmed,
+} from "@/lib/flow-channel-purity";
+import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
 
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
@@ -354,11 +361,13 @@ export function SessionView({
     handleFaceError,
     handleConnectMuse,
     handleDisconnectMuse,
+    eegLastSampleMsRef,
     recordTransferEvent,
     getWorkspaceId,
     logTool,
     logToolRef,
     flushRemainingIlePow,
+    scheduleCanvasPowUpload,
     powSessionEnabled,
     powSessionEnabledRef,
     ilePowContext,
@@ -455,6 +464,14 @@ export function SessionView({
   });
 
   const bumpUserActivityRef = useRef<() => void>(() => {});
+  const enforcedChannels = sessionEnforcedChannels(session?.metadata);
+  const [dictateActive, setDictateActive] = useState(false);
+  const speechCaptureEnabled = isIleSpeechCaptureEnabled({
+    isRecording,
+    isPaused,
+    showWelcomePanel,
+    audioEnforced: enforcedChannels.audio || dictateActive,
+  });
   const { handlePowInterruption, clearPendingInterruption, mapDelay, mapDelayList, beginMapDelay, clearMapDelay } = useSessionIdle({
     activeChapterKey,
     updateChapterWorkspace,
@@ -477,6 +494,7 @@ export function SessionView({
     sessionThoughtInterface,
   } = useSessionSpeech({
     powSessionEnabled,
+    speechCaptureEnabled,
     micMuted: isMuted,
     ilePowContext,
     handlePowInterruption,
@@ -513,6 +531,7 @@ export function SessionView({
     setError,
     setIsSaving,
     whiteboardData,
+    whiteboardDataRef,
     notebookContent,
     handlePauseRef,
     openWorkIdsRef,
@@ -525,6 +544,10 @@ export function SessionView({
     setIsScreenCapturing,
     museStatus,
     screenCaptureRef,
+    captureAudio: enforcedChannels.audio,
+    autoStartMuse: enforcedChannels.muse,
+    autoStartVideo: enforcedChannels.video,
+    autoStartScreenshots: enforcedChannels.screenshots,
   });
 
   const policyRef = useRef(emptySessionPolicySnapshot());
@@ -732,6 +755,9 @@ export function SessionView({
       handleCanvasPowActions={handleCanvasPowActions}
       handleAskCanvasSelection={handleAskCanvasSelection}
       sessionThoughtInterface={sessionThoughtInterface}
+      onDictateActive={setDictateActive}
+      whiteboardPngRef={whiteboardDataRef}
+      scheduleCanvasPowUpload={scheduleCanvasPowUpload}
       activeStep={activeStep}
       activeChapterLabel={activeChapterLabel}
       chapterTitle={learnField?.chapterTitle || ""}
@@ -804,8 +830,22 @@ export function SessionView({
   const handleConfirmEndRef = useRef(handleConfirmEnd);
   handleConfirmEndRef.current = handleConfirmEnd;
   const sessionPurity = useIleSessionPurity({
-    armed: Boolean(session && !showWelcomeModal && !showWelcomePanel && !isSaving),
+    armed: Boolean(
+      session &&
+        !showWelcomeModal &&
+        !showWelcomePanel &&
+        !isSaving &&
+        sessionPurityArmed(enforcedChannels),
+    ),
+    enforcedChannels,
+    getSensorLive: () => ({
+      muse: museSamplesLive({ lastSampleAtMs: eegLastSampleMsRef.current }),
+      video: isWebcamEnabled && !webcamError,
+      screenshots:
+        isScreenCapturing && mediaStreamLive(screenCaptureRef.current?.getStream?.() ?? null),
+    }),
     formingText: sessionThoughtInterface.crystallizableText,
+    getFormingText: sessionThoughtInterface.getFormingText,
     waitingForHelios: sessionThoughtInterface.isSending,
     canvasLoadingRef,
     xaiReplyWaitRef,
@@ -892,6 +932,8 @@ export function SessionView({
 
   return (
     <SessionLiveStage
+      audioEnforced={enforcedChannels.audio}
+      enforcedChannels={enforcedChannels}
       activeStep={activeStep}
       activeTool={activeTool}
       allowEndSession={allowEndSession}

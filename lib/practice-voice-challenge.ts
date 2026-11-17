@@ -420,8 +420,10 @@ export type ScoredTapBriefingChoice = "topic" | null;
 export function scoredTapBriefingStep(input: {
   choice: ScoredTapBriefingChoice;
   challengePassed: boolean;
+  audioEnforced?: boolean;
 }): "pick" | "challenge" | "live" {
   if (input.choice !== "topic") return "pick";
+  if (input.audioEnforced === false) return "live";
   if (!input.challengePassed) return "challenge";
   return "live";
 }
@@ -430,8 +432,10 @@ export function scoredTapBriefingStep(input: {
 export function prepareBriefingStep(input: {
   startConfirmed: boolean;
   challengePassed: boolean;
+  audioEnforced?: boolean;
 }): "confirm" | "challenge" | "live" {
   if (!input.startConfirmed) return "confirm";
+  if (input.audioEnforced === false) return "live";
   if (!input.challengePassed) return "challenge";
   return "live";
 }

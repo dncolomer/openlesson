@@ -12,6 +12,7 @@ import {
 } from "@/lib/product-flow";
 import { flowProblemFromUnknown, parseFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
@@ -176,6 +177,10 @@ export async function POST(
       body.answersModelSeed === undefined && body.answers_model_seed === undefined
         ? undefined
         : parseFlowUnsysSeed(body.answersModelSeed ?? body.answers_model_seed);
+    const enforcedChannels =
+      body.enforcedChannels === undefined && body.enforced_channels === undefined
+        ? undefined
+        : parseFlowEnforcedChannels(body.enforcedChannels ?? body.enforced_channels);
 
     if (loaded.kind === "solve") {
       const updated = await runSolveCommand({
@@ -190,6 +195,7 @@ export async function POST(
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
         answersModelSeed,
+        enforcedChannels,
       });
       if (!updated.ok) return jsonError(400, updated.reason);
       return NextResponse.json({ flow: updated.flow, name: updated.flow?.name });
@@ -208,6 +214,7 @@ export async function POST(
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
         answersModelSeed,
+        enforcedChannels,
       });
       if (!updated.ok) return jsonError(400, updated.reason);
       return NextResponse.json({ flow: updated.flow, name: updated.flow?.name });
@@ -223,6 +230,7 @@ export async function POST(
       exactProblemOnCanvas,
       actionCatalog: body.actionCatalog as number | undefined,
       answersModelSeed,
+      enforcedChannels,
     });
     if (!updated.ok) return jsonError(400, updated.reason);
     return NextResponse.json({ flow: updated.flow, name: updated.flow?.name });

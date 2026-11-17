@@ -21,6 +21,13 @@ export const FLOW_SECONDARY_BTN =
 export const FLOW_GHOST_BTN =
   "console-button inline-flex h-10 items-center justify-center px-4 text-xs font-medium text-neutral-300 transition hover:border-white/80 hover:text-white disabled:opacity-40";
 
+/** Tight controls for the Unsys model step sidebar. */
+export const FLOW_COMPACT_PRIMARY_BTN =
+  "inline-flex h-7 items-center justify-center rounded-none bg-white px-2.5 text-[11px] font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40";
+
+export const FLOW_COMPACT_GHOST_BTN =
+  "console-button inline-flex h-7 items-center justify-center px-2.5 text-[11px] font-medium text-neutral-300 transition hover:border-white/80 hover:text-white disabled:opacity-40";
+
 export const FLOW_DANGER_BTN =
   "console-button inline-flex h-12 items-center justify-center px-6 text-sm font-medium text-red-300 transition hover:border-red-300/70 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40";
 
@@ -31,6 +38,7 @@ export function FlowFormHeader({
   backHref,
   backLabel = "Back to flows",
   extra,
+  compact = false,
 }: {
   kicker?: ReactNode;
   title: string;
@@ -38,9 +46,10 @@ export function FlowFormHeader({
   backHref?: string;
   backLabel?: string;
   extra?: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
+    <div className={`console-copy ${compact ? "px-4 py-4 sm:px-6 sm:py-5" : "px-6 py-7 sm:px-8 sm:py-8"}`}>
       {backHref ? (
         <Link
           href={backHref}
@@ -51,7 +60,7 @@ export function FlowFormHeader({
       ) : null}
       {kicker ? <div className={backHref ? "mt-5" : undefined}>{kicker}</div> : null}
       <h1
-        className={`${backHref || kicker ? "mt-4" : ""} text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl`}
+        className={`${backHref || kicker ? (compact ? "mt-3" : "mt-4") : ""} text-3xl font-medium tracking-[-1.2px] text-white ${compact ? "sm:text-3xl" : "sm:text-4xl"}`}
       >
         {title}
       </h1>

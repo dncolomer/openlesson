@@ -5,6 +5,7 @@ import type { IleWorkCanvasCommandId } from "@/lib/learn-work-canvas-commands";
 
 export type SessionCanvasDictate = {
   transcript: string;
+  getLiveTranscript?: () => string;
   write: (text: string, commit: boolean) => void;
   /** Stop recording and run Do/run on the dictate note. */
   run: (text: string) => void;

@@ -18,6 +18,11 @@ import {
 } from "@/lib/solve-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
 import { parseExactProblemOnCanvas } from "@/lib/product-flow";
+import {
+  parseFlowEnforcedChannels,
+  serializeFlowEnforcedChannels,
+  withEnforcedChannelsMetadata,
+} from "@/lib/flow-channels";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
@@ -85,6 +90,7 @@ function memorySolveSessionRow(input: {
       solve_flow_id: input.flow.id,
       identity: input.identity,
       ...(input.flow.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+      enforcedChannels: serializeFlowEnforcedChannels(input.flow.enforcedChannels),
     },
     created_at: new Date().toISOString(),
   };
@@ -131,6 +137,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
+    enforcedChannels: parseFlowEnforcedChannels(row.enforced_channels),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -189,6 +196,7 @@ async function persistCommand(
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
+      enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -205,6 +213,7 @@ async function persistCommand(
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
+      enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -247,11 +256,14 @@ async function persistCommand(
         kind: "solve",
         projectedPolicy: null,
       },
-      metadata: {
-        title: topic,
-        solve_flow_id: command.flowId,
-        ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-      },
+      metadata: withEnforcedChannelsMetadata(
+        {
+          title: topic,
+          solve_flow_id: command.flowId,
+          ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+        },
+        parseFlowEnforcedChannels(mapped?.enforcedChannels),
+      ),
     });
     if (error) {
       await refundClaimedFlowSession(charged?.billedUserId);
@@ -271,7 +283,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed", "enforced_channels"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

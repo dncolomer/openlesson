@@ -14,6 +14,12 @@ import {
 } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
+import {
+  OPTIONAL_FLOW_ENFORCED_CHANNELS,
+  parseFlowEnforcedChannels,
+  serializeFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 
 export type ProductFlowKind = "verification" | "calibration" | "solve";
 
@@ -23,7 +29,7 @@ export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
 export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
 export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/flows/files";
 
-export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "model", "publish"] as const;
+export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "model", "channels", "publish"] as const;
 
 export type ProductFlowWizardStep = (typeof PRODUCT_FLOW_WIZARD_STEPS)[number];
 
@@ -41,7 +47,21 @@ export type ProductFlowDraft = {
   exactProblemOnCanvas: boolean;
   /** Author unsys seed used when a learner runs this flow. */
   answersModelSeed: AuthorUnsysModelSeed | null;
+  /** Channels the run requires. Audio off leaves the microphone optional. */
+  enforcedChannels: FlowEnforcedChannels;
 };
+
+/** Solve and Verification author enforced sensors. Calibration sounding does not. */
+export function flowAuthorShowsEnforcedChannels(kind: ProductFlowKind): boolean {
+  return kind === "solve" || kind === "verification";
+}
+
+export function productFlowWizardSteps(
+  kind: ProductFlowKind,
+): readonly ProductFlowWizardStep[] {
+  if (kind === "calibration") return ["name", "author", "model", "publish"];
+  return PRODUCT_FLOW_WIZARD_STEPS;
+}
 
 /** Author option on Solve and Verification flows. Calibration has no canvas. */
 export function parseExactProblemOnCanvas(value: unknown): boolean {
@@ -192,6 +212,9 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     durationMinutes: 15,
     exactProblemOnCanvas: false,
     answersModelSeed: null,
+    enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
+      ? parseFlowEnforcedChannels(null)
+      : { ...OPTIONAL_FLOW_ENFORCED_CHANNELS },
   };
 }
 
@@ -233,21 +256,26 @@ export function productFlowWizardCanAdvance(
   if (step === "name") return Boolean(normalizeFlowName(draft.name));
   if (step === "author") return Boolean(productFlowProblem(draft));
   if (step === "model") return Boolean(productFlowProblem(draft));
+  if (step === "channels") return Boolean(productFlowProblem(draft));
   return Boolean(normalizeFlowName(draft.name));
 }
 
 export function nextProductFlowWizardStep(
   step: ProductFlowWizardStep,
+  kind?: ProductFlowKind,
 ): ProductFlowWizardStep {
   if (step === "name") return "author";
   if (step === "author") return "model";
+  if (step === "model") return kind === "calibration" ? "publish" : "channels";
   return "publish";
 }
 
 export function previousProductFlowWizardStep(
   step: ProductFlowWizardStep,
+  kind?: ProductFlowKind,
 ): ProductFlowWizardStep {
-  if (step === "publish") return "model";
+  if (step === "publish") return kind === "calibration" ? "model" : "channels";
+  if (step === "channels") return "model";
   if (step === "model") return "author";
   return "name";
 }
@@ -265,6 +293,7 @@ export type AcceptedProductFlowPublish =
       durationMinutes: number;
       exactProblemOnCanvas: boolean;
       answersModelSeed: AuthorUnsysModelSeed | null;
+      enforcedChannels: FlowEnforcedChannels;
     }
   | { ok: false; reason: string };
 
@@ -281,6 +310,9 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     ? parseExactProblemOnCanvas(draft.exactProblemOnCanvas)
     : false;
   const answersModelSeed = parseFlowUnsysSeed(draft.answersModelSeed);
+  const enforcedChannels = flowAuthorShowsEnforcedChannels(draft.kind)
+    ? serializeFlowEnforcedChannels(draft.enforcedChannels)
+    : { ...OPTIONAL_FLOW_ENFORCED_CHANNELS };
   if (draft.kind === "calibration") {
     return {
       ok: true,
@@ -294,6 +326,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       durationMinutes,
       exactProblemOnCanvas: false,
       answersModelSeed,
+      enforcedChannels,
     };
   }
   if (draft.kind === "solve") {
@@ -309,6 +342,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       durationMinutes,
       exactProblemOnCanvas,
       answersModelSeed,
+      enforcedChannels,
     };
   }
   return {
@@ -323,6 +357,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     durationMinutes,
     exactProblemOnCanvas,
     answersModelSeed,
+    enforcedChannels,
   };
 }
 

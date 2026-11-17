@@ -36,6 +36,7 @@ import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
 
 export type SessionSpeechInput = {
   powSessionEnabled: boolean;
+  speechCaptureEnabled?: boolean;
   micMuted?: boolean;
   ilePowContext: {
     workspaceId?: string;
@@ -70,6 +71,7 @@ export type SessionSpeechInput = {
 export function useSessionSpeech(input: SessionSpeechInput) {
   const {
     powSessionEnabled,
+    speechCaptureEnabled = powSessionEnabled,
     micMuted = false,
     ilePowContext,
     handlePowInterruption,
@@ -114,7 +116,7 @@ const {
   flushSpeechSegment,
   resetSpeechTracking,
 } = useTapSpeechProofOfWork(
-  powSessionEnabled,
+  speechCaptureEnabled,
   ilePowContext,
   handleSpeechInterruption,
   ILE_POW_API_PATHS.speech,
@@ -249,7 +251,7 @@ const mutateActiveProjectThoughts = useCallback(
 );
 
 const sessionThoughtInterface = useSessionThoughtInterface({
-  enabled: powSessionEnabled && !micMuted && !(isProjectMode && chapterThoughtsLocked),
+  enabled: speechCaptureEnabled && !micMuted && !(isProjectMode && chapterThoughtsLocked),
   speechLang: sessionSpeechLang,
   sessionId,
   contextAutoStash: true,
@@ -312,7 +314,7 @@ const handleProjectDemote = useCallback(
 );
 
   const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
-    powSessionEnabled,
+    speechCaptureEnabled,
     ilePowContext,
     handleIdleInterruption,
     {

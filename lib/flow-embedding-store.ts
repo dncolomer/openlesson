@@ -47,6 +47,7 @@ export type PersistFlowEmbeddingInput = {
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
+  audioEnforced?: boolean;
   raw?: unknown;
   id?: string;
 };
@@ -160,6 +161,7 @@ export async function persistCompletedFlowEmbedding(
         model: input.model,
         sequence: input.sequence,
         pow: input.pow,
+        audioEnforced: input.audioEnforced,
       });
   const stored: StoredFlowEmbedding = {
     id: text(input.id) || makeId(),

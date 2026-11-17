@@ -46,6 +46,7 @@ import {
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasLiveVersionSignature,
+  ileWorkCanvasPersistSignature,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasZoomAtPoint,
@@ -130,6 +131,8 @@ export interface ExcalidrawCanvasProps {
    * onto the canvas as it arrives.
    */
   dictateTranscript?: string;
+  /** Live think-aloud text without re-rendering the board on every speech tick. */
+  getLiveTranscript?: () => string;
   /**
    * Fires when Dictate is turned on or off. Omitted callers keep the
    * existing transcript feed and do not start a recognizer from this button.
@@ -175,6 +178,7 @@ export function ExcalidrawCanvas({
   onLearnerWaitChange,
   craftInsight = null,
   dictateTranscript,
+  getLiveTranscript,
   onDictateActive,
   replaceScene = null,
   replaceSceneNonce = null,
@@ -250,6 +254,7 @@ export function ExcalidrawCanvas({
   const scenePersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isExportingRef = useRef(false);
   const lastPersistedSceneJsonRef = useRef("");
+  const lastPersistedSignatureRef = useRef("");
   const lastPngExportSignatureRef = useRef("");
   const userClearedRef = useRef(false);
   const centeredOnOpenRef = useRef(false);
@@ -678,7 +683,8 @@ export function ExcalidrawCanvas({
       userClearedRef.current = false;
       flushPendingApply();
     }
-  }, [initialSceneData, flushPendingApply]);
+    // boardId remounts the scene. Parent identity churn (pan/speech) must not.
+  }, [boardId, flushPendingApply]);
 
   const exportToPNG = useCallback(async (): Promise<string | null> => {
     const api = excalidrawAPIRef.current;
@@ -781,6 +787,9 @@ export function ExcalidrawCanvas({
       if (scenePersistTimeoutRef.current) clearTimeout(scenePersistTimeoutRef.current);
       scenePersistTimeoutRef.current = setTimeout(() => {
         if (!sceneData) return;
+        const persistSig = ileWorkCanvasPersistSignature(sceneData);
+        if (persistSig === lastPersistedSignatureRef.current) return;
+        lastPersistedSignatureRef.current = persistSig;
         const json = JSON.stringify(sceneData);
         if (json === lastPersistedSceneJsonRef.current) return;
         lastPersistedSceneJsonRef.current = json;
@@ -1002,6 +1011,7 @@ export function ExcalidrawCanvas({
             craftInsight={craftInsight}
             setCraftInsightOpen={setCraftInsightOpen}
             dictateTranscript={dictateTranscript}
+            getLiveTranscript={getLiveTranscript}
             viewModeEnabled={viewModeEnabled}
             writeDictatedText={writeDictatedText}
             autoLayoutEnabled={autoLayoutEnabled}

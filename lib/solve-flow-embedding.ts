@@ -16,6 +16,7 @@ export async function persistSolveCompletedEmbedding(input: {
   model?: SessionBranchModel | null;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
+  audioEnforced?: boolean;
 }): Promise<StoredFlowEmbedding> {
   return persistCompletedFlowEmbedding({
     ownerUserId: input.ownerUserId,
@@ -28,5 +29,6 @@ export async function persistSolveCompletedEmbedding(input: {
     model: input.model ?? null,
     sequence: input.sequence ?? null,
     pow: input.pow ?? [],
+    audioEnforced: input.audioEnforced,
   });
 }

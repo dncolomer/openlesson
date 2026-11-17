@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { practiceVoiceChallengeLocalSkipAllowed } from "@/lib/practice-voice-challenge";
 import {
+  DEFAULT_FLOW_ENFORCED_CHANNELS,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
+import {
+  anySensorChannelEnforced,
+  emptyFlowChannelLive,
+  enforcedSensorChannelsMissing,
+  shouldPenalizeEnforcedChannelIdle,
+  type FlowChannelLive,
+} from "@/lib/flow-channel-purity";
+import {
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
   isSessionPurityDepleted,
@@ -24,16 +35,27 @@ function learnPurityDisabledOnLocalhost(): boolean {
 export function useIleSessionPurity(input: {
   armed: boolean;
   formingText: string;
+  getFormingText?: () => string;
   waitingForHelios: boolean;
   canvasLoadingRef: { current: boolean };
   xaiReplyWaitRef: { current: boolean };
   stashCurrentTranscription: (options?: { auto?: boolean; fromContext?: boolean }) => void;
   onDepleted: () => void;
+  enforcedChannels?: FlowEnforcedChannels;
+  getSensorLive?: () => FlowChannelLive;
+  skipLocal?: boolean;
 }) {
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
-  const [localSkip] = useState(learnPurityDisabledOnLocalhost);
+  const [localSkip] = useState(() =>
+    input.skipLocal === false ? false : learnPurityDisabledOnLocalhost(),
+  );
   const lastSpeechActivityAtRef = useRef(Date.now());
+  const lastSensorOkAtRef = useRef(Date.now());
+  const enforcedChannelsRef = useRef(input.enforcedChannels ?? DEFAULT_FLOW_ENFORCED_CHANNELS);
+  const getSensorLiveRef = useRef(input.getSensorLive);
+  enforcedChannelsRef.current = input.enforcedChannels ?? DEFAULT_FLOW_ENFORCED_CHANNELS;
+  getSensorLiveRef.current = input.getSensorLive;
   const autoStashInFlightRef = useRef(false);
   const isSendingRef = useRef(false);
   const prevHadTextRef = useRef(false);
@@ -45,7 +67,7 @@ export function useIleSessionPurity(input: {
   onDepletedRef.current = input.onDepleted;
   stashRef.current = input.stashCurrentTranscription;
   isSendingRef.current = input.waitingForHelios;
-  formingTextRef.current = input.formingText;
+  formingTextRef.current = input.getFormingText?.() ?? input.formingText;
 
   const applyPurityHit = useCallback(() => {
     setSessionPurity((current) => {
@@ -63,6 +85,7 @@ export function useIleSessionPurity(input: {
   useEffect(() => {
     if (input.waitingForHelios) {
       lastSpeechActivityAtRef.current = Date.now();
+      lastSensorOkAtRef.current = Date.now();
       autoStashInFlightRef.current = false;
     }
   }, [input.waitingForHelios]);
@@ -93,6 +116,7 @@ export function useIleSessionPurity(input: {
     const tick = window.setInterval(() => {
       if (isWithinTapPurityGrace(liveEnteredAt)) {
         lastSpeechActivityAtRef.current = Date.now();
+        lastSensorOkAtRef.current = Date.now();
         return;
       }
       if (
@@ -103,9 +127,33 @@ export function useIleSessionPurity(input: {
         })
       ) {
         lastSpeechActivityAtRef.current = Date.now();
+        lastSensorOkAtRef.current = Date.now();
         autoStashInFlightRef.current = false;
         return;
       }
+      const channels = enforcedChannelsRef.current;
+      if (anySensorChannelEnforced(channels)) {
+        const live = getSensorLiveRef.current?.() ?? emptyFlowChannelLive();
+        const missing = enforcedSensorChannelsMissing(channels, live);
+        if (missing.length === 0) {
+          lastSensorOkAtRef.current = Date.now();
+        } else if (
+          shouldPenalizeEnforcedChannelIdle(
+            Date.now() - lastSensorOkAtRef.current,
+            missing.length,
+            TAP_SILENCE_AUTO_STASH_MS,
+          ) &&
+          !autoStashInFlightRef.current
+        ) {
+          autoStashInFlightRef.current = true;
+          applyPurityHit();
+          lastSensorOkAtRef.current = Date.now();
+          autoStashInFlightRef.current = false;
+          return;
+        }
+      }
+      if (!channels.audio) return;
+      formingTextRef.current = input.getFormingText?.() ?? formingTextRef.current;
       const silenceMs = Date.now() - lastSpeechActivityAtRef.current;
       const hasTranscript = Boolean(formingTextRef.current.trim());
 

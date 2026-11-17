@@ -43,6 +43,8 @@ import { SessionWorkSurface } from "@/components/session-view/session-work-surfa
 import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { TapProductKind } from "@/lib/tap-session-runtime";
+import type { FlowEnforcedChannels } from "@/lib/flow-channels";
+import type { FlowChannelLive } from "@/lib/flow-channel-purity";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
@@ -94,6 +96,10 @@ export function TapScorePhases(props: {
   verificationToken?: string | null;
   exactProblemOnCanvas?: boolean;
   canvasProblem?: string | null;
+  audioEnforced?: boolean;
+  enforcedChannels?: FlowEnforcedChannels;
+  onChannelLive?: (live: FlowChannelLive) => void;
+  getLiveTranscript?: () => string;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
   durationLocked: boolean;
   aestheticPackages: AestheticPackage[];
@@ -238,6 +244,10 @@ export function TapScorePhases(props: {
     sendCanvasAsk,
     onLearnerWaitChange,
     onImDoneBusyChange,
+    audioEnforced = true,
+    enforcedChannels,
+    onChannelLive,
+    getLiveTranscript,
   } = props;
 
   const [pendingStart, setPendingStart] = useState<{ topic: TapStartingTopic } | null>(null);
@@ -275,8 +285,12 @@ export function TapScorePhases(props: {
   }, [phase]);
 
   function chooseTopic(topic: TapStartingTopic) {
-    const step = scoredTapBriefingStep({ choice: "topic", challengePassed: false });
-    if (step === "challenge") setPendingStart({ topic });
+    const step = scoredTapBriefingStep({
+      choice: "topic",
+      challengePassed: false,
+      audioEnforced,
+    });
+    if (step === "challenge" || step === "live") setPendingStart({ topic });
   }
 
   function passTapChallenge() {
@@ -301,7 +315,23 @@ export function TapScorePhases(props: {
   const briefingStep = scoredTapBriefingStep({
     choice: pendingStart ? "topic" : null,
     challengePassed: false,
+    audioEnforced,
   });
+
+  useEffect(() => {
+    if (phase !== "briefing" || briefingStep !== "live" || !pendingStart) return;
+    if (passGuard.current) return;
+    passGuard.current = true;
+    const run = startSession(pendingStart.topic);
+    void Promise.resolve(run).then((result) => {
+      const release = releaseVoiceChallengeStartLatch({
+        startSucceeded: voiceChallengeStartSucceeded(result),
+      });
+      if (!release.release) return;
+      passGuard.current = false;
+      setChallengeAttempt((attempt) => attempt + 1);
+    });
+  }, [briefingStep, pendingStart, phase, startSession]);
 
   useEffect(() => {
     if (phase !== "live") {
@@ -628,6 +658,7 @@ export function TapScorePhases(props: {
                     onCanvasPowActions={handleCanvasPowActions}
                     onAskSelected={handleAskSelected}
                     dictateTranscript={crystallizableText}
+                    getLiveTranscript={getLiveTranscript}
                     sessionMarkMode={kind === "verify" ? "verification" : undefined}
                     sessionMarkListKey={
                       kind === "verify"
@@ -693,7 +724,13 @@ export function TapScorePhases(props: {
                   }
                 />
               }
-              signals={<TapSessionSignals captureAudio />}
+              signals={
+                <TapSessionSignals
+                  captureAudio={audioEnforced}
+                  enforcedChannels={enforcedChannels}
+                  onLiveChange={onChannelLive}
+                />
+              }
               focusLabel={kind === "verify" ? null : "Stash"}
               focus={
                 kind === "verify" ? (

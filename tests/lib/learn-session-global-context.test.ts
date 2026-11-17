@@ -229,7 +229,7 @@ describe("TAP Learning single-canvas context store", () => {
     const canvas = readExcalidrawSurface();
     expect(canvas).toContain("initialSceneDataRef = useRef(");
     expect(canvas).toContain("ileWorkCanvasWithScrollToContent(next)");
-    expect(canvas).toContain("sanitizeSceneData(scene)");
+    expect(canvas).toContain("sanitizeSceneData(");
 
     const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
     expect(view).toContain("activeChapterKey={activeChapterKey}");

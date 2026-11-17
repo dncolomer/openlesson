@@ -44,6 +44,7 @@ export async function POST(
     model: sessionBranchModelFromUnknown(body.model),
     sequence,
     pow: parsePow(body.pow),
+    audioEnforced: access.flow.enforcedChannels.audio,
   });
   if (playCopy && access.workspaceId) {
     const admin = createAdminClient();

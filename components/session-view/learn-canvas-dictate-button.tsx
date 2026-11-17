@@ -38,6 +38,7 @@ function dictateButtonClass(
 
 export function IleCanvasDictateButton({
   transcript,
+  getLiveTranscript,
   onLiveText,
   onCommit,
   onRun,
@@ -48,6 +49,7 @@ export function IleCanvasDictateButton({
   index = "07",
 }: {
   transcript: string;
+  getLiveTranscript?: () => string;
   /** Writes the transcript onto the canvas as recognition updates. */
   onLiveText: (text: string) => void;
   /** Stop. The canvas records the finished transcript as proof of work. */
@@ -68,18 +70,38 @@ export function IleCanvasDictateButton({
   const captureRef = useRef<IleDictateCapture | null>(null);
   const onLiveTextRef = useRef(onLiveText);
   onLiveTextRef.current = onLiveText;
+  const liveTranscriptRef = useRef(getLiveTranscript);
+  liveTranscriptRef.current = getLiveTranscript;
 
   useEffect(() => {
     if (!captureRef.current) return;
-    const advanced = advanceIleDictateCapture(captureRef.current, transcript);
+    const advanced = advanceIleDictateCapture(
+      captureRef.current,
+      liveTranscriptRef.current?.() ?? transcript,
+    );
     captureRef.current = advanced.capture;
     onLiveTextRef.current(advanced.text);
   }, [transcript]);
 
+  useEffect(() => {
+    if (!dictating || !getLiveTranscript) return;
+    const tick = window.setInterval(() => {
+      if (!captureRef.current) return;
+      const next = liveTranscriptRef.current?.() ?? "";
+      const advanced = advanceIleDictateCapture(captureRef.current, next);
+      captureRef.current = advanced.capture;
+      onLiveTextRef.current(advanced.text);
+    }, 400);
+    return () => window.clearInterval(tick);
+  }, [dictating, getLiveTranscript]);
+
   const closeCapture = () => {
     if (!captureRef.current) return "";
     const text = ileDictateCaptureText(
-      noteIleDictateTranscript(captureRef.current, transcript),
+      noteIleDictateTranscript(
+        captureRef.current,
+        liveTranscriptRef.current?.() ?? transcript,
+      ),
     );
     captureRef.current = null;
     setDictating(false);

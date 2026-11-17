@@ -7,6 +7,7 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   DASHBOARD_FLOWS_PATH,
   flowAuthorShowsCountdown,
+  flowAuthorShowsEnforcedChannels,
   productFlowDashboardPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
@@ -24,6 +25,11 @@ import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields
 import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
+import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
+import {
+  parseFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 
@@ -39,6 +45,7 @@ type LoadedFlow = {
   publicToken: string;
   workspaceId: string;
   answersModelSeed?: AuthorUnsysModelSeed | null;
+  enforcedChannels?: FlowEnforcedChannels;
 };
 
 
@@ -56,6 +63,9 @@ export function ProductFlowPage({
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
   const [answersModelSeed, setAnswersModelSeed] = useState<AuthorUnsysModelSeed | null>(null);
+  const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
+    () => parseFlowEnforcedChannels(null),
+  );
   const [minutes, setMinutes] = useState(15);
   const [publicUrl, setPublicUrl] = useState("");
   const [error, setError] = useState("");
@@ -78,6 +88,7 @@ export function ProductFlowPage({
     setArtifacts(parseFlowArtifacts(next.artifacts));
     setExactProblemOnCanvas(Boolean(next.exactProblemOnCanvas));
     setAnswersModelSeed(parseFlowUnsysSeed(next.answersModelSeed));
+    setEnforcedChannels(parseFlowEnforcedChannels(next.enforcedChannels));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setPublicUrl(String(payload.publicUrl || ""));
   }, [flowId, kind]);
@@ -101,6 +112,9 @@ export function ProductFlowPage({
           exactProblemOnCanvas,
           durationMinutes: minutes,
           answersModelSeed,
+          enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
+            ? enforcedChannels
+            : undefined,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -233,6 +247,12 @@ export function ProductFlowPage({
               onBusyChange={setModelBusy}
             />
           </section>
+
+          {flowAuthorShowsEnforcedChannels(kind) ? (
+            <section className="space-y-3" data-flow-channels-editor="">
+              <FlowChannelsFields value={enforcedChannels} onChange={setEnforcedChannels} />
+            </section>
+          ) : null}
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button

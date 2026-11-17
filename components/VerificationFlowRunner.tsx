@@ -6,6 +6,11 @@ import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { verificationQuestionStartingPrompt } from "@/lib/verification-flow";
+import {
+  DEFAULT_FLOW_ENFORCED_CHANNELS,
+  parseFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 
 type Phase = "identity" | "pick" | "empty";
 
@@ -17,6 +22,9 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [presetTopics, setPresetTopics] = useState<TapStartingTopic[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(15);
+  const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
+    DEFAULT_FLOW_ENFORCED_CHANNELS,
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -64,6 +72,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       setTopic(String(payload.topic || ""));
       setExactProblemOnCanvas(payload.exactProblemOnCanvas === true);
       setDurationMinutes(flowCountdownMinutes(payload.durationMinutes));
+      setEnforcedChannels(parseFlowEnforcedChannels(payload.enforcedChannels));
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -106,6 +115,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           verificationToken={token}
           exactProblemOnCanvas={exactProblemOnCanvas}
           canvasProblem={topic}
+          enforcedChannels={enforcedChannels}
           initialMinutes={durationMinutes}
           lockDuration
           onLocalProof={storeProof}

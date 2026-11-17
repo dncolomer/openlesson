@@ -82,12 +82,22 @@ export function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor 
  * TAP Learning thought-interface speech is armed only while the learner is in an
  * active monitoring session (recording, not paused, onboarding not covering Helios).
  */
-export function isIleSpeechCaptureEnabled(input: {
+export function isIleSessionLive(input: {
   isRecording: boolean;
   isPaused: boolean;
   showWelcomePanel: boolean;
 }): boolean {
   return input.isRecording && !input.isPaused && !input.showWelcomePanel;
+}
+
+export function isIleSpeechCaptureEnabled(input: {
+  isRecording: boolean;
+  isPaused: boolean;
+  showWelcomePanel: boolean;
+  audioEnforced?: boolean;
+}): boolean {
+  if (input.audioEnforced === false) return false;
+  return isIleSessionLive(input);
 }
 
 /** Exported for lifecycle unit tests (Chrome needs a beat before re-start). */
@@ -100,11 +110,22 @@ function normalize(text: string) {
 /** Errors that end a turn but should not surface as permanent mic failures. */
 const BENIGN_SPEECH_RECOGNITION_ERRORS = new Set(["aborted", "no-speech"]);
 
+/** Chrome often ends a long session with `network`. Back off instead of a 280ms loop. */
+const TRANSIENT_SPEECH_RECOGNITION_ERRORS = new Set(["network", "aborted", "no-speech"]);
+
+export const SPEECH_RESTART_BACKOFF_MS = [280, 1_000, 2_000, 5_000, 15_000] as const;
+export const SPEECH_NETWORK_RETRY_MAX = 8;
+
 /** Delay before restarting after onend — Chrome often rejects immediate start(). */
 const SPEECH_RESTART_DELAY_MS = SPEECH_RESTART_DELAY_MS_FOR_TESTS;
 
 export function shouldReportSpeechRecognitionError(error?: string) {
-  return !!error && !BENIGN_SPEECH_RECOGNITION_ERRORS.has(error);
+  return !!error && !TRANSIENT_SPEECH_RECOGNITION_ERRORS.has(error);
+}
+
+export function speechRestartDelayMs(attempt: number): number {
+  const index = Math.max(0, Math.min(SPEECH_RESTART_BACKOFF_MS.length - 1, Math.floor(attempt)));
+  return SPEECH_RESTART_BACKOFF_MS[index] ?? SPEECH_RESTART_DELAY_MS;
 }
 
 export function isFatalSpeechRecognitionError(error?: string) {
@@ -157,6 +178,8 @@ export type LiveSpeechRecognitionBindings = {
   shouldListenRef: MutableRefObject<boolean>;
   /** Pending delayed restart after onend (Chrome needs a beat before start()). */
   restartTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  /** Consecutive transient restarts. Reset on a successful onstart. */
+  restartAttemptRef?: MutableRefObject<number>;
   /** BCP-47 language for recreating the recognizer after a hard failure. */
   langRef: MutableRefObject<string>;
   onResult: (event: SpeechRecognitionEventLike) => void;
@@ -173,6 +196,15 @@ function clearSpeechRestartTimer(bindings: LiveSpeechRecognitionBindings) {
 
 function scheduleSpeechRestart(bindings: LiveSpeechRecognitionBindings, recognition: SpeechRecognitionLike) {
   clearSpeechRestartTimer(bindings);
+  const attempt = bindings.restartAttemptRef?.current ?? 0;
+  if (attempt >= SPEECH_NETWORK_RETRY_MAX) {
+    bindings.shouldListenRef.current = false;
+    bindings.onListeningChange(false);
+    bindings.onError("network");
+    return;
+  }
+  const delay = speechRestartDelayMs(attempt);
+  if (bindings.restartAttemptRef) bindings.restartAttemptRef.current = attempt + 1;
   bindings.restartTimerRef.current = setTimeout(() => {
     bindings.restartTimerRef.current = null;
     if (!bindings.shouldListenRef.current) return;
@@ -187,13 +219,9 @@ function scheduleSpeechRestart(bindings: LiveSpeechRecognitionBindings, recognit
         bindings.onError(null);
         return;
       }
-      // Instance may be dead — rebuild a fresh recognizer.
-      disposeSpeechRecognition(recognition, bindings);
-      if (bindings.shouldListenRef.current) {
-        startLiveSpeechRecognition(bindings, bindings.langRef.current);
-      }
+      scheduleSpeechRestart(bindings, recognition);
     }
-  }, SPEECH_RESTART_DELAY_MS);
+  }, delay);
 }
 
 function attachLiveSpeechRecognitionHandlers(
@@ -203,6 +231,7 @@ function attachLiveSpeechRecognitionHandlers(
   recognition.onresult = bindings.onResult;
   recognition.onstart = () => {
     if (bindings.recognitionRef.current !== recognition) return;
+    if (bindings.restartAttemptRef) bindings.restartAttemptRef.current = 0;
     bindings.onListeningChange(true);
     bindings.onError(null);
   };
@@ -412,6 +441,8 @@ export function useSessionThoughtInterface({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartAttemptRef = useRef(0);
+  const textPublishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const langRef = useRef(speechLang);
   const finalBufferRef = useRef<string[]>([]);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -496,17 +527,30 @@ export function useSessionThoughtInterface({
       recognitionRef,
       shouldListenRef,
       restartTimerRef,
+      restartAttemptRef,
       langRef,
       onResult: (event) => {
         speechResultsLengthRef.current = event.results.length;
+        const consumed = consumedResultsIndexRef.current;
+        const sessionReset =
+          consumed > 0 &&
+          (event.results.length === 0 ||
+            consumed > event.results.length ||
+            (event.resultIndex === 0 && event.results.length < consumed));
+        if (sessionReset) consumedResultsIndexRef.current = 0;
+        const start = Math.max(event.resultIndex, consumedResultsIndexRef.current);
         const finals: string[] = [];
         let interim = "";
-        for (let i = 0; i < event.results.length; i += 1) {
+        for (let i = start; i < event.results.length; i += 1) {
           const result = event.results[i];
           const transcript = normalize(result[0]?.transcript || "");
           if (!transcript) continue;
-          if (result.isFinal) finals.push(transcript);
-          else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
+          if (result.isFinal) {
+            finals.push(transcript);
+            consumedResultsIndexRef.current = i + 1;
+          } else {
+            interim = normalize(`${interim} ${transcript}`);
+          }
         }
         finalBufferRef.current = finals;
         const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
@@ -520,10 +564,14 @@ export function useSessionThoughtInterface({
           return;
         }
         acceptEmptyTranscriptRef.current = false;
-        setInterimText(interim);
         crystallizableTextRef.current = displayText;
-        setCrystallizableText(displayText);
         onSpeechTranscriptRef.current?.(displayText);
+        if (textPublishTimerRef.current) return;
+        textPublishTimerRef.current = setTimeout(() => {
+          textPublishTimerRef.current = null;
+          setInterimText(normalize(crystallizableTextRef.current));
+          setCrystallizableText(crystallizableTextRef.current);
+        }, 400);
       },
       onListeningChange: setIsListening,
       onError: setSpeechError,

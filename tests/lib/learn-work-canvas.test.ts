@@ -136,6 +136,7 @@ import {
   ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasIncomingClearsLiveScene,
   ileWorkCanvasLiveVersionSignature,
+  ileWorkCanvasPersistSignature,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasWorkspaceFromChatBody,
   ileWorkCanvasViewportToHost,
@@ -768,6 +769,7 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("IleLaserToolbarSlot");
     expect(canvas).toContain("data-ile-toolbar-laser");
     expect(canvas).toContain("ileWorkCanvasLiveVersionSignature");
+    expect(canvas).toContain("ileWorkCanvasPersistSignature");
     expect(canvas).toContain("lastPngExportSignatureRef");
     const laserSlot = read("components/excalidraw-canvas/laser-toolbar-slot.tsx");
     expect(laserSlot).toContain("requestAnimationFrame");
@@ -1910,6 +1912,12 @@ describe("TAP Learning Work canvas user delete stays empty (shipped)", () => {
       ileWorkCanvasLiveVersionSignature(
         live.elements.map((el) => ({ ...el, versionNonce: (el.versionNonce || 0) + 1 })),
       ),
+    );
+    expect(ileWorkCanvasPersistSignature(live)).toBe(
+      ileWorkCanvasPersistSignature({
+        elements: live.elements,
+        files: live.files,
+      }),
     );
 
     const canvas = read("components/ExcalidrawCanvas.tsx");

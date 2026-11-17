@@ -43,6 +43,8 @@ export type SessionOnboardingGuideProps = {
    */
   insightGoalCount?: number;
   className?: string;
+  /** When false, skip the speak-aloud gate. Map Learn and legacy flows keep the default. */
+  audioEnforced?: boolean;
 };
 
 const STEP1_ILE_GRID_PAN_VIDEO = "/animations/grid_pan.mp4";
@@ -166,6 +168,7 @@ export function SessionOnboardingGuide({
   step1VideoSrc = STEP1_ILE_GRID_PAN_VIDEO,
   insightGoalCount = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   className = "",
+  audioEnforced = true,
 }: SessionOnboardingGuideProps) {
   const [step, setStep] = useState(0);
   const lang = language ?? "en";
@@ -173,6 +176,23 @@ export function SessionOnboardingGuide({
   const insightCount = clampIleMinInsightsPerChapter(insightGoalCount);
 
   if (variant === "ile" && showStartAction && !renderStep3Action) {
+    if (audioEnforced === false) {
+      return (
+        <div
+          data-ile-voice-challenge=""
+          data-ile-voice-optional=""
+          className={`flex h-full min-h-0 w-full flex-1 items-center justify-center bg-[#0b0b0b] px-6 ${className}`}
+        >
+          <button
+            type="button"
+            className="border border-white bg-white px-6 py-3 text-sm font-semibold text-black"
+            onClick={() => onStart?.()}
+          >
+            Start
+          </button>
+        </div>
+      );
+    }
     return (
       <div
         data-ile-voice-challenge=""

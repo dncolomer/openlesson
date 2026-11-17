@@ -70,7 +70,7 @@ export function WorkspaceUnsysSeedGraph({
   onSelect?: (id: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 720, height: 480 });
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [positions, setPositions] = useState<Record<string, AuthorUnsysGraphPoint>>(
     {},
   );
@@ -113,9 +113,12 @@ export function WorkspaceUnsysSeedGraph({
       setPositions({});
       return;
     }
-    setPositions((current) =>
-      seedAuthorUnsysPositions(model, size.width, size.height, current),
-    );
+    if (size.width < 8 || size.height < 8) return;
+    setPositions((current) => {
+      const missing = model.branches.some((branch) => !current[branch.id]);
+      if (!missing) return current;
+      return seedAuthorUnsysPositions(model, size.width, size.height, current);
+    });
   }, [model, size.height, size.width]);
 
   const edges = useMemo(() => (model ? pricedEdges(model) : []), [model]);
@@ -253,6 +256,7 @@ export function WorkspaceUnsysSeedGraph({
       data-author-unsys-graph
       data-author-unsys-graph-infinite=""
       data-learning-model-canvas="2d"
+      style={{ overflowAnchor: "none" }}
       onPointerDown={onBackgroundPointerDown}
     >
       <div

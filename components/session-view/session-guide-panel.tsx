@@ -135,6 +135,7 @@ export function SessionGuidePanel({
               plate
               index={dictateIndex}
               transcript={bridge?.dictate?.transcript ?? ""}
+              getLiveTranscript={bridge?.dictate?.getLiveTranscript}
               onLiveText={(text) => bridge?.dictate?.write(text, false)}
               onCommit={(text) => bridge?.dictate?.write(text, true)}
               onRun={(text) => bridge?.dictate?.run(text)}

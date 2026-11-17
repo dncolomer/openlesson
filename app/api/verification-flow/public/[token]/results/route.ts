@@ -26,6 +26,7 @@ export async function POST(
     flowKind: "verify",
     model: policy?.model ?? null,
     sequence: policy?.sequence ?? null,
+    audioEnforced: flow?.enforcedChannels.audio,
     pow: [
       {
         type: source === "runner" ? "speech" : "tool",
@@ -63,6 +64,7 @@ export async function POST(
       identity: saved.result.identity,
       source,
       raw: embedding.raw,
+      audioEnforced: flow?.enforcedChannels.audio,
     });
   }
   return NextResponse.json({

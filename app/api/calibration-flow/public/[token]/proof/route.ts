@@ -44,6 +44,7 @@ export async function POST(
       model: sessionBranchModelFromUnknown(body.model),
       catalogSize: body.catalogSize ?? flow.actionCatalog,
       sequence: null,
+      audioEnforced: flow.enforcedChannels.audio,
       pow: [
         {
           type: "tool",

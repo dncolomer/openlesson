@@ -26,6 +26,10 @@ import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { acceptParticipantIdentity } from "@/lib/verification-flow";
 import { archiveFlowStamp, publicInviteClaimReason } from "@/lib/flow-archive";
+import {
+  OPTIONAL_FLOW_ENFORCED_CHANNELS,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
 
 export type CalibrationFlow = {
   id: string;
@@ -41,6 +45,7 @@ export type CalibrationFlow = {
   /** 4, 8, or 16 actions on the unsys model. */
   actionCatalog: LearningModelSize;
   answersModelSeed?: AuthorUnsysModelSeed | null;
+  enforcedChannels: FlowEnforcedChannels;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -149,6 +154,7 @@ export type CalibrationCommand =
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
+      enforcedChannels?: unknown;
       id?: string;
       publicToken?: string;
     }
@@ -166,6 +172,7 @@ export type CalibrationCommand =
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
+      enforcedChannels?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
@@ -255,6 +262,7 @@ export function applyCalibrationCommand(
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
+      enforcedChannels: { ...OPTIONAL_FLOW_ENFORCED_CHANNELS },
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -299,6 +307,7 @@ export function applyCalibrationCommand(
           ? parseLearningModelSize(current.actionCatalog)
           : parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(current.answersModelSeed, command.answersModelSeed),
+      enforcedChannels: { ...OPTIONAL_FLOW_ENFORCED_CHANNELS },
       updatedAt: nowIso(),
     };
     return {

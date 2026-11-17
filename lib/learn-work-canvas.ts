@@ -108,6 +108,7 @@ export {
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasLiveVersionSignature,
+  ileWorkCanvasPersistSignature,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasIncomingClearsLiveScene,
   BOARD_INSTRUCTION_NOTE_KEY,

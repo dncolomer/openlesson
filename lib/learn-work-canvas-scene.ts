@@ -718,6 +718,15 @@ export function ileWorkCanvasLiveVersionSignature(
   return out;
 }
 
+/** Scene persist identity: live marks + file ids. Pan/zoom/hover do not change it. */
+export function ileWorkCanvasPersistSignature(
+  scene: { elements?: readonly IleWorkCanvasElement[] | null; files?: Record<string, unknown> | null } | null | undefined,
+): string {
+  const live = ileWorkCanvasLiveVersionSignature(scene?.elements);
+  const files = scene?.files ? Object.keys(scene.files).sort().join(",") : "";
+  return `${live}|${files}`;
+}
+
 /**
  * Mount-only empty recovery. After the learner has cleared a live board,
  * do not paste the previous scene back.

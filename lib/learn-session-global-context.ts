@@ -249,6 +249,18 @@ export function evictIleChapterHeavyPayload(workspace: IleSessionContext): IleSe
   };
 }
 
+/** sessionStorage must not hold PNG data URLs; scene JSON is enough to restore. */
+export function ileSessionContextForStorage(
+  map: IleSessionContextMap,
+): IleSessionContextMap {
+  const out: IleSessionContextMap = {};
+  for (const [id, row] of Object.entries(map)) {
+    if (!row) continue;
+    out[id] = { ...row, whiteboardData: null };
+  }
+  return out;
+}
+
 export function boundIleSessionLiveState(
   map: IleSessionContextMap,
   focusedChapterId: string | null | undefined,

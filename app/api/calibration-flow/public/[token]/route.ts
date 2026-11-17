@@ -28,6 +28,7 @@ export async function GET(
     goal: flow.goal,
     questionCount: flow.questions.length,
     durationMinutes: flow.durationMinutes,
+    enforcedChannels: flow.enforcedChannels,
     actionCatalog: flow.actionCatalog,
     verificationRun: false,
   });
@@ -56,6 +57,7 @@ export async function POST(
       flowId: claimed.flow.id,
       goal: claimed.flow.goal,
       durationMinutes: claimed.flow.durationMinutes,
+      enforcedChannels: claimed.flow.enforcedChannels,
       actionCatalog: claimed.flow.actionCatalog,
       questions: claimed.flow.questions,
     });

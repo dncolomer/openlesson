@@ -13,6 +13,7 @@ import {
   ileChapterCanvasInitialScene,
   ileLegacyChapterWorkspacesStorageKey,
   ileSessionContextStorageKey,
+  ileSessionContextForStorage,
   parseIleSessionContextStored,
   persistIleChapterColdWorkspace,
   hydrateIleFocusedChapterLiveState,
@@ -69,14 +70,17 @@ export function useSessionChapterWorkspaces(
   useEffect(() => {
     if (!chapterWorkspacesLoaded) return;
     if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(
-        ileSessionContextStorageKey(sessionId),
-        JSON.stringify(coldContextRef.current),
-      );
-    } catch {
-      /* Session storage can fail on quota, especially with canvas data. */
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        window.sessionStorage.setItem(
+          ileSessionContextStorageKey(sessionId),
+          JSON.stringify(ileSessionContextForStorage(coldContextRef.current)),
+        );
+      } catch {
+        /* Session storage can fail on quota, especially with canvas data. */
+      }
+    }, 1500);
+    return () => window.clearTimeout(timer);
   }, [sessionContext, chapterWorkspacesLoaded, sessionId]);
 
   const activeStep = frame ? sessionPlan?.steps?.[frame.index] : undefined;

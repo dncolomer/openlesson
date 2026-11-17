@@ -152,8 +152,15 @@ export function buildGatedIleEegUploadItem(
 }
 
 export function hashIlePowContent(value: string): string {
-  let hash = 0;
-  for (let i = 0; i < value.length; i++) {
+  let hash = value.length;
+  if (value.length <= 4096) {
+    for (let i = 0; i < value.length; i++) {
+      hash = (hash * 31 + value.charCodeAt(i)) | 0;
+    }
+    return String(hash);
+  }
+  const step = Math.max(1, Math.floor(value.length / 2048));
+  for (let i = 0; i < value.length; i += step) {
     hash = (hash * 31 + value.charCodeAt(i)) | 0;
   }
   return String(hash);

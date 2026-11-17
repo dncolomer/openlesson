@@ -244,6 +244,13 @@ describe("a pass is required before TAP Learning, TAP, Prepare, and rest unlock"
     expect(scoredTapBriefingStep({ choice: null, challengePassed: false })).toBe("pick");
     expect(scoredTapBriefingStep({ choice: "topic", challengePassed: false })).toBe("challenge");
     expect(scoredTapBriefingStep({ choice: "topic", challengePassed: true })).toBe("live");
+    expect(
+      scoredTapBriefingStep({
+        choice: "topic",
+        challengePassed: false,
+        audioEnforced: false,
+      }),
+    ).toBe("live");
 
     expect(prepareBriefingStep({ startConfirmed: false, challengePassed: false })).toBe("confirm");
     expect(prepareBriefingStep({ startConfirmed: true, challengePassed: false })).toBe("challenge");
@@ -557,8 +564,9 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(phases).toContain("onConfirm={confirmStart}");
     expect(phases).toContain("data-calibrate-start");
     expect(phases).toContain("<CalibrateSoundingSurface");
-    expect(runner).toContain("PracticeVoiceChallenge");
-    expect(runner).toContain("data-calibrate-voice-challenge");
+    expect(runner).not.toContain("PracticeVoiceChallenge");
+    expect(runner).not.toContain("data-calibrate-voice-challenge");
+    expect(runner).toContain("data-calibrate-voice-optional");
     expect(scoutThinkAloudEnabled()).toBe(false);
     expect(phases).toContain("scoutThinkAloudEnabled()");
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);

@@ -40,12 +40,17 @@ Each key is a single full-access token.
 | Method | Path | MCP tool | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | `list_flows` | Owner-scoped list. Query `kind=`, `workspace_id=`. |
-| `POST` | `/` | `create_flow` | Independent flow. Optional `workspace_id`. |
+| `POST` | `/` | `create_flow` | Independent flow. Optional `workspace_id`. Wizard fields: `topic`, `artifacts` / `files`, `answers_model_seed` / `generate_unsys`, `exact_problem_on_canvas`, `enforced_channels`, `duration_minutes`. |
+| `POST` | `/files` | `upload_flow_file` | Upload Problem-context file. |
+| `POST` | `/unsys-seed` | `generate_flow_unsys_seed` | Generate Unsys model from Problem + artifacts. |
 | `GET` | `/{flow_id}` | `get_flow` | Read one flow. |
 | `PATCH` | `/{flow_id}` | `update_flow` | Update. |
 | `DELETE` | `/{flow_id}` | `delete_flow` | Hard delete. |
-| `POST` | `/{flow_id}/link` | `link_flow` | Body `{ workspace_id, block_id }`. |
 
-Nested `/api/v3/workspaces/{workspace_id}/flows` still creates or lists flows on that map.
+## Knowledge regions (base `/api/v3/knowledge-regions`)
+
+| Method | Path | MCP tool | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/{knowledge_region_id}/candidates/{candidate_id}` | `get_knowledge_region_candidate` | Closed render payload for one candidate. Query `space=` (`path` default, e.g. `path+audio`). |
 
 Interactive reference: `/docs/learning-map-api`. Skill: `/skill.md`.

@@ -7,6 +7,7 @@ import {
 } from "@/lib/pow-api/agent-flow-management";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   const result = await authenticateRequest(req, "workspaces:read");

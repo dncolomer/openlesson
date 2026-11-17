@@ -1,12 +1,15 @@
 /**
  * Single inventory of public agent tools (MCP tools/list + REST twins).
- * One family: independent Solve / Calibration / Verification flow management.
- * Learning Maps, workspaces, Helios map tools, headless proof-of-work,
- * Snapshot, and Stash are not public agent APIs.
+ * Families: independent Solve / Calibration / Verification flow management
+ * and knowledge-region candidate render. Learning Maps, workspaces, Helios
+ * map tools, headless proof-of-work, Snapshot, and Stash are not public.
  */
 
 import {
   FLOW_API_BASE,
+  FLOW_FILES_API_PATH,
+  FLOW_UNSYS_SEED_API_PATH,
+  KNOWLEDGE_REGION_API_BASE,
   type PublicAgentApiFamily,
 } from "@/lib/api/agent-api-paths";
 import {
@@ -47,6 +50,28 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
+    name: "upload_flow_file",
+    family: "flow",
+    scope: "workspaces:write",
+    summary:
+      "Upload a Problem-context file (PDF, text, image) and get an artifact pointer for create_flow / update_flow.",
+    rest: {
+      method: "POST",
+      path: FLOW_FILES_API_PATH,
+    },
+  },
+  {
+    name: "generate_flow_unsys_seed",
+    family: "flow",
+    scope: "workspaces:write",
+    summary:
+      "Generate the Unsys model for a flow from the Problem, artifacts, and optional guidance (wizard model step).",
+    rest: {
+      method: "POST",
+      path: FLOW_UNSYS_SEED_API_PATH,
+    },
+  },
+  {
     name: "get_flow",
     family: "flow",
     scope: "workspaces:read",
@@ -74,6 +99,17 @@ export const AGENT_TOOL_SURFACE = [
     rest: {
       method: "DELETE",
       path: `${FLOW_API_BASE}/{flow_id}`,
+    },
+  },
+  {
+    name: "get_knowledge_region_candidate",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary:
+      "Render metrics for one candidate in a knowledge region: unsys distance, cluster L2, path and pairwise L2.",
+    rest: {
+      method: "GET",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}`,
     },
   },
 ] as const satisfies readonly AgentToolSurfaceEntry[];

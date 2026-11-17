@@ -67,6 +67,8 @@ function restPathToRouteFile(path: string): string {
     .replace(/\{session_id\}/g, "[sessionId]")
     .replace(/\{flow_id\}/g, "[flowId]")
     .replace(/\{block_id\}/g, "[blockId]")
+    .replace(/\{knowledge_region_id\}/g, "[id]")
+    .replace(/\{candidate_id\}/g, "[candidateId]")
     .replace(/\{id\}/g, "[id]");
   // Collection GET /workspaces has no trailing resource
   if (
@@ -94,9 +96,9 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     expect(agentToolNames()).not.toContain("list_map_tools");
     expect(agentToolNames()).not.toContain("apply_map_tool");
     expect(agentToolNames()).toContain("create_flow");
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow"]);
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow", "knowledge_region"]);
     for (const tool of AGENT_TOOL_SURFACE) {
-      expect(tool.family).toBe("flow");
+      expect(["flow", "knowledge_region"]).toContain(tool.family);
       const routeFile = restPathToRouteFile(tool.rest.path);
       expect(existsSync(routeFile), `${tool.name} → ${tool.rest.path} missing ${routeFile}`).toBe(
         true,
@@ -172,9 +174,12 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     for (const name of [
       "list_flows",
       "create_flow",
+      "upload_flow_file",
+      "generate_flow_unsys_seed",
       "get_flow",
       "update_flow",
       "delete_flow",
+      "get_knowledge_region_candidate",
     ] as const) {
       expect(mcpNames.has(name)).toBe(true);
     }

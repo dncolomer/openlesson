@@ -14,6 +14,11 @@ import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
+import {
+  mixFlowEmbeddingSpace,
+  parseFlowEmbeddingChannelVectors,
+  type FlowEmbeddingChannelVectors,
+} from "@/lib/flow-embedding-space";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
 const FLOW_EMBEDDING_GLOBAL = "__openlessonFlowEmbeddingStore";
@@ -30,6 +35,8 @@ export type StoredFlowEmbedding = {
   embedding_model_id: typeof FLOW_EMBEDDING_MODEL_ID;
   dim: typeof FLOW_EMBEDDING_DIM;
   vector: number[];
+  vector_path_text?: number[];
+  channel_vectors: FlowEmbeddingChannelVectors;
   raw: FlowEmbeddingRaw;
   created_at: string;
 };
@@ -108,9 +115,15 @@ function text(value: unknown): string {
 function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
   const raw = recoverFlowEmbeddingRaw(row.raw);
   if (!raw) return null;
+  const embedded = embedFlowOutput(raw);
+  const storedChannels = parseFlowEmbeddingChannelVectors(row.channel_vectors);
   const vector = Array.isArray(row.vector)
     ? row.vector.filter((value): value is number => typeof value === "number" && Number.isFinite(value))
     : [];
+  const channel_vectors = storedChannels ?? {
+    ...embedded.channel_vectors,
+    path: vector.length === FLOW_EMBEDDING_DIM ? vector : embedded.vector,
+  };
   const kind = raw.flowKind;
   return {
     id: String(row.id),
@@ -123,7 +136,9 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
     source: row.source ? String(row.source) : null,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
-    vector: vector.length === FLOW_EMBEDDING_DIM ? vector : embedFlowOutput(raw).vector,
+    vector: channel_vectors.path,
+    vector_path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
+    channel_vectors,
     raw,
     created_at: String(row.created_at || new Date().toISOString()),
   };
@@ -131,18 +146,34 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
 
 export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedding {
   const recovered = recoverFlowEmbeddingRaw(row.raw);
+  const storedChannels = parseFlowEmbeddingChannelVectors(row.channel_vectors);
+  if (storedChannels) {
+    return {
+      ...row,
+      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+      dim: FLOW_EMBEDDING_DIM,
+      vector: storedChannels.path,
+      vector_path_text: mixFlowEmbeddingSpace(storedChannels, "path+audio"),
+      channel_vectors: storedChannels,
+      raw: recovered ?? row.raw,
+    };
+  }
   if (!recovered) {
     return {
       ...row,
       embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
       dim: FLOW_EMBEDDING_DIM,
+      channel_vectors: row.channel_vectors ?? { path: row.vector },
     };
   }
+  const embedded = embedFlowOutput(recovered);
   return {
     ...row,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
-    vector: embedFlowOutput(recovered).vector,
+    vector: embedded.vector,
+    vector_path_text: embedded.vector_path_text,
+    channel_vectors: embedded.channel_vectors,
     raw: recovered,
   };
 }
@@ -175,6 +206,8 @@ export async function persistCompletedFlowEmbedding(
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: record.vector,
+    vector_path_text: record.vector_path_text,
+    channel_vectors: record.channel_vectors,
     raw: record.raw,
     created_at: new Date().toISOString(),
   };
@@ -204,14 +237,24 @@ export async function persistCompletedFlowEmbedding(
     embedding_model_id: stored.embedding_model_id,
     dim: stored.dim,
     vector: stored.vector,
+    channel_vectors: stored.channel_vectors,
     raw: stored.raw,
     created_at: stored.created_at,
   };
   const { error } = await supabase.from("session_embeddings").insert(row);
   if (error) {
-    if (String(error.message).includes("owner_user_id") && "owner_user_id" in row) {
-      const retry = { ...row };
+    const retry = { ...row };
+    const message = String(error.message);
+    let dropped = false;
+    if (message.includes("owner_user_id") && "owner_user_id" in retry) {
       delete retry.owner_user_id;
+      dropped = true;
+    }
+    if (message.includes("channel_vectors") && "channel_vectors" in retry) {
+      delete retry.channel_vectors;
+      dropped = true;
+    }
+    if (dropped) {
       const second = await supabase.from("session_embeddings").insert(retry);
       if (second.error) throw new Error(second.error.message);
       return stored;

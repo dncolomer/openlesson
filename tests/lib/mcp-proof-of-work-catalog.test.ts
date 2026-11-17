@@ -5,16 +5,19 @@ import { AGENT_TOOL_SURFACE } from "@/lib/pow-api/agent-tool-surface";
 
 describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
   it("exposes only independent flow management", () => {
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow"]);
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow", "knowledge_region"]);
     const families = new Set(AGENT_TOOL_SURFACE.map((t) => t.family));
-    expect([...families]).toEqual(["flow"]);
+    expect([...families]).toEqual(["flow", "knowledge_region"]);
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
     expect(names).toEqual([
       "list_flows",
       "create_flow",
+      "upload_flow_file",
+      "generate_flow_unsys_seed",
       "get_flow",
       "update_flow",
       "delete_flow",
+      "get_knowledge_region_candidate",
     ]);
     expect(names).not.toContain("create_workspace");
     expect(names).not.toContain("list_map_tools");
@@ -28,6 +31,10 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
   it("documents REST twins for flow management, not Snapshot/Stash or sessions", () => {
     const createFlow = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "create_flow");
     expect(createFlow?.rest.path).toBe("/api/v3/flows");
+    const upload = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "upload_flow_file");
+    expect(upload?.rest.path).toBe("/api/v3/flows/files");
+    const unsys = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "generate_flow_unsys_seed");
+    expect(unsys?.rest.path).toBe("/api/v3/flows/unsys-seed");
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((t) => t.name);
     expect(names).not.toContain("link_flow");
     expect(names).not.toContain("apply_map_tool");

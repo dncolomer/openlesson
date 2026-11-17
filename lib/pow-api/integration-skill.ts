@@ -289,7 +289,7 @@ Required content:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
 4. Current flow list from the current status.
-5. Quick checklist: list_flows → create_flow → get_flow → update_flow.
+5. Quick checklist: list_flows → upload_flow_file (optional) → generate_flow_unsys_seed (optional) → create_flow → get_flow → update_flow.
 
 ${statusSection}
 

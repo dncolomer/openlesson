@@ -156,9 +156,11 @@ describe("flow authoring: name + Problem + artifacts", () => {
 
   it("uploads flow artifacts through org-scoped xAI Files", () => {
     const route = read("app/api/dashboard/flows/files/route.ts");
-    expect(route).toContain("uploadOrgScopedXaiFile");
+    const helper = read("lib/flow-artifact-upload.ts");
+    expect(route).toContain("uploadFlowArtifactBytes");
     expect(route).not.toMatch(/uploadFileToXAI\(/);
-    expect(route).toContain("organizationIdFromUser");
+    expect(helper).toContain("uploadOrgScopedXaiFile");
+    expect(helper).toContain("organizationIdFromUser");
     expect(parseFlowArtifacts([ARTIFACT, { name: "bad" }])).toEqual([ARTIFACT]);
   });
 });

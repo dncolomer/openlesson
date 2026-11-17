@@ -14,9 +14,12 @@ export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — Solve, Calibration, and Verification flow management with REST parity.
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — flow management and knowledge-region candidate render with REST parity.
 
 Create, list, update, and delete independent Solve, Calibration, and Verification flows. REST: /api/v3/flows.
+Wizard options on create_flow / update_flow: topic (Problem), artifacts / files, answers_model_seed or generate_unsys, exact_problem_on_canvas, enforced_channels.
+Upload context files with upload_flow_file. Generate the Unsys model with generate_flow_unsys_seed.
+Read one candidate in a knowledge region. REST: /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}.
 
 Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent tools.
 

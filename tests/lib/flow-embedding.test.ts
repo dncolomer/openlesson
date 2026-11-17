@@ -10,8 +10,13 @@ import {
   flowEmbeddingModelIdForChannel,
   recoverFlowEmbeddingRaw,
   reembedFlowRaw,
+  vectorForFlowSpace,
   vectorsMatch,
 } from "@/lib/flow-embedding";
+import {
+  mixFlowEmbeddingSpace,
+  parseFlowEmbeddingSpace,
+} from "@/lib/flow-embedding-space";
 import { cosineSimilarity } from "@/lib/knowledge-config/math";
 import {
   persistCompletedFlowEmbedding,
@@ -145,6 +150,62 @@ describe("flowcfg-v1-d96 embeddings", () => {
     ).toBeGreaterThan(0);
     expect(otherModel.raw.genModel.chapterTitle).toBe("Priced");
   });
+
+  it("names spaces from basis channels and mixes path+audio as Path+Text", () => {
+    expect(parseFlowEmbeddingSpace(null)).toEqual({
+      ok: true,
+      space: "path",
+      channels: ["path"],
+    });
+    expect(parseFlowEmbeddingSpace("path_text")).toEqual({
+      ok: true,
+      space: "path+audio",
+      channels: ["path", "audio"],
+    });
+    const sorted = parseFlowEmbeddingSpace("path+eeg+audio");
+    expect(sorted.ok && sorted.space).toBe("path+audio+eeg");
+    const voice = parseFlowEmbeddingSpace("voice");
+    expect(voice.ok && voice.space).toBe("path+audio");
+    expect(parseFlowEmbeddingSpace("path+foo").ok).toBe(false);
+    const spoken = completeFlowEmbedding({
+      flowKind: "verify",
+      model,
+      sequence: ["r1"],
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
+    });
+    expect(spoken.channel_vectors.path).toEqual(spoken.vector);
+    expect(spoken.channel_vectors.audio).toBeTruthy();
+    expect(
+      vectorsMatch(vectorForFlowSpace(spoken, "path+audio"), spoken.vector_path_text),
+    ).toBe(true);
+    expect(vectorsMatch(reembedFlowRaw(spoken.raw, "path+audio"), spoken.vector_path_text)).toBe(
+      true,
+    );
+    const silent = completeFlowEmbedding({
+      flowKind: "verify",
+      model,
+      sequence: ["r1"],
+      pow: [{ type: "tool", tool_name: "session_policy", tool_action: "r1", timestamp_ms: 1 }],
+    });
+    expect(silent.channel_vectors.audio).toBeUndefined();
+    expect(vectorForFlowSpace(silent, "path+audio")).toEqual(silent.vector);
+    const withEeg = completeFlowEmbedding({
+      flowKind: "verify",
+      model,
+      sequence: ["r1"],
+      pow: [
+        { type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" },
+        { type: "eeg", tool_name: "muse", timestamp_ms: 2, payload: "band-alpha" },
+      ],
+    });
+    expect(withEeg.channel_vectors.eeg).toBeTruthy();
+    const twoExtra = mixFlowEmbeddingSpace(withEeg.channel_vectors, "path+audio+eeg");
+    expect(twoExtra).not.toEqual(withEeg.vector);
+    expect(twoExtra).not.toEqual(withEeg.vector_path_text);
+    expect(
+      existsSync(join(ROOT, "supabase/migrations/20261118120000_session_embedding_channel_vectors.sql")),
+    ).toBe(true);
+  });
 });
 
 describe("flow embedding store", () => {
@@ -175,6 +236,7 @@ describe("flow embedding store", () => {
     const got = await getFlowEmbedding({ workspaceId: "ws-flow", embeddingId: stored.id });
     expect(got?.raw).toEqual(stored.raw);
     expect(vectorsMatch(reembedFlowRaw(got!.raw), stored.vector)).toBe(true);
+    expect(stored.channel_vectors.path).toEqual(stored.vector);
   });
 
   it("allows a workspace-only persist in memory", async () => {

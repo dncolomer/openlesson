@@ -17,12 +17,36 @@ import {
   listCalibrationFlowsForOwnerUserId,
   runCalibrationCommand,
 } from "@/lib/calibration-flow-repository";
-import { parseProductFlowKind, type ProductFlowKind } from "@/lib/product-flow";
+import {
+  acceptProductFlowPublish,
+  emptyProductFlowDraft,
+  parseExactProblemOnCanvas,
+  parseProductFlowKind,
+  type ProductFlowKind,
+} from "@/lib/product-flow";
 import {
   parseFlowArtifacts,
   flowProblemFromUnknown,
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
+import {
+  resolveFlowArtifactsFromBody,
+  uploadFlowArtifactBytes,
+} from "@/lib/flow-artifact-upload";
+import {
+  OPTIONAL_FLOW_ENFORCED_CHANNELS,
+  parseFlowEnforcedChannels,
+  serializeFlowEnforcedChannels,
+  type FlowEnforcedChannels,
+} from "@/lib/flow-channels";
+import {
+  flowUnsysSeedFromModel,
+  serializeFlowUnsysSeed,
+} from "@/lib/flow-unsys-seed";
+import {
+  generateFlowUnsysSeedFromBody,
+  runProductFlowUnsysGenerate,
+} from "@/lib/flow-unsys-generate";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import {
   getSolveFlowById,
@@ -52,6 +76,12 @@ export type PresentedAgentFlow = {
   artifacts: FlowArtifact[];
   duration_minutes: number | null;
   action_catalog: number | null;
+  /** Solve / Verification: seed the Work canvas with the Problem as written. */
+  exact_problem_on_canvas: boolean;
+  /** Author Unsys seed used when a learner runs this flow. */
+  answers_model_seed: Record<string, unknown> | null;
+  /** Channels the run requires. Calibration is always all-off. */
+  enforced_channels: FlowEnforcedChannels;
   public_token: string;
   workspace_id: string | null;
   owner_user_id: string | null;
@@ -88,6 +118,28 @@ function questionsFrom(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function presentWizardFields(flow: {
+  kind: AgentFlowKind;
+  exactProblemOnCanvas?: boolean;
+  answersModelSeed?: unknown;
+  enforcedChannels?: unknown;
+}): Pick<
+  PresentedAgentFlow,
+  "exact_problem_on_canvas" | "answers_model_seed" | "enforced_channels"
+> {
+  return {
+    exact_problem_on_canvas:
+      flow.kind === "calibration"
+        ? false
+        : parseExactProblemOnCanvas(flow.exactProblemOnCanvas),
+    answers_model_seed: serializeFlowUnsysSeed(flow.answersModelSeed),
+    enforced_channels:
+      flow.kind === "calibration"
+        ? { ...OPTIONAL_FLOW_ENFORCED_CHANNELS }
+        : serializeFlowEnforcedChannels(flow.enforcedChannels),
+  };
+}
+
 function presentSolve(flow: {
   id: string;
   name: string;
@@ -95,6 +147,9 @@ function presentSolve(flow: {
   artifacts?: FlowArtifact[];
   durationMinutes: number;
   actionCatalog: number;
+  exactProblemOnCanvas?: boolean;
+  answersModelSeed?: unknown;
+  enforcedChannels?: unknown;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
@@ -111,6 +166,7 @@ function presentSolve(flow: {
     artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes,
     action_catalog: flow.actionCatalog,
+    ...presentWizardFields({ kind: "solve", ...flow }),
     public_token: flow.publicToken,
     workspace_id: presentWorkspaceId(flow.workspaceId),
     owner_user_id: flow.ownerUserId || null,
@@ -128,6 +184,8 @@ function presentCalibration(flow: {
   artifacts?: FlowArtifact[];
   durationMinutes: number;
   actionCatalog: number;
+  answersModelSeed?: unknown;
+  enforcedChannels?: unknown;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
@@ -144,6 +202,7 @@ function presentCalibration(flow: {
     artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes,
     action_catalog: flow.actionCatalog,
+    ...presentWizardFields({ kind: "calibration", ...flow }),
     public_token: flow.publicToken,
     workspace_id: presentWorkspaceId(flow.workspaceId),
     owner_user_id: flow.ownerUserId || null,
@@ -160,6 +219,9 @@ function presentVerification(flow: {
   artifacts?: FlowArtifact[];
   durationMinutes?: number;
   actionCatalog: number;
+  exactProblemOnCanvas?: boolean;
+  answersModelSeed?: unknown;
+  enforcedChannels?: unknown;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
@@ -176,12 +238,37 @@ function presentVerification(flow: {
     artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes ?? null,
     action_catalog: flow.actionCatalog,
+    ...presentWizardFields({ kind: "verification", ...flow }),
     public_token: flow.publicToken,
     workspace_id: presentWorkspaceId(flow.workspaceId),
     owner_user_id: flow.ownerUserId || null,
     created_at: flow.createdAt,
     updated_at: flow.updatedAt,
   };
+}
+
+function publishReason(reason: string): string {
+  if (reason === "name_required") return "name is required";
+  if (reason === "topic_required") return "topic is required";
+  return reason;
+}
+
+function optionalNumber(primary: unknown, fallback: unknown): number | undefined {
+  if (primary === undefined && fallback === undefined) return undefined;
+  const value = Number(primary ?? fallback);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function optionalBoolean(primary: unknown, fallback: unknown): boolean | undefined {
+  if (primary === undefined && fallback === undefined) return undefined;
+  return parseExactProblemOnCanvas(primary ?? fallback);
+}
+
+function wantsGenerateUnsys(body: Record<string, unknown>): boolean {
+  const raw = body.generate_unsys ?? body.generateUnsys;
+  if (raw === true || raw === 1) return true;
+  if (typeof raw === "string") return raw.trim().toLowerCase() === "true";
+  return false;
 }
 
 export function parseAgentFlowKind(value: unknown): AgentFlowKind | null {
@@ -253,6 +340,32 @@ export async function getAgentFlow(
   return presented;
 }
 
+export async function uploadAgentFlowFile(
+  auth: AuthContext,
+  body: Record<string, unknown>,
+): Promise<FlowArtifact> {
+  const owner = ownerUserId(auth);
+  const workspaceId = optionalWorkspaceId(body.workspace_id || body.workspaceId);
+  return uploadFlowArtifactBytes({
+    fileName: String(body.fileName ?? body.file_name ?? body.name ?? ""),
+    mimeType: String(body.mimeType ?? body.mime_type ?? ""),
+    data: String(body.data ?? body.base64 ?? ""),
+    userId: owner,
+    workspaceId,
+  });
+}
+
+export async function generateAgentFlowUnsysSeed(
+  body: Record<string, unknown>,
+): Promise<{ model: unknown; answers_model_seed: Record<string, unknown> | null }> {
+  const result = await runProductFlowUnsysGenerate(body);
+  if (!result.ok) throw new Error(result.error);
+  return {
+    model: result.model,
+    answers_model_seed: serializeFlowUnsysSeed(flowUnsysSeedFromModel(result.model)),
+  };
+}
+
 export async function createAgentFlow(
   auth: AuthContext,
   workspaceId: string | null | undefined,
@@ -267,33 +380,54 @@ export async function createAgentFlow(
     optionalWorkspaceId(workspaceId) ||
     optionalWorkspaceId(body.workspace_id || body.workspaceId);
   const name = String(body.name || "").trim();
-  const topic = flowProblemFromUnknown({ ...body, topic: body.topic || name }) || name;
-  const goal = topic;
-  const artifacts = parseFlowArtifacts(body.artifacts);
-  const durationMinutes =
-    typeof body.duration_minutes === "number"
-      ? body.duration_minutes
-      : typeof body.durationMinutes === "number"
-        ? body.durationMinutes
-        : undefined;
-  const actionCatalog =
-    typeof body.action_catalog === "number"
-      ? body.action_catalog
-      : typeof body.actionCatalog === "number"
-        ? body.actionCatalog
-        : undefined;
+  const problem = flowProblemFromUnknown(body);
+  const artifacts = await resolveFlowArtifactsFromBody({
+    artifacts: body.artifacts,
+    files: body.files,
+    userId: owner,
+    workspaceId: mapId,
+  });
+  const answersModelSeed = await generateFlowUnsysSeedFromBody({
+    ...body,
+    kind,
+    artifacts,
+    problem: problem || name,
+    topic: problem || name,
+    goal: problem || name,
+    name,
+  });
+  const draft = {
+    ...emptyProductFlowDraft(kind),
+    name,
+    topic: problem,
+    goal: problem,
+    artifacts,
+    actionCatalog: optionalNumber(body.action_catalog, body.actionCatalog) ?? 4,
+    durationMinutes: optionalNumber(body.duration_minutes, body.durationMinutes) ?? 15,
+    exactProblemOnCanvas: parseExactProblemOnCanvas(
+      body.exact_problem_on_canvas ?? body.exactProblemOnCanvas,
+    ),
+    answersModelSeed,
+    enforcedChannels: parseFlowEnforcedChannels(
+      body.enforced_channels ?? body.enforcedChannels,
+    ),
+  };
+  const accepted = acceptProductFlowPublish(draft);
+  if (!accepted.ok) throw new Error(publishReason(accepted.reason));
 
   if (kind === "solve") {
-    if (!topic) throw new Error("topic is required for Solve flows");
     const created = await runSolveCommand({
       type: "create",
       ownerUserId: owner,
       workspaceId: mapId,
-      name: name || topic,
-      topic,
-      artifacts,
-      durationMinutes,
-      actionCatalog,
+      name: accepted.name,
+      topic: accepted.topic,
+      artifacts: accepted.artifacts,
+      exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+      durationMinutes: accepted.durationMinutes,
+      actionCatalog: accepted.actionCatalog,
+      answersModelSeed: accepted.answersModelSeed,
+      enforcedChannels: accepted.enforcedChannels,
     });
     if (!created.ok || !created.flow) {
       throw new Error(created.ok ? "create_failed" : created.reason);
@@ -302,17 +436,18 @@ export async function createAgentFlow(
   }
 
   if (kind === "calibration") {
-    if (!goal) throw new Error("topic is required for Calibration flows");
     const created = await runCalibrationCommand({
       type: "create",
       ownerUserId: owner,
       workspaceId: mapId,
-      name: name || goal,
-      goal,
-      topic,
-      artifacts,
-      durationMinutes,
-      actionCatalog,
+      name: accepted.name,
+      goal: accepted.goal,
+      topic: accepted.topic,
+      artifacts: accepted.artifacts,
+      durationMinutes: accepted.durationMinutes,
+      actionCatalog: accepted.actionCatalog,
+      answersModelSeed: accepted.answersModelSeed,
+      enforcedChannels: accepted.enforcedChannels,
     });
     if (!created.ok || !created.flow) {
       throw new Error(created.ok ? "create_failed" : created.reason);
@@ -320,16 +455,18 @@ export async function createAgentFlow(
     return presentCalibration(created.flow);
   }
 
-  if (!topic) throw new Error("topic is required for Verification flows");
   const created = await runVerificationCommand({
     type: "create",
     ownerUserId: owner,
     workspaceId: mapId,
-    name: name || topic,
-    topic,
-    artifacts,
-    durationMinutes,
-    actionCatalog,
+    name: accepted.name,
+    topic: accepted.topic,
+    artifacts: accepted.artifacts,
+    exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+    durationMinutes: accepted.durationMinutes,
+    actionCatalog: accepted.actionCatalog,
+    answersModelSeed: accepted.answersModelSeed,
+    enforcedChannels: accepted.enforcedChannels,
   });
   if (!created.ok || !created.flow) {
     throw new Error(created.ok ? "create_failed" : created.reason);
@@ -351,15 +488,39 @@ export async function updateAgentFlow(
     body.problem === undefined && body.topic === undefined && body.goal === undefined
       ? undefined
       : flowProblemFromUnknown(body);
-  const artifacts = body.artifacts === undefined ? undefined : parseFlowArtifacts(body.artifacts);
-  const durationMinutes =
-    body.duration_minutes === undefined && body.durationMinutes === undefined
+  const artifacts =
+    body.artifacts === undefined && body.files === undefined
       ? undefined
-      : Number(body.duration_minutes ?? body.durationMinutes);
-  const actionCatalog =
-    body.action_catalog === undefined && body.actionCatalog === undefined
+      : await resolveFlowArtifactsFromBody({
+          artifacts: body.artifacts !== undefined ? body.artifacts : existing.artifacts,
+          files: body.files,
+          userId: owner,
+          workspaceId: existing.workspace_id,
+        });
+  const durationMinutes = optionalNumber(body.duration_minutes, body.durationMinutes);
+  const actionCatalog = optionalNumber(body.action_catalog, body.actionCatalog);
+  const exactProblemOnCanvas = optionalBoolean(
+    body.exact_problem_on_canvas,
+    body.exactProblemOnCanvas,
+  );
+  const answersModelSeed =
+    body.answers_model_seed === undefined &&
+    body.answersModelSeed === undefined &&
+    !wantsGenerateUnsys(body)
       ? undefined
-      : Number(body.action_catalog ?? body.actionCatalog);
+      : await generateFlowUnsysSeedFromBody({
+          ...body,
+          kind: existing.kind,
+          artifacts: artifacts ?? existing.artifacts,
+          problem: problem || existing.topic || existing.goal || existing.name,
+          topic: problem || existing.topic || existing.name,
+          goal: problem || existing.goal || existing.topic || existing.name,
+          name: name || existing.name,
+        });
+  const enforcedChannels =
+    body.enforced_channels === undefined && body.enforcedChannels === undefined
+      ? undefined
+      : parseFlowEnforcedChannels(body.enforced_channels ?? body.enforcedChannels);
 
   if (existing.kind === "solve") {
     const updated = await runSolveCommand({
@@ -370,8 +531,11 @@ export async function updateAgentFlow(
       name,
       topic: problem,
       artifacts,
+      exactProblemOnCanvas,
       durationMinutes,
       actionCatalog,
+      answersModelSeed,
+      enforcedChannels,
     });
     if (!updated.ok || !updated.flow) {
       throw new Error(updated.ok ? "update_failed" : updated.reason);
@@ -391,6 +555,8 @@ export async function updateAgentFlow(
       artifacts,
       durationMinutes,
       actionCatalog,
+      answersModelSeed,
+      enforcedChannels,
     });
     if (!updated.ok || !updated.flow) {
       throw new Error(updated.ok ? "update_failed" : updated.reason);
@@ -406,8 +572,11 @@ export async function updateAgentFlow(
     name,
     topic: problem,
     artifacts,
+    exactProblemOnCanvas,
     durationMinutes,
     actionCatalog,
+    answersModelSeed,
+    enforcedChannels,
   });
   if (!updated.ok || !updated.flow) {
     throw new Error(updated.ok ? "update_failed" : updated.reason);

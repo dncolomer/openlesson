@@ -1,6 +1,9 @@
 /**
- * Public agent REST family (v3):
+ * Public agent REST families (v3):
  *   - Independent Solve / Calibration / Verification flows `/api/v3/flows`
+ *     (create/update match the dashboard wizard: problem, artifacts, files,
+ *     unsys seed, exact problem on canvas, enforced channels)
+ *   - Knowledge region candidate render `/api/v3/knowledge-regions`
  *
  * Learning Map management (`/api/v3/workspaces`) is retired. Headless
  * proof-of-work (`/api/v3/pow` sessions), Snapshot, and Stash are not
@@ -9,6 +12,9 @@
 
 export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
 export const FLOW_API_BASE = "/api/v3/flows" as const;
+export const FLOW_FILES_API_PATH = `${FLOW_API_BASE}/files` as const;
+export const FLOW_UNSYS_SEED_API_PATH = `${FLOW_API_BASE}/unsys-seed` as const;
+export const KNOWLEDGE_REGION_API_BASE = "/api/v3/knowledge-regions" as const;
 export const ACCOUNT_API_BASE = "/api/v3/account" as const;
 export const POW_API_BASE = "/api/v3/pow" as const;
 /** Retired Snapshot API family. Kept so tests can assert the tree is gone. */
@@ -17,7 +23,7 @@ export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 export const STASH_API_BASE = "/api/v3/stash" as const;
 
 /** Public agent REST families. Map/workspace, PoW sessions, Snapshot, and Stash are excluded. */
-export const PUBLIC_AGENT_API_FAMILIES = ["flow"] as const;
+export const PUBLIC_AGENT_API_FAMILIES = ["flow", "knowledge_region"] as const;
 export type PublicAgentApiFamily = (typeof PUBLIC_AGENT_API_FAMILIES)[number];
 
 /** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */

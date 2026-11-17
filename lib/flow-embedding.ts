@@ -1,9 +1,10 @@
 /**
  * Deterministic embeddings for a completed Calibrate, Learn, or Verify run.
- * Path space (`flowcfg-v1-d96`, stored default) is the hidden-state tree and
- * priced walk. Path + Text (`flowcfg-pathtext-v1-d96`, stored channel `path_text`)
- * mixes that walk with spoken and written transcripts. Identity, event logs, and UI tool counts stay
- * off-vector in recoverable raw. Calibrate sounding omits projected policy.
+ * Path (`flowcfg-v1-d96` stored `vector`) is the hidden-state tree and priced
+ * walk. Extra basis channels (audio, eeg, video, screen) store independently
+ * and mix into named spaces at read time. `path_text` is the legacy name for
+ * space `path+audio`. Identity, event logs, and UI tool counts stay off-vector
+ * in recoverable raw. Calibrate sounding omits projected policy.
  */
 
 import {
@@ -14,6 +15,17 @@ import {
 } from "@/lib/knowledge-config/math";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import { scorePolicySequence } from "@/lib/session-policy-score";
+import {
+  mixFlowEmbeddingSpace,
+  parseFlowEmbeddingChannelVectors,
+  parseFlowEmbeddingSpace,
+  type FlowEmbeddingChannelVectors,
+} from "@/lib/flow-embedding-space";
+
+export {
+  FLOW_EMBEDDING_SPACE_EXTRA_WEIGHT as FLOW_EMBEDDING_PATH_TEXT_TEXT_WEIGHT,
+  FLOW_EMBEDDING_SPACE_PATH_WEIGHT as FLOW_EMBEDDING_PATH_TEXT_PATH_WEIGHT,
+} from "@/lib/flow-embedding-space";
 
 export const FLOW_EMBEDDING_MODEL_ID = "flowcfg-v1-d96" as const;
 export const FLOW_EMBEDDING_PATH_TEXT_MODEL_ID = "flowcfg-pathtext-v1-d96" as const;
@@ -26,8 +38,6 @@ export const FLOW_EMBEDDING_CHANNEL_LABELS: Record<FlowEmbeddingChannel, string>
   path: "Path",
   path_text: "Path + Text",
 };
-export const FLOW_EMBEDDING_PATH_TEXT_PATH_WEIGHT = 0.75;
-export const FLOW_EMBEDDING_PATH_TEXT_TEXT_WEIGHT = 0.25;
 
 export type FlowKind = "calibrate" | "learn" | "verify" | "solve";
 
@@ -78,6 +88,8 @@ export type FlowEmbeddingRecord = {
   vector: number[];
   /** Path + Text space: walk mixed with spoken and written transcripts. */
   vector_path_text: number[];
+  /** Independent basis channels for named spaces. Path is always present. */
+  channel_vectors: FlowEmbeddingChannelVectors;
   raw: FlowEmbeddingRaw;
 };
 
@@ -509,35 +521,82 @@ function textVector(raw: FlowEmbeddingRaw): number[] {
   return l2Normalize(hashBag(texts));
 }
 
-function pathTextVector(path: number[], text: number[]): number[] {
-  if (text.every((value) => value === 0)) return path;
-  const mixed = path.map(
-    (value, index) =>
-      value * FLOW_EMBEDDING_PATH_TEXT_PATH_WEIGHT +
-      (text[index] ?? 0) * FLOW_EMBEDDING_PATH_TEXT_TEXT_WEIGHT,
-  );
-  return l2Normalize(mixed);
+function collectTypedPowBag(pow: readonly FlowPowRow[], type: "eeg" | "video" | "screen"): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const next = value.trim();
+    if (!next || next.length > 4000 || seen.has(next)) return;
+    seen.add(next);
+    out.push(next);
+  };
+  for (const row of pow) {
+    if (textOf(row.type).toLowerCase() !== type) continue;
+    push(textOf(row.tool_name));
+    push(textOf(row.tool_action));
+    const payload = textOf(row.payload);
+    if (payload && payload.length <= 4000) push(payload);
+    const meta =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? row.metadata
+        : null;
+    if (!meta) continue;
+    for (const value of Object.values(meta)) {
+      if (typeof value === "string") push(value);
+    }
+  }
+  return out;
+}
+
+function typedChannelVector(raw: FlowEmbeddingRaw, type: "eeg" | "video" | "screen"): number[] {
+  const texts = collectTypedPowBag(raw.pow, type);
+  if (!texts.length) return new Array(FLOW_EMBEDDING_DIM).fill(0);
+  return l2Normalize(hashBag(texts));
+}
+
+export function embedFlowBasis(rawInput: FlowEmbeddingRaw): {
+  raw: FlowEmbeddingRaw;
+  channel_vectors: FlowEmbeddingChannelVectors;
+} {
+  const recovered = recoverFlowEmbeddingRaw(rawInput);
+  const raw = recovered ?? rawInput;
+  const path = pathVector(raw);
+  const channel_vectors: FlowEmbeddingChannelVectors = { path };
+  const audio = textVector(raw);
+  if (!audio.every((value) => value === 0)) channel_vectors.audio = audio;
+  const eeg = typedChannelVector(raw, "eeg");
+  if (!eeg.every((value) => value === 0)) channel_vectors.eeg = eeg;
+  const video = typedChannelVector(raw, "video");
+  if (!video.every((value) => value === 0)) channel_vectors.video = video;
+  const screen = typedChannelVector(raw, "screen");
+  if (!screen.every((value) => value === 0)) channel_vectors.screen = screen;
+  return { raw, channel_vectors };
 }
 
 export function embedFlowChannels(rawInput: FlowEmbeddingRaw): {
   raw: FlowEmbeddingRaw;
   path: number[];
   path_text: number[];
+  channel_vectors: FlowEmbeddingChannelVectors;
 } {
-  const recovered = recoverFlowEmbeddingRaw(rawInput);
-  const raw = recovered ?? rawInput;
-  const path = pathVector(raw);
-  const path_text = pathTextVector(path, textVector(raw));
-  return { raw, path, path_text };
+  const { raw, channel_vectors } = embedFlowBasis(rawInput);
+  return {
+    raw,
+    path: channel_vectors.path,
+    path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
+    channel_vectors,
+  };
 }
 
 export function embedFlowOutput(rawInput: FlowEmbeddingRaw): FlowEmbeddingRecord {
-  const { raw, path, path_text } = embedFlowChannels(rawInput);
+  const { raw, path, path_text, channel_vectors } = embedFlowChannels(rawInput);
   return {
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: path,
     vector_path_text: path_text,
+    channel_vectors,
     raw,
   };
 }
@@ -583,29 +642,67 @@ export function completeFlowEmbedding(input: {
   return embedFlowOutput(buildFlowEmbeddingRaw(input));
 }
 
+function resolveChannelVectors(
+  record: {
+    vector?: number[];
+    vector_path_text?: number[];
+    raw?: FlowEmbeddingRaw | unknown;
+    channel_vectors?: FlowEmbeddingChannelVectors | null;
+  },
+): FlowEmbeddingChannelVectors {
+  const stored = parseFlowEmbeddingChannelVectors(record.channel_vectors);
+  if (stored) return stored;
+  const recovered = recoverFlowEmbeddingRaw(record.raw);
+  if (recovered) return embedFlowBasis(recovered).channel_vectors;
+  const path = isFlowEmbeddingVector(record.vector)
+    ? record.vector
+    : new Array(FLOW_EMBEDDING_DIM).fill(0);
+  return { path };
+}
+
 export function reembedFlowRaw(
   raw: FlowEmbeddingRaw,
   channel: FlowEmbeddingChannel | string = "path",
 ): number[] {
-  const embedded = embedFlowChannels(raw);
-  return parseFlowEmbeddingChannel(channel) === "path_text" ? embedded.path_text : embedded.path;
+  const { channel_vectors } = embedFlowBasis(raw);
+  const parsed = parseFlowEmbeddingSpace(channel);
+  if (parsed.ok) return mixFlowEmbeddingSpace(channel_vectors, parsed.space);
+  return parseFlowEmbeddingChannel(channel) === "path_text"
+    ? mixFlowEmbeddingSpace(channel_vectors, "path+audio")
+    : channel_vectors.path;
+}
+
+export function vectorForFlowSpace(
+  record: {
+    vector?: number[];
+    vector_path_text?: number[];
+    raw?: FlowEmbeddingRaw | unknown;
+    channel_vectors?: FlowEmbeddingChannelVectors | null;
+  },
+  space: string = "path",
+): number[] {
+  const parsed = parseFlowEmbeddingSpace(space);
+  const canonical = parsed.ok ? parsed.space : "path";
+  return mixFlowEmbeddingSpace(resolveChannelVectors(record), canonical);
 }
 
 export function vectorForFlowChannel(
-  record: Pick<FlowEmbeddingRecord, "vector" | "vector_path_text" | "raw">,
+  record: {
+    vector?: number[];
+    vector_path_text?: number[];
+    raw?: FlowEmbeddingRaw | unknown;
+    channel_vectors?: FlowEmbeddingChannelVectors | null;
+  },
   channel: FlowEmbeddingChannel | string = "path",
 ): number[] {
-  const parsed = parseFlowEmbeddingChannel(channel);
-  if (parsed === "path_text") {
-    if (Array.isArray(record.vector_path_text) && record.vector_path_text.length === FLOW_EMBEDDING_DIM) {
-      return record.vector_path_text;
-    }
-    return reembedFlowRaw(record.raw, "path_text");
+  if (parseFlowEmbeddingChannel(channel) === "path_text") {
+    return vectorForFlowSpace(record, "path+audio");
   }
-  if (Array.isArray(record.vector) && record.vector.length === FLOW_EMBEDDING_DIM) {
-    return record.vector;
+  const parsed = parseFlowEmbeddingSpace(channel);
+  if (parsed.ok && parsed.space !== "path") {
+    return vectorForFlowSpace(record, parsed.space);
   }
-  return reembedFlowRaw(record.raw, "path");
+  return vectorForFlowSpace(record, "path");
 }
 
 export function isFlowEmbeddingVector(value: unknown): value is number[] {

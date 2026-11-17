@@ -9,7 +9,7 @@ Proof of work is recorded in the product UI. Headless `start_session` / `upload_
 When the Customer Agent opens a new chat with a user, run this setup **before** the first coaching reply:
 
 1. `list_flows` — independent Solve, Calibration, and Verification flows.
-2. `create_flow` — Solve, Calibration, or Verification (`kind`: `solve` | `calibration` | `verification`) when the user needs a new flow.
+2. `create_flow` — Solve, Calibration, or Verification (`kind`: `solve` | `calibration` | `verification`) when the user needs a new flow. Same wizard options: `topic`, `artifacts` / `upload_flow_file`, `answers_model_seed` / `generate_flow_unsys_seed`, `exact_problem_on_canvas`, `enforced_channels`.
 3. `get_flow` — read the current flow.
 
 This setup runs **once per chat start**, not only at phase boundaries.

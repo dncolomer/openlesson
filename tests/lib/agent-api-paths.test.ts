@@ -38,7 +38,7 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(WORKSPACE_API_BASE).toBe("/api/v3/workspaces");
     expect(ACCOUNT_API_BASE).toBe("/api/v3/account");
     expect(POW_API_BASE).toBe("/api/v3/pow");
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow"]);
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow", "knowledge_region"]);
     expect(SNAPSHOT_API_BASE).toBe("/api/v3/snapshot");
     expect(EVAL_API_BASE).toBe(SNAPSHOT_API_BASE);
     expect(STASH_API_BASE).toBe("/api/v3/stash");

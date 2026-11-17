@@ -41,6 +41,7 @@ async function main() {
         dim: embedded.dim,
         vector: embedded.vector,
         vector_path_text: embedded.vector_path_text,
+        channel_vectors: embedded.channel_vectors,
       })}\n`,
     );
     count += 1;

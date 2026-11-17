@@ -244,8 +244,9 @@ describe("product flow owner_user_id", () => {
     expect(page).toContain("answersModelSeed");
     expect(create).toContain("answersModelSeed: accepted.answersModelSeed");
     expect(update).toContain("parseFlowUnsysSeed");
-    expect(generate).toContain("generateAuthorUnsysSessionField");
+    expect(generate).toContain("runProductFlowUnsysGenerate");
     expect(generate).toContain("requireAuthenticatedUser");
+    expect(read("lib/flow-unsys-generate.ts")).toContain("generateAuthorUnsysSessionField");
     expect(FLOW_UNSYS_SEED_PATH).toBe("/api/dashboard/flows/unsys-seed");
     expect(session).toContain("flow.answersModelSeed");
     expect(session).toContain("getCalibrationFlowById");

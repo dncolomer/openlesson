@@ -5,25 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import {
-  organizationIdFromUser,
-  organizationIdFromWorkspace,
-  uploadOrgScopedXaiFile,
-} from "@/lib/organization/org-xai-files";
-import {
-  FLOW_ARTIFACT_MAX_BYTES,
-} from "@/lib/flow-artifacts";
-import {
-  isHeliosAllowedMimeType,
-  normalizeHeliosFileMime,
-} from "@/lib/workspace-helios-files";
+import { uploadFlowArtifactBytes } from "@/lib/flow-artifact-upload";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-
-function estimatedBase64Bytes(data: string): number {
-  return Math.ceil((String(data || "").replace(/\s+/g, "").length * 3) / 4);
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,49 +17,39 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Record<string, unknown>;
     const workspaceId = String(body.workspaceId ?? body.workspace_id ?? "").trim();
     const fileName = String(body.fileName ?? body.file_name ?? body.name ?? "").trim();
-    const mimeType = normalizeHeliosFileMime(
-      fileName,
-      String(body.mimeType ?? body.mime_type ?? ""),
-    );
-    const data = String(body.data ?? body.base64 ?? "").replace(/\s+/g, "");
-    if (!fileName || !data) {
-      return jsonError(400, "fileName and data are required");
-    }
-    if (!isHeliosAllowedMimeType(mimeType)) {
-      return jsonError(400, "That file type is not supported.");
-    }
-    if (estimatedBase64Bytes(data) > FLOW_ARTIFACT_MAX_BYTES) {
-      return jsonError(400, "File is too large (10 MB).");
-    }
+    const mimeType = String(body.mimeType ?? body.mime_type ?? "");
+    const data = String(body.data ?? body.base64 ?? "");
 
-    const organizationId =
-      (workspaceId
-        ? await organizationIdFromWorkspace(auth.supabase, workspaceId)
-        : null) || (await organizationIdFromUser(auth.supabase, auth.user.id));
-
-    let xaiFileId: string;
+    let artifact;
     try {
-      const uploaded = await uploadOrgScopedXaiFile(fileName, mimeType, data, {
-        organizationId,
-        collectionFields: {
-          user_id: auth.user.id,
-          kind: "flow_artifact",
-          ...(workspaceId ? { workspace_id: workspaceId } : {}),
-        },
+      artifact = await uploadFlowArtifactBytes({
+        fileName,
+        mimeType,
+        data,
+        userId: auth.user.id,
+        workspaceId,
+        supabase: auth.supabase,
       });
-      xaiFileId = uploaded.file_id;
     } catch (err) {
+      const message = err instanceof Error ? err.message : "xAI upload failed";
+      if (
+        message === "fileName and data are required" ||
+        message === "That file type is not supported." ||
+        message === "File is too large (10 MB)."
+      ) {
+        return jsonError(400, message);
+      }
       console.error("[flow-files] xAI upload failed:", err);
-      return jsonError(502, err instanceof Error ? err.message : "xAI upload failed");
+      return jsonError(502, message);
     }
-    if (!xaiFileId) return jsonError(502, "xAI upload failed");
 
     return NextResponse.json({
       success: true,
-      xaiFileId,
-      xai_file_id: xaiFileId,
-      name: fileName,
-      mimeType,
+      xaiFileId: artifact.xaiFileId,
+      xai_file_id: artifact.xaiFileId,
+      name: artifact.name,
+      mimeType: artifact.mimeType,
+      mime_type: artifact.mimeType,
     });
   } catch (err) {
     console.error("[flow-files] POST error:", err);

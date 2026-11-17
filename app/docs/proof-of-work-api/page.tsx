@@ -58,16 +58,23 @@ Content-Type: application/json`}</pre>
               <code className="text-neutral-300">/api/v3/flows</code>. MCP tools{" "}
               <code className="text-neutral-300">list_flows</code>,{" "}
               <code className="text-neutral-300">create_flow</code>,{" "}
+              <code className="text-neutral-300">upload_flow_file</code>,{" "}
+              <code className="text-neutral-300">generate_flow_unsys_seed</code>,{" "}
               <code className="text-neutral-300">get_flow</code>,{" "}
               <code className="text-neutral-300">update_flow</code>, and{" "}
               <code className="text-neutral-300">delete_flow</code> are 1:1 with these REST twins.
+              Create/update take the same options as the dashboard wizard (Problem, files, Unsys
+              model, exact problem on canvas, channels).
             </li>
           </ul>
           <pre className={codeBlockClass}>{`POST /api/v3/flows
 {
   "kind": "solve",
   "name": "Linear systems",
-  "topic": "Solve Ax = b"
+  "topic": "Solve Ax = b",
+  "exact_problem_on_canvas": true,
+  "enforced_channels": { "audio": true, "muse": false, "video": false, "screenshots": false },
+  "artifacts": [{ "name": "brief.pdf", "xai_file_id": "file_…" }]
 }`}</pre>
         </section>
 
@@ -95,6 +102,8 @@ Authorization: Bearer sk_…
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }`}</pre>
           <p className="mt-3 text-sm text-neutral-400">
             Partner loop: <code className="text-neutral-300">list_flows</code>, then{" "}
+            <code className="text-neutral-300">upload_flow_file</code> →{" "}
+            <code className="text-neutral-300">generate_flow_unsys_seed</code> →{" "}
             <code className="text-neutral-300">create_flow</code> →{" "}
             <code className="text-neutral-300">get_flow</code> →{" "}
             <code className="text-neutral-300">update_flow</code>. REST lives at{" "}

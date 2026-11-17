@@ -36,7 +36,6 @@ import {
 import {
   OPTIONAL_FLOW_ENFORCED_CHANNELS,
   parseFlowEnforcedChannels,
-  serializeFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import {
@@ -136,7 +135,7 @@ function presentWizardFields(flow: {
     enforced_channels:
       flow.kind === "calibration"
         ? { ...OPTIONAL_FLOW_ENFORCED_CHANNELS }
-        : serializeFlowEnforcedChannels(flow.enforcedChannels),
+        : parseFlowEnforcedChannels(flow.enforcedChannels),
   };
 }
 

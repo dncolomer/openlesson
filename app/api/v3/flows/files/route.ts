@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         : 502;
     return errorResponse(
       status,
-      status === 400 ? "validation_error" : "upload_failed",
+      status === 400 ? "validation_error" : "internal_error",
       message,
     );
   }

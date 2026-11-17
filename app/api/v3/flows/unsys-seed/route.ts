@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const status = message === "A problem is required." ? 400 : 502;
     return errorResponse(
       status,
-      status === 400 ? "validation_error" : "generate_failed",
+      status === 400 ? "validation_error" : "internal_error",
       message,
     );
   }

@@ -46,7 +46,7 @@ function IleExcalidrawMount({
   initialData,
   viewModeEnabled = false,
 }: {
-  onApi: (api: LiveExcalidrawAPI) => void;
+  onApi: (api: LiveExcalidrawAPI | null) => void;
   onChange: IleExcalidrawChange;
   onPointerUpdate?: (payload: IleExcalidrawPointerUpdate) => void;
   initialData: IleWorkCanvasScene & { scrollToContent?: boolean };
@@ -79,7 +79,7 @@ const IleExcalidrawStable = memo(function IleExcalidrawStable({
   viewModeEnabled,
   pointerEnabled,
 }: {
-  onApiRef: { current: (api: LiveExcalidrawAPI) => void };
+  onApiRef: { current: (api: LiveExcalidrawAPI | null) => void };
   onChangeRef: { current: IleExcalidrawChange };
   onPointerUpdateRef: { current: ((payload: IleExcalidrawPointerUpdate) => void) | undefined };
   initialData: IleWorkCanvasScene & { scrollToContent?: boolean };
@@ -92,7 +92,7 @@ const IleExcalidrawStable = memo(function IleExcalidrawStable({
     };
   }, []);
   const bindApi = useCallback((api: unknown) => {
-    onApiRef.current(api as LiveExcalidrawAPI);
+    onApiRef.current((api ?? null) as LiveExcalidrawAPI | null);
   }, [onApiRef]);
   const bindChange = useCallback(
     (elements: readonly unknown[], appState: unknown, files: unknown) => {
@@ -109,7 +109,7 @@ const IleExcalidrawStable = memo(function IleExcalidrawStable({
   }, [onPointerUpdateRef]);
   return (
     <Excalidraw
-      excalidrawAPI={bindApi}
+      onExcalidrawAPI={bindApi}
       onChange={bindChange}
       onPointerUpdate={pointerEnabled ? bindPointerUpdate : undefined}
       initialData={initialData as never}

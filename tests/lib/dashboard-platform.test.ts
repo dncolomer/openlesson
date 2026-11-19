@@ -40,6 +40,7 @@ import {
   questionCountFromUnknown,
   sortDashboardRecentFlows,
   sortDashboardFlowsByCreatedAt,
+  type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
 import { workspaceCreateModeFromQuery } from "@/lib/workspace-create-modes";
 import {
@@ -328,7 +329,7 @@ describe("dashboard home summaries", () => {
       1,
     );
     expect(sorted.map((row) => row.id)).toEqual(["b"]);
-    const mixed = Array.from({ length: 101 }, (_, i) => ({
+    const mixed: DashboardRecentFlow[] = Array.from({ length: 101 }, (_, i) => ({
       id: `solve-${i}`,
       kind: "solve" as const,
       name: `S${i}`,

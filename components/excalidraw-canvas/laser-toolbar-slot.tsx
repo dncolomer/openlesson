@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { LiveExcalidrawAPI } from "@/components/excalidraw-canvas/excalidraw-api";
+import { setLiveActiveTool, type LiveExcalidrawAPI } from "@/components/excalidraw-canvas/excalidraw-api";
 
 const LASER_ICON = (
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -82,12 +82,12 @@ export function IleLaserToolbarSlot({
     <button
       type="button"
       data-ile-toolbar-laser
-      className="ToolIcon Shape"
+      className={`ToolIcon ToolIcon_type_toggle${active ? " ToolIcon--checked" : ""}`}
       title="Laser pointer — K"
       aria-label="Laser pointer"
       aria-pressed={active ? "true" : "false"}
       onClick={() =>
-        onToggle ? onToggle() : apiRef.current?.setActiveTool?.({ type: "laser" })
+        onToggle ? onToggle() : setLiveActiveTool(apiRef.current, { type: "laser" })
       }
     >
       <div className="ToolIcon__icon">{LASER_ICON}</div>

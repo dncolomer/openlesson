@@ -54,7 +54,6 @@ import {
   ileWorkCanvasPointerNextTool,
   ileWorkCanvasPointerToolActive,
   pasteIleWorkCanvasElements,
-  ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
   type IleWorkCanvasFiles,
@@ -69,7 +68,10 @@ import {
 } from "@/lib/learn-work-canvas-pow";
 import {
   commitScene,
+  exportWorkCanvasPngDataUrl,
+  followViewport,
   liveSceneElements,
+  setLiveActiveTool,
   type LiveExcalidrawAPI,
   type LiveExcalidrawAppState,
 } from "@/components/excalidraw-canvas/excalidraw-api";
@@ -206,7 +208,7 @@ export function ExcalidrawCanvas({
   const [autoLayoutEnabled, setAutoLayoutEnabled] = useState(false);
   const [laserToolActive, setLaserToolActive] = useState(false);
   const toggleLaserTool = useCallback(() => {
-    excalidrawAPIRef.current?.setActiveTool?.(ileWorkCanvasPointerNextTool(laserToolActive));
+    setLiveActiveTool(excalidrawAPIRef.current, ileWorkCanvasPointerNextTool(laserToolActive));
   }, [laserToolActive]);
   const harnessSuggestion = useSessionPolicySuggestion();
   const harnessInferences = useSessionPolicyInferences();
@@ -328,10 +330,10 @@ export function ExcalidrawCanvas({
               { remote: false },
             );
           } catch {
-            api.scrollToContent(focused, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+            followViewport(api, focused);
           }
         } else {
-          api.scrollToContent(focused, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+          followViewport(api, focused);
         }
         if (!focusHoldUntilRef.current) focusHoldUntilRef.current = performance.now() + 900;
         if (performance.now() < focusHoldUntilRef.current) {
@@ -339,7 +341,7 @@ export function ExcalidrawCanvas({
           return;
         }
       } else {
-        api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+        followViewport(api, elements);
       }
       centeredOnOpenRef.current = true;
     };
@@ -410,7 +412,7 @@ export function ExcalidrawCanvas({
       { applyingRemote: applyingRemoteRef },
     );
     if (shouldScroll) {
-      api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+      followViewport(api, added);
     } else {
       scheduleCenterOnOpen();
     }
@@ -433,8 +435,12 @@ export function ExcalidrawCanvas({
     );
   }, []);
 
-  const setExcalidrawAPI = useCallback((api: LiveExcalidrawAPI) => {
+  const setExcalidrawAPI = useCallback((api: LiveExcalidrawAPI | null) => {
     excalidrawAPIRef.current = api;
+    if (!api) {
+      setCanvasApiReady(false);
+      return;
+    }
     setCanvasApiReady(true);
     flushPendingApply();
     requestAnimationFrame(() => {
@@ -690,31 +696,12 @@ export function ExcalidrawCanvas({
     const api = excalidrawAPIRef.current;
     if (!api) return null;
     try {
-      const { exportToBlob } = await import("@excalidraw/excalidraw");
-      const elements = api.getSceneElements();
-      const appState = api.getAppState();
-      const files = api.getFiles();
-      if (!elements || elements.length === 0) return null;
-      const blob = await exportToBlob({
+      const elements = [...(api.getSceneElements() ?? [])];
+      if (!elements.length) return null;
+      return await exportWorkCanvasPngDataUrl({
         elements,
-        appState: {
-          ...appState,
-          exportWithDarkMode: true,
-          exportBackground: true,
-          viewBackgroundColor: "#0a0a0a",
-        },
-        files,
-        mimeType: "image/png",
-      });
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
-        reader.onerror = () => {
-          resolve(null);
-        };
-        reader.readAsDataURL(blob);
+        appState: { ...api.getAppState() },
+        files: { ...api.getFiles() },
       });
     } catch (err) {
       console.error("[ExcalidrawCanvas] PNG export failed:", err);

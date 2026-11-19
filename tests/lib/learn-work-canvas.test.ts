@@ -24,7 +24,7 @@ import {
   ileWorkCanvasXaiShapeType,
   ileWorkCanvasXaiToolsInstruction,
   ILE_EXCALIDRAW_POW_TOOLS,
-  ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
+  ILE_WORK_CANVAS_VIEWPORT_OPTS,
   ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION,
   ILE_XAI_CANVAS_SHAPE_TYPES,
   isRetiredIleWorkToolName,
@@ -327,7 +327,7 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(css).toContain("--color-surface-primary-container: #3a3a3a !important");
     expect(css).toContain("--button-selected-bg: #3a3a3a !important");
     expect(css).toContain("--color-selection: #111111 !important");
-    expect(css).toContain(".ToolIcon_type_radio:checked + .ToolIcon__icon");
+    expect(css).toContain(".ToolIcon.ToolIcon--checked .ToolIcon__icon");
     expect(css).toContain("button.standalone.active");
     expect(css).toContain('[data-testid="toolbar-laser"]');
     expect(css).toContain("[data-ile-toolbar-laser]");
@@ -522,15 +522,15 @@ describe("TAP Learning Work canvas center on open (shipped)", () => {
     expect(empty).not.toHaveProperty("scrollToContent");
     const withFlag = ileWorkCanvasWithScrollToContent(seeded.scene);
     expect(withFlag.scrollToContent).toBe(true);
-    expect(ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS).toEqual({ animate: false });
+    expect(ILE_WORK_CANVAS_VIEWPORT_OPTS).toEqual({ fit: "none", animation: false });
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("ileWorkCanvasWithScrollToContent");
     expect(canvas).toContain("scheduleCenterOnOpen");
     expect(canvas).toContain("centeredOnOpenRef");
     expect(canvas).toContain("scrollToContent");
-    expect(canvas).toContain("ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS");
-    expect(canvas).toContain("api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
+    expect(canvas).toContain("ILE_WORK_CANVAS_VIEWPORT_OPTS");
+    expect(canvas).toContain("followViewport(api, elements)");
     expect(canvas).toContain("ileWorkCanvasRevealScroll");
     expect(canvas).toContain("commitScene");
     expect(canvas).toContain("export function commitScene");
@@ -2978,7 +2978,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
       canvas.indexOf("const flushPendingApply"),
       canvas.indexOf("const syncPromptBarPlacement"),
     );
-    expect(paste).toContain("scrollToContent");
+    expect(paste).toContain("followViewport");
     expect(paste).not.toContain("data-ile-canvas-new-mark");
     const applyBody = canvas.slice(
       canvas.indexOf("const applyReply"),

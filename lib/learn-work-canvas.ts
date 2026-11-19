@@ -169,7 +169,7 @@ export {
 export type { IleWorkCanvasPlacementOptions } from "@/lib/learn-work-canvas-place";
 
 export {
-  ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
+  ILE_WORK_CANVAS_VIEWPORT_OPTS,
   ileWorkCanvasFitScroll,
   ileWorkCanvasCenterScroll,
   ileWorkCanvasWithScrollToContent,

@@ -473,7 +473,7 @@ describe("session sidebar mode configuration", () => {
       "utf8",
     );
     expect(cardSource).toContain('audio: { index: "01", label: "Audio" }');
-    expect(cardSource).toContain('muse: { index: "02", label: "Muse (EEG)" }');
+    expect(cardSource).toContain('muse: { index: "02", label: "EEG" }');
     expect(cardSource).toContain('video: { index: "03", label: "Video" }');
     expect(cardSource).toContain('screen: { index: "04", label: "Screen" }');
     expect(cardSource).toContain("data-session-data-enable");
@@ -493,6 +493,8 @@ describe("session sidebar mode configuration", () => {
     expect(standby).toContain('data-session-data-active="audio"');
     expect(standby).toContain('data-session-data-tab="audio"');
     expect(standby).toContain('data-session-data-tab="muse"');
+    expect(standby).toContain(">EEG<");
+    expect(standby).not.toContain("Muse (EEG)");
     expect(standby).toContain('data-session-data-tab="video"');
     expect(standby).toContain('data-session-data-tab="screen"');
     expect(standby).toContain('data-session-data-enable="audio"');

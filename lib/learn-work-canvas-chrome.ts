@@ -357,7 +357,11 @@ export function ileWorkCanvasThinkingOccupancy(input: {
   return [];
 }
 
-export const ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS = { animate: false } as const;
+/** Instant recenter at the current zoom via Excalidraw `setViewport`. */
+export const ILE_WORK_CANVAS_VIEWPORT_OPTS = {
+  fit: "none",
+  animation: false,
+} as const;
 
 /**
  * Scroll offsets that place `bounds` at the viewport center (same formula as

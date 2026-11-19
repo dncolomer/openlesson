@@ -79,8 +79,7 @@
   --color-logo-text: #e5e5e5;
 }
 
-[data-ile-excalidraw-host] .excalidraw.theme--dark .ToolIcon .ToolIcon_type_radio:checked + .ToolIcon__icon,
-[data-ile-excalidraw-host] .excalidraw.theme--dark .ToolIcon .ToolIcon_type_checkbox:checked + .ToolIcon__icon,
+[data-ile-excalidraw-host] .excalidraw.theme--dark .ToolIcon.ToolIcon--checked .ToolIcon__icon,
 [data-ile-excalidraw-host] .excalidraw.theme--dark button.standalone.active,
 [data-ile-excalidraw-host] .excalidraw.theme--dark .excalidraw-button.active {
   background: #3a3a3a;

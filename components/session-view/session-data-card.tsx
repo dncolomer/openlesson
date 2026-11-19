@@ -18,7 +18,7 @@ type BandPowers = {
 
 const TAB_META: Record<SessionDataTab, { index: string; label: string }> = {
   audio: { index: "01", label: "Audio" },
-  muse: { index: "02", label: "Muse (EEG)" },
+  muse: { index: "02", label: "EEG" },
   video: { index: "03", label: "Video" },
   screen: { index: "04", label: "Screen" },
 };

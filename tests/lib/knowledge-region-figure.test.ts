@@ -15,6 +15,8 @@ import {
   knowledgeRegionPolarGrid,
   knowledgeRegionSampleIdForIdentity,
   parseKnowledgeRegionFigureMode,
+  knowledgeRegionUnsysDistance,
+  placeKnowledgeRegionQuadrantPoints,
   presentKnowledgeRegionClusterDistances,
   presentKnowledgeRegionFigure,
   presentKnowledgeRegionIdentityPath,
@@ -191,7 +193,10 @@ describe("knowledge region figure", () => {
   it("follows a named identity as a time-ordered path instead of cluster rays", () => {
     expect(parseKnowledgeRegionFigureMode("path")).toBe("path");
     expect(parseKnowledgeRegionFigureMode("individual")).toBe("individual");
+    expect(parseKnowledgeRegionFigureMode("quadrant")).toBe("quadrant");
     expect(parseKnowledgeRegionFigureMode("nope")).toBe("individual");
+    expect(knowledgeRegionUnsysDistance({ projectedPolicy: { distance: 1.25 } })).toBe(1.25);
+    expect(knowledgeRegionUnsysDistance(null)).toBeNull();
 
     const points = [
       {
@@ -288,6 +293,89 @@ describe("knowledge region figure", () => {
     expect(followed.focus?.id).toBe("sim-early");
   });
 
+  it("places dots in the nearest simulation section, farther from center as unsys distance grows", () => {
+    const clusters = [
+      { id: "c-exploit", strategyName: "Exploit-heavy", vector: [1, 0] },
+      { id: "c-balanced", strategyName: "Balanced", vector: [0, 1] },
+    ];
+    const points = [
+      {
+        id: "near-exploit",
+        x: 999,
+        y: 999,
+        origin: "human" as const,
+        clusterId: null,
+        identity: "ada",
+        vector: [1, 0],
+        unsysDistance: 0.2,
+      },
+      {
+        id: "far-exploit",
+        x: 0,
+        y: 0,
+        origin: "human" as const,
+        clusterId: null,
+        identity: "bev",
+        vector: [0.95, 0.05],
+        unsysDistance: 2,
+      },
+      {
+        id: "balanced-mid",
+        x: 10,
+        y: 10,
+        origin: "simulated" as const,
+        clusterId: "c-balanced",
+        identity: "Simulated · Balanced",
+        vector: [0, 1],
+        unsysDistance: 1,
+      },
+    ];
+    const map = { cx: 240, cy: 240, radius: 208 };
+    const layout = placeKnowledgeRegionQuadrantPoints({ points, clusters, map });
+    expect(layout.sections).toHaveLength(2);
+    expect(layout.sections.map((section) => section.clusterId)).toEqual([
+      "c-exploit",
+      "c-balanced",
+    ]);
+    const exploit = layout.sections[0]!;
+    const balanced = layout.sections[1]!;
+    const near = layout.placed.get("near-exploit")!;
+    const far = layout.placed.get("far-exploit")!;
+    const other = layout.placed.get("balanced-mid")!;
+    expect(near.clusterId).toBe("c-exploit");
+    expect(far.clusterId).toBe("c-exploit");
+    expect(other.clusterId).toBe("c-balanced");
+    expect(near.angle).toBeGreaterThanOrEqual(exploit.startAngle);
+    expect(near.angle).toBeLessThan(exploit.endAngle);
+    expect(far.angle).toBeGreaterThanOrEqual(exploit.startAngle);
+    expect(far.angle).toBeLessThan(exploit.endAngle);
+    expect(other.angle).toBeGreaterThanOrEqual(balanced.startAngle);
+    expect(other.angle).toBeLessThan(balanced.endAngle);
+    expect(far.radius).toBeGreaterThan(near.radius);
+    expect(other.radius).toBeGreaterThan(near.radius);
+    expect(other.radius).toBeLessThan(far.radius);
+
+    const figure = presentKnowledgeRegionFigure({
+      parent: { id: "parent", name: "Limits styles" },
+      clusters,
+      showReal: true,
+      mode: "quadrant",
+      points,
+    });
+    expect(figure.sections).toHaveLength(2);
+    expect(figure.contours).toEqual([]);
+    expect(figure.rays).toEqual([]);
+    expect(figure.path).toBeNull();
+    expect(figure.centroids).toEqual([]);
+    expect(figure.glyphs.find((glyph) => glyph.id === "near-exploit")?.clusterId).toBe("c-exploit");
+    expect(figure.glyphs.find((glyph) => glyph.id === "balanced-mid")?.clusterId).toBe("c-balanced");
+    const nearGlyph = figure.glyphs.find((glyph) => glyph.id === "near-exploit")!;
+    const farGlyph = figure.glyphs.find((glyph) => glyph.id === "far-exploit")!;
+    const nearR = Math.hypot(nearGlyph.x - figure.map.cx, nearGlyph.y - figure.map.cy);
+    const farR = Math.hypot(farGlyph.x - figure.map.cx, farGlyph.y - figure.map.cy);
+    expect(farR).toBeGreaterThan(nearR);
+  });
+
   it("renders the polar map chrome on the details page", () => {
     const page = readFileSync(
       join(ROOT, "components/product-flow/knowledge-region-page.tsx"),
@@ -320,6 +408,9 @@ describe("knowledge region figure", () => {
     expect(page).toContain("presentKnowledgeRegionClusterDistances");
     expect(page).toContain("data-knowledge-region-figure-mode");
     expect(page).toContain("data-knowledge-region-figure-mode-option");
+    expect(page).toContain('data-knowledge-region-figure-mode-option="quadrant"');
+    expect(page).toContain("data-knowledge-region-section");
+    expect(page).toContain("knowledgeRegionUnsysDistance");
     expect(page).toContain("data-knowledge-region-identity");
     expect(page).toContain("data-knowledge-region-path");
     expect(page).toContain("data-knowledge-region-path-segment");
@@ -331,6 +422,7 @@ describe("knowledge region figure", () => {
     );
     expect(inspect).toContain("data-knowledge-region-inspect-tab");
     expect(inspect).toContain("data-knowledge-region-distance-table");
+    expect(inspect).toContain("data-knowledge-region-inspect-unsys");
     expect(inspect).toContain("data-knowledge-region-path-table");
     expect(inspect).toContain('data-knowledge-region-inspect-tab="path"');
     expect(inspect).toContain("DataStudioInspectFields");

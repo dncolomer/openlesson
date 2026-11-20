@@ -1,7 +1,8 @@
 /**
  * Circular 2D embedding map for a single knowledge region: polar grid,
- * nested density contours, mixed glyphs, centroid marks, and distance
- * rays from the selected point. Real points stay off until toggled.
+ * nested density contours, mixed glyphs, centroid marks, distance rays,
+ * identity paths, and a quadrant view that slices the disk by nearest
+ * simulation cluster and radii by unsys distance.
  */
 
 import {
@@ -10,6 +11,7 @@ import {
   STUDIO_HUMAN_FILL,
   STUDIO_SIMULATED_FILL,
 } from "@/lib/data-studio-view";
+import { recoverFlowEmbeddingRaw } from "@/lib/flow-embedding";
 import type { RegionCentroidInput } from "@/lib/knowledge-config";
 import { l2Distance } from "@/lib/knowledge-config/math";
 import type { StudioEmbeddingOrigin } from "@/lib/region-simulation";
@@ -34,10 +36,12 @@ export type KnowledgeRegionGlyphKind =
   | "diamond"
   | "open-diamond";
 
-export type KnowledgeRegionFigureMode = "individual" | "path";
+export type KnowledgeRegionFigureMode = "individual" | "path" | "quadrant";
 
 export function parseKnowledgeRegionFigureMode(value: unknown): KnowledgeRegionFigureMode {
-  return value === "path" ? "path" : "individual";
+  if (value === "path") return "path";
+  if (value === "quadrant") return "quadrant";
+  return "individual";
 }
 
 export function knowledgeRegionIdentityKey(point: {
@@ -59,6 +63,7 @@ export type KnowledgeRegionFigurePoint = {
   identity: string | null;
   vector?: number[] | null;
   createdAt?: string | null;
+  unsysDistance?: number | null;
 };
 
 export type KnowledgeRegionContour = {
@@ -156,9 +161,20 @@ export type KnowledgeRegionPolarGrid = {
   spokes: Array<{ x1: number; y1: number; x2: number; y2: number }>;
 };
 
+export type KnowledgeRegionQuadrantSection = {
+  clusterId: string;
+  label: string;
+  color: string;
+  startAngle: number;
+  endAngle: number;
+  midAngle: number;
+  path: string;
+};
+
 export type KnowledgeRegionFigureView = {
   map: { size: number; cx: number; cy: number; radius: number };
   grid: KnowledgeRegionPolarGrid;
+  sections: KnowledgeRegionQuadrantSection[];
   contours: KnowledgeRegionContour[];
   glyphs: KnowledgeRegionGlyph[];
   centroids: Array<{ id: string; x: number; y: number; color: string; label: string }>;
@@ -704,6 +720,146 @@ function pointDistance(
   return Math.hypot(from.x - to.x, from.y - to.y);
 }
 
+export function knowledgeRegionUnsysDistance(raw: unknown): number | null {
+  const recovered = recoverFlowEmbeddingRaw(raw);
+  const nested =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as { projectedPolicy?: { distance?: unknown }; raw?: { projectedPolicy?: { distance?: unknown } } })
+      : null;
+  const distance = Number(
+    recovered?.projectedPolicy?.distance ??
+      nested?.projectedPolicy?.distance ??
+      nested?.raw?.projectedPolicy?.distance,
+  );
+  return Number.isFinite(distance) ? distance : null;
+}
+
+function unitHash(id: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i += 1) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function pieSlicePath(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+): string {
+  const sweep = endAngle - startAngle;
+  if (sweep >= Math.PI * 2 - 1e-6) {
+    return `M ${cx - radius} ${cy} a ${radius} ${radius} 0 1 1 ${radius * 2} 0 a ${radius} ${radius} 0 1 1 ${-radius * 2} 0 Z`;
+  }
+  const x0 = cx + Math.cos(startAngle) * radius;
+  const y0 = cy + Math.sin(startAngle) * radius;
+  const x1 = cx + Math.cos(endAngle) * radius;
+  const y1 = cy + Math.sin(endAngle) * radius;
+  const large = sweep > Math.PI ? 1 : 0;
+  return `M ${cx} ${cy} L ${x0} ${y0} A ${radius} ${radius} 0 ${large} 1 ${x1} ${y1} Z`;
+}
+
+function nearestClusterByVector(
+  vector: number[] | null | undefined,
+  clusters: readonly { id: string; vector?: number[] | null }[],
+): string | null {
+  const v = Array.isArray(vector) ? vector : [];
+  let best: { id: string; distance: number } | null = null;
+  for (const cluster of clusters) {
+    const centroid = cluster.vector;
+    if (!Array.isArray(centroid) || !centroid.length || centroid.length !== v.length) continue;
+    const distance = l2Distance(v, centroid);
+    if (!Number.isFinite(distance)) continue;
+    if (!best || distance < best.distance) best = { id: cluster.id, distance };
+  }
+  return best?.id ?? null;
+}
+
+export function placeKnowledgeRegionQuadrantPoints(input: {
+  points: readonly KnowledgeRegionFigurePoint[];
+  clusters: readonly {
+    id: string;
+    strategyName: string;
+    vector?: number[] | null;
+    color?: string;
+    colorIndex?: number;
+  }[];
+  map: { cx: number; cy: number; radius: number };
+}): {
+  placed: Map<
+    string,
+    { x: number; y: number; clusterId: string | null; unsysDistance: number | null; angle: number; radius: number }
+  >;
+  sections: KnowledgeRegionQuadrantSection[];
+  spokes: KnowledgeRegionPolarGrid["spokes"];
+} {
+  const { cx, cy, radius } = input.map;
+  const n = input.clusters.length;
+  const start = -Math.PI / 2;
+  const sweep = n > 0 ? (Math.PI * 2) / n : Math.PI * 2;
+  const sections: KnowledgeRegionQuadrantSection[] = input.clusters.map((cluster, index) => {
+    const startAngle = start + index * sweep;
+    const endAngle = start + (index + 1) * sweep;
+    const midAngle = startAngle + sweep / 2;
+    return {
+      clusterId: cluster.id,
+      label: cluster.strategyName,
+      color: cluster.color ?? knowledgeRegionClusterColor(cluster.colorIndex ?? index),
+      startAngle,
+      endAngle,
+      midAngle,
+      path: pieSlicePath(cx, cy, radius, startAngle, endAngle),
+    };
+  });
+  const spokes: KnowledgeRegionPolarGrid["spokes"] = sections.map((section) => ({
+    x1: cx,
+    y1: cy,
+    x2: cx + Math.cos(section.startAngle) * radius,
+    y2: cy + Math.sin(section.startAngle) * radius,
+  }));
+  const scored = input.points
+    .map((point) => point.unsysDistance)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const maxDistance = scored.length ? Math.max(...scored) : 0;
+  const inner = radius * 0.12;
+  const outer = radius * 0.86;
+  const placed = new Map<
+    string,
+    { x: number; y: number; clusterId: string | null; unsysDistance: number | null; angle: number; radius: number }
+  >();
+  for (const point of input.points) {
+    const clusterId =
+      nearestClusterByVector(point.vector, input.clusters) ||
+      (point.clusterId && input.clusters.some((cluster) => cluster.id === point.clusterId)
+        ? point.clusterId
+        : null);
+    const section = clusterId
+      ? sections.find((row) => row.clusterId === clusterId) ?? null
+      : null;
+    const unsysDistance =
+      typeof point.unsysDistance === "number" && Number.isFinite(point.unsysDistance)
+        ? Math.max(0, point.unsysDistance)
+        : null;
+    const t =
+      unsysDistance == null ? 0.5 : maxDistance > 1e-9 ? Math.min(1, unsysDistance / maxDistance) : 0;
+    const r = inner + t * (outer - inner);
+    const jitter = (unitHash(point.id) - 0.5) * sweep * 0.55;
+    const angle = section ? section.midAngle + jitter : start;
+    placed.set(point.id, {
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r,
+      clusterId,
+      unsysDistance,
+      angle,
+      radius: r,
+    });
+  }
+  return { placed, sections, spokes };
+}
+
 export function presentKnowledgeRegionFigure(input: {
   points: readonly KnowledgeRegionFigurePoint[];
   clusters: readonly { id: string; strategyName: string; vector?: number[] | null }[];
@@ -741,7 +897,6 @@ export function presentKnowledgeRegionFigure(input: {
     cy: KNOWLEDGE_REGION_MAP_CENTER.y,
     radius: KNOWLEDGE_REGION_MAP_RADIUS,
   };
-  const grid = knowledgeRegionPolarGrid(map);
   const visible = input.points.filter((point) => {
     const kind = resolveKnowledgeRegionPointKind(point);
     if (!visiblePointKinds.has(kind)) return false;
@@ -750,12 +905,46 @@ export function presentKnowledgeRegionFigure(input: {
     }
     return true;
   });
-  const placed = mapPointsToDisk(visible, map);
+  const wedgeClusters = input.clusters
+    .map((cluster, index) => ({
+      ...cluster,
+      color: knowledgeRegionClusterColor(index),
+      colorIndex: index,
+    }))
+    .filter((cluster) => clusterVisibleInKnowledgeRegion(cluster.id, visibleClusterIds));
+  const quadrant =
+    mode === "quadrant"
+      ? placeKnowledgeRegionQuadrantPoints({
+          points: visible,
+          clusters: wedgeClusters,
+          map,
+        })
+      : null;
+  const grid = quadrant
+    ? {
+        ...knowledgeRegionPolarGrid({
+          cx: map.cx,
+          cy: map.cy,
+          radius: map.radius,
+          spokes: Math.max(4, wedgeClusters.length),
+        }),
+        spokes: quadrant.spokes,
+      }
+    : knowledgeRegionPolarGrid(map);
+  const placed = quadrant
+    ? new Map([...quadrant.placed].map(([id, row]) => [id, { x: row.x, y: row.y }] as const))
+    : mapPointsToDisk(visible, map);
   const located = visible
     .map((point) => {
       const xy = placed.get(point.id);
       if (!xy) return null;
-      return { ...point, x: xy.x, y: xy.y };
+      const assigned = quadrant?.placed.get(point.id)?.clusterId;
+      return {
+        ...point,
+        x: xy.x,
+        y: xy.y,
+        clusterId: assigned ?? point.clusterId,
+      };
     })
     .filter((point): point is KnowledgeRegionFigurePoint => !!point);
 
@@ -814,37 +1003,56 @@ export function presentKnowledgeRegionFigure(input: {
   const contours: KnowledgeRegionContour[] = [];
   const centroids: KnowledgeRegionFigureView["centroids"] = [];
   const badges: KnowledgeRegionBadge[] = [];
-  for (const cluster of clusterMeta) {
-    if (!cluster.members.length || !cluster.center) continue;
-    densityContourPaths(cluster.members, 3).forEach((path, level) => {
-      contours.push({
-        clusterId: cluster.id,
-        level,
-        path,
+  const sections = quadrant?.sections ?? [];
+  if (quadrant) {
+    for (const section of sections) {
+      const label = section.label;
+      const width = badgeWidth(label);
+      const rimX = map.cx + Math.cos(section.midAngle) * (map.radius + 18);
+      const rimY = map.cy + Math.sin(section.midAngle) * (map.radius + 18);
+      badges.push({
+        id: section.clusterId,
+        kind: "cluster",
+        label,
+        x: rimX - width / 2,
+        y: rimY - 9,
+        width,
+        color: section.color,
+      });
+    }
+  } else {
+    for (const cluster of clusterMeta) {
+      if (!cluster.members.length || !cluster.center) continue;
+      densityContourPaths(cluster.members, 3).forEach((path, level) => {
+        contours.push({
+          clusterId: cluster.id,
+          level,
+          path,
+          color: cluster.color,
+        });
+      });
+      centroids.push({
+        id: cluster.id,
+        x: cluster.center.x,
+        y: cluster.center.y,
+        color: cluster.color,
+        label: cluster.strategyName,
+      });
+      const outwardX = cluster.center.x - map.cx;
+      const outwardY = cluster.center.y - map.cy;
+      const outward = Math.hypot(outwardX, outwardY) || 1;
+      const label = cluster.strategyName;
+      const width = badgeWidth(label);
+      badges.push({
+        id: cluster.id,
+        kind: "cluster",
+        label,
+        x: cluster.center.x + (outwardX / outward) * 26 - width / 2,
+        y: cluster.center.y + (outwardY / outward) * 26 - 28,
+        width,
         color: cluster.color,
       });
-    });
-    centroids.push({
-      id: cluster.id,
-      x: cluster.center.x,
-      y: cluster.center.y,
-      color: cluster.color,
-      label: cluster.strategyName,
-    });
-    const outwardX = cluster.center.x - map.cx;
-    const outwardY = cluster.center.y - map.cy;
-    const outward = Math.hypot(outwardX, outwardY) || 1;
-    const label = cluster.strategyName;
-    const width = badgeWidth(label);
-    badges.push({
-      id: cluster.id,
-      kind: "cluster",
-      label,
-      x: cluster.center.x + (outwardX / outward) * 26 - width / 2,
-      y: cluster.center.y + (outwardY / outward) * 26 - 28,
-      width,
-      color: cluster.color,
-    });
+    }
   }
 
   const focusGlyph = selectedPointId
@@ -950,6 +1158,7 @@ export function presentKnowledgeRegionFigure(input: {
   return {
     map,
     grid,
+    sections,
     contours,
     glyphs,
     centroids,

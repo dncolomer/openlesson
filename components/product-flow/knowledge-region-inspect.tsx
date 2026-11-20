@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { DataStudioInspectFields } from "@/components/data-studio/DataStudioInspect";
 import { FLOW_FORM_LABEL } from "@/components/product-flow/product-flow-form";
-import type { DataStudioInspectPayload } from "@/lib/data-studio-view";
+import {
+  formatStudioHighDimDistance,
+  type DataStudioInspectPayload,
+} from "@/lib/data-studio-view";
 import {
   formatKnowledgeRegionTimestamp,
   knowledgeRegionPointKindLabel,
@@ -26,6 +29,7 @@ export function KnowledgeRegionInspect({
   sample,
   distances,
   path = null,
+  unsysDistance = null,
   mode = "individual",
   productKind,
   onClose,
@@ -35,6 +39,7 @@ export function KnowledgeRegionInspect({
   sample: KnowledgeRegionDetailsSample;
   distances: readonly KnowledgeRegionClusterDistance[];
   path?: KnowledgeRegionIdentityPath | null;
+  unsysDistance?: number | null;
   mode?: KnowledgeRegionFigureMode | string | null;
   productKind?: string | null;
   onClose: () => void;
@@ -165,6 +170,12 @@ export function KnowledgeRegionInspect({
             </dd>
             <dt className={FLOW_FORM_LABEL}>Cluster</dt>
             <dd className="text-white">{sample.strategyName || "—"}</dd>
+            <dt className={FLOW_FORM_LABEL}>Unsys</dt>
+            <dd className="font-mono text-[12px] text-white" data-knowledge-region-inspect-unsys="">
+              {typeof unsysDistance === "number" && Number.isFinite(unsysDistance)
+                ? formatStudioHighDimDistance(unsysDistance)
+                : "—"}
+            </dd>
             <dt className={FLOW_FORM_LABEL}>flow_id</dt>
             <dd className="break-all font-mono text-[12px]">{inspect.flow_id || "—"}</dd>
             <dt className={FLOW_FORM_LABEL}>run_id</dt>

@@ -34,6 +34,7 @@ import {
   knowledgeRegionIdentityKey,
   knowledgeRegionIdentityOptions,
   knowledgeRegionSampleIdForIdentity,
+  knowledgeRegionUnsysDistance,
   knowledgeRegionVisibleIdsFromSelection,
   parseKnowledgeRegionFigureMode,
   presentKnowledgeRegionClusterDistances,
@@ -227,6 +228,7 @@ export function KnowledgeRegionPage({
           pointKind: sample?.pointKind,
           vector: sample?.embedding.vector ?? null,
           createdAt: sample?.embedding.created_at ?? null,
+          unsysDistance: knowledgeRegionUnsysDistance(sample?.embedding.raw),
         };
       }),
       clusters: details.clusters.map((cluster) => ({
@@ -394,6 +396,18 @@ export function KnowledgeRegionPage({
                       ))}
                     </g>
                     <g clipPath={`url(#kr-disk-${details.id})`}>
+                      {figure.sections.map((section) => (
+                        <path
+                          key={section.clusterId}
+                          d={section.path}
+                          fill={section.color}
+                          fillOpacity={0.16}
+                          stroke={section.color}
+                          strokeOpacity={0.55}
+                          strokeWidth={1}
+                          data-knowledge-region-section={section.clusterId}
+                        />
+                      ))}
                       {figure.contours.map((contour) => (
                         <path
                           key={`${contour.clusterId}-${contour.level}`}
@@ -611,7 +625,7 @@ export function KnowledgeRegionPage({
                         View
                       </span>
                       <div
-                        className="mt-0.5 flex gap-1"
+                        className="mt-0.5 flex flex-wrap gap-1"
                         role="tablist"
                         aria-label="Figure mode"
                       >
@@ -635,6 +649,16 @@ export function KnowledgeRegionPage({
                         >
                           Path
                         </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={figureMode === "quadrant"}
+                          className={figureMode === "quadrant" ? MODE_ON : MODE_OFF}
+                          data-knowledge-region-figure-mode-option="quadrant"
+                          onClick={() => setMode("quadrant")}
+                        >
+                          Quadrant
+                        </button>
                       </div>
                     </div>
                     {figureMode === "path" ? (
@@ -657,6 +681,7 @@ export function KnowledgeRegionPage({
                         </select>
                       </label>
                     ) : null}
+                    {figureMode === "quadrant" ? null : (
                     <label className="flex min-w-0 w-full flex-col gap-0.5">
                       <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                         Project
@@ -677,6 +702,7 @@ export function KnowledgeRegionPage({
                         ))}
                       </select>
                     </label>
+                    )}
                     <div data-knowledge-region-clusters="">
                       <StudioMultiSelect
                         label="Clusters"
@@ -742,6 +768,7 @@ export function KnowledgeRegionPage({
                   sample={selectedSample}
                   distances={clusterDistances}
                   path={figure?.path ?? null}
+                  unsysDistance={knowledgeRegionUnsysDistance(selectedSample.embedding.raw)}
                   mode={figureMode}
                   productKind={details.kind}
                   onClose={() => setSelectedSampleId(null)}

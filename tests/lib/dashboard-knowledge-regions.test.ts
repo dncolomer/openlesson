@@ -232,6 +232,8 @@ describe("dashboard knowledge regions", () => {
     expect(detailsPage).toContain("data-knowledge-region-polar");
     expect(detailsPage).toContain("data-knowledge-region-projection");
     expect(detailsPage).toContain("data-knowledge-region-figure-mode");
+    expect(detailsPage).toContain('data-knowledge-region-figure-mode-option="quadrant"');
+    expect(detailsPage).toContain("data-knowledge-region-section");
     expect(detailsPage).toContain("data-knowledge-region-identity");
     expect(detailsPage).toContain("KnowledgeRegionInspect");
     expect(detailsPage).toContain("inspectStudioEmbedding");

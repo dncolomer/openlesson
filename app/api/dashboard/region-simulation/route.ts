@@ -16,7 +16,7 @@ import {
   clampSamplesPerStrategy,
   EXPLORATION_STRATEGIES,
   isSimulatedEmbedding,
-  parseExplorationStrategyIds,
+  parseSimulationStrategies,
   REGION_SIMULATION_DEFAULT_SAMPLES,
   REGION_SIMULATION_MAX_SAMPLES,
   REGION_SIMULATION_MIN_SAMPLES,
@@ -156,8 +156,11 @@ export async function POST(req: NextRequest) {
       ? body.flowIds.map((id) => String(id || "").trim()).filter(Boolean)
       : [];
     if (!flowIds.length) return jsonError(400, "Select at least one flow");
-    const strategyIds = parseExplorationStrategyIds(body.strategyIds);
-    if (!strategyIds.length) return jsonError(400, "Select at least one exploration strategy");
+    const strategies = parseSimulationStrategies({
+      strategyIds: body.strategyIds,
+      customStrategies: body.customStrategies,
+    });
+    if (!strategies.length) return jsonError(400, "Select at least one exploration strategy");
     const samplesPerStrategy = clampSamplesPerStrategy(body.samplesPerStrategy);
     const includeHumanData = body.includeHumanData === true;
 
@@ -185,7 +188,7 @@ export async function POST(req: NextRequest) {
             name,
             kind,
             flows,
-            strategyIds,
+            strategies,
             samplesPerStrategy,
             includeHumanData,
             onProgress: (progress) => send({ type: "progress", progress }),

@@ -5,12 +5,18 @@ import {
   allocateSamplesAcrossFlows,
   clampSamplesPerStrategy,
   coverProblems,
+  customExplorationStrategyId,
   EXPLORATION_STRATEGIES,
   explorationStrategyById,
+  isCustomExplorationStrategyId,
   isSimulatedEmbedding,
+  matchSimulationFlows,
   nearestStrategyCluster,
+  parseCustomExplorationStrategy,
+  parseSimulationStrategies,
   planRegionSimulationSamples,
   REGION_SIMULATION_DEFAULT_SAMPLES,
+  REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_SOURCE,
   runRegionSimulationSample,
   seededSimulationTree,
@@ -26,6 +32,7 @@ import {
   resetFlowEmbeddingStore,
 } from "@/lib/flow-embedding-store";
 import { presentDashboardKnowledgeRegions } from "@/lib/dashboard-knowledge-regions";
+import { parseRegionSimulationClusterStrategyId } from "@/lib/knowledge-region-details";
 
 const ROOT = join(__dirname, "../..");
 
@@ -229,8 +236,17 @@ describe("region simulation", () => {
     expect(setup).not.toContain("productRegionStudioPath");
     expect(setup).not.toContain("Open in Data Studio");
     expect(setup).toContain("data-region-simulation-progress");
+    expect(setup).toContain("data-region-simulation-flow-search");
+    expect(setup).toContain("data-region-simulation-flow-matches");
+    expect(setup).toContain("data-region-simulation-add-custom");
+    expect(setup).toContain("data-region-simulation-custom-name");
+    expect(setup).toContain("data-region-simulation-custom-instructions");
+    expect(setup).toContain("customStrategies");
+    expect(setup).toContain("REGION_SIMULATION_FLOW_MATCH_LIMIT");
     expect(setup).toContain("kind=${kind}");
     const route = read("app/api/dashboard/region-simulation/route.ts");
+    expect(route).toContain("customStrategies: body.customStrategies");
+    expect(route).toContain("parseSimulationStrategies");
     expect(route).toContain("runRegionSimulation");
     expect(route).toContain("requireAuthenticatedUser");
     expect(route).toContain("listSolveFlowsForOwnerUserId");
@@ -259,6 +275,81 @@ describe("region simulation", () => {
       flowKind: "solve",
     });
     expect(stored.filter((row) => row.source === REGION_SIMULATION_SOURCE)).toHaveLength(3);
+  });
+
+  it("matches a short list of flows from a search query", () => {
+    const flows = [
+      { id: "1", name: "Limits", topic: "calc" },
+      { id: "2", name: "Integrals", topic: "calc" },
+      { id: "3", name: "Series", topic: "calc" },
+      { id: "4", name: "ODE", topic: "diff" },
+      { id: "5", name: "PDE", topic: "diff" },
+      { id: "6", name: "Algebra", topic: "alg" },
+    ];
+    expect(REGION_SIMULATION_FLOW_MATCH_LIMIT).toBe(4);
+    expect(matchSimulationFlows(flows, "").map((flow) => flow.id)).toEqual(["1", "2", "3", "4"]);
+    expect(matchSimulationFlows(flows, "diff").map((flow) => flow.id)).toEqual(["4", "5"]);
+    expect(matchSimulationFlows(flows, "algebra").map((flow) => flow.id)).toEqual(["6"]);
+    expect(matchSimulationFlows(flows, "missing")).toEqual([]);
+  });
+
+  it("parses custom exploration strategies as simulation prompts", () => {
+    expect(parseCustomExplorationStrategy({ name: "Cautious" })).toBeNull();
+    expect(parseCustomExplorationStrategy({ instructions: "Go slow." })).toBeNull();
+    const parsed = parseCustomExplorationStrategy({
+      name: "Cautious",
+      prompt: "Ask more questions before you commit to an answer.",
+    });
+    expect(parsed?.name).toBe("Cautious");
+    expect(parsed?.instructions).toContain("Ask more questions");
+    expect(isCustomExplorationStrategyId(parsed?.id)).toBe(true);
+    expect(parsed?.id).toBe(
+      customExplorationStrategyId("Cautious", "Ask more questions before you commit to an answer."),
+    );
+    const mixed = parseSimulationStrategies({
+      strategyIds: ["exploit-heavy", parsed!.id, "unknown"],
+      customStrategies: [parsed],
+    });
+    expect(mixed.map((row) => row.id)).toEqual(["exploit-heavy", parsed!.id]);
+    expect(mixed[1]?.instructions).toContain("Ask more questions");
+  });
+
+  it("walks a custom strategy from its prompt and stores the instructions", async () => {
+    const custom = parseCustomExplorationStrategy({
+      name: "Cautious",
+      instructions: "Take the slowest path and ask more questions before answering.",
+    })!;
+    const other = parseCustomExplorationStrategy({
+      name: "Impulsive",
+      instructions: "Commit immediately to the cheapest first step and stop.",
+    })!;
+    expect(custom.id).not.toBe(other.id);
+    const plan = planRegionSimulationSamples({
+      flowIds: ["flow-a"],
+      problemsByFlowId: { "flow-a": ["What is a limit?"] },
+      strategyIds: [custom.id],
+      samplesPerStrategy: 3,
+    })[0]!;
+    const walk = runRegionSimulationSample(plan, "verify", [custom]);
+    expect(walk.pow[0]?.metadata?.strategyId).toBe(custom.id);
+    expect(walk.pow[0]?.metadata?.instructions).toBe(custom.instructions);
+    expect(custom.params).not.toEqual(other.params);
+
+    const result = await runRegionSimulation({
+      ownerUserId: "owner-custom",
+      name: "Custom styles",
+      flows: [{ id: "flow-a", name: "Limits", problems: ["ε-δ"] }],
+      strategyIds: [custom.id],
+      customStrategies: [custom],
+      samplesPerStrategy: 3,
+      includeHumanData: false,
+    });
+    expect(result.clusters.map((cluster) => cluster.strategyName)).toEqual(["Cautious"]);
+    expect(result.clusters[0]?.strategyId).toBe(custom.id);
+    expect(result.summary.simulatedCount).toBe(3);
+    expect(
+      parseRegionSimulationClusterStrategyId(`region-simulation-cluster:${custom.id}`),
+    ).toBe(custom.id);
   });
 
   it("stores Calibration simulations on calibrate embeddings", async () => {

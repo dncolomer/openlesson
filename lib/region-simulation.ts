@@ -20,6 +20,7 @@ export const REGION_SIMULATION_SOURCE = "simulated" as const;
 export const REGION_SIMULATION_DEFAULT_SAMPLES = 12;
 export const REGION_SIMULATION_MIN_SAMPLES = 3;
 export const REGION_SIMULATION_MAX_SAMPLES = 48;
+export const REGION_SIMULATION_FLOW_MATCH_LIMIT = 4;
 export const DASHBOARD_REGION_SIMULATION_PATH = "/api/dashboard/region-simulation";
 
 export const EXPLORATION_STRATEGY_IDS = [
@@ -30,7 +31,8 @@ export const EXPLORATION_STRATEGY_IDS = [
   "narrow-and-deep",
 ] as const;
 
-export type ExplorationStrategyId = (typeof EXPLORATION_STRATEGY_IDS)[number];
+export type BuiltInExplorationStrategyId = (typeof EXPLORATION_STRATEGY_IDS)[number];
+export type ExplorationStrategyId = string;
 
 export type ExplorationStrategy = {
   id: ExplorationStrategyId;
@@ -119,13 +121,64 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function isBuiltInExplorationStrategyId(
+  value: unknown,
+): value is BuiltInExplorationStrategyId {
+  return EXPLORATION_STRATEGY_IDS.includes(value as BuiltInExplorationStrategyId);
+}
+
+export function isCustomExplorationStrategyId(value: unknown): boolean {
+  return /^custom-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text(value));
+}
+
 export function isExplorationStrategyId(value: unknown): value is ExplorationStrategyId {
-  return EXPLORATION_STRATEGY_IDS.includes(value as ExplorationStrategyId);
+  return isBuiltInExplorationStrategyId(value) || isCustomExplorationStrategyId(value);
 }
 
 export function explorationStrategyById(id: unknown): ExplorationStrategy | null {
   const key = text(id);
   return EXPLORATION_STRATEGIES.find((row) => row.id === key) ?? null;
+}
+
+export function customExplorationStrategyId(name: string, instructions = ""): string {
+  const slug =
+    text(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32) || "strategy";
+  const tag = Math.floor(hashUnit(`custom-id:${name}:${instructions}`) * 36 ** 4)
+    .toString(36)
+    .padStart(4, "0");
+  return `custom-${slug}-${tag}`.slice(0, 64);
+}
+
+function paramsForCustomInstructions(instructions: string): ExplorationStrategy["params"] {
+  const prefers = ["cheap", "costly", "novel", "balanced", "lineage"] as const;
+  const prefer = prefers[Math.floor(hashUnit(`custom-prefer:${instructions}`) * prefers.length)]!;
+  const maxSteps = 4 + Math.floor(hashUnit(`custom-steps:${instructions}`) * 4);
+  const commitAfter = Math.floor(hashUnit(`custom-commit:${instructions}`) * (maxSteps + 1));
+  return { maxSteps, prefer, commitAfter };
+}
+
+export function parseCustomExplorationStrategy(value: unknown): ExplorationStrategy | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const name = text(record.name);
+  const instructions = text(record.instructions) || text(record.prompt);
+  if (!name || !instructions) return null;
+  const description = text(record.description) || instructions.slice(0, 160);
+  const requested = text(record.id);
+  const id = isCustomExplorationStrategyId(requested)
+    ? requested
+    : customExplorationStrategyId(name, instructions);
+  return {
+    id,
+    name: name.slice(0, 80),
+    description: description.slice(0, 200),
+    instructions: instructions.slice(0, 2000),
+    params: paramsForCustomInstructions(instructions),
+  };
 }
 
 export function parseExplorationStrategyIds(value: unknown): ExplorationStrategyId[] {
@@ -138,6 +191,49 @@ export function parseExplorationStrategyIds(value: unknown): ExplorationStrategy
     out.push(item);
   }
   return out;
+}
+
+export function parseSimulationStrategies(input: {
+  strategyIds?: unknown;
+  customStrategies?: unknown;
+}): ExplorationStrategy[] {
+  const customRows = Array.isArray(input.customStrategies) ? input.customStrategies : [];
+  const customById = new Map<string, ExplorationStrategy>();
+  for (const row of customRows) {
+    const parsed = parseCustomExplorationStrategy(row);
+    if (!parsed || customById.has(parsed.id)) continue;
+    customById.set(parsed.id, parsed);
+  }
+  const listed = Array.isArray(input.strategyIds)
+    ? input.strategyIds
+    : [...EXPLORATION_STRATEGY_IDS, ...customById.keys()];
+  const seen = new Set<string>();
+  const out: ExplorationStrategy[] = [];
+  for (const item of listed) {
+    const id = text(item);
+    if (!id || seen.has(id)) continue;
+    const strategy = explorationStrategyById(id) ?? customById.get(id) ?? null;
+    if (!strategy) continue;
+    seen.add(strategy.id);
+    out.push(strategy);
+  }
+  return out;
+}
+
+export function matchSimulationFlows<T extends { id: string; name: string; topic?: string | null }>(
+  flows: readonly T[],
+  query: string,
+  limit = REGION_SIMULATION_FLOW_MATCH_LIMIT,
+): T[] {
+  const q = query.trim().toLowerCase();
+  const matched = q
+    ? flows.filter((flow) => {
+        const hay = `${flow.name} ${flow.topic ?? ""} ${flow.id}`.toLowerCase();
+        return hay.includes(q);
+      })
+    : [...flows];
+  const cap = Math.max(0, Math.floor(Number(limit) || 0));
+  return matched.slice(0, cap);
 }
 
 export function clampSamplesPerStrategy(value: unknown): number {
@@ -265,19 +361,16 @@ export function planRegionSimulationSamples(input: {
 }
 
 export function emptySimulationProgress(
-  strategyIds: readonly string[],
+  strategies: readonly Pick<ExplorationStrategy, "id" | "name">[],
   samplesPerStrategy: number,
 ): RegionSimulationProgress[] {
   const total = clampSamplesPerStrategy(samplesPerStrategy);
-  return parseExplorationStrategyIds(strategyIds).map((id) => {
-    const strategy = explorationStrategyById(id)!;
-    return {
-      strategyId: id,
-      strategyName: strategy.name,
-      done: 0,
-      total,
-    };
-  });
+  return strategies.map((strategy) => ({
+    strategyId: strategy.id,
+    strategyName: strategy.name,
+    done: 0,
+    total,
+  }));
 }
 
 function seededPrice(seed: string, key: string, min: number, max: number): number {
@@ -462,8 +555,10 @@ export function regionSimulationPow(input: {
 export function runRegionSimulationSample(
   plan: RegionSimulationSamplePlan,
   flowKind: "verify" | "calibrate" | "solve" = "verify",
+  catalog: readonly ExplorationStrategy[] = EXPLORATION_STRATEGIES,
 ): RegionSimulationWalk {
-  const strategy = explorationStrategyById(plan.strategyId);
+  const strategy =
+    catalog.find((row) => row.id === plan.strategyId) ?? explorationStrategyById(plan.strategyId);
   if (!strategy) {
     throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
   }

@@ -15,6 +15,8 @@ import {
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
   FLOW_FORM_INPUT,
+  FLOW_FORM_TEXTAREA,
+  FLOW_GHOST_BTN,
   FLOW_PRIMARY_BTN,
   FlowField,
   FlowFormCard,
@@ -23,7 +25,10 @@ import {
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import {
   DASHBOARD_REGION_SIMULATION_PATH,
+  matchSimulationFlows,
+  parseCustomExplorationStrategy,
   REGION_SIMULATION_DEFAULT_SAMPLES,
+  REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_MAX_SAMPLES,
   REGION_SIMULATION_MIN_SAMPLES,
   type ExplorationStrategyId,
@@ -47,6 +52,8 @@ type SetupStrategy = {
   id: ExplorationStrategyId;
   name: string;
   description: string;
+  instructions?: string;
+  custom?: boolean;
 };
 
 function toggleId<T extends string>(current: readonly T[], id: T): T[] {
@@ -104,7 +111,10 @@ export function RegionSimulationSetup({
   const [strategies, setStrategies] = useState<SetupStrategy[]>([]);
   const [name, setName] = useState("");
   const [flowIds, setFlowIds] = useState<string[]>([]);
+  const [flowQuery, setFlowQuery] = useState("");
   const [strategyIds, setStrategyIds] = useState<ExplorationStrategyId[]>([]);
+  const [customName, setCustomName] = useState("");
+  const [customInstructions, setCustomInstructions] = useState("");
   const [samplesPerStrategy, setSamplesPerStrategy] = useState(REGION_SIMULATION_DEFAULT_SAMPLES);
   const [includeHumanData, setIncludeHumanData] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -155,18 +165,71 @@ export function RegionSimulationSetup({
 
   useEffect(() => {
     setFlowIds([]);
+    setFlowQuery("");
+    setCustomName("");
+    setCustomInstructions("");
   }, [kind]);
 
   const selectedFlows = useMemo(
     () => flows.filter((flow) => flowIds.includes(flow.id)),
     [flowIds, flows],
   );
+  const flowMatches = useMemo(
+    () =>
+      matchSimulationFlows(
+        flows.filter((flow) => !flowIds.includes(flow.id)),
+        flowQuery,
+        REGION_SIMULATION_FLOW_MATCH_LIMIT,
+      ),
+    [flowIds, flowQuery, flows],
+  );
+  const customStrategies = strategies.filter((strategy) => strategy.custom);
+  const catalogStrategies = strategies.filter((strategy) => !strategy.custom);
   const realSessionCount = selectedFlows.reduce((sum, flow) => sum + flow.realSessionCount, 0);
   const showHumanOption = realSessionCount > 0;
 
   useEffect(() => {
     if (!showHumanOption && includeHumanData) setIncludeHumanData(false);
   }, [includeHumanData, showHumanOption]);
+
+  function addFlow(id: string) {
+    setFlowIds((current) => (current.includes(id) ? current : [...current, id]));
+    setFlowQuery("");
+  }
+
+  function removeFlow(id: string) {
+    setFlowIds((current) => current.filter((item) => item !== id));
+  }
+
+  function addCustomStrategy() {
+    const parsed = parseCustomExplorationStrategy({
+      name: customName,
+      instructions: customInstructions,
+    });
+    if (!parsed) return;
+    setStrategies((current) =>
+      current.some((row) => row.id === parsed.id)
+        ? current
+        : [
+            ...current,
+            {
+              id: parsed.id,
+              name: parsed.name,
+              description: parsed.description,
+              instructions: parsed.instructions,
+              custom: true,
+            },
+          ],
+    );
+    setStrategyIds((current) => (current.includes(parsed.id) ? current : [...current, parsed.id]));
+    setCustomName("");
+    setCustomInstructions("");
+  }
+
+  function removeCustomStrategy(id: ExplorationStrategyId) {
+    setStrategies((current) => current.filter((row) => row.id !== id));
+    setStrategyIds((current) => current.filter((item) => item !== id));
+  }
 
   async function run() {
     if (!name.trim() || !flowIds.length || !strategyIds.length) return;
@@ -193,6 +256,14 @@ export function RegionSimulationSetup({
           name: name.trim(),
           flowIds,
           strategyIds,
+          customStrategies: customStrategies
+            .filter((strategy) => strategyIds.includes(strategy.id))
+            .map((strategy) => ({
+              id: strategy.id,
+              name: strategy.name,
+              instructions: strategy.instructions || "",
+              description: strategy.description,
+            })),
           samplesPerStrategy,
           includeHumanData: showHumanOption && includeHumanData,
         }),
@@ -325,30 +396,66 @@ export function RegionSimulationSetup({
                     {productLabel} flows
                   </legend>
                   <p className="text-xs text-neutral-500">
-                    Required. These flows supply the problems the agents will solve.
+                    Required. Search and pick the flows that supply the problems the agents will solve.
                   </p>
-                  {flows.map((flow) => (
-                    <label
-                      key={flow.id}
-                      className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={flowIds.includes(flow.id)}
-                        onChange={() => setFlowIds(toggleId(flowIds, flow.id))}
-                        data-region-simulation-flow={flow.id}
-                      />
-                      <span>
-                        {flow.name}
-                        <span className="ml-2 text-neutral-500">
-                          {flow.questionCount} problem{flow.questionCount === 1 ? "" : "s"}
-                          {flow.realSessionCount
-                            ? ` · ${flow.realSessionCount} real session${flow.realSessionCount === 1 ? "" : "s"}`
-                            : ""}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
+                  {selectedFlows.length ? (
+                    <ul className="flex flex-wrap gap-2" data-region-simulation-flow-selected="">
+                      {selectedFlows.map((flow) => (
+                        <li key={flow.id}>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 border border-white/40 px-3 py-1.5 text-sm text-white"
+                            data-region-simulation-flow={flow.id}
+                            onClick={() => removeFlow(flow.id)}
+                          >
+                            {flow.name}
+                            <span className="text-neutral-500">×</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <input
+                    value={flowQuery}
+                    onChange={(event) => setFlowQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") return;
+                      event.preventDefault();
+                      const first = flowMatches[0];
+                      if (first) addFlow(first.id);
+                    }}
+                    placeholder="Search flows"
+                    data-region-simulation-flow-search=""
+                    className={FLOW_FORM_INPUT}
+                  />
+                  {flowMatches.length ? (
+                    <ul className="space-y-2" data-region-simulation-flow-matches="">
+                      {flowMatches.map((flow) => (
+                        <li key={flow.id}>
+                          <button
+                            type="button"
+                            className="flex w-full items-start justify-between gap-3 border border-white/20 px-3 py-2 text-left text-sm text-white"
+                            data-region-simulation-flow-match={flow.id}
+                            onClick={() => addFlow(flow.id)}
+                          >
+                            <span>
+                              {flow.name}
+                              <span className="ml-2 text-neutral-500">
+                                {flow.questionCount} problem{flow.questionCount === 1 ? "" : "s"}
+                                {flow.realSessionCount
+                                  ? ` · ${flow.realSessionCount} real session${flow.realSessionCount === 1 ? "" : "s"}`
+                                  : ""}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-neutral-500" data-region-simulation-flow-empty="">
+                      {flowQuery.trim() ? "No matching flows." : "All matching flows are already selected."}
+                    </p>
+                  )}
                 </fieldset>
 
                 <fieldset className="space-y-2" data-region-simulation-strategies="">
@@ -356,9 +463,10 @@ export function RegionSimulationSetup({
                     Exploration strategies
                   </legend>
                   <p className="text-xs text-neutral-500">
-                    Clusters describe exploration styles, not a person's ability or worth.
+                    Clusters describe exploration styles, not a person's ability or worth. Add a custom
+                    strategy to use its prompt as the agent instructions for the simulation.
                   </p>
-                  {strategies.map((strategy) => (
+                  {catalogStrategies.map((strategy) => (
                     <label
                       key={strategy.id}
                       className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
@@ -375,6 +483,65 @@ export function RegionSimulationSetup({
                       </span>
                     </label>
                   ))}
+                  {customStrategies.map((strategy) => (
+                    <div
+                      key={strategy.id}
+                      className="flex items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
+                      data-region-simulation-custom-strategy={strategy.id}
+                    >
+                      <label className="flex flex-1 cursor-pointer items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={strategyIds.includes(strategy.id)}
+                          onChange={() => setStrategyIds(toggleId(strategyIds, strategy.id))}
+                          data-region-simulation-strategy={strategy.id}
+                        />
+                        <span>
+                          <span className="block">{strategy.name}</span>
+                          <span className="block text-xs text-neutral-400">
+                            {strategy.instructions || strategy.description}
+                          </span>
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        className={FLOW_GHOST_BTN}
+                        data-region-simulation-remove-custom={strategy.id}
+                        onClick={() => removeCustomStrategy(strategy.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <div className="space-y-2 border border-dashed border-white/20 px-3 py-3">
+                    <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                      Custom strategy
+                    </p>
+                    <input
+                      value={customName}
+                      onChange={(event) => setCustomName(event.target.value)}
+                      placeholder="Strategy name"
+                      data-region-simulation-custom-name=""
+                      className={FLOW_FORM_INPUT}
+                    />
+                    <textarea
+                      value={customInstructions}
+                      onChange={(event) => setCustomInstructions(event.target.value)}
+                      placeholder="Prompt for this exploration style"
+                      rows={3}
+                      data-region-simulation-custom-instructions=""
+                      className={FLOW_FORM_TEXTAREA}
+                    />
+                    <button
+                      type="button"
+                      disabled={!customName.trim() || !customInstructions.trim()}
+                      onClick={addCustomStrategy}
+                      data-region-simulation-add-custom=""
+                      className={FLOW_GHOST_BTN}
+                    >
+                      Add strategy
+                    </button>
+                  </div>
                 </fieldset>
 
                 <FlowField label="Samples per strategy">

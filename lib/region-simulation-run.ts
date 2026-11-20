@@ -26,17 +26,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   clampSamplesPerStrategy,
   emptySimulationProgress,
-  explorationStrategyById,
   isSimulatedEmbedding,
+  parseSimulationStrategies,
   planRegionSimulationSamples,
   REGION_SIMULATION_SOURCE,
   runRegionSimulationSample,
   simulatedIdentityLabel,
   simulationClusterRegionName,
   simulationSampleRunId,
+  type ExplorationStrategy,
   type ExplorationStrategyId,
   type RegionSimulationProgress,
-  type RegionSimulationSamplePlan,
 } from "@/lib/region-simulation";
 import type { VerificationFlow } from "@/lib/verification-flow";
 
@@ -181,7 +181,9 @@ export async function runRegionSimulation(input: {
   ownerUserId: string;
   name: string;
   flows: readonly RegionSimulationFlowInput[];
-  strategyIds: readonly ExplorationStrategyId[];
+  strategyIds?: readonly ExplorationStrategyId[];
+  customStrategies?: unknown;
+  strategies?: readonly ExplorationStrategy[];
   samplesPerStrategy: number;
   includeHumanData: boolean;
   kind?: ProductFlowKind;
@@ -194,8 +196,16 @@ export async function runRegionSimulation(input: {
   if (!ownerUserId) throw new Error("owner is required");
   if (!name) throw new Error("name is required");
   if (!input.flows.length) throw new Error("Select at least one flow");
-  if (!input.strategyIds.length) throw new Error("Select at least one exploration strategy");
+  const strategies = input.strategies?.length
+    ? [...input.strategies]
+    : parseSimulationStrategies({
+        strategyIds: input.strategyIds,
+        customStrategies: input.customStrategies,
+      });
+  if (!strategies.length) throw new Error("Select at least one exploration strategy");
   const samplesPerStrategy = clampSamplesPerStrategy(input.samplesPerStrategy);
+  const strategyIds = strategies.map((strategy) => strategy.id);
+  const strategyById = new Map(strategies.map((strategy) => [strategy.id, strategy] as const));
 
   const flowIds = input.flows.map((flow) => flow.id);
   const problemsByFlowId: Record<string, readonly string[]> = {};
@@ -205,19 +215,20 @@ export async function runRegionSimulation(input: {
   const plans = planRegionSimulationSamples({
     flowIds,
     problemsByFlowId,
-    strategyIds: input.strategyIds,
+    strategyIds,
     samplesPerStrategy,
   });
-  const progress = emptySimulationProgress(input.strategyIds, samplesPerStrategy);
+  const progress = emptySimulationProgress(strategies, samplesPerStrategy);
   const byStrategy = new Map<ExplorationStrategyId, StoredFlowEmbedding[]>();
-  for (const strategyId of input.strategyIds) {
+  for (const strategyId of strategyIds) {
     byStrategy.set(strategyId, []);
   }
 
   const simulated: StoredFlowEmbedding[] = [];
   for (const plan of plans) {
-    const walk = runRegionSimulationSample(plan, flowKind);
-    const strategy = explorationStrategyById(plan.strategyId)!;
+    const walk = runRegionSimulationSample(plan, flowKind, strategies);
+    const strategy = strategyById.get(plan.strategyId);
+    if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
     const flow = input.flows.find((row) => row.id === plan.flowId);
     const stored = await persistCompletedFlowEmbedding({
       ownerUserId,
@@ -251,10 +262,6 @@ export async function runRegionSimulation(input: {
   const parentSpec = specFromEmbeddings(name, parentRows);
   const workspaceId = input.flows.find((flow) => flow.workspaceId)?.workspaceId || null;
   const primaryFlowId = flowIds[0] || null;
-  const strategies = input.strategyIds.map((id) => {
-    const strategy = explorationStrategyById(id)!;
-    return { id, name: strategy.name };
-  });
   const summary: RegionSimulationSummary = {
     name,
     flows: input.flows.map((flow) => ({ id: flow.id, name: flow.name })),
@@ -287,8 +294,8 @@ export async function runRegionSimulation(input: {
   });
 
   const clusters: RegionSimulationClusterResult[] = [];
-  for (const strategyId of input.strategyIds) {
-    const strategy = explorationStrategyById(strategyId)!;
+  for (const strategy of strategies) {
+    const strategyId = strategy.id;
     const rows = byStrategy.get(strategyId) ?? [];
     if (!rows.length) continue;
     const clusterName = simulationClusterRegionName(name, strategy.name);
@@ -357,5 +364,3 @@ export function problemsForVerificationFlow(
 ): string[] {
   return problemsForSimulationFlow(flow);
 }
-
-export type { RegionSimulationSamplePlan };

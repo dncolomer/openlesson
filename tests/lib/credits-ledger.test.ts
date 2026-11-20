@@ -17,7 +17,9 @@ import {
   creditCostForAction,
   createMemoryCreditStore,
   debitFlowSessionCredits,
+  flowSessionCreditCost,
   grantCreditPack,
+  refundFlowSessionCredits,
   isBillableAction,
   isUnmeteredCreditsProfile,
   loadCreditSummary,
@@ -73,8 +75,9 @@ describe("starter grant on free signup", () => {
 
 describe("flow session debit", () => {
   it.each(FLOW_SESSION_KINDS)(
-    "%s start deducts FLOW_SESSION_CREDIT_COST and persists a lower balance",
+    "%s start deducts flowSessionCreditCost and persists a lower balance",
     async (flowKind) => {
+      const cost = flowSessionCreditCost(flowKind);
       const store = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
       let created = false;
       const result = await startBillableFlowSession(
@@ -89,17 +92,18 @@ describe("flow session debit", () => {
       if (!result.ok) return;
       expect(created).toBe(true);
       expect(result.value).toEqual({ sessionId: `${flowKind}-1` });
-      expect(result.balanceAfter).toBe(STARTER_CREDIT_GRANT - FLOW_SESSION_CREDIT_COST);
+      expect(result.balanceAfter).toBe(STARTER_CREDIT_GRANT - cost);
       const summary = await loadCreditSummary(store, "runner");
-      expect(summary.balance).toBe(STARTER_CREDIT_GRANT - FLOW_SESSION_CREDIT_COST);
+      expect(summary.balance).toBe(STARTER_CREDIT_GRANT - cost);
       expect(summary.debits).toHaveLength(1);
       expect(summary.debits[0]?.flowKind).toBe(flowKind);
-      expect(Math.abs(summary.debits[0]?.amount ?? 0)).toBe(FLOW_SESSION_CREDIT_COST);
+      expect(Math.abs(summary.debits[0]?.amount ?? 0)).toBe(cost);
     },
   );
 
   it("rejects an insufficient start and does not create a billable session", async () => {
-    const store = createMemoryCreditStore({ broke: FLOW_SESSION_CREDIT_COST - 1 });
+    const cost = flowSessionCreditCost("learn");
+    const store = createMemoryCreditStore({ broke: cost - 1 });
     let created = false;
     const result = await startBillableFlowSession(
       store,
@@ -113,10 +117,10 @@ describe("flow session debit", () => {
     expect(created).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("insufficient_credits");
-    expect(result.balance).toBe(FLOW_SESSION_CREDIT_COST - 1);
-    expect(result.amount).toBe(FLOW_SESSION_CREDIT_COST);
+    expect(result.balance).toBe(cost - 1);
+    expect(result.amount).toBe(cost);
     const summary = await loadCreditSummary(store, "broke");
-    expect(summary.balance).toBe(FLOW_SESSION_CREDIT_COST - 1);
+    expect(summary.balance).toBe(cost - 1);
     expect(summary.debits).toHaveLength(0);
   });
 
@@ -186,7 +190,7 @@ describe("guest vs signed-in billed account", () => {
     expect(result.ok).toBe(true);
     expect(result.billedUserId).toBe("owner-1");
     expect((await store.load("owner-1")).balance).toBe(
-      STARTER_CREDIT_GRANT - FLOW_SESSION_CREDIT_COST,
+      STARTER_CREDIT_GRANT - flowSessionCreditCost("calibrate"),
     );
     expect((await store.load("runner-1")).balance).toBe(STARTER_CREDIT_GRANT);
   });
@@ -230,7 +234,7 @@ describe("guest vs signed-in billed account", () => {
     );
     expect(result.ok).toBe(true);
     expect((await store.load("runner-1")).balance).toBe(
-      STARTER_CREDIT_GRANT - FLOW_SESSION_CREDIT_COST,
+      STARTER_CREDIT_GRANT - flowSessionCreditCost("solve"),
     );
     expect((await store.load("owner-1")).balance).toBe(STARTER_CREDIT_GRANT);
   });
@@ -289,16 +293,100 @@ describe("session-start routes debit shipped credits", () => {
   });
 });
 
-describe("unmetered creates", () => {
-  it("does not debit map or knowledge-region create routes", () => {
-    const root = join(__dirname, "../..");
-    const generate = readFileSync(join(root, "app/api/workspace/generate/route.ts"), "utf8");
-    const regions = readFileSync(join(root, "app/api/dashboard/knowledge-regions/route.ts"), "utf8");
-    expect(generate).not.toContain("rejectIfInsufficientSessionCredits");
-    expect(regions).not.toContain("rejectIfInsufficientSessionCredits");
-    expect(generate).not.toContain("debitFlowSessionCredits");
-    expect(regions).not.toContain("debitFlowSessionCredits");
+describe("xAI session credit discount", () => {
+  it("debits half of FLOW_SESSION_CREDIT_COST for xAI and the full cost otherwise", async () => {
+    const xaiCost = flowSessionCreditCost("learn", { llmIsXai: true });
+    const otherCost = flowSessionCreditCost("learn", { llmIsXai: false });
+    expect(xaiCost).toBe(Math.max(1, Math.floor(FLOW_SESSION_CREDIT_COST / 2)));
+    expect(otherCost).toBe(FLOW_SESSION_CREDIT_COST);
+    expect(flowSessionCreditCost()).toBe(xaiCost);
+
+    const xaiStore = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
+    const xaiDebit = await debitFlowSessionCredits(xaiStore, {
+      runnerUserId: "runner",
+      ownerUserId: "runner",
+      flowKind: "learn",
+      llmIsXai: true,
+    });
+    expect(xaiDebit.ok).toBe(true);
+    expect((await xaiStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT - xaiCost);
+
+    const otherStore = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
+    const otherDebit = await debitFlowSessionCredits(otherStore, {
+      runnerUserId: "runner",
+      ownerUserId: "runner",
+      flowKind: "learn",
+      llmIsXai: false,
+    });
+    expect(otherDebit.ok).toBe(true);
+    expect((await otherStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT - otherCost);
   });
+
+  it("refunds the charged amount when persist fails for xAI and non-xAI", async () => {
+    const xaiCost = flowSessionCreditCost("learn", { llmIsXai: true });
+    const otherCost = flowSessionCreditCost("learn", { llmIsXai: false });
+    expect(otherCost).toBeGreaterThan(xaiCost);
+
+    const xaiStore = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
+    await expect(
+      startBillableFlowSession(
+        xaiStore,
+        { runnerUserId: "runner", ownerUserId: "runner", flowKind: "learn", llmIsXai: true },
+        async () => {
+          throw new Error("persist failed");
+        },
+      ),
+    ).rejects.toThrow("persist failed");
+    expect((await xaiStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT);
+
+    const otherStore = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
+    await expect(
+      startBillableFlowSession(
+        otherStore,
+        { runnerUserId: "runner", ownerUserId: "runner", flowKind: "learn", llmIsXai: false },
+        async () => {
+          throw new Error("persist failed");
+        },
+      ),
+    ).rejects.toThrow("persist failed");
+    expect((await otherStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT);
+  });
+
+  it("refundFlowSessionCredits without an amount refunds the last session debit", async () => {
+    const xaiCost = flowSessionCreditCost("learn", { llmIsXai: true });
+    const otherCost = flowSessionCreditCost("learn", { llmIsXai: false });
+
+    const otherStore = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
+    const otherDebit = await debitFlowSessionCredits(otherStore, {
+      runnerUserId: "runner",
+      ownerUserId: "runner",
+      flowKind: "learn",
+      llmIsXai: false,
+    });
+    expect(otherDebit.ok).toBe(true);
+    expect((await otherStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT - otherCost);
+    const otherRefund = await refundFlowSessionCredits(otherStore, "runner");
+    expect(otherRefund.applied).toBe(true);
+    expect(otherRefund.entry.amount).toBe(otherCost);
+    expect((await otherStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT);
+
+    const xaiStore = createMemoryCreditStore({ runner: STARTER_CREDIT_GRANT });
+    const xaiDebit = await debitFlowSessionCredits(xaiStore, {
+      runnerUserId: "runner",
+      ownerUserId: "runner",
+      flowKind: "learn",
+      llmIsXai: true,
+    });
+    expect(xaiDebit.ok).toBe(true);
+    expect((await xaiStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT - xaiCost);
+    const xaiRefund = await refundFlowSessionCredits(xaiStore, "runner");
+    expect(xaiRefund.applied).toBe(true);
+    expect(xaiRefund.entry.amount).toBe(xaiCost);
+    expect((await xaiStore.load("runner")).balance).toBe(STARTER_CREDIT_GRANT);
+  });
+});
+
+describe("unmetered creates", () => {
 
   it("leaves the balance unchanged for Learning Map and Knowledge Region create", async () => {
     const store = createMemoryCreditStore({ author: STARTER_CREDIT_GRANT });

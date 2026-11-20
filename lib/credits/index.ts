@@ -22,6 +22,7 @@ export {
   creditCostForAction,
   flowSessionCreditCost,
   isBillableAction,
+  type FlowSessionCreditOptions,
   isUnmeteredCreditsProfile,
   guestGrantAmount,
   starterGrantAmount,
@@ -41,6 +42,7 @@ export {
   memoryCreditStore,
   refundFlowSessionCredits,
   rejectIfInsufficientSessionCredits,
+  resolveLlmIsXaiForUser,
   startBillableFlowSession,
   unmeteredCreateLeavesBalance,
 } from "@/lib/credits/account";

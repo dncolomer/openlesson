@@ -14,10 +14,11 @@ import {
 } from "@/lib/plans";
 import { presentFreeWeeklySessionQuota, utcMondayWeekWindow } from "@/lib/free-tier";
 import {
-  FLOW_SESSION_CREDIT_COST,
   STARTER_CREDIT_GRANT,
 } from "@/lib/credits/constants";
+import { flowSessionCreditCost } from "@/lib/credits/ledger";
 import { creditStoreFromClient, loadCreditSummary } from "@/lib/credits/account";
+import { orgLlmIsXai } from "@/lib/organization/org-backends";
 import {
   billingEntityToUserProfile,
   resolveBillingEntity,
@@ -83,7 +84,7 @@ export async function GET() {
         weeklySessionsResetAt: null,
         weeklySessionsAllowed: false,
         creditBalance: 0,
-        sessionCreditCost: FLOW_SESSION_CREDIT_COST,
+        sessionCreditCost: flowSessionCreditCost(),
         starterCreditGrant: STARTER_CREDIT_GRANT,
         creditGrants: [],
         creditDebits: [],
@@ -96,7 +97,7 @@ export async function GET() {
       const { data: orgRow } = await admin
         .from("organizations")
         .select(
-          "id, name, plan, subscription_status, current_period_end, extra_lessons, billing_mode, kind, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status"
+          "id, name, plan, subscription_status, current_period_end, extra_lessons, billing_mode, kind, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, llm_backend, llm_provider, llm_base_url"
         )
         .eq("id", profile.organization_id)
         .maybeSingle();
@@ -313,10 +314,19 @@ export async function GET() {
     const weekStart = utcMondayWeekWindow().start;
     const weeklyUsed = await countUserSessionsSince(admin, user.id, weekStart);
     const weekly = presentFreeWeeklySessionQuota(weeklyUsed);
+    const sessionCreditCost = flowSessionCreditCost(undefined, {
+      llmIsXai: orgLlmIsXai(
+        org as {
+          llm_backend?: string | null;
+          llm_provider?: string | null;
+          llm_base_url?: string | null;
+        } | null,
+      ),
+    });
     const credits = await loadCreditSummary(creditStoreFromClient(admin), user.id).catch(() => ({
       balance: 0,
       starterGrant: STARTER_CREDIT_GRANT,
-      sessionCost: FLOW_SESSION_CREDIT_COST,
+      sessionCost: sessionCreditCost,
       grants: [],
       debits: [],
       entries: [],
@@ -351,7 +361,7 @@ export async function GET() {
       weeklySessionsResetAt: weekly.resetAt,
       weeklySessionsAllowed: hasPaidAccess || weekly.allowed,
       creditBalance: credits.balance,
-      sessionCreditCost: credits.sessionCost,
+      sessionCreditCost,
       starterCreditGrant: credits.starterGrant,
       creditGrants: credits.grants.map((entry) => ({
         id: entry.id,

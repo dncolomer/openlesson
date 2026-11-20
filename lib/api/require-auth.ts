@@ -78,6 +78,18 @@ export type CookieAuthenticatedRequest =
     }
   | { ok: false; response: NextResponse };
 
+async function bindOrgBackendsForUserId(userId: string | null | undefined) {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { bindOrgBackendContextForUser } = await import(
+      "@/lib/organization/org-backend-runtime"
+    );
+    await bindOrgBackendContextForUser(createAdminClient(), userId);
+  } catch (err) {
+    console.error("[org-backends] request bind failed:", err);
+  }
+}
+
 export async function requireAuthenticatedUser(): Promise<CookieAuthenticatedRequest> {
   const supabase = await createClient();
   const {
@@ -91,6 +103,8 @@ export async function requireAuthenticatedUser(): Promise<CookieAuthenticatedReq
       response: jsonError(401, "Not authenticated"),
     };
   }
+
+  await bindOrgBackendsForUserId(user.id);
 
   return {
     ok: true,
@@ -326,6 +340,7 @@ export async function guardSessionRoute(
     if ("error" in ids) {
       return { ok: false, response: jsonError(500, "Workspace owner is missing") };
     }
+    await bindOrgBackendsForUserId(ids.persistUserId);
     return {
       ok: true,
       principal,
@@ -359,6 +374,7 @@ export async function guardSessionRoute(
     if ("error" in ids) {
       return { ok: false, response: jsonError(500, "Workspace owner is missing") };
     }
+    await bindOrgBackendsForUserId(ids.persistUserId);
     return {
       ok: true,
       principal,
@@ -392,6 +408,7 @@ export async function guardSessionRoute(
     if ("error" in ids) {
       return { ok: false, response: jsonError(500, "Workspace owner is missing") };
     }
+    await bindOrgBackendsForUserId(ids.persistUserId);
     return {
       ok: true,
       principal,

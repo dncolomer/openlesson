@@ -6,6 +6,7 @@ import {
   parseLogoPayload,
   uploadOrganizationLogo,
 } from "@/lib/organization/upload-logo";
+import { presentOrganizationRow } from "@/lib/organization/org-backends";
 
 export const runtime = "nodejs";
 
@@ -113,8 +114,13 @@ export async function GET() {
       guests = guestData || [];
     }
 
+    const publicOrganization = presentOrganizationRow(
+      organization as Record<string, unknown>,
+    );
+
     return NextResponse.json({
-      organization,
+      organization: publicOrganization,
+      backends: publicOrganization.backends,
       is_org_admin: profile.is_org_admin,
       members,
       invites,
@@ -233,7 +239,7 @@ export async function POST(req: NextRequest) {
           .eq("user_id", user.id)
           .is("organization_id", null);
 
-        return NextResponse.json({ organization: finalOrg, is_org_admin: true, promoted: true }, { status: 200 });
+        return NextResponse.json({ organization: presentOrganizationRow(finalOrg as Record<string, unknown>), is_org_admin: true, promoted: true }, { status: 200 });
       }
 
       return jsonError(409, "You already belong to a multi-member organization. Leave it before creating another.",);
@@ -292,7 +298,7 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id)
       .is("organization_id", null);
 
-    return NextResponse.json({ organization: finalOrg, is_org_admin: true }, { status: 201 });
+    return NextResponse.json({ organization: presentOrganizationRow(finalOrg as Record<string, unknown>), is_org_admin: true }, { status: 201 });
   } catch (error) {
     console.error("Create organization error:", error);
     return jsonError(500, "Internal server error");

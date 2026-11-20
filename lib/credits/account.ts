@@ -7,6 +7,7 @@
 import type { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { jsonError } from "@/lib/api-error-envelope";
+import { orgLlmIsXai } from "@/lib/organization/org-backends";
 import {
   GUEST_CREDIT_GRANT,
   GUEST_GRANT_REASON,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/credits/ledger";
 import {
   createMemoryCreditStore,
+  type CreditLedgerEntry,
   type CreditStore,
   type DebitCommitResult,
   type GrantCommitResult,
@@ -106,6 +108,8 @@ export type FlowSessionChargeInput = {
   runnerUserId: string | null | undefined;
   ownerUserId: string;
   flowKind: FlowSessionKind;
+  /** Default true (platform xAI). Pass false for a non-xAI org LLM backend. */
+  llmIsXai?: boolean;
 };
 
 export async function debitFlowSessionCredits(
@@ -113,7 +117,7 @@ export async function debitFlowSessionCredits(
   input: FlowSessionChargeInput,
 ): Promise<DebitCommitResult & { billedUserId: string }> {
   const billedUserId = billedUserIdForSession(input);
-  const amount = flowSessionCreditCost(input.flowKind);
+  const amount = flowSessionCreditCost(input.flowKind, { llmIsXai: input.llmIsXai });
   const result = await store.commitDebit({
     userId: billedUserId,
     amount,
@@ -123,14 +127,63 @@ export async function debitFlowSessionCredits(
   return { ...result, billedUserId };
 }
 
+function lastUnrefundedSessionDebitAmount(
+  entries: CreditLedgerEntry[],
+): number | null {
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (entry.entryKind === "refund" && entry.reason === SESSION_REFUND_REASON) {
+      return null;
+    }
+    if (entry.entryKind === "debit" && entry.reason === SESSION_DEBIT_REASON) {
+      const amount = Math.abs(entry.amount);
+      return amount > 0 ? amount : null;
+    }
+  }
+  return null;
+}
+
+function noopRefundResult(
+  billedUserId: string,
+  balanceAfter: number,
+): GrantCommitResult {
+  return {
+    ok: true,
+    balanceAfter,
+    applied: false,
+    entry: {
+      id: "session_refund_noop",
+      userId: billedUserId,
+      entryKind: "refund",
+      amount: 0,
+      balanceAfter,
+      reason: SESSION_REFUND_REASON,
+      flowKind: null,
+      stripeCheckoutSessionId: null,
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
+
 export async function refundFlowSessionCredits(
   store: CreditStore,
   billedUserId: string,
-  amount: number = flowSessionCreditCost(),
+  amount?: number,
 ): Promise<GrantCommitResult> {
+  const requested =
+    typeof amount === "number" && Number.isFinite(amount) && amount > 0
+      ? Math.floor(amount)
+      : null;
+  const snapshot = requested == null ? await store.load(billedUserId) : null;
+  const refundAmount =
+    requested ?? lastUnrefundedSessionDebitAmount(snapshot?.entries ?? []) ?? 0;
+  if (refundAmount <= 0) {
+    const current = snapshot ?? (await store.load(billedUserId));
+    return noopRefundResult(billedUserId, current.balance);
+  }
   return store.commitGrant({
     userId: billedUserId,
-    amount,
+    amount: refundAmount,
     reason: SESSION_REFUND_REASON,
     entryKind: "refund",
   });
@@ -179,7 +232,7 @@ export async function startBillableFlowSession<T>(
       await refundFlowSessionCredits(
         store,
         charge.billedUserId,
-        charge.entry.amount < 0 ? -charge.entry.amount : flowSessionCreditCost(input.flowKind),
+        charge.entry.amount < 0 ? -charge.entry.amount : undefined,
       );
     }
     throw error;
@@ -221,12 +274,43 @@ export function memoryCreditStore(
   return createMemoryCreditStore(seed, options);
 }
 
+export async function resolveLlmIsXaiForUser(
+  client: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const id = String(userId || "").trim();
+  if (!id) return true;
+  const { data: profile } = await client
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", id)
+    .maybeSingle();
+  const organizationId = String(profile?.organization_id || "").trim();
+  if (!organizationId) return true;
+  const { data: org } = await client
+    .from("organizations")
+    .select("llm_backend, llm_provider, llm_base_url")
+    .eq("id", organizationId)
+    .maybeSingle();
+  return orgLlmIsXai(org);
+}
+
+async function chargeInputWithOrgLlm(
+  client: SupabaseClient,
+  input: FlowSessionChargeInput,
+): Promise<FlowSessionChargeInput> {
+  if (typeof input.llmIsXai === "boolean") return input;
+  const billedUserId = billedUserIdForSession(input);
+  const llmIsXai = await resolveLlmIsXaiForUser(client, billedUserId);
+  return { ...input, llmIsXai };
+}
+
 export async function rejectIfInsufficientSessionCredits(
   client: SupabaseClient,
   input: FlowSessionChargeInput,
 ): Promise<NextResponse | null> {
   const store = creditStoreFromClient(client);
-  const charge = await debitFlowSessionCredits(store, input);
+  const charge = await debitFlowSessionCredits(store, await chargeInputWithOrgLlm(client, input));
   if (charge.ok) return null;
   return jsonError(402, charge.reason, "insufficient_credits", {
     balance: charge.balance,
@@ -241,7 +325,7 @@ export async function chargeFlowSessionOrThrow(
   input: FlowSessionChargeInput,
 ): Promise<void> {
   const store = creditStoreFromClient(client);
-  const charge = await debitFlowSessionCredits(store, input);
+  const charge = await debitFlowSessionCredits(store, await chargeInputWithOrgLlm(client, input));
   if (!charge.ok) {
     throw new InsufficientCreditsError(charge.balance, charge.amount);
   }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getChatConfig } from "@/lib/ai/chat";
+import { getPlatformChatConfig } from "@/lib/ai/chat";
+import { readOrgBackendStored } from "@/lib/organization/org-backends";
 import { isXaiBlobStore } from "@/lib/ai/blob-store";
 import { sealString, openSealedString } from "@/lib/crypto/seal";
 import {
@@ -26,7 +27,7 @@ export type OrgXaiRow = {
 };
 
 const ORG_XAI_SELECT =
-  "id, slug, name, xai_api_key_id, xai_api_key_name, xai_api_key_ciphertext, xai_api_key_status, xai_collection_id, xai_collection_name, xai_collection_status";
+  "id, slug, name, xai_api_key_id, xai_api_key_name, xai_api_key_ciphertext, xai_api_key_status, xai_collection_id, xai_collection_name, xai_collection_status, llm_backend, llm_provider, llm_base_url, llm_api_key_ciphertext, blob_backend, blob_provider, blob_base_url, blob_api_key_ciphertext";
 
 /**
  * Ensure the org has an xAI API key. Returns the plaintext key for server use.
@@ -36,7 +37,7 @@ export async function ensureOrgXaiApiKey(
   admin: SupabaseClient,
   organizationId: string
 ): Promise<{ apiKey: string; apiKeyId: string | null; fromOrg: boolean }> {
-  const platformKey = getChatConfig().apiKey;
+  const platformKey = getPlatformChatConfig().apiKey;
   if (!platformKey) {
     throw new Error("AI_API_KEY / XAI_API_KEY not configured");
   }
@@ -51,7 +52,23 @@ export async function ensureOrgXaiApiKey(
     return { apiKey: platformKey, apiKeyId: null, fromOrg: false };
   }
 
-  const row = org as OrgXaiRow;
+  const row = org as OrgXaiRow & {
+    llm_backend?: string | null;
+    llm_api_key_ciphertext?: string | null;
+  };
+  const backends = readOrgBackendStored(row);
+  if (backends.llm_backend === "custom" && backends.llm_api_key_ciphertext) {
+    try {
+      return {
+        apiKey: openSealedString(backends.llm_api_key_ciphertext),
+        apiKeyId: null,
+        fromOrg: true,
+      };
+    } catch (err) {
+      console.error("[ensureOrgXaiApiKey] customer BYOK decrypt failed:", err);
+    }
+    return { apiKey: platformKey, apiKeyId: null, fromOrg: false };
+  }
 
   if (
     row.xai_api_key_status === "ready" &&
@@ -111,7 +128,7 @@ export async function getXaiApiKeyForOrganization(
   admin: SupabaseClient,
   organizationId: string | null | undefined
 ): Promise<string> {
-  const platformKey = getChatConfig().apiKey;
+  const platformKey = getPlatformChatConfig().apiKey;
   if (!platformKey) {
     throw new Error("AI_API_KEY / XAI_API_KEY not configured");
   }
@@ -119,9 +136,18 @@ export async function getXaiApiKeyForOrganization(
 
   const { data: org } = await admin
     .from("organizations")
-    .select("xai_api_key_status, xai_api_key_ciphertext")
+    .select("xai_api_key_status, xai_api_key_ciphertext, llm_backend, llm_api_key_ciphertext, blob_backend, blob_api_key_ciphertext")
     .eq("id", organizationId)
     .maybeSingle();
+
+  const backends = readOrgBackendStored(org);
+  if (backends.llm_backend === "custom" && backends.llm_api_key_ciphertext) {
+    try {
+      return openSealedString(backends.llm_api_key_ciphertext);
+    } catch {
+      /* fall through */
+    }
+  }
 
   if (org?.xai_api_key_status === "ready" && org.xai_api_key_ciphertext) {
     try {

@@ -15,6 +15,7 @@ import {
   fileToAestheticPayload,
   validateAestheticFile,
 } from "@/lib/organization/custom-aesthetics-client";
+import type { OrgBackendPublic } from "@/lib/organization/org-backends";
 
 function apiErrorMessage(body: unknown, fallback: string): string {
   if (!body || typeof body !== "object") return fallback;
@@ -92,6 +93,31 @@ export function OrganizationDashboardTab() {
   const [uploadingAesthetics, setUploadingAesthetics] = useState(false);
   const [removingAestheticUrl, setRemovingAestheticUrl] = useState<string | null>(null);
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
+  const [backends, setBackends] = useState<OrgBackendPublic | null>(null);
+  const [llmMode, setLlmMode] = useState<"platform" | "custom">("platform");
+  const [llmProvider, setLlmProvider] = useState<"xai" | "openai-compatible">("xai");
+  const [llmBaseUrl, setLlmBaseUrl] = useState("");
+  const [llmApiKey, setLlmApiKey] = useState("");
+  const [llmModel, setLlmModel] = useState("");
+  const [blobMode, setBlobMode] = useState<"platform" | "custom">("platform");
+  const [blobProvider, setBlobProvider] = useState<"xai" | "openai-compatible">("xai");
+  const [blobBaseUrl, setBlobBaseUrl] = useState("");
+  const [blobApiKey, setBlobApiKey] = useState("");
+  const [savingBackends, setSavingBackends] = useState(false);
+
+  const applyBackends = (next: OrgBackendPublic | null | undefined) => {
+    if (!next) return;
+    setBackends(next);
+    setLlmMode(next.llm.mode);
+    setLlmProvider(next.llm.provider === "openai-compatible" ? "openai-compatible" : "xai");
+    setLlmBaseUrl(next.llm.baseUrl || "");
+    setLlmModel(next.llm.model || "");
+    setLlmApiKey("");
+    setBlobMode(next.blob.mode);
+    setBlobProvider(next.blob.provider === "openai-compatible" ? "openai-compatible" : "xai");
+    setBlobBaseUrl(next.blob.baseUrl || "");
+    setBlobApiKey("");
+  };
 
   useEffect(() => {
     void loadOrganization();
@@ -125,6 +151,7 @@ export function OrganizationDashboardTab() {
       setIsOrgAdmin(data.is_org_admin);
       setMembers(data.members || []);
       setInvites(data.invites || []);
+      applyBackends(data.backends || data.organization?.backends);
     } catch (err) {
       console.error("Load organization error:", err);
       setError(t("organization.loadError"));
@@ -289,6 +316,42 @@ export function OrganizationDashboardTab() {
     }
   };
 
+  const handleSaveBackends = async () => {
+    setSavingBackends(true);
+    try {
+      const res = await fetch("/api/organization/backends", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          llm: {
+            mode: llmMode,
+            provider: llmProvider,
+            baseUrl: llmBaseUrl,
+            apiKey: llmApiKey,
+            model: llmModel,
+          },
+          blob: {
+            mode: blobMode,
+            provider: blobProvider,
+            baseUrl: blobBaseUrl,
+            apiKey: blobApiKey,
+          },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.backendsSaveError")));
+        return;
+      }
+      applyBackends(data.backends);
+    } catch (saveErr) {
+      console.error("Organization backends save error:", saveErr);
+      alert(t("organization.backendsSaveError"));
+    } finally {
+      setSavingBackends(false);
+    }
+  };
+
   const handleRemoveAesthetic = async (url: string) => {
     setRemovingAestheticUrl(url);
     try {
@@ -423,6 +486,199 @@ export function OrganizationDashboardTab() {
           </div>
         </div>
       </section>
+
+      {isOrgAdmin && (
+        <section className={cardPaddedClass} data-org-backends>
+          <p className={labelClass}>{t("organization.backends")}</p>
+          <h3 className="mt-1 text-sm font-medium text-white">
+            {t("organization.backendsTitle")}
+          </h3>
+          <p className="mt-2 max-w-xl text-xs text-neutral-500">
+            {t("organization.backendsHelper")}
+          </p>
+          <p className="mt-2 max-w-xl text-xs text-neutral-400">
+            {t("organization.xaiCreditNote")}
+          </p>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div data-org-llm-backend>
+              <p className={labelClass}>{t("organization.llmBackend")}</p>
+              <div className="mt-3 space-y-2 text-sm text-neutral-300">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="org-llm-mode"
+                    data-org-llm-mode="platform"
+                    checked={llmMode === "platform"}
+                    onChange={() => setLlmMode("platform")}
+                  />
+                  {t("organization.llmBackendPlatform")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="org-llm-mode"
+                    data-org-llm-mode="custom"
+                    checked={llmMode === "custom"}
+                    onChange={() => setLlmMode("custom")}
+                  />
+                  {t("organization.llmBackendCustom")}
+                </label>
+              </div>
+              {llmMode === "custom" && (
+                <div className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.llmProvider")}
+                    </span>
+                    <select
+                      data-org-llm-provider
+                      className={inputClass}
+                      value={llmProvider}
+                      onChange={(e) =>
+                        setLlmProvider(e.target.value === "openai-compatible" ? "openai-compatible" : "xai")
+                      }
+                    >
+                      <option value="xai">{t("organization.llmProviderXai")}</option>
+                      <option value="openai-compatible">{t("organization.llmProviderCompatible")}</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.llmBaseUrl")}
+                    </span>
+                    <input
+                      data-org-llm-base-url
+                      className={inputClass}
+                      value={llmBaseUrl}
+                      onChange={(e) => setLlmBaseUrl(e.target.value)}
+                      placeholder="https://api.x.ai/v1"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.llmApiKey")}
+                    </span>
+                    <input
+                      data-org-llm-api-key
+                      type="password"
+                      autoComplete="off"
+                      className={inputClass}
+                      value={llmApiKey}
+                      onChange={(e) => setLlmApiKey(e.target.value)}
+                      placeholder={t("organization.llmApiKeyPlaceholder")}
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {backends?.llm.configured && backends.llm.lastFour
+                        ? t("organization.keyConfigured", { lastFour: backends.llm.lastFour })
+                        : t("organization.keyNotConfigured")}
+                    </p>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.llmModel")}
+                    </span>
+                    <input
+                      data-org-llm-model
+                      className={inputClass}
+                      value={llmModel}
+                      onChange={(e) => setLlmModel(e.target.value)}
+                      placeholder="grok-4.5"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div data-org-blob-backend>
+              <p className={labelClass}>{t("organization.blobBackend")}</p>
+              <div className="mt-3 space-y-2 text-sm text-neutral-300">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="org-blob-mode"
+                    data-org-blob-mode="platform"
+                    checked={blobMode === "platform"}
+                    onChange={() => setBlobMode("platform")}
+                  />
+                  {t("organization.blobBackendPlatform")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="org-blob-mode"
+                    data-org-blob-mode="custom"
+                    checked={blobMode === "custom"}
+                    onChange={() => setBlobMode("custom")}
+                  />
+                  {t("organization.blobBackendCustom")}
+                </label>
+              </div>
+              {blobMode === "custom" && (
+                <div className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.blobProvider")}
+                    </span>
+                    <select
+                      data-org-blob-provider
+                      className={inputClass}
+                      value={blobProvider}
+                      onChange={(e) =>
+                        setBlobProvider(e.target.value === "openai-compatible" ? "openai-compatible" : "xai")
+                      }
+                    >
+                      <option value="xai">{t("organization.llmProviderXai")}</option>
+                      <option value="openai-compatible">{t("organization.llmProviderCompatible")}</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.blobBaseUrl")}
+                    </span>
+                    <input
+                      data-org-blob-base-url
+                      className={inputClass}
+                      value={blobBaseUrl}
+                      onChange={(e) => setBlobBaseUrl(e.target.value)}
+                      placeholder="https://api.x.ai"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-neutral-500">
+                      {t("organization.blobApiKey")}
+                    </span>
+                    <input
+                      data-org-blob-api-key
+                      type="password"
+                      autoComplete="off"
+                      className={inputClass}
+                      value={blobApiKey}
+                      onChange={(e) => setBlobApiKey(e.target.value)}
+                      placeholder={t("organization.llmApiKeyPlaceholder")}
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {backends?.blob.configured && backends.blob.lastFour
+                        ? t("organization.keyConfigured", { lastFour: backends.blob.lastFour })
+                        : t("organization.keyNotConfigured")}
+                    </p>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            data-org-backends-save
+            className={`${primaryBtnClass} mt-6`}
+            disabled={savingBackends}
+            onClick={() => void handleSaveBackends()}
+          >
+            {savingBackends ? t("organization.savingBackends") : t("organization.saveBackends")}
+          </button>
+        </section>
+      )}
 
       {isOrgAdmin && (
         <section className={cardPaddedClass} data-org-custom-aesthetics>

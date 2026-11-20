@@ -5,6 +5,7 @@
 import { xaiBlobStore } from "@/lib/ai/xai-blob-store";
 import { createFilesystemBlobStore } from "@/lib/ai/fs-blob-store";
 import { bytesToBase64 } from "@/lib/ai/bytes";
+import { getContextualBlobKind } from "@/lib/xai-context";
 export type BlobPutInput = {
   name: string;
   mimeType: string;
@@ -38,6 +39,8 @@ export function setBlobStoreForTests(store: BlobStore | null): void {
 }
 
 export function blobStoreKind(): string {
+  const contextual = getContextualBlobKind();
+  if (contextual) return contextual;
   return (process.env.BLOB_STORE || "xai").trim().toLowerCase() || "xai";
 }
 
@@ -48,7 +51,7 @@ export function isXaiBlobStore(): boolean {
 export function getBlobStore(): BlobStore {
   if (storeOverride) return storeOverride;
   const kind = blobStoreKind();
-  if (kind === "xai") return xaiBlobStore;
+  if (kind === "xai" || kind === "openai-compatible") return xaiBlobStore;
   if (kind === "memory") return createMemoryBlobStore();
   if (kind === "fs") {
     const dir = process.env.BLOB_STORE_DIR?.trim();
@@ -58,7 +61,7 @@ export function getBlobStore(): BlobStore {
     return createFilesystemBlobStore(dir);
   }
   throw new Error(
-    `Unknown BLOB_STORE=${kind}. Use xai (default), memory, or fs.`,
+    `Unknown BLOB_STORE=${kind}. Use xai (default), openai-compatible, memory, or fs.`,
   );
 }
 

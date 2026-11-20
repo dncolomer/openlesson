@@ -6,12 +6,17 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runWithXaiContext } from "@/lib/xai-context";
 import { getBlobStore } from "@/lib/ai/blob-store";
 import {
   attachFileToOrgCollection,
   ensureOrgXaiApiKey,
 } from "@/lib/organization/ensure-xai-resources";
+import {
+  loadOrgBackendRecord,
+  loadOrgBackendRuntime,
+  runWithOrgBackendRuntime,
+} from "@/lib/organization/org-backend-runtime";
+import { readOrgBackendStored } from "@/lib/organization/org-backends";
 import type { XAIFileMetadata } from "@/lib/xai-files";
 
 function asOrgId(value: unknown): string | null {
@@ -94,18 +99,29 @@ export async function uploadOrgScopedXaiFile(
   uploaded: XAIFileMetadata;
 }> {
   const organizationId = asOrgId(options?.organizationId);
-  const apiKey = await resolveOrgXaiApiKey(organizationId, options?.admin);
+  const client = options?.admin ?? (organizationId ? createAdminClient() : undefined);
+  const runtime = client
+    ? await loadOrgBackendRuntime(client, organizationId)
+    : null;
+  const apiKey =
+    runtime?.blob.apiKey ||
+    runtime?.chat.apiKey ||
+    (await resolveOrgXaiApiKey(organizationId, options?.admin));
   const fields: Record<string, string> = {
     ...(apiKey ? { apiKey } : {}),
     ...(organizationId ? { organizationId } : {}),
     ...(options?.collectionFields || {}),
   };
-  const put = await getBlobStore().put({
-    name,
-    mimeType,
-    bytes: base64Data,
-    fields: Object.keys(fields).length ? fields : undefined,
-  });
+  const putBlob = async () =>
+    getBlobStore().put({
+      name,
+      mimeType,
+      bytes: base64Data,
+      fields: Object.keys(fields).length ? fields : undefined,
+    });
+  const put = runtime
+    ? await runWithOrgBackendRuntime(organizationId, runtime, putBlob)
+    : await putBlob();
   const uploaded: XAIFileMetadata = {
     file_id: put.id,
     name,
@@ -113,11 +129,14 @@ export async function uploadOrgScopedXaiFile(
     content_type: mimeType,
   };
   let collectionId: string | null = null;
-  if (organizationId) {
+  const storedBlob = readOrgBackendStored(
+    client ? await loadOrgBackendRecord(client, organizationId) : null,
+  );
+  if (organizationId && runtime?.blob.kind === "xai" && storedBlob.blob_backend !== "custom") {
     try {
-      const client = options?.admin ?? createAdminClient();
+      const adminClient = client ?? createAdminClient();
       collectionId = await attachFileToOrgCollection(
-        client,
+        adminClient,
         organizationId,
         put.id,
         options?.collectionFields,
@@ -134,7 +153,9 @@ export async function getOrgScopedFileContentResponse(
   organizationId: string | null | undefined,
 ): Promise<Response> {
   const orgId = asOrgId(organizationId);
-  const apiKey = await resolveOrgXaiApiKey(orgId);
+  const admin = orgId ? createAdminClient() : null;
+  const runtime = admin ? await loadOrgBackendRuntime(admin, orgId) : null;
+  const apiKey = runtime?.blob.apiKey || runtime?.chat.apiKey || (await resolveOrgXaiApiKey(orgId));
   const fields = apiKey ? { apiKey } : undefined;
   const load = async () => {
     const file = await getBlobStore().get(fileId, fields);
@@ -143,8 +164,8 @@ export async function getOrgScopedFileContentResponse(
       headers: { "Content-Type": file.mimeType },
     });
   };
-  if (orgId && apiKey) {
-    return runWithXaiContext({ organizationId: orgId, apiKey }, load);
+  if (runtime) {
+    return runWithOrgBackendRuntime(orgId, runtime, load);
   }
   return load();
 }
@@ -153,6 +174,13 @@ export async function deleteOrgScopedXaiFile(
   fileId: string,
   organizationId: string | null | undefined,
 ): Promise<boolean> {
-  const apiKey = await resolveOrgXaiApiKey(organizationId);
-  return getBlobStore().delete(fileId, apiKey ? { apiKey } : undefined);
+  const orgId = asOrgId(organizationId);
+  const admin = orgId ? createAdminClient() : null;
+  const runtime = admin ? await loadOrgBackendRuntime(admin, orgId) : null;
+  const apiKey = runtime?.blob.apiKey || runtime?.chat.apiKey || (await resolveOrgXaiApiKey(orgId));
+  const remove = () => getBlobStore().delete(fileId, apiKey ? { apiKey } : undefined);
+  if (runtime) {
+    return runWithOrgBackendRuntime(orgId, runtime, remove);
+  }
+  return remove();
 }

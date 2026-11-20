@@ -7,6 +7,7 @@ import {
   CANVAS_COMMAND_MODEL,
   DEFAULT_MODEL,
 } from "@/lib/xai-models";
+import { getContextualChatConfig } from "@/lib/xai-context";
 
 export type ChatConfig = {
   baseURL: string;
@@ -20,7 +21,8 @@ function trimSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-export function getChatConfig(): ChatConfig {
+/** Process-env fallback for unconfigured orgs and self-hosted deploys. */
+export function getPlatformChatConfig(): ChatConfig {
   const baseURL = trimSlash(
     process.env.AI_BASE_URL?.trim() || "https://api.x.ai/v1",
   );
@@ -34,6 +36,12 @@ export function getChatConfig(): ChatConfig {
     canvasCommandModel:
       process.env.AI_CANVAS_COMMAND_MODEL?.trim() || CANVAS_COMMAND_MODEL,
   };
+}
+
+export function getChatConfig(): ChatConfig {
+  const contextual = getContextualChatConfig();
+  if (contextual) return contextual;
+  return getPlatformChatConfig();
 }
 
 export function chatCompletionsUrl(): string {

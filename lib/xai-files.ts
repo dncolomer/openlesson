@@ -12,21 +12,43 @@ export { isXaiFileId };
 
 const XAI_BASE_URL = "https://api.x.ai";
 
+function filesRoot(): string {
+  if (typeof window === "undefined") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getContextualBlobBaseURL } = require("@/lib/xai-context") as {
+        getContextualBlobBaseURL: () => string | null;
+      };
+      const contextual = getContextualBlobBaseURL();
+      if (contextual) {
+        const trimmed = contextual.replace(/\/+$/, "");
+        return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
+      }
+    } catch {
+      /* no context */
+    }
+  }
+  return `${XAI_BASE_URL}/v1`;
+}
+
 function getApiKey(override?: string | null): string {
   if (override) return override;
   if (typeof window === "undefined") {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getContextualXaiApiKey } = require("@/lib/xai-context") as {
+      const ctx = require("@/lib/xai-context") as {
+        getContextualBlobApiKey: () => string | null;
         getContextualXaiApiKey: () => string | null;
       };
-      const ctxKey = getContextualXaiApiKey();
-      if (ctxKey) return ctxKey;
+      const blobKey = ctx.getContextualBlobApiKey();
+      if (blobKey) return blobKey;
+      const chatKey = ctx.getContextualXaiApiKey();
+      if (chatKey) return chatKey;
     } catch {
       /* no context */
     }
   }
-  const key = process.env.XAI_API_KEY;
+  const key = process.env.AI_API_KEY?.trim() || process.env.XAI_API_KEY?.trim();
   if (!key) throw new Error("XAI_API_KEY not configured");
   return key;
 }
@@ -103,7 +125,7 @@ export async function uploadFileToXAI(
   const formData = new FormData();
   formData.append("file", blob, timestampedName);
 
-  const res = await fetch(`${XAI_BASE_URL}/v1/files`, {
+  const res = await fetch(`${filesRoot()}/files`, {
     method: "POST",
     // Do NOT set Content-Type manually — fetch sets the multipart boundary
     headers: authHeader(options?.apiKey),
@@ -143,7 +165,7 @@ export async function getFileContentResponse(
   options?: { apiKey?: string | null }
 ): Promise<Response> {
   return fetch(
-    `${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}/content`,
+    `${filesRoot()}/files/${encodeURIComponent(fileId)}/content`,
     { headers: authHeader(options?.apiKey) }
   );
 }
@@ -160,7 +182,7 @@ export async function getFileTextContent(
 ): Promise<string | null> {
   try {
     const res = await fetch(
-      `${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}/content`,
+      `${filesRoot()}/files/${encodeURIComponent(fileId)}/content`,
       { headers: authHeader(options?.apiKey) }
     );
     if (!res.ok) {
@@ -183,7 +205,7 @@ export async function getFileMetadata(
   fileId: string,
   options?: { apiKey?: string | null }
 ): Promise<XAIFileMetadata | null> {
-  const res = await fetch(`${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}`, {
+  const res = await fetch(`${filesRoot()}/files/${encodeURIComponent(fileId)}`, {
     headers: authHeader(options?.apiKey),
   });
   if (!res.ok) return null;
@@ -197,7 +219,7 @@ export async function deleteFileFromXAI(
   fileId: string,
   options?: { apiKey?: string | null }
 ): Promise<boolean> {
-  const res = await fetch(`${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}`, {
+  const res = await fetch(`${filesRoot()}/files/${encodeURIComponent(fileId)}`, {
     method: "DELETE",
     headers: authHeader(options?.apiKey),
   });

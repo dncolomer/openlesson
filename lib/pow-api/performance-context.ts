@@ -2,8 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
 import { isStoredFileId } from "@/lib/ai/stored-file-id";
 import { filterResolvableXaiFileIds, isXaiFileId } from "@/lib/xai-files";
-import { runWithXaiContext } from "@/lib/xai-context";
 import { resolveOrgXaiApiKey } from "@/lib/organization/org-xai-files";
+import {
+  loadOrgBackendRuntime,
+  runWithOrgBackendRuntime,
+} from "@/lib/organization/org-backend-runtime";
 import { proofOfWorkQueryForAuth } from "./workspace-proof-of-work";
 import { filterSnapshotEligibleProofOfWorkRows } from "./pow-quality";
 
@@ -279,7 +282,11 @@ export async function buildWorkspacePerformanceContext({
 
   const organizationId =
     typeof workspace.organization_id === "string" ? workspace.organization_id : null;
-  const orgApiKey = await resolveOrgXaiApiKey(organizationId);
+  const runtime = organizationId
+    ? await loadOrgBackendRuntime(supabase, organizationId)
+    : null;
+  const orgApiKey =
+    runtime?.blob.apiKey || runtime?.chat.apiKey || (await resolveOrgXaiApiKey(organizationId));
 
   const attachFiles = async () => {
     const storedIds = Array.from(
@@ -303,8 +310,8 @@ export async function buildWorkspacePerformanceContext({
     };
   };
 
-  if (orgApiKey) {
-    return runWithXaiContext({ organizationId, apiKey: orgApiKey }, attachFiles);
+  if (runtime) {
+    return runWithOrgBackendRuntime(organizationId, runtime, attachFiles);
   }
   return attachFiles();
 }

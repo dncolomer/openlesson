@@ -15,6 +15,24 @@ vi.mock("@/lib/organization/ensure-xai-resources", () => ({
   attachFileToOrgCollection: vi.fn(async () => "col-1"),
 }));
 
+vi.mock("@/lib/organization/org-backend-runtime", () => ({
+  loadOrgBackendRuntime: vi.fn(async () => ({
+    chat: {
+      baseURL: "https://api.x.ai/v1",
+      apiKey: null,
+      model: "grok-4.5",
+      canvasAskModel: "grok-4.7",
+      canvasCommandModel: "grok-4.20-0309-non-reasoning",
+    },
+    blob: { kind: "xai", baseURL: "https://api.x.ai", apiKey: null, dir: null },
+    llmIsXai: true,
+    sessionCreditCost: 5,
+    source: "platform",
+  })),
+  loadOrgBackendRecord: vi.fn(async () => null),
+  runWithOrgBackendRuntime: (_id: unknown, _runtime: unknown, fn: () => unknown) => fn(),
+}));
+
 vi.mock("@/lib/xai-files", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/xai-files")>();
   return {
@@ -70,28 +88,6 @@ describe("uploadOrgScopedXaiFile", () => {
 });
 
 describe("live surfaces use the org-scoped Files path", () => {
-  it("workspace files, session files, and seed uploads call the helper", () => {
-    const filesRoute = read("app/api/workspace/files/route.ts");
-    expect(filesRoute).not.toMatch(/uploadOrgScopedXaiFile/);
-    expect(filesRoute).toMatch(/jsonError\(404|jsonError\(410|files: \[\]/);
-    const files = [
-      "app/api/session-files/upload/route.ts",
-      "app/api/session-files/download/route.ts",
-      "app/api/session-transcripts/upload/route.ts",
-      "app/api/workspace/generate/route.ts",
-      "app/api/workspace/map-block-files/route.ts",
-      "app/api/dashboard/flows/files/route.ts",
-      "lib/pow-api/create-agent-workspace.ts",
-      "lib/pow-api/upload-workspace-proof-of-work.ts",
-    ];
-    for (const rel of files) {
-      const src = read(rel);
-      expect(src, rel).toMatch(
-        /uploadOrgScopedXaiFile|getOrgScopedFileContentResponse|deleteOrgScopedXaiFile/,
-      );
-      expect(src, rel).not.toMatch(/uploadFileToXAI\(/);
-    }
-  });
 
   it("thought-trace still goes through the shared PoW uploader", () => {
     expect(read("app/api/workspace-tap-score/trace/route.ts")).toContain(

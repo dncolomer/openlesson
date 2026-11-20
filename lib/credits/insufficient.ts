@@ -2,7 +2,7 @@
  * Out-of-credits ice screen: parse 402 envelopes, pricing + register hrefs.
  */
 
-import { FLOW_SESSION_CREDIT_COST } from "@/lib/credits/constants";
+import { flowSessionCreditCost } from "@/lib/credits/ledger";
 import { HARNESS_PRICING_PATH } from "@/lib/marketing/paths";
 
 export const INSUFFICIENT_CREDITS_EVENT = "openlesson:insufficient-credits";
@@ -10,7 +10,7 @@ export const INSUFFICIENT_CREDITS_EVENT = "openlesson:insufficient-credits";
 export const INSUFFICIENT_CREDITS_COPY = {
   kicker: "Credits",
   title: "You're out of credits",
-  body: `This session costs ${FLOW_SESSION_CREDIT_COST} credits. Buy a pack to keep going.`,
+  body: `This session costs ${flowSessionCreditCost()} credits. Buy a pack to keep going.`,
   getCredits: "Get credits",
   createAccount: "Create an account",
 } as const;
@@ -69,14 +69,14 @@ export function parseInsufficientCreditsBody(
   const costRaw = details.cost;
   return {
     balance: typeof balanceRaw === "number" && Number.isFinite(balanceRaw) ? balanceRaw : null,
-    cost: typeof costRaw === "number" && Number.isFinite(costRaw) ? costRaw : FLOW_SESSION_CREDIT_COST,
+    cost: typeof costRaw === "number" && Number.isFinite(costRaw) ? costRaw : flowSessionCreditCost(),
   };
 }
 
 export function publishInsufficientCreditsIce(detail: InsufficientCreditsDetail | null) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
-    new CustomEvent(INSUFFICIENT_CREDITS_EVENT, { detail: detail ?? { balance: 0, cost: FLOW_SESSION_CREDIT_COST } }),
+    new CustomEvent(INSUFFICIENT_CREDITS_EVENT, { detail: detail ?? { balance: 0, cost: flowSessionCreditCost() } }),
   );
 }
 

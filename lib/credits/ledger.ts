@@ -28,17 +28,31 @@ export type LedgerInsufficient = {
   reason: string;
 };
 
-export function creditCostForAction(action: CreditAction): number {
-  if (action === "flow_session") return FLOW_SESSION_CREDIT_COST;
+export type FlowSessionCreditOptions = {
+  /** Default true: platform LLM is xAI and session credits are half. */
+  llmIsXai?: boolean;
+};
+
+export function flowSessionCreditCost(
+  _kind?: FlowSessionKind,
+  options?: FlowSessionCreditOptions,
+): number {
+  const llmIsXai = options?.llmIsXai ?? true;
+  const full = FLOW_SESSION_CREDIT_COST;
+  if (llmIsXai) return Math.max(1, Math.floor(full / 2));
+  return full;
+}
+
+export function creditCostForAction(
+  action: CreditAction,
+  options?: FlowSessionCreditOptions,
+): number {
+  if (action === "flow_session") return flowSessionCreditCost(undefined, options);
   return 0;
 }
 
 export function isBillableAction(action: CreditAction): boolean {
   return creditCostForAction(action) > 0;
-}
-
-export function flowSessionCreditCost(_kind?: FlowSessionKind): number {
-  return FLOW_SESSION_CREDIT_COST;
 }
 
 export function starterGrantAmount(): number {

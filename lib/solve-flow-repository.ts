@@ -25,6 +25,7 @@ import {
 } from "@/lib/flow-channels";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const SOLVE_FLOW_GLOBAL = "__openlessonSolveFlowRepository";
@@ -278,20 +279,23 @@ async function writeSolveFlow(
   id: string,
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
-  const run = (body: Record<string, unknown>) =>
-    mode === "insert"
-      ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
-      : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
-  let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed", "enforced_channels"] as const) {
-    const result = await run(current);
-    if (!result.error) return result;
-    if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
-    const next = { ...current };
-    delete next[optional];
-    current = next;
-  }
-  return run(current);
+  return writeFlowRowWithOptionalColumns(
+    (body) =>
+      mode === "insert"
+        ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
+        : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id),
+    row,
+    [
+      "action_catalog",
+      "duration_minutes",
+      "workspace_id",
+      "archived_at",
+      "artifacts",
+      "exact_problem_on_canvas",
+      "answers_model_seed",
+      "enforced_channels",
+    ],
+  );
 }
 
 async function stateFor(command: SolveCommand): Promise<SolveState> {

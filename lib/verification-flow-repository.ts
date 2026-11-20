@@ -32,6 +32,7 @@ import {
 } from "@/lib/flow-channels";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const VERIFICATION_FLOW_GLOBAL = "__openlessonVerificationFlowRepository";
@@ -391,20 +392,25 @@ async function writeVerificationFlow(
   id: string,
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
-  const run = (body: Record<string, unknown>) =>
-    mode === "insert"
-      ? supabase.from("verify_flows").insert(body)
-      : supabase.from("verify_flows").update(body).eq("id", id);
-  let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed", "enforced_channels"] as const) {
-    const result = await run(current);
-    if (!result.error) return result;
-    if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
-    const next = { ...current };
-    delete next[optional];
-    current = next;
-  }
-  return run(current);
+  return writeFlowRowWithOptionalColumns(
+    (body) =>
+      mode === "insert"
+        ? supabase.from("verify_flows").insert(body)
+        : supabase.from("verify_flows").update(body).eq("id", id),
+    row,
+    [
+      "name",
+      "action_catalog",
+      "duration_minutes",
+      "owner_user_id",
+      "workspace_id",
+      "archived_at",
+      "artifacts",
+      "exact_problem_on_canvas",
+      "answers_model_seed",
+      "enforced_channels",
+    ],
+  );
 }
 
 export async function getVerificationFlowById(flowId: string): Promise<VerificationFlow | null> {

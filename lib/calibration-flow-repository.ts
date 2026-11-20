@@ -27,6 +27,7 @@ import {
   OPTIONAL_FLOW_ENFORCED_CHANNELS,
   serializeFlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const CALIBRATION_FLOW_GLOBAL = "__openlessonCalibrationFlowRepository";
@@ -313,13 +314,30 @@ function presentFlow(flow: CalibrationFlow): CalibrationFlow {
   };
 }
 
+const CALIBRATE_OPTIONAL_COLUMNS = [
+  "name",
+  "action_catalog",
+  "duration_minutes",
+  "owner_user_id",
+  "workspace_id",
+  "archived_at",
+  "topic",
+  "artifacts",
+  "answers_model_seed",
+  "enforced_channels",
+] as const;
+
 async function updateFlowRow(
   supabase: ReturnType<typeof createAdminClient>,
   table: "calibrate_flows",
   id: string,
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
-  return writeFlowRowWithOptionalColumns((body) => supabase.from(table).update(body).eq("id", id), row);
+  return writeFlowRowWithOptionalColumns(
+    (body) => supabase.from(table).update(body).eq("id", id),
+    row,
+    CALIBRATE_OPTIONAL_COLUMNS,
+  );
 }
 
 async function insertFlowRow(
@@ -327,23 +345,11 @@ async function insertFlowRow(
   table: "calibrate_flows",
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
-  return writeFlowRowWithOptionalColumns((body) => supabase.from(table).insert(body), row);
-}
-
-async function writeFlowRowWithOptionalColumns(
-  run: (body: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>,
-  row: Record<string, unknown>,
-): Promise<{ error: { message: string } | null }> {
-  let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "topic", "artifacts", "answers_model_seed", "enforced_channels"] as const) {
-    const result = await run(current);
-    if (!result.error) return result;
-    if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
-    const next = { ...current };
-    delete next[optional];
-    current = next;
-  }
-  return run(current);
+  return writeFlowRowWithOptionalColumns(
+    (body) => supabase.from(table).insert(body),
+    row,
+    CALIBRATE_OPTIONAL_COLUMNS,
+  );
 }
 
 export async function getCalibrationFlowById(flowId: string): Promise<CalibrationFlow | null> {

@@ -421,6 +421,21 @@ export function serializeIleWorkCanvasScene(
   };
 }
 
+/** Live Excalidraw apply payload: elements and binary files together. */
+export function ileWorkCanvasLiveApply(
+  scene: IleWorkCanvasScene | null | undefined,
+): { elements: IleWorkCanvasElement[]; files: IleWorkCanvasFiles } {
+  const next = serializeIleWorkCanvasScene(scene);
+  return { elements: next.elements, files: next.files };
+}
+
+export function ileWorkCanvasMergeFiles(
+  live: IleWorkCanvasFiles | null | undefined,
+  incoming: IleWorkCanvasFiles | null | undefined,
+): IleWorkCanvasFiles {
+  return { ...(live || {}), ...(incoming || {}) };
+}
+
 function measureText(text: string, fontSize: number, lineHeight: number): { width: number; height: number } {
   const wrapped = wrapIleWorkCanvasText(text, ILE_WORK_CANVAS_TEXT_BOX_WIDTH, fontSize);
   const charW = Math.max(6, fontSize * 0.55);

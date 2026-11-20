@@ -36,7 +36,13 @@ import {
   FlowWizardSteps,
 } from "@/components/product-flow/product-flow-form";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
+import { FlowOpeningCanvasHost } from "@/components/product-flow/flow-opening-canvas-host";
 import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
+import {
+  FLOW_OPENING_CANVAS_LABEL,
+  flowOpeningCanvasHasContent,
+  flowShowsOpeningCanvas,
+} from "@/lib/flow-opening-canvas";
 import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
 import { FLOW_CHANNEL_IDS, FLOW_CHANNEL_LABELS } from "@/lib/flow-channels";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
@@ -64,6 +70,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
   );
   const [busy, setBusy] = useState(false);
   const [modelBusy, setModelBusy] = useState(false);
+  const [authoringCanvas, setAuthoringCanvas] = useState(false);
   const [error, setError] = useState("");
   const kind = draft.kind;
   const productLabel = productFlowKindLabel(kind);
@@ -106,6 +113,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           problem: accepted.topic,
           artifacts: accepted.artifacts,
           exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+          openingCanvasScene: accepted.openingCanvasScene,
           actionCatalog: accepted.actionCatalog,
           durationMinutes: accepted.durationMinutes,
           answersModelSeed: accepted.answersModelSeed,
@@ -124,6 +132,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
     }
   }
 
+  const fillViewport = step === "model" || authoringCanvas;
   const compactActions = step === "model";
   const backBtnClass = compactActions ? FLOW_COMPACT_GHOST_BTN : FLOW_SECONDARY_BTN;
   const nextBtnClass = compactActions ? FLOW_COMPACT_PRIMARY_BTN : FLOW_PRIMARY_BTN;
@@ -177,7 +186,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
     >
       <div
         className={
-          step === "model"
+          fillViewport
             ? "mx-auto flex min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden"
             : "mx-auto w-full max-w-3xl space-y-6"
         }
@@ -185,16 +194,30 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}
       >
-        <FlowFormHeader
-          kicker={<FlowWizardSteps steps={productFlowWizardSteps(kind)} current={step} />}
-          title={heading}
-          description={step === "model" ? undefined : wizardDescription(kind, step)}
-          compact={step === "model"}
-        />
+        {authoringCanvas ? null : (
+          <FlowFormHeader
+            kicker={<FlowWizardSteps steps={productFlowWizardSteps(kind)} current={step} />}
+            title={heading}
+            description={step === "model" ? undefined : wizardDescription(kind, step)}
+            compact={step === "model"}
+          />
+        )}
 
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        {error && !authoringCanvas ? <p className="text-sm text-red-300">{error}</p> : null}
 
-        {step === "name" ? (
+        {authoringCanvas ? (
+          <FlowOpeningCanvasHost
+            scene={draft.openingCanvasScene}
+            topicName={draft.name}
+            onSave={(openingCanvasScene) => {
+              patch({ openingCanvasScene });
+              setAuthoringCanvas(false);
+            }}
+            onCancel={() => setAuthoringCanvas(false)}
+          />
+        ) : null}
+
+        {!authoringCanvas && step === "name" ? (
           <FlowFormCard>
             <FlowField label="Type">
               <select
@@ -227,7 +250,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           </FlowFormCard>
         ) : null}
 
-        {step === "author" ? (
+        {!authoringCanvas && step === "author" ? (
           <FlowFormCard
             data-flow-problem=""
             data-solve-flow-editor={kind === "solve" ? "" : undefined}
@@ -244,6 +267,13 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               onExactProblemOnCanvasChange={(exactProblemOnCanvas) =>
                 patch({ exactProblemOnCanvas })
               }
+              openingCanvasPrepared={flowOpeningCanvasHasContent(draft.openingCanvasScene)}
+              onPrepareOpeningCanvas={
+                flowShowsOpeningCanvas(kind)
+                  ? () => setAuthoringCanvas(true)
+                  : undefined
+              }
+              onClearOpeningCanvas={() => patch({ openingCanvasScene: null })}
             />
             {flowAuthorShowsCountdown(kind) ? (
               <FlowField label="Countdown">
@@ -269,7 +299,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           </FlowFormCard>
         ) : null}
 
-        {step === "model" ? (
+        {!authoringCanvas && step === "model" ? (
           <FlowFormCard
             data-flow-unsys-step=""
             className="flex min-h-0 flex-1 flex-col space-y-0 overflow-hidden px-0 py-0 sm:px-0 sm:py-0"
@@ -279,6 +309,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               name={draft.name}
               problem={problem}
               artifacts={draft.artifacts}
+              openingCanvasScene={draft.openingCanvasScene}
               seed={draft.answersModelSeed}
               onChange={(answersModelSeed) => patch({ answersModelSeed })}
               onBusyChange={setModelBusy}
@@ -288,7 +319,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           </FlowFormCard>
         ) : null}
 
-        {step === "channels" && flowAuthorShowsEnforcedChannels(kind) ? (
+        {!authoringCanvas && step === "channels" && flowAuthorShowsEnforcedChannels(kind) ? (
           <FlowFormCard data-flow-channels-step="">
             <FlowChannelsFields
               value={draft.enforcedChannels}
@@ -298,7 +329,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           </FlowFormCard>
         ) : null}
 
-        {step === "publish" ? (
+        {!authoringCanvas && step === "publish" ? (
           <FlowFormCard data-flow-publish-review="">
             <div className="space-y-3">
               <p className="text-lg font-medium tracking-[-0.4px] text-white" data-flow-name>
@@ -315,6 +346,14 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               {draft.exactProblemOnCanvas && kind !== "calibration" ? (
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                   Exact problem on canvas
+                </p>
+              ) : null}
+              {flowOpeningCanvasHasContent(draft.openingCanvasScene) ? (
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-publish-opening-canvas=""
+                >
+                  {FLOW_OPENING_CANVAS_LABEL}
                 </p>
               ) : null}
               {flowAuthorShowsCountdown(kind) ? (

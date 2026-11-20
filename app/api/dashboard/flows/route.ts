@@ -20,7 +20,9 @@ import {
 } from "@/lib/product-flow";
 import { parseFlowArtifacts, flowProblemFromUnknown } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import { unsysSeedFromRequestBody } from "@/lib/unsys-tree-spec";
 import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
@@ -165,7 +167,13 @@ export async function POST(req: NextRequest) {
       actionCatalog: Number(body.actionCatalog) || 4,
       durationMinutes: Number(body.durationMinutes) || 15,
       exactProblemOnCanvas: parseExactProblemOnCanvas(body.exactProblemOnCanvas),
-      answersModelSeed: parseFlowUnsysSeed(body.answersModelSeed ?? body.answers_model_seed),
+      openingCanvasScene: parseFlowOpeningCanvasSceneForKind(
+        kind,
+        body.openingCanvasScene ?? body.opening_canvas_scene,
+      ),
+      answersModelSeed: parseFlowUnsysSeed(
+        unsysSeedFromRequestBody(body) ?? body.answersModelSeed ?? body.answers_model_seed,
+      ),
       enforcedChannels: parseFlowEnforcedChannels(
         body.enforcedChannels ?? body.enforced_channels,
       ),
@@ -182,6 +190,7 @@ export async function POST(req: NextRequest) {
         topic: accepted.topic,
         artifacts: accepted.artifacts,
         exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+        openingCanvasScene: accepted.openingCanvasScene,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
         answersModelSeed: accepted.answersModelSeed,
@@ -237,6 +246,7 @@ export async function POST(req: NextRequest) {
       topic: accepted.topic,
       artifacts: accepted.artifacts,
       exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+      openingCanvasScene: accepted.openingCanvasScene,
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
       enforcedChannels: accepted.enforcedChannels,

@@ -5,13 +5,13 @@
 
 import {
   authorUnsysSeedForPersist,
-  normalizeAuthorUnsysModelSeed,
   serializeAuthorUnsysModelSeed,
   studentSessionModelFromAuthorSeed,
   type AuthorUnsysModelSeed,
 } from "@/lib/author-unsys-model";
 import { SCIENCE_UNSYS_PATH } from "@/lib/science/hub";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
+import { parseUnsysSeedSpec } from "@/lib/unsys-tree-spec";
 
 export const FLOW_UNSYS_SEED_PATH = "/api/dashboard/flows/unsys-seed";
 
@@ -31,7 +31,7 @@ export const FLOW_UNSYS_EXPLAINER = {
 } as const;
 
 export function parseFlowUnsysSeed(raw: unknown): AuthorUnsysModelSeed | null {
-  return normalizeAuthorUnsysModelSeed(raw);
+  return parseUnsysSeedSpec(raw);
 }
 
 export function serializeFlowUnsysSeed(raw: unknown): Record<string, unknown> | null {

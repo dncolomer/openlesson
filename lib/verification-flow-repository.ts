@@ -25,6 +25,7 @@ import {
 } from "@/lib/verification-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
 import { parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import {
   parseFlowEnforcedChannels,
   serializeFlowEnforcedChannels,
@@ -108,6 +109,10 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     questions: normalizeQuestionPool(row.questions),
     artifacts: parseFlowArtifacts(row.artifacts),
     exactProblemOnCanvas: parseExactProblemOnCanvas(row.exact_problem_on_canvas),
+    openingCanvasScene: parseFlowOpeningCanvasSceneForKind(
+      "verification",
+      row.opening_canvas_scene,
+    ),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
@@ -207,6 +212,7 @@ async function persistCommand(
       questions: value.flow.questions,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
+      opening_canvas_scene: value.flow.openingCanvasScene,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -225,6 +231,7 @@ async function persistCommand(
       questions: value.flow.questions,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
+      opening_canvas_scene: value.flow.openingCanvasScene,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -276,6 +283,9 @@ async function persistCommand(
       metadata: withEnforcedChannelsMetadata(
         {
           ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+          ...(mapped?.openingCanvasScene
+            ? { openingCanvasScene: mapped.openingCanvasScene }
+            : {}),
         },
         parseFlowEnforcedChannels(mapped?.enforcedChannels),
       ),
@@ -407,6 +417,7 @@ async function writeVerificationFlow(
       "archived_at",
       "artifacts",
       "exact_problem_on_canvas",
+      "opening_canvas_scene",
       "answers_model_seed",
       "enforced_channels",
     ],

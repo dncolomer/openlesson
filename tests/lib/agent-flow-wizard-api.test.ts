@@ -38,6 +38,7 @@ describe("public flow create/update matches the dashboard wizard", () => {
       expect(properties).toHaveProperty("files");
       expect(properties).toHaveProperty("exact_problem_on_canvas");
       expect(properties).toHaveProperty("answers_model_seed");
+      expect(properties).toHaveProperty("uncertainty_model");
       expect(properties).toHaveProperty("generate_unsys");
       expect(properties).toHaveProperty("enforced_channels");
       expect(properties).toHaveProperty("duration_minutes");

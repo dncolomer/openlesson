@@ -114,6 +114,12 @@ function edgePriceFromRaw(raw: RawNode | null | undefined, fallback: number): nu
   if (raw.edgePrice != null && Number.isFinite(Number(raw.edgePrice))) {
     return priceOf(raw.edgePrice, fallback);
   }
+  const generic = (raw as { weight?: unknown; price?: unknown; cost?: unknown }).weight
+    ?? (raw as { price?: unknown }).price
+    ?? (raw as { cost?: unknown }).cost;
+  if (generic != null && Number.isFinite(Number(generic))) {
+    return priceOf(generic, fallback);
+  }
   const priced = [raw.keepPrice, raw.closePrice, raw.discardPrice, raw.insightPrice]
     .map((value) => Number(value))
     .filter((value) => Number.isFinite(value));
@@ -380,7 +386,10 @@ function nodeFromRaw(
   fallbackTitle: string,
   fallbackPrice: number,
 ): { branch: SessionBranch; edgePrice: number } {
-  const title = textOf(raw.title, fallbackTitle);
+  const title = textOf(raw.title)
+    || textOf((raw as { name?: unknown }).name)
+    || textOf((raw as { label?: unknown }).label)
+    || fallbackTitle;
   const observation = textOf(raw.observation, title);
   return {
     edgePrice: edgePriceFromRaw(raw, fallbackPrice),
@@ -494,7 +503,10 @@ export function hydrateSessionBranchModel(raw: unknown): SessionBranchModel | nu
     .map(parseStoredBranch)
     .filter((branch): branch is SessionBranch => Boolean(branch));
   if (!parsed.length) {
-    return normalizeSessionBranchModel(row as SessionBranchDraft, textOf(row.chapterTitle, "This chapter"));
+    return normalizeSessionBranchModel(
+      row as SessionBranchDraft,
+      textOf(row.chapterTitle, textOf(row.title, textOf(row.name, "This chapter"))),
+    );
   }
   const ids = new Set(parsed.map((branch) => branch.id));
   const withEdges = parsed.map((branch) => {

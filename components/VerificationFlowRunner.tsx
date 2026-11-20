@@ -11,6 +11,8 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 
 type Phase = "identity" | "pick" | "empty";
 
@@ -21,6 +23,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [topic, setTopic] = useState("");
   const [presetTopics, setPresetTopics] = useState<TapStartingTopic[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
+  const [openingCanvasScene, setOpeningCanvasScene] = useState<IleWorkCanvasScene | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(15);
   const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
     DEFAULT_FLOW_ENFORCED_CHANNELS,
@@ -71,6 +74,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       setPresetTopics(cards);
       setTopic(String(payload.topic || ""));
       setExactProblemOnCanvas(payload.exactProblemOnCanvas === true);
+      setOpeningCanvasScene(parseFlowOpeningCanvasScene(payload.openingCanvasScene));
       setDurationMinutes(flowCountdownMinutes(payload.durationMinutes));
       setEnforcedChannels(parseFlowEnforcedChannels(payload.enforcedChannels));
       setPhase("pick");
@@ -114,6 +118,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           sidebarMode="verification-tap"
           verificationToken={token}
           exactProblemOnCanvas={exactProblemOnCanvas}
+          openingCanvasScene={openingCanvasScene}
           canvasProblem={topic}
           enforcedChannels={enforcedChannels}
           initialMinutes={durationMinutes}

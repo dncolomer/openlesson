@@ -20,6 +20,13 @@ import {
   serializeFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import {
+  flowOpeningCanvasHasContent,
+  flowShowsOpeningCanvas,
+  parseFlowOpeningCanvasSceneForKind,
+  productFlowPublishTopicFromOpeningCanvas,
+} from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 
 export type ProductFlowKind = "verification" | "calibration" | "solve";
 
@@ -45,6 +52,8 @@ export type ProductFlowDraft = {
   durationMinutes: number;
   /** Solve / Verification: seed the Work canvas with this Problem as written. */
   exactProblemOnCanvas: boolean;
+  /** Solve / Verification: author-prepared opening Work canvas. */
+  openingCanvasScene: IleWorkCanvasScene | null;
   /** Author unsys seed used when a learner runs this flow. */
   answersModelSeed: AuthorUnsysModelSeed | null;
   /** Channels the run requires. Audio off leaves the microphone optional. */
@@ -211,6 +220,7 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     actionCatalog: 4,
     durationMinutes: 15,
     exactProblemOnCanvas: false,
+    openingCanvasScene: null,
     answersModelSeed: null,
     enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
       ? parseFlowEnforcedChannels(null)
@@ -249,14 +259,22 @@ export function productFlowQuestionsFromDraft(questions: unknown): string[] {
   return questions.map((item) => String(item ?? "").trim()).filter(Boolean);
 }
 
+export function productFlowAuthorHasMaterial(draft: ProductFlowDraft): boolean {
+  if (productFlowProblem(draft)) return true;
+  return (
+    flowShowsOpeningCanvas(draft.kind) &&
+    flowOpeningCanvasHasContent(draft.openingCanvasScene)
+  );
+}
+
 export function productFlowWizardCanAdvance(
   step: ProductFlowWizardStep,
   draft: ProductFlowDraft,
 ): boolean {
   if (step === "name") return Boolean(normalizeFlowName(draft.name));
-  if (step === "author") return Boolean(productFlowProblem(draft));
-  if (step === "model") return Boolean(productFlowProblem(draft));
-  if (step === "channels") return Boolean(productFlowProblem(draft));
+  if (step === "author") return productFlowAuthorHasMaterial(draft);
+  if (step === "model") return productFlowAuthorHasMaterial(draft);
+  if (step === "channels") return productFlowAuthorHasMaterial(draft);
   return Boolean(normalizeFlowName(draft.name));
 }
 
@@ -292,6 +310,7 @@ export type AcceptedProductFlowPublish =
       actionCatalog: ReturnType<typeof parseLearningModelSize>;
       durationMinutes: number;
       exactProblemOnCanvas: boolean;
+      openingCanvasScene: IleWorkCanvasScene | null;
       answersModelSeed: AuthorUnsysModelSeed | null;
       enforcedChannels: FlowEnforcedChannels;
     }
@@ -300,7 +319,15 @@ export type AcceptedProductFlowPublish =
 export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProductFlowPublish {
   const name = normalizeFlowName(draft.name);
   if (!name) return { ok: false, reason: "name_required" };
-  const problem = productFlowProblem(draft);
+  const openingCanvasScene = parseFlowOpeningCanvasSceneForKind(
+    draft.kind,
+    draft.openingCanvasScene,
+  );
+  const problem = productFlowPublishTopicFromOpeningCanvas({
+    problem: productFlowProblem(draft),
+    name,
+    scene: openingCanvasScene,
+  });
   if (!problem) return { ok: false, reason: "topic_required" };
   const artifacts = parseFlowArtifacts(draft.artifacts);
   const actionCatalog = parseLearningModelSize(draft.actionCatalog);
@@ -325,6 +352,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       actionCatalog,
       durationMinutes,
       exactProblemOnCanvas: false,
+      openingCanvasScene: null,
       answersModelSeed,
       enforcedChannels,
     };
@@ -341,6 +369,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       actionCatalog,
       durationMinutes,
       exactProblemOnCanvas,
+      openingCanvasScene,
       answersModelSeed,
       enforcedChannels,
     };
@@ -356,6 +385,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     actionCatalog,
     durationMinutes,
     exactProblemOnCanvas,
+    openingCanvasScene,
     answersModelSeed,
     enforcedChannels,
   };

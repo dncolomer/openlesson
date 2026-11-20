@@ -38,6 +38,7 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import {
   flowUnsysSeedFromModel,
   serializeFlowUnsysSeed,
@@ -46,6 +47,7 @@ import {
   generateFlowUnsysSeedFromBody,
   runProductFlowUnsysGenerate,
 } from "@/lib/flow-unsys-generate";
+import { requestHasUnsysSeed } from "@/lib/unsys-tree-spec";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import {
   getSolveFlowById,
@@ -406,6 +408,10 @@ export async function createAgentFlow(
     exactProblemOnCanvas: parseExactProblemOnCanvas(
       body.exact_problem_on_canvas ?? body.exactProblemOnCanvas,
     ),
+    openingCanvasScene: parseFlowOpeningCanvasSceneForKind(
+      kind,
+      body.opening_canvas_scene ?? body.openingCanvasScene,
+    ),
     answersModelSeed,
     enforcedChannels: parseFlowEnforcedChannels(
       body.enforced_channels ?? body.enforcedChannels,
@@ -423,6 +429,7 @@ export async function createAgentFlow(
       topic: accepted.topic,
       artifacts: accepted.artifacts,
       exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+      openingCanvasScene: accepted.openingCanvasScene,
       durationMinutes: accepted.durationMinutes,
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
@@ -462,6 +469,7 @@ export async function createAgentFlow(
     topic: accepted.topic,
     artifacts: accepted.artifacts,
     exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+    openingCanvasScene: accepted.openingCanvasScene,
     durationMinutes: accepted.durationMinutes,
     actionCatalog: accepted.actionCatalog,
     answersModelSeed: accepted.answersModelSeed,
@@ -502,10 +510,15 @@ export async function updateAgentFlow(
     body.exact_problem_on_canvas,
     body.exactProblemOnCanvas,
   );
+  const openingCanvasScene =
+    body.opening_canvas_scene === undefined && body.openingCanvasScene === undefined
+      ? undefined
+      : parseFlowOpeningCanvasSceneForKind(
+          existing.kind,
+          body.opening_canvas_scene ?? body.openingCanvasScene,
+        );
   const answersModelSeed =
-    body.answers_model_seed === undefined &&
-    body.answersModelSeed === undefined &&
-    !wantsGenerateUnsys(body)
+    !requestHasUnsysSeed(body) && !wantsGenerateUnsys(body)
       ? undefined
       : await generateFlowUnsysSeedFromBody({
           ...body,
@@ -531,6 +544,7 @@ export async function updateAgentFlow(
       topic: problem,
       artifacts,
       exactProblemOnCanvas,
+      openingCanvasScene,
       durationMinutes,
       actionCatalog,
       answersModelSeed,
@@ -572,6 +586,7 @@ export async function updateAgentFlow(
     topic: problem,
     artifacts,
     exactProblemOnCanvas,
+    openingCanvasScene,
     durationMinutes,
     actionCatalog,
     answersModelSeed,

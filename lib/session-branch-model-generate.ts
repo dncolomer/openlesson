@@ -39,6 +39,11 @@ import {
   parseFlowArtifacts,
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
+import {
+  flowOpeningCanvasGenerateProblem,
+  flowOpeningCanvasHasContent,
+  parseFlowOpeningCanvasScene,
+} from "@/lib/flow-opening-canvas";
 
 export type SessionBranchGenerateResult =
   | { ok: true; model: SessionBranchModel }
@@ -82,6 +87,8 @@ export type SessionBranchGenerateContext = {
   artifacts?: FlowArtifact[] | null;
   /** Extra author instruction when adapting the unsys field. */
   guidance?: string | null;
+  /** Author-prepared Work canvas. When present, this is the generate source. */
+  openingCanvasScene?: unknown;
 };
 
 export type SessionBranchGenerateMaterial = {
@@ -117,12 +124,23 @@ export function buildSessionBranchGenerateMaterial(
     input.kind === "solve" || input.kind === "verification" || input.kind === "calibration"
       ? input.kind
       : "learn";
-  const problem = textOf(input.problem) || textOf(input.chapterBrief) || textOf(input.chapterTitle);
+  const openingCanvas = parseFlowOpeningCanvasScene(input.openingCanvasScene);
+  const fromPreparedCanvas = flowOpeningCanvasHasContent(openingCanvas);
+  const canvasProblem = fromPreparedCanvas
+    ? flowOpeningCanvasGenerateProblem(openingCanvas)
+    : "";
+  const problem = fromPreparedCanvas
+    ? canvasProblem
+    : textOf(input.problem) || textOf(input.chapterBrief) || textOf(input.chapterTitle);
   const chapterTitle = textOf(input.chapterTitle) || problem;
-  const chapterBrief = textOf(input.chapterBrief) || (kind === "learn" ? "" : problem);
-  const artifacts = parseFlowArtifacts(input.artifacts ?? input.files);
+  const chapterBrief = fromPreparedCanvas
+    ? problem
+    : textOf(input.chapterBrief) || (kind === "learn" ? "" : problem);
+  const artifacts = fromPreparedCanvas ? [] : parseFlowArtifacts(input.artifacts ?? input.files);
   const namedIds = artifacts.map((item) => `${item.name} (${item.xaiFileId})`);
-  const extraIds = (input.fileIds ?? []).map((id) => String(id || "").trim()).filter(Boolean);
+  const extraIds = fromPreparedCanvas
+    ? []
+    : (input.fileIds ?? []).map((id) => String(id || "").trim()).filter(Boolean);
   const fileIds = [...new Set([...flowArtifactFileIds(artifacts), ...extraIds])];
   const fileBlock =
     namedIds.length || extraIds.length
@@ -130,11 +148,19 @@ export function buildSessionBranchGenerateMaterial(
           namedIds.length ? namedIds.map((line) => `- ${line}`).join("\n") : extraIds.map((id) => `- ${id}`).join("\n")
         }`
       : "";
-  const problemBlock = problem ? `Problem:\n${problem}` : "";
+  const problemBlock = fromPreparedCanvas
+    ? problem
+      ? `Prepared Work canvas:\n${problem}`
+      : ""
+    : problem
+      ? `Problem:\n${problem}`
+      : "";
   const guidance = textOf(input.guidance);
   const user = [
     kind === "solve"
-      ? "Assist the user in breaking down and solving the problem. Use the Problem and attached files as the field to decompose."
+      ? fromPreparedCanvas
+        ? "Assist the user in breaking down and solving the problem. Use the prepared Work canvas as the field to decompose."
+        : "Assist the user in breaking down and solving the problem. Use the Problem and attached files as the field to decompose."
       : "",
     problemBlock,
     chapterTitle && chapterTitle !== problem ? `Chapter: ${chapterTitle}.` : "",

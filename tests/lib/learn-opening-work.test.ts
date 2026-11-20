@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -9,6 +9,12 @@ import {
   resolveLearnOpeningWork,
 } from "@/lib/learn-opening-work";
 import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
+import {
+  seedPreparedOpeningCanvas,
+  serializeFlowOpeningCanvasScene,
+} from "@/lib/flow-opening-canvas";
+import { ileWorkCanvasLiveApply } from "@/lib/learn-work-canvas";
+import { commitScene, type LiveExcalidrawAPI } from "@/components/excalidraw-canvas/excalidraw-api";
 
 const ROOT = join(__dirname, "../..");
 const { callXai } = vi.hoisted(() => ({ callXai: vi.fn() }));
@@ -156,5 +162,103 @@ describe("learn opening work", () => {
     });
     expect(exact).toBe("Write the Langevin force balance for this grain.");
     expect(callXai).not.toHaveBeenCalled();
+  });
+
+  it("seeds a prepared opening scene instead of Exact-problem rewrite", () => {
+    const scratch =
+      process.env.GROK_GOAL_SCRATCH ||
+      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+    mkdirSync(scratch, { recursive: true });
+    const scene = serializeFlowOpeningCanvasScene({
+      elements: [
+        {
+          id: "prep-1",
+          type: "text",
+          x: 4,
+          y: 4,
+          width: 200,
+          height: 36,
+          text: "Prepared opening board",
+          originalText: "Prepared opening board",
+          isDeleted: false,
+        },
+        {
+          id: "prep-img",
+          type: "image",
+          x: 40,
+          y: 80,
+          width: 160,
+          height: 90,
+          fileId: "file-solve-1",
+          isDeleted: false,
+        },
+      ],
+      appState: {},
+      files: {
+        "file-solve-1": {
+          id: "file-solve-1",
+          mimeType: "image/png",
+          dataURL: "data:image/png;base64,aaaa",
+        },
+      },
+    });
+    const seeded = seedPreparedOpeningCanvas(null, scene);
+    expect(seeded.seeded).toBe(true);
+    expect(
+      seeded.scene.elements.some((el) =>
+        String(el.originalText || el.text || "").includes("Prepared opening board"),
+      ),
+    ).toBe(true);
+    const apply = ileWorkCanvasLiveApply(seeded.scene);
+    expect(apply.elements.some((el) => el.fileId === "file-solve-1")).toBe(true);
+    expect(apply.files["file-solve-1"]).toMatchObject({
+      id: "file-solve-1",
+      mimeType: "image/png",
+    });
+    const live: LiveExcalidrawAPI = {
+      updateScene: vi.fn(),
+      getSceneElements: () => [],
+      getAppState: () => ({}),
+      getFiles: () => ({}),
+      setViewport: vi.fn(),
+    };
+    expect(
+      commitScene(live, {
+        elements: apply.elements,
+        files: apply.files,
+      }),
+    ).toBe(true);
+    expect(live.updateScene).toHaveBeenCalledWith({
+      elements: apply.elements,
+      files: apply.files,
+    });
+    const route = read("app/api/learn/session-branch-model/route.ts");
+    expect(route).toContain("openingCanvasScene");
+    expect(route).toContain("flowOpeningCanvasHasContent");
+    const field = read("components/session-view/use-session-field.ts");
+    expect(field).toContain("seedPreparedOpeningCanvas");
+    expect(field).toContain("openingScene");
+    expect(field).toContain("ileWorkCanvasLiveApply");
+    expect(field).toContain("setCanvasApplyFiles");
+    const chapter = read("components/session-view/session-chapter-canvas.tsx");
+    expect(chapter).toContain("applyFiles={canvasApplyFiles}");
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("applyFiles");
+    expect(canvas).toContain("ileWorkCanvasMergeFiles");
+    const load = read("lib/session-branch-field-load.ts");
+    expect(load).toContain("openingCanvasScene");
+    appendFileSync(
+      join(scratch, "opening-scene-tests.log"),
+      [
+        `seeded=${seeded.seeded}`,
+        `routeScene=${route.includes("openingCanvasScene")}`,
+        `fieldSeed=${field.includes("seedPreparedOpeningCanvas")}`,
+        `solveImageFile=${Boolean(apply.files["file-solve-1"])}`,
+        `solveApplyFiles=${field.includes("setCanvasApplyFiles")}`,
+        `commitFiles=${JSON.stringify((live.updateScene as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.files || {}).includes("file-solve-1")}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
   });
 });

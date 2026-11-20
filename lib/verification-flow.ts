@@ -6,6 +6,8 @@
  */
 
 import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import {
@@ -56,6 +58,7 @@ export type VerificationFlow = {
   questions: VerificationQuestion[];
   artifacts: FlowArtifact[];
   exactProblemOnCanvas: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
   /** Author-set run clock. The public start screen does not let the runner change it. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
@@ -523,6 +526,7 @@ export type VerificationCommand =
       questions?: unknown;
       artifacts?: unknown;
       exactProblemOnCanvas?: boolean;
+      openingCanvasScene?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -541,6 +545,7 @@ export type VerificationCommand =
       questions?: unknown;
       artifacts?: unknown;
       exactProblemOnCanvas?: boolean;
+      openingCanvasScene?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -595,6 +600,10 @@ export function applyVerificationCommand(
       questions: flowProblemQuestionPool(topic),
       artifacts: parseFlowArtifacts(command.artifacts),
       exactProblemOnCanvas: parseExactProblemOnCanvas(command.exactProblemOnCanvas),
+      openingCanvasScene: parseFlowOpeningCanvasSceneForKind(
+        "verification",
+        command.openingCanvasScene,
+      ),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
@@ -633,6 +642,10 @@ export function applyVerificationCommand(
         command.exactProblemOnCanvas === undefined
           ? Boolean(current.exactProblemOnCanvas)
           : parseExactProblemOnCanvas(command.exactProblemOnCanvas),
+      openingCanvasScene:
+        command.openingCanvasScene === undefined
+          ? current.openingCanvasScene ?? null
+          : parseFlowOpeningCanvasSceneForKind("verification", command.openingCanvasScene),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

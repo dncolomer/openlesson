@@ -9,6 +9,11 @@ import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { getCalibrationFlowById, getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
 import { exactProblemOpeningWork } from "@/lib/learn-opening-work";
+import {
+  flowOpeningCanvasHasContent,
+  parseFlowOpeningCanvasScene,
+} from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
 import {
   definitionUnsysSeedFromBlocks,
@@ -45,26 +50,36 @@ type OpeningGenerateContext = {
   artifacts?: FlowArtifact[];
   fileIds?: string[];
   exactProblemOnCanvas?: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
 };
 
 async function openingWorkPayload(
   plan: { kind: string; sessionId?: string; chapterTitle?: string; chapterBrief?: string },
   model: Parameters<typeof openingWorkForSessionField>[0],
   generateContext: OpeningGenerateContext,
-): Promise<{ openingWork: string; openingWorkExact: boolean }> {
+): Promise<{
+  openingWork: string;
+  openingWorkExact: boolean;
+  openingCanvasScene: IleWorkCanvasScene | null;
+}> {
+  const openingCanvasScene = parseFlowOpeningCanvasScene(generateContext.openingCanvasScene);
+  if (flowOpeningCanvasHasContent(openingCanvasScene)) {
+    return { openingWork: "", openingWorkExact: false, openingCanvasScene };
+  }
   if (generateContext.exactProblemOnCanvas) {
     const openingWork = exactProblemOpeningWork(
       generateContext.problem || plan.chapterBrief || plan.chapterTitle,
     );
-    if (openingWork) return { openingWork, openingWorkExact: true };
+    if (openingWork) return { openingWork, openingWorkExact: true, openingCanvasScene: null };
   }
   if (plan.kind === "learn") {
     return {
       openingWork: await openingWorkForSessionField(model, plan.sessionId || ""),
       openingWorkExact: false,
+      openingCanvasScene: null,
     };
   }
-  return { openingWork: "", openingWorkExact: false };
+  return { openingWork: "", openingWorkExact: false, openingCanvasScene: null };
 }
 
 export async function POST(request: NextRequest) {
@@ -131,6 +146,7 @@ export async function POST(request: NextRequest) {
             problem: flow.topic,
             artifacts: flow.artifacts,
             exactProblemOnCanvas: flow.exactProblemOnCanvas,
+            openingCanvasScene: flow.openingCanvasScene,
           };
         }
       } else if (tokenedEarly?.kind === "solve") {
@@ -141,6 +157,7 @@ export async function POST(request: NextRequest) {
             problem: flow.topic,
             artifacts: flow.artifacts,
             exactProblemOnCanvas: flow.exactProblemOnCanvas,
+            openingCanvasScene: flow.openingCanvasScene,
           };
         }
       }
@@ -178,6 +195,7 @@ export async function POST(request: NextRequest) {
               problem: flow.topic,
               artifacts: flow.artifacts,
               exactProblemOnCanvas: flow.exactProblemOnCanvas,
+              openingCanvasScene: flow.openingCanvasScene,
             };
           }
         } else if (tokened?.kind === "solve") {
@@ -191,6 +209,7 @@ export async function POST(request: NextRequest) {
               problem: flow.topic,
               artifacts: flow.artifacts,
               exactProblemOnCanvas: flow.exactProblemOnCanvas,
+              openingCanvasScene: flow.openingCanvasScene,
             };
           }
         }
@@ -220,6 +239,12 @@ export async function POST(request: NextRequest) {
                 exactProblemOnCanvas: true,
               };
             }
+            if (meta?.openingCanvasScene) {
+              generateContext = {
+                ...generateContext,
+                openingCanvasScene: parseFlowOpeningCanvasScene(meta.openingCanvasScene),
+              };
+            }
           }
         }
         if (flowId) {
@@ -231,6 +256,7 @@ export async function POST(request: NextRequest) {
               problem: solve.topic,
               artifacts: solve.artifacts,
               exactProblemOnCanvas: solve.exactProblemOnCanvas,
+              openingCanvasScene: solve.openingCanvasScene,
             };
           } else {
             const verify = await getVerificationFlowById(flowId);
@@ -241,6 +267,7 @@ export async function POST(request: NextRequest) {
                 problem: verify.topic,
                 artifacts: verify.artifacts,
                 exactProblemOnCanvas: verify.exactProblemOnCanvas,
+                openingCanvasScene: verify.openingCanvasScene,
               };
             } else {
               const calibrate = await getCalibrationFlowById(flowId);

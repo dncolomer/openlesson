@@ -10,8 +10,10 @@ import {
 import {
   FLOW_FORM_TEXTAREA,
   FLOW_GHOST_BTN,
+  FLOW_SECONDARY_BTN,
   FlowField,
 } from "@/components/product-flow/product-flow-form";
+import { FLOW_OPENING_CANVAS_LABEL } from "@/lib/flow-opening-canvas";
 
 export function FlowProblemFields({
   problem,
@@ -22,6 +24,9 @@ export function FlowProblemFields({
   topicHook,
   exactProblemOnCanvas = false,
   onExactProblemOnCanvasChange,
+  openingCanvasPrepared = false,
+  onPrepareOpeningCanvas,
+  onClearOpeningCanvas,
   problemReadOnly = false,
 }: {
   problem: string;
@@ -33,6 +38,9 @@ export function FlowProblemFields({
   topicHook?: string;
   exactProblemOnCanvas?: boolean;
   onExactProblemOnCanvasChange?: (value: boolean) => void;
+  openingCanvasPrepared?: boolean;
+  onPrepareOpeningCanvas?: () => void;
+  onClearOpeningCanvas?: () => void;
   /** Published flows keep the Problem as written. */
   problemReadOnly?: boolean;
 }) {
@@ -84,25 +92,69 @@ export function FlowProblemFields({
           </p>
         ) : null}
       </FlowField>
-      {topicHook !== "calibration" && onExactProblemOnCanvasChange ? (
-        <label
-          className="flex cursor-pointer items-start gap-3"
-          data-flow-exact-problem-on-canvas=""
-        >
-          <input
-            type="checkbox"
-            checked={exactProblemOnCanvas}
-            onChange={(event) => onExactProblemOnCanvasChange(event.target.checked)}
-            data-flow-exact-problem-on-canvas-input=""
-            className="mt-1 h-4 w-4 rounded-none border-white/40 bg-black accent-white"
-          />
-          <span className="space-y-1">
-            <span className="block text-sm text-neutral-200">Exact problem on canvas</span>
-            <span className="block text-xs leading-relaxed text-neutral-500">
-              Open the Work canvas with this problem as written.
-            </span>
-          </span>
-        </label>
+      {topicHook !== "calibration" &&
+      (onExactProblemOnCanvasChange || onPrepareOpeningCanvas) ? (
+        <div className="space-y-4" data-flow-work-canvas-options="">
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+            Work canvas
+          </p>
+          {onExactProblemOnCanvasChange ? (
+            <label
+              className="flex cursor-pointer items-start gap-3"
+              data-flow-exact-problem-on-canvas=""
+            >
+              <input
+                type="checkbox"
+                checked={exactProblemOnCanvas}
+                onChange={(event) => onExactProblemOnCanvasChange(event.target.checked)}
+                data-flow-exact-problem-on-canvas-input=""
+                className="mt-1 h-4 w-4 rounded-none border-white/40 bg-black accent-white"
+              />
+              <span className="space-y-1">
+                <span className="block text-sm text-neutral-200">Exact problem on canvas</span>
+                <span className="block text-xs leading-relaxed text-neutral-500">
+                  Open the Work canvas with this problem as written.
+                </span>
+              </span>
+            </label>
+          ) : null}
+          {onPrepareOpeningCanvas ? (
+            <div className="space-y-2" data-flow-opening-canvas="">
+              <p className="text-sm text-neutral-200">{FLOW_OPENING_CANVAS_LABEL}</p>
+              <p className="text-xs leading-relaxed text-neutral-500">
+                Draw, write, and place images on the same Work canvas learners will open.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={FLOW_SECONDARY_BTN}
+                  onClick={onPrepareOpeningCanvas}
+                  data-flow-opening-canvas-open=""
+                >
+                  {openingCanvasPrepared ? "Edit canvas" : FLOW_OPENING_CANVAS_LABEL}
+                </button>
+                {openingCanvasPrepared && onClearOpeningCanvas ? (
+                  <button
+                    type="button"
+                    className={FLOW_GHOST_BTN}
+                    onClick={onClearOpeningCanvas}
+                    data-flow-opening-canvas-clear=""
+                  >
+                    Clear canvas
+                  </button>
+                ) : null}
+              </div>
+              {openingCanvasPrepared ? (
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-opening-canvas-prepared=""
+                >
+                  Canvas prepared
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <div className="space-y-3" data-flow-artifacts="">
         <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">

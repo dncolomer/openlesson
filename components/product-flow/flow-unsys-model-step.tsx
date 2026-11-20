@@ -27,6 +27,8 @@ import {
   parseFlowUnsysSeed,
 } from "@/lib/flow-unsys-seed";
 import type { ProductFlowKind } from "@/lib/product-flow";
+import { flowOpeningCanvasHasContent } from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
@@ -40,6 +42,7 @@ export function FlowUnsysModelStep({
   name,
   problem,
   artifacts,
+  openingCanvasScene = null,
   seed,
   onChange,
   onBusyChange,
@@ -50,6 +53,7 @@ export function FlowUnsysModelStep({
   name: string;
   problem: string;
   artifacts: FlowArtifact[];
+  openingCanvasScene?: IleWorkCanvasScene | null;
   seed: AuthorUnsysModelSeed | null;
   onChange: (seed: AuthorUnsysModelSeed | null) => void;
   onBusyChange?: (busy: boolean) => void;
@@ -118,6 +122,7 @@ export function FlowUnsysModelStep({
           name,
           problem,
           artifacts: contextFiles,
+          openingCanvasScene,
           guidance: prompt,
           ...(parentId && model ? { parentId, seedModel: model } : {}),
         }),
@@ -143,7 +148,12 @@ export function FlowUnsysModelStep({
   };
 
   useEffect(() => {
-    if (autoStarted.current || model || !problem.trim()) return;
+    if (
+      autoStarted.current ||
+      model ||
+      (!problem.trim() && !flowOpeningCanvasHasContent(openingCanvasScene))
+    )
+      return;
     autoStarted.current = true;
     void generate();
     // First visit only: generate from the authored problem.

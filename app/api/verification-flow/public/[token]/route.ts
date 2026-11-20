@@ -28,6 +28,7 @@ export async function GET(
   return NextResponse.json({
     topic: flow.topic,
     exactProblemOnCanvas: flow.exactProblemOnCanvas,
+    openingCanvasScene: flow.openingCanvasScene,
     enforcedChannels: flow.enforcedChannels,
     questionCount: flow.questions.length,
     durationMinutes: flow.durationMinutes,
@@ -67,6 +68,7 @@ export async function POST(
     topics: claimed.choices.topics,
     topic: claimed.flow.topic,
     exactProblemOnCanvas: claimed.flow.exactProblemOnCanvas,
+    openingCanvasScene: claimed.flow.openingCanvasScene,
     enforcedChannels: claimed.flow.enforcedChannels,
   });
   } catch (error) {

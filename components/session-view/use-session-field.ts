@@ -25,6 +25,10 @@ import {
 } from "@/lib/welcomeState";
 import { exactProblemOpeningWork, resolveLearnOpeningWork } from "@/lib/learn-opening-work";
 import { sessionWantsExactProblemOnCanvas } from "@/lib/product-flow";
+import {
+  parseFlowOpeningCanvasScene,
+  seedPreparedOpeningCanvas,
+} from "@/lib/flow-opening-canvas";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
@@ -33,12 +37,14 @@ import { type ChatMessage, postIleSessionChat } from "@/lib/session-chat-client"
 import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
   ileWorkCanvasAskFromSessionChat,
+  ileWorkCanvasLiveApply,
   ileWorkCanvasScenesFromWorkspaces,
   pickIleWorkCanvasTurnScene,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
+  type IleWorkCanvasFiles,
   type IleWorkCanvasScene,
   type IleWorkCanvasWorkspaceInput,
 } from "@/lib/learn-work-canvas";
@@ -154,6 +160,7 @@ export function useSessionField(input: SessionFieldInput) {
   }, [whiteboardSceneData]);
   const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
   const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>([]);
+  const [canvasApplyFiles, setCanvasApplyFiles] = useState<IleWorkCanvasFiles>({});
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [workAestheticById, setWorkAestheticById] = useState<Record<string, string>>({});
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
@@ -330,15 +337,44 @@ export function useSessionField(input: SessionFieldInput) {
       boardId: string,
       model: SessionBranchModel,
       generated?: string | null,
-      options?: { exactProblem?: boolean; fallback?: string | null },
+      options?: {
+        exactProblem?: boolean;
+        fallback?: string | null;
+        openingScene?: IleWorkCanvasScene | null;
+      },
     ) => {
+      const picked = pickIleWorkCanvasTurnScene({
+        targetChapterId: boardId,
+        focusedChapterId: activeChapterKey,
+        liveSceneByChapter: ileWorkCanvasScenesFromWorkspaces(sessionContext),
+        coldSceneByChapter: ileWorkCanvasScenesFromWorkspaces(coldContextRef.current),
+        focusedSceneRef: whiteboardSceneDataRef,
+      });
+      const prepared = seedPreparedOpeningCanvas(picked.sceneToSend, options?.openingScene);
+      if (prepared.seeded) {
+        updateChapterWorkspace(boardId, { whiteboardSceneData: prepared.scene });
+        if (picked.applyLive || boardId === activeChapterKey) {
+          const apply = ileWorkCanvasLiveApply(prepared.scene);
+          whiteboardSceneDataRef.current = prepared.scene;
+          setCanvasApplyElements(apply.elements);
+          setCanvasApplyFiles(apply.files);
+          setCanvasApplyNonce((n) => n + 1);
+        }
+        return;
+      }
       const text = options?.exactProblem
         ? exactProblemOpeningWork(generated || options.fallback)
         : resolveLearnOpeningWork(model, generated, boardId);
       if (!text) return;
       seedChapterWorkCanvas(boardId, text);
     },
-    [seedChapterWorkCanvas],
+    [
+      activeChapterKey,
+      coldContextRef,
+      seedChapterWorkCanvas,
+      sessionContext,
+      updateChapterWorkspace,
+    ],
   );
 
   useEffect(() => {
@@ -600,7 +636,14 @@ export function useSessionField(input: SessionFieldInput) {
           "openingWork" in field && typeof field.openingWork === "string"
             ? field.openingWork
             : null,
-          { exactProblem: exact, fallback: session.problem },
+          {
+            exactProblem: exact,
+            fallback: session.problem,
+            openingScene:
+              "openingCanvasScene" in field
+                ? parseFlowOpeningCanvasScene(field.openingCanvasScene)
+                : null,
+          },
         );
       }
       setIsPaused(false);
@@ -676,7 +719,14 @@ export function useSessionField(input: SessionFieldInput) {
           "openingWork" in field && typeof field.openingWork === "string"
             ? field.openingWork
             : null,
-          { exactProblem: exact, fallback: session.problem },
+          {
+            exactProblem: exact,
+            fallback: session.problem,
+            openingScene:
+              "openingCanvasScene" in field
+                ? parseFlowOpeningCanvasScene(field.openingCanvasScene)
+                : null,
+          },
         );
       }
       setIsPaused(false);
@@ -712,6 +762,7 @@ export function useSessionField(input: SessionFieldInput) {
     whiteboardSceneDataRef,
     canvasApplyNonce,
     canvasApplyElements,
+    canvasApplyFiles,
     openWorkIds,
     sessionInsights,
     setSessionInsights,

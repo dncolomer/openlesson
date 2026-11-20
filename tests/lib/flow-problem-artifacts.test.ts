@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -26,6 +26,16 @@ import {
   sessionBranchContextFromFlow,
 } from "@/lib/session-branch-model-generate";
 import { heliosFlowCreateInput } from "@/lib/workspace-helios-flow";
+import {
+  FLOW_OPENING_CANVAS_LABEL,
+  flowOpeningCanvasExtractText,
+  flowOpeningCanvasHasContent,
+  parseFlowOpeningCanvasScene,
+  parseFlowOpeningCanvasSceneForKind,
+  seedPreparedOpeningCanvas,
+  serializeFlowOpeningCanvasScene,
+} from "@/lib/flow-opening-canvas";
+
 import { heliosMapToolAwarenessText } from "@/lib/workspace-helios-tools";
 import { buildHeliosMapBuilderSystemPrompt } from "@/lib/prompt-kernel";
 
@@ -212,6 +222,39 @@ describe("unsys generate material from Problem + files", () => {
     expect(guided.user).toContain("Author guidance:");
     expect(guided.user).toContain("Keep the first ring on decoder failure modes.");
   });
+
+  it("uses the prepared Work canvas as Unsys generate source", () => {
+    const scene = serializeFlowOpeningCanvasScene({
+      elements: [
+        {
+          id: "board-text",
+          type: "text",
+          x: 8,
+          y: 8,
+          width: 280,
+          height: 40,
+          text: "Prepared board kernel",
+          originalText: "Prepared board kernel",
+          isDeleted: false,
+        },
+      ],
+      appState: {},
+      files: {},
+    });
+    const fromBoard = buildSessionBranchGenerateMaterial({
+      kind: "solve",
+      problem: "Leftover problem textarea",
+      artifacts: [ARTIFACT],
+      openingCanvasScene: scene,
+    });
+    expect(fromBoard.user).toContain("Prepared Work canvas:");
+    expect(fromBoard.user).toContain("Prepared board kernel");
+    expect(fromBoard.user).toContain("prepared Work canvas as the field");
+    expect(fromBoard.user).not.toContain("Leftover problem textarea");
+    expect(fromBoard.user).not.toContain(ARTIFACT.xaiFileId);
+    expect(fromBoard.fileIds).toEqual([]);
+    expect(fromBoard.user).not.toContain("Problem:\nLeftover");
+  });
 });
 
 describe("Helios and Manual map authoring", () => {
@@ -335,6 +378,152 @@ describe("flow exact problem on canvas", () => {
     expect(page).toContain("problemReadOnly");
     expect(read("app/api/dashboard/flows/route.ts")).toContain("exactProblemOnCanvas");
     expect(read("lib/learn-opening-work-generate.ts")).toContain("exactProblem");
+  });
+});
+
+describe("flow opening canvas", () => {
+  it("lets Solve and Verification store a prepared scene and hides Calibration", () => {
+    const scratch =
+      process.env.GROK_GOAL_SCRATCH ||
+      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+    mkdirSync(scratch, { recursive: true });
+
+    const scene = {
+      elements: [
+        {
+          id: "el-text",
+          type: "text",
+          x: 12,
+          y: 24,
+          width: 240,
+          height: 48,
+          text: "Find the kernel of T",
+          originalText: "Find the kernel of T",
+          isDeleted: false,
+        },
+        {
+          id: "el-img",
+          type: "image",
+          x: 40,
+          y: 90,
+          width: 160,
+          height: 90,
+          fileId: "file-1",
+          isDeleted: false,
+        },
+      ],
+      appState: { zenModeEnabled: false, gridModeEnabled: true },
+      files: {
+        "file-1": {
+          id: "file-1",
+          mimeType: "image/png",
+          dataURL: "data:image/png;base64,aaaa",
+        },
+      },
+    };
+    const stored = serializeFlowOpeningCanvasScene(scene);
+    expect(flowOpeningCanvasHasContent(stored)).toBe(true);
+    expect(flowOpeningCanvasExtractText(stored)).toContain("kernel of T");
+    expect(JSON.stringify(stored?.files["file-1"] ?? {})).toContain("image/png");
+    const restored = parseFlowOpeningCanvasScene(JSON.parse(JSON.stringify(stored)));
+    expect(restored?.elements.some((el) => el.id === "el-img" && el.fileId === "file-1")).toBe(true);
+    expect(parseFlowOpeningCanvasSceneForKind("calibration", stored)).toBeNull();
+    expect(parseFlowOpeningCanvasSceneForKind("solve", stored)?.elements.length).toBeGreaterThan(0);
+
+    const emptyDraft = {
+      ...emptyProductFlowDraft("solve"),
+      name: "Kernel",
+    };
+    expect(acceptProductFlowPublish(emptyDraft).ok).toBe(false);
+    const withBoard = acceptProductFlowPublish({
+      ...emptyDraft,
+      openingCanvasScene: stored,
+    });
+    expect(withBoard.ok).toBe(true);
+    if (!withBoard.ok) return;
+    expect(withBoard.openingCanvasScene).toBeTruthy();
+    expect(withBoard.topic).toContain("kernel of T");
+
+    const calibrate = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("calibration"),
+      name: "Priors",
+      topic: "State the noise model",
+      openingCanvasScene: stored,
+    });
+    expect(calibrate.ok).toBe(true);
+    if (!calibrate.ok) return;
+    expect(calibrate.openingCanvasScene).toBeNull();
+
+    const solve = applySolveCommand(emptySolveState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Kernel",
+      topic: "Find the kernel of T",
+      openingCanvasScene: stored,
+      id: "sf-canvas",
+      publicToken: "stok-canvas",
+    });
+    expect(solve.ok).toBe(true);
+    if (!solve.ok) return;
+    expect(flowOpeningCanvasHasContent(solve.flow?.openingCanvasScene)).toBe(true);
+
+    const verify = applyVerificationCommand(emptyVerificationState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Investigate",
+      topic: "When does a learned decoder beat MWPM?",
+      openingCanvasScene: stored,
+      id: "vf-canvas",
+      publicToken: "vtok-canvas",
+    });
+    expect(verify.ok).toBe(true);
+    if (!verify.ok) return;
+    expect(flowOpeningCanvasHasContent(verify.flow?.openingCanvasScene)).toBe(true);
+
+    const seeded = seedPreparedOpeningCanvas(null, stored);
+    expect(seeded.seeded).toBe(true);
+    expect(seeded.scene.elements.some((el) => el.fileId === "file-1")).toBe(true);
+    const alreadyLive = seedPreparedOpeningCanvas(seeded.scene, stored);
+    expect(alreadyLive.seeded).toBe(false);
+
+    const sql = read("supabase/migrations/20261121140000_flow_opening_canvas_scene.sql");
+    expect(sql).toContain("opening_canvas_scene");
+    expect(sql).toContain("solve_flows");
+    expect(sql).toContain("verify_flows");
+    expect(sql).not.toMatch(/calibrate_flows[\s\S]*opening_canvas_scene/);
+
+    const fields = read("components/product-flow/flow-problem-fields.tsx");
+    const wizard = read("components/product-flow/product-flow-wizard.tsx");
+    const page = read("components/product-flow/product-flow-page.tsx");
+    const host = read("components/product-flow/flow-opening-canvas-host.tsx");
+    const surface = read("components/session-view/session-work-surface.tsx");
+    expect(fields).toContain("FLOW_OPENING_CANVAS_LABEL");
+    expect(fields).toContain("data-flow-opening-canvas-open");
+    expect(wizard).toContain("FLOW_OPENING_CANVAS_LABEL");
+    expect(wizard).toContain("FlowOpeningCanvasHost");
+    expect(wizard).not.toContain("window.open");
+    expect(page).toContain("FlowOpeningCanvasHost");
+    expect(host).toContain("data-flow-opening-canvas-authoring");
+    expect(host).toContain("data-flow-opening-canvas-save");
+    expect(host).toContain("authoringOpeningCanvasScene");
+    expect(surface).toContain("pointer-events-none");
+    expect(surface).toContain("opacity-40");
+    expect(read("app/api/dashboard/flows/route.ts")).toContain("openingCanvasScene");
+    expect(read("lib/solve-flow-repository.ts")).toContain("opening_canvas_scene");
+    expect(read("lib/verification-flow-repository.ts")).toContain("opening_canvas_scene");
+
+    writeFileSync(
+      join(scratch, "author-canvas-tests.log"),
+      [
+        `label=${FLOW_OPENING_CANVAS_LABEL}`,
+        `solveStored=${flowOpeningCanvasHasContent(solve.flow?.openingCanvasScene)}`,
+        `verifyStored=${flowOpeningCanvasHasContent(verify.flow?.openingCanvasScene)}`,
+        `calibrateNull=${calibrate.openingCanvasScene === null}`,
+        `roundTripFiles=${Boolean(restored?.files["file-1"])}`,
+        `wizardHost=${wizard.includes("FlowOpeningCanvasHost")}`,
+      ].join("\n"),
+      "utf8",
+    );
   });
 });
 

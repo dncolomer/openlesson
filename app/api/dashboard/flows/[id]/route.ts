@@ -12,7 +12,9 @@ import {
 } from "@/lib/product-flow";
 import { flowProblemFromUnknown, parseFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import { requestHasUnsysSeed, unsysSeedFromRequestBody } from "@/lib/unsys-tree-spec";
 import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
@@ -173,10 +175,16 @@ export async function POST(
       body.exactProblemOnCanvas === undefined
         ? undefined
         : parseExactProblemOnCanvas(body.exactProblemOnCanvas);
-    const answersModelSeed =
-      body.answersModelSeed === undefined && body.answers_model_seed === undefined
+    const openingCanvasScene =
+      body.openingCanvasScene === undefined && body.opening_canvas_scene === undefined
         ? undefined
-        : parseFlowUnsysSeed(body.answersModelSeed ?? body.answers_model_seed);
+        : parseFlowOpeningCanvasSceneForKind(
+            loaded.kind,
+            body.openingCanvasScene ?? body.opening_canvas_scene,
+          );
+    const answersModelSeed = !requestHasUnsysSeed(body)
+      ? undefined
+      : parseFlowUnsysSeed(unsysSeedFromRequestBody(body));
     const enforcedChannels =
       body.enforcedChannels === undefined && body.enforced_channels === undefined
         ? undefined
@@ -192,6 +200,7 @@ export async function POST(
         topic: problem,
         artifacts,
         exactProblemOnCanvas,
+        openingCanvasScene,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
         answersModelSeed,
@@ -228,6 +237,7 @@ export async function POST(
       topic: problem,
       artifacts,
       exactProblemOnCanvas,
+      openingCanvasScene,
       actionCatalog: body.actionCatalog as number | undefined,
       answersModelSeed,
       enforcedChannels,

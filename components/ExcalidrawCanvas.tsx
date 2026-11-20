@@ -53,6 +53,7 @@ import {
   ileWorkCanvasZoomValue,
   ileWorkCanvasPointerNextTool,
   ileWorkCanvasPointerToolActive,
+  ileWorkCanvasMergeFiles,
   pasteIleWorkCanvasElements,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
@@ -97,6 +98,8 @@ export interface ExcalidrawCanvasProps {
   /** When nonce changes, merge these elements onto the live board via commitScene. */
   applyElements?: readonly unknown[] | null;
   applyElementsNonce?: string | number | null;
+  /** Binary files for applyElements (image fileId). Merged into the live board. */
+  applyFiles?: IleWorkCanvasFiles | null;
   /** Ids to drop before merging applyElements (loading-placeholder replace). */
   applyRemoveElementIds?: readonly string[] | null;
   /** On open, center these marks (`customData.calibrateRole`) instead of the whole board. */
@@ -170,6 +173,7 @@ export function ExcalidrawCanvas({
   submitLabel,
   applyElements = null,
   applyElementsNonce = null,
+  applyFiles = null,
   applyRemoveElementIds = null,
   openFocusRole = null,
   scrollAppliedElements = true,
@@ -250,6 +254,7 @@ export function ExcalidrawCanvas({
   const pendingApplyRef = useRef<{
     nonce: string | number;
     elements: readonly unknown[];
+    files: IleWorkCanvasFiles;
     removeIds: readonly string[];
   } | null>(null);
   const exportTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -376,7 +381,11 @@ export function ExcalidrawCanvas({
         userCleared: userClearedRef.current || live.some((el) => el.isDeleted),
       })
     ) {
-      commitScene(api, { elements: initial.elements }, { applyingRemote: applyingRemoteRef });
+      commitScene(
+        api,
+        { elements: initial.elements, files: initial.files },
+        { applyingRemote: applyingRemoteRef },
+      );
     }
     if (!pending || pending.nonce === lastApplyNonceRef.current) {
       pendingApplyRef.current = null;
@@ -392,7 +401,9 @@ export function ExcalidrawCanvas({
     const existing = (api.getSceneElements() ?? []).filter((el) => !el?.id || !removeIds.has(el.id));
     const existingIds = new Set(existing.map((el) => el.id));
     const toAdd = incoming.filter((el) => el && typeof el === "object" && !existingIds.has(el.id));
-    if (!toAdd.length && !removeIds.size) {
+    const files = ileWorkCanvasMergeFiles(api.getFiles(), pending.files);
+    const hasIncomingFiles = Object.keys(pending.files || {}).length > 0;
+    if (!toAdd.length && !removeIds.size && !hasIncomingFiles) {
       scheduleCenterOnOpen();
       return;
     }
@@ -408,6 +419,7 @@ export function ExcalidrawCanvas({
       {
         elements: merged,
         appState: { selectedElementIds: {} },
+        files,
       },
       { applyingRemote: applyingRemoteRef },
     );
@@ -633,10 +645,11 @@ export function ExcalidrawCanvas({
     pendingApplyRef.current = {
       nonce: applyElementsNonce,
       elements: applyElements ?? [],
+      files: applyFiles ?? {},
       removeIds: applyRemoveElementIds ?? [],
     };
     flushPendingApply();
-  }, [applyElements, applyElementsNonce, applyRemoveElementIds, isLoaded, flushPendingApply]);
+  }, [applyElements, applyElementsNonce, applyFiles, applyRemoveElementIds, isLoaded, flushPendingApply]);
 
   useEffect(() => {
     if (replaceSceneNonce == null || replaceSceneNonce === lastReplaceNonceRef.current) {

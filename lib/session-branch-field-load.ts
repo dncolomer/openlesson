@@ -5,6 +5,8 @@
  */
 
 import { exactProblemOpeningWork, resolveLearnOpeningWork } from "@/lib/learn-opening-work";
+import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   planSessionBranchPrepare,
@@ -30,6 +32,7 @@ export type SessionBranchFieldLoadResult =
       key: string;
       openingWork: string;
       openingWorkExact: boolean;
+      openingCanvasScene: IleWorkCanvasScene | null;
     }
   | { ok: false; error: string; key: string | null };
 
@@ -44,6 +47,7 @@ type CacheEntry = {
   birth: SessionBranchModel | null;
   openingWork: string;
   openingWorkExact: boolean;
+  openingCanvasScene: IleWorkCanvasScene | null;
   error: string | null;
   promise: Promise<SessionBranchModel>;
   listeners: Set<(entry: CacheEntry) => void>;
@@ -131,6 +135,7 @@ async function readPayload(
   done: boolean;
   openingWork: string;
   openingWorkExact: boolean;
+  openingCanvasScene: IleWorkCanvasScene | null;
 }> {
   const payload = (await response.json().catch(() => null)) as {
     model?: unknown;
@@ -138,6 +143,7 @@ async function readPayload(
     done?: unknown;
     openingWork?: unknown;
     openingWorkExact?: unknown;
+    openingCanvasScene?: unknown;
     error?: { message?: unknown };
   } | null;
   if (!response.ok) {
@@ -152,6 +158,7 @@ async function readPayload(
     done: payload.done === true,
     openingWork: openingWorkOf(payload.model, payload.openingWork, salt, openingWorkExact),
     openingWorkExact,
+    openingCanvasScene: parseFlowOpeningCanvasScene(payload.openingCanvasScene),
   };
 }
 
@@ -209,6 +216,7 @@ export async function loadSessionBranchField(
         existing.openingWork ||
         openingWorkOf(existing.model, existing.openingWork, key, existing.openingWorkExact),
       openingWorkExact: existing.openingWorkExact,
+      openingCanvasScene: existing.openingCanvasScene ?? null,
     };
   }
   if (decision === "join" && existing) {
@@ -223,6 +231,7 @@ export async function loadSessionBranchField(
           ready?.openingWork ||
           openingWorkOf(model, ready?.openingWork, key, ready?.openingWorkExact),
         openingWorkExact: Boolean(ready?.openingWorkExact),
+        openingCanvasScene: ready?.openingCanvasScene ?? null,
       };
     } catch (error) {
       return { ok: false, error: messageOf(error), key };
@@ -249,6 +258,7 @@ export async function loadSessionBranchField(
     birth: null,
     openingWork: "",
     openingWorkExact: false,
+    openingCanvasScene: null,
     error: null,
     promise: promise.then((payload) => payload.model),
     listeners: pendingListeners.get(key) ?? new Set(),
@@ -264,6 +274,7 @@ export async function loadSessionBranchField(
       entry.birth = payload.model;
       entry.openingWork = payload.openingWork;
       entry.openingWorkExact = payload.openingWorkExact;
+      entry.openingCanvasScene = payload.openingCanvasScene;
       entry.error = null;
       for (const listener of entry.listeners) listener(entry);
     }
@@ -276,6 +287,7 @@ export async function loadSessionBranchField(
       key,
       openingWork: payload.openingWork,
       openingWorkExact: payload.openingWorkExact,
+      openingCanvasScene: payload.openingCanvasScene,
     };
   } catch (error) {
     if (cache.get(key)?.token === token) cache.delete(key);

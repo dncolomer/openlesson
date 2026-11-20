@@ -4,6 +4,8 @@
  */
 
 import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import {
   nextFlowEnforcedChannels,
@@ -35,6 +37,7 @@ export type SolveFlow = {
   topic: string;
   artifacts: FlowArtifact[];
   exactProblemOnCanvas: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
   durationMinutes: number;
   actionCatalog: LearningModelSize;
   answersModelSeed?: AuthorUnsysModelSeed | null;
@@ -124,6 +127,7 @@ export type SolveCommand =
       problem?: string;
       artifacts?: unknown;
       exactProblemOnCanvas?: boolean;
+      openingCanvasScene?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -141,6 +145,7 @@ export type SolveCommand =
       problem?: string;
       artifacts?: unknown;
       exactProblemOnCanvas?: boolean;
+      openingCanvasScene?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -177,6 +182,7 @@ export function applySolveCommand(
       topic: accepted.topic,
       artifacts: accepted.artifacts,
       exactProblemOnCanvas: parseExactProblemOnCanvas(command.exactProblemOnCanvas),
+      openingCanvasScene: parseFlowOpeningCanvasSceneForKind("solve", command.openingCanvasScene),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
@@ -214,6 +220,10 @@ export function applySolveCommand(
         command.exactProblemOnCanvas === undefined
           ? Boolean(current.exactProblemOnCanvas)
           : parseExactProblemOnCanvas(command.exactProblemOnCanvas),
+      openingCanvasScene:
+        command.openingCanvasScene === undefined
+          ? current.openingCanvasScene ?? null
+          : parseFlowOpeningCanvasSceneForKind("solve", command.openingCanvasScene),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

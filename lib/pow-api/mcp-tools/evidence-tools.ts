@@ -82,9 +82,18 @@ const FLOW_WRITE_PROPERTIES = {
       "Solve / Verification: put the Problem on the Work canvas as written (no LLM probe rewrite). Default false. Ignored for Calibration.",
   },
   answers_model_seed: {
-    type: "object",
+    type: ["object", "string"],
     description:
-      "Unsys model seed from generate_flow_unsys_seed or the wizard model step. Shape: { model }.",
+      "Custom uncertainty model for this flow. Canonical { model } with priced parent→child edges, or a generic tree spec: nested { title, children, weight }, or { nodes, edges } with weight/price. JSON string accepted. Same as uncertainty_model.",
+  },
+  uncertainty_model: {
+    type: ["object", "string"],
+    description:
+      "Alias of answers_model_seed. Generic tree with weights (nodes/edges or nested children) or serialized JSON.",
+  },
+  unsys_model: {
+    type: ["object", "string"],
+    description: "Alias of answers_model_seed.",
   },
   generate_unsys: {
     type: "boolean",

@@ -22,7 +22,14 @@ import {
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
+import { FlowOpeningCanvasHost } from "@/components/product-flow/flow-opening-canvas-host";
 import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
+import {
+  flowOpeningCanvasHasContent,
+  flowShowsOpeningCanvas,
+  parseFlowOpeningCanvasScene,
+} from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
@@ -40,6 +47,7 @@ type LoadedFlow = {
   goal?: string;
   artifacts?: FlowArtifact[];
   exactProblemOnCanvas?: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
   questions: Array<{ id?: string; text?: string }>;
   durationMinutes?: number;
   publicToken: string;
@@ -62,6 +70,8 @@ export function ProductFlowPage({
   const [problem, setProblem] = useState("");
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
+  const [openingCanvasScene, setOpeningCanvasScene] = useState<IleWorkCanvasScene | null>(null);
+  const [authoringCanvas, setAuthoringCanvas] = useState(false);
   const [answersModelSeed, setAnswersModelSeed] = useState<AuthorUnsysModelSeed | null>(null);
   const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
     () => parseFlowEnforcedChannels(null),
@@ -87,6 +97,7 @@ export function ProductFlowPage({
     setProblem(String(next.topic || next.goal || ""));
     setArtifacts(parseFlowArtifacts(next.artifacts));
     setExactProblemOnCanvas(Boolean(next.exactProblemOnCanvas));
+    setOpeningCanvasScene(parseFlowOpeningCanvasScene(next.openingCanvasScene));
     setAnswersModelSeed(parseFlowUnsysSeed(next.answersModelSeed));
     setEnforcedChannels(parseFlowEnforcedChannels(next.enforcedChannels));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
@@ -110,6 +121,7 @@ export function ProductFlowPage({
           name,
           artifacts,
           exactProblemOnCanvas,
+          openingCanvasScene,
           durationMinutes: minutes,
           answersModelSeed,
           enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
@@ -184,6 +196,19 @@ export function ProductFlowPage({
 
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
+        {authoringCanvas ? (
+          <div className="flex min-h-[70vh] flex-col">
+            <FlowOpeningCanvasHost
+              scene={openingCanvasScene}
+              topicName={name}
+              onSave={(next) => {
+                setOpeningCanvasScene(next);
+                setAuthoringCanvas(false);
+              }}
+              onCancel={() => setAuthoringCanvas(false)}
+            />
+          </div>
+        ) : (
         <FlowFormCard>
           <FlowField label="Flow name">
             <input
@@ -211,6 +236,11 @@ export function ProductFlowPage({
               topicHook={kind}
               exactProblemOnCanvas={exactProblemOnCanvas}
               onExactProblemOnCanvasChange={setExactProblemOnCanvas}
+              openingCanvasPrepared={flowOpeningCanvasHasContent(openingCanvasScene)}
+              onPrepareOpeningCanvas={
+                flowShowsOpeningCanvas(kind) ? () => setAuthoringCanvas(true) : undefined
+              }
+              onClearOpeningCanvas={() => setOpeningCanvasScene(null)}
               problemReadOnly
             />
             {flowAuthorShowsCountdown(kind) ? (
@@ -242,6 +272,7 @@ export function ProductFlowPage({
               name={name}
               problem={problem}
               artifacts={artifacts}
+              openingCanvasScene={openingCanvasScene}
               seed={answersModelSeed}
               onChange={setAnswersModelSeed}
               onBusyChange={setModelBusy}
@@ -276,6 +307,7 @@ export function ProductFlowPage({
             </button>
           </div>
         </FlowFormCard>
+        )}
       </div>
     </ProductSurface>
   );

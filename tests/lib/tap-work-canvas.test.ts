@@ -3,7 +3,7 @@
  * Drives shipped TAP Learning apply/PoW units via TAP wrappers — no reimplementation.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readExcalidrawSurface } from "../helpers/surface-source";
 import ts from "typescript";
@@ -16,6 +16,7 @@ import {
   applyTapAssistantTurnsToWorkCanvas,
   applyTapHeliosReplyToWorkCanvas,
   applyTapVerificationOpeningToWorkCanvas,
+  tapWorkCanvasOpeningLiveSeed,
   buildTapCanvasSnapshotUploadItem,
   buildTapExcalidrawToolUploadItem,
   buildTapWorkCanvasAskUserMessage,
@@ -46,6 +47,7 @@ import {
   wrapIleWorkCanvasText,
 } from "@/lib/learn-work-canvas";
 import { readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -188,6 +190,86 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     );
     expect(exactLive).toContain("distance-5");
     expect(exactLive).not.toContain("heap insert");
+    const prepared = serializeFlowOpeningCanvasScene({
+      elements: [
+        {
+          id: "prep-verify",
+          type: "text",
+          x: 0,
+          y: 0,
+          width: 180,
+          height: 32,
+          text: "Prepared verify board",
+          originalText: "Prepared verify board",
+          isDeleted: false,
+        },
+        {
+          id: "prep-img",
+          type: "image",
+          x: 40,
+          y: 80,
+          width: 160,
+          height: 90,
+          fileId: "file-verify-1",
+          isDeleted: false,
+        },
+      ],
+      appState: {},
+      files: {
+        "file-verify-1": {
+          id: "file-verify-1",
+          mimeType: "image/png",
+          dataURL: "data:image/png;base64,aaaa",
+        },
+      },
+    });
+    const preparedOpening = applyTapVerificationOpeningToWorkCanvas(
+      empty,
+      [{ id: "open-1", role: "assistant", content: "Walk the heap insert from this array." }],
+      "Decode a distance-5 rotated surface-code chain",
+      prepared,
+    );
+    const preparedLive = preparedOpening.elements
+      .map((el) => String(el.originalText || el.text || ""))
+      .join(" ");
+    expect(preparedLive).toContain("Prepared verify board");
+    expect(preparedLive).not.toContain("distance-5");
+    const liveSeed = tapWorkCanvasOpeningLiveSeed(
+      empty,
+      [{ id: "open-1", role: "assistant", content: "Walk the heap insert from this array." }],
+      "Decode a distance-5 rotated surface-code chain",
+      prepared,
+    );
+    expect(liveSeed.applyElements.some((el) => el.fileId === "file-verify-1")).toBe(true);
+    expect(liveSeed.applyFiles["file-verify-1"]).toMatchObject({
+      id: "file-verify-1",
+      mimeType: "image/png",
+    });
+    expect(JSON.stringify(liveSeed.applyFiles["file-verify-1"])).toContain("image/png");
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    expect(phases).toContain("openingCanvasScene");
+    expect(phases).toContain("tapWorkCanvasOpeningLiveSeed");
+    expect(phases).toContain("applyFiles={canvasApplyFiles}");
+    expect(phases).toContain("canvasSeedNonce");
+    expect(phases).toContain("tap-work-canvas:${phase}:${canvasSeedNonce}");
+    const openingScratch =
+      process.env.GROK_GOAL_SCRATCH ||
+      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+    mkdirSync(openingScratch, { recursive: true });
+    appendFileSync(
+      join(openingScratch, "opening-scene-tests.log"),
+      [
+        `preparedVerify=${preparedLive.includes("Prepared verify board")}`,
+        `skippedExact=${!preparedLive.includes("distance-5")}`,
+        `phases=${phases.includes("openingCanvasScene")}`,
+        `imageFile=${Boolean(liveSeed.applyFiles["file-verify-1"])}`,
+        `liveSeed=${phases.includes("tapWorkCanvasOpeningLiveSeed")}`,
+        `applyFiles=${phases.includes("applyFiles={canvasApplyFiles}")}`,
+        `remount=${phases.includes("tap-work-canvas:${phase}:${canvasSeedNonce}")}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
     expect(verifyOpening.elements.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body")).toBe(
       true,
     );
@@ -274,7 +356,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(phases).toContain("onAskSelected={handleAskSelected}");
     expect(phases).toContain("applyTapHeliosReplyToWorkCanvas");
     expect(phases).toContain("applyTapAssistantTurnsToWorkCanvas");
-    expect(phases).toContain("applyTapVerificationOpeningToWorkCanvas");
+    expect(phases).toContain("tapWorkCanvasOpeningLiveSeed");
     expect(phases).toContain('kind === "verify"');
     expect(phases).toContain("if (!missing.length) return");
     expect(phases).not.toContain("if (!missing.length && !boardEmpty) return");

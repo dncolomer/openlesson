@@ -57,7 +57,7 @@ import {
 import {
   applyTapAssistantTurnsToWorkCanvas,
   applyTapHeliosReplyToWorkCanvas,
-  applyTapVerificationOpeningToWorkCanvas,
+  tapWorkCanvasOpeningLiveSeed,
   buildTapCanvasSnapshotUploadItem,
   buildTapWorkCanvasActionUploadItem,
   emptyTapWorkCanvasScene,
@@ -72,8 +72,10 @@ import type { IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
 import { ILE_POW_DEBOUNCE_MS } from "@/lib/learn-realtime-pow";
 import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
+  ileWorkCanvasLiveApply,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
+  type IleWorkCanvasFiles,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/learn-work-canvas";
@@ -95,6 +97,7 @@ export function TapScorePhases(props: {
   /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
   exactProblemOnCanvas?: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
   canvasProblem?: string | null;
   audioEnforced?: boolean;
   enforcedChannels?: FlowEnforcedChannels;
@@ -195,6 +198,7 @@ export function TapScorePhases(props: {
     kind = "scored",
     verificationToken = null,
     exactProblemOnCanvas = false,
+    openingCanvasScene = null,
     canvasProblem = null,
     durationLocked,
     aestheticPackages,
@@ -257,7 +261,9 @@ export function TapScorePhases(props: {
     emptyTapWorkCanvasScene(),
   );
   const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>([]);
+  const [canvasApplyFiles, setCanvasApplyFiles] = useState<IleWorkCanvasFiles>({});
   const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
+  const [canvasSeedNonce, setCanvasSeedNonce] = useState(0);
   const sceneRef = useRef(workCanvasScene);
   const appliedAssistantIdsRef = useRef<Set<string>>(new Set());
   const lastCanvasPowHashRef = useRef("");
@@ -339,24 +345,29 @@ export function TapScorePhases(props: {
       const empty = emptyTapWorkCanvasScene();
       syncScene(empty);
       setCanvasApplyElements([]);
+      setCanvasApplyFiles({});
+      setCanvasSeedNonce(0);
     }
   }, [phase, syncScene]);
 
   useEffect(() => {
-    if (phase !== "live" || kind !== "verify" || !exactProblemOnCanvas) return;
-    const problem = String(canvasProblem || "").trim();
-    if (!problem) return;
+    if (phase !== "live" || kind !== "verify") return;
     const boardEmpty = !sceneRef.current.elements.some((el) => !el.isDeleted);
     if (!boardEmpty) return;
-    const next = applyTapVerificationOpeningToWorkCanvas(
+    const problem = exactProblemOnCanvas ? String(canvasProblem || "").trim() : "";
+    if (!openingCanvasScene && !problem) return;
+    const seeded = tapWorkCanvasOpeningLiveSeed(
       emptyTapWorkCanvasScene(),
       [],
-      problem,
+      problem || null,
+      openingCanvasScene,
     );
-    syncScene(next);
-    setCanvasApplyElements(next.elements);
+    syncScene(seeded.scene);
+    setCanvasApplyElements(seeded.applyElements);
+    setCanvasApplyFiles(seeded.applyFiles);
     setCanvasApplyNonce((n) => n + 1);
-  }, [canvasProblem, exactProblemOnCanvas, kind, phase, syncScene]);
+    setCanvasSeedNonce((n) => n + 1);
+  }, [canvasProblem, exactProblemOnCanvas, kind, openingCanvasScene, phase, syncScene]);
 
   const heliosBusy = tapHeliosCanvasBusy({
     isSending,
@@ -377,11 +388,12 @@ export function TapScorePhases(props: {
     const next =
       boardEmpty && missing.length === assistantTurns.length
         ? kind === "verify"
-          ? applyTapVerificationOpeningToWorkCanvas(
+          ? tapWorkCanvasOpeningLiveSeed(
               emptyTapWorkCanvasScene(),
               assistantTurns,
               exactProblemOnCanvas ? canvasProblem : null,
-            )
+              openingCanvasScene,
+            ).scene
           : applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
         : applyTapHeliosReplyToWorkCanvas(
             sceneRef.current,
@@ -392,12 +404,16 @@ export function TapScorePhases(props: {
     for (const turn of assistantTurns) appliedAssistantIdsRef.current.add(turn.id);
     const added = next.elements.filter((el) => !prevIds.has(el.id));
     if (!added.length && !boardEmpty) return;
+    const apply = ileWorkCanvasLiveApply(next);
     syncScene(next);
-    setCanvasApplyElements(added.length ? added : next.elements);
+    setCanvasApplyElements(added.length ? added : apply.elements);
+    setCanvasApplyFiles(apply.files);
     setCanvasApplyNonce((n) => n + 1);
+    if (boardEmpty) setCanvasSeedNonce((n) => n + 1);
   }, [
     canvasProblem,
     exactProblemOnCanvas,
+    openingCanvasScene,
     kind,
     lastAssistantTurn?.id,
     lastAssistantTurn?.content,
@@ -647,10 +663,11 @@ export function TapScorePhases(props: {
                   className="relative h-full min-h-0 min-w-0 overflow-hidden"
                 >
                   <WorkCanvas
-                    key={`tap-work-canvas:${phase}`}
+                    key={`tap-work-canvas:${phase}:${canvasSeedNonce}`}
                     boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
                     initialSceneData={workCanvasScene}
                     applyElements={canvasApplyElements}
+                    applyFiles={canvasApplyFiles}
                     applyElementsNonce={canvasApplyNonce}
                     heliosBusy={heliosBusy}
                     onLearnerWaitChange={onLearnerWaitChange}

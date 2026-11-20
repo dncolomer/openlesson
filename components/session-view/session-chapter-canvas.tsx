@@ -20,6 +20,7 @@ import { ileChapterCanvasRemountKey } from "@/lib/learn-session-global-context";
 import {
   serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
+  type IleWorkCanvasFiles,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
 import type { IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
@@ -37,6 +38,7 @@ export function SessionChapterWorkCanvas({
   whiteboardSceneDataRef,
   updateActiveChapterWorkspace,
   canvasApplyElements,
+  canvasApplyFiles,
   canvasApplyNonce,
   handleCanvasPowActions,
   handleAskCanvasSelection,
@@ -73,6 +75,7 @@ export function SessionChapterWorkCanvas({
   whiteboardSceneDataRef: { current: IleWorkCanvasScene | null };
   updateActiveChapterWorkspace: (patch: { whiteboardSceneData: IleWorkCanvasScene }) => void;
   canvasApplyElements: readonly IleWorkCanvasElement[] | null;
+  canvasApplyFiles?: IleWorkCanvasFiles | null;
   canvasApplyNonce: string | number | null;
   handleCanvasPowActions: (events: IleWorkCanvasPowEvent[]) => void;
   handleAskCanvasSelection: NonNullable<Parameters<typeof WorkCanvas>[0]["onAskSelected"]>;
@@ -176,6 +179,7 @@ export function SessionChapterWorkCanvas({
         updateActiveChapterWorkspace({ whiteboardSceneData: scene });
       }}
       applyElements={canvasApplyElements}
+      applyFiles={canvasApplyFiles}
       applyElementsNonce={canvasApplyNonce}
       onCanvasPowActions={handleCanvasPowActions}
       onAskSelected={handleAskCanvasSelection}

@@ -32,6 +32,7 @@ import {
 } from "@/lib/flow-unsys-seed";
 import { definitionUnsysSeedFromBlocks } from "@/lib/definition-unsys-seed";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
+import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import {
   FLOW_COMPACT_GHOST_BTN,
   FLOW_COMPACT_PRIMARY_BTN,
@@ -112,7 +113,39 @@ describe("product flow owner_user_id", () => {
     expect(accepted.goal).toBe("");
     expect(accepted.artifacts).toEqual([]);
     expect(accepted.exactProblemOnCanvas).toBe(false);
+    expect(accepted.openingCanvasScene).toBeNull();
     expect(accepted.answersModelSeed).toBeNull();
+  });
+
+  it("advances authoring when a prepared canvas is the problem", () => {
+    const scene = serializeFlowOpeningCanvasScene({
+      elements: [
+        {
+          id: "n1",
+          type: "text",
+          x: 0,
+          y: 0,
+          width: 120,
+          height: 32,
+          text: "Board-only problem",
+          originalText: "Board-only problem",
+          isDeleted: false,
+        },
+      ],
+      appState: {},
+      files: {},
+    });
+    const draft = {
+      ...emptyProductFlowDraft("solve"),
+      name: "Board flow",
+      openingCanvasScene: scene,
+    };
+    expect(productFlowWizardCanAdvance("author", draft)).toBe(true);
+    expect(productFlowWizardCanAdvance("model", draft)).toBe(true);
+    const accepted = acceptProductFlowPublish(draft);
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.topic).toContain("Board-only problem");
   });
 
   it("inserts an unsys model step between author and publish", () => {

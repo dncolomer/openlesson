@@ -18,6 +18,7 @@ import {
 } from "@/lib/solve-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
 import { parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import {
   parseFlowEnforcedChannels,
   serializeFlowEnforcedChannels,
@@ -91,6 +92,9 @@ function memorySolveSessionRow(input: {
       solve_flow_id: input.flow.id,
       identity: input.identity,
       ...(input.flow.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+      ...(input.flow.openingCanvasScene
+        ? { openingCanvasScene: input.flow.openingCanvasScene }
+        : {}),
       enforcedChannels: serializeFlowEnforcedChannels(input.flow.enforcedChannels),
     },
     created_at: new Date().toISOString(),
@@ -135,6 +139,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     topic,
     artifacts: parseFlowArtifacts(row.artifacts),
     exactProblemOnCanvas: parseExactProblemOnCanvas(row.exact_problem_on_canvas),
+    openingCanvasScene: parseFlowOpeningCanvasSceneForKind("solve", row.opening_canvas_scene),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
@@ -194,6 +199,7 @@ async function persistCommand(
       topic: value.flow.topic,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
+      opening_canvas_scene: value.flow.openingCanvasScene,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -211,6 +217,7 @@ async function persistCommand(
       topic: value.flow.topic,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
+      opening_canvas_scene: value.flow.openingCanvasScene,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -262,6 +269,9 @@ async function persistCommand(
           title: topic,
           solve_flow_id: command.flowId,
           ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+          ...(mapped?.openingCanvasScene
+            ? { openingCanvasScene: mapped.openingCanvasScene }
+            : {}),
         },
         parseFlowEnforcedChannels(mapped?.enforcedChannels),
       ),
@@ -292,6 +302,7 @@ async function writeSolveFlow(
       "archived_at",
       "artifacts",
       "exact_problem_on_canvas",
+      "opening_canvas_scene",
       "answers_model_seed",
       "enforced_channels",
     ],

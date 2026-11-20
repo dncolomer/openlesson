@@ -121,6 +121,7 @@ interface TapScoreClientProps {
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   verificationToken?: string | null;
   exactProblemOnCanvas?: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
   canvasProblem?: string | null;
   enforcedChannels?: FlowEnforcedChannels | null;
 }
@@ -152,6 +153,7 @@ export function TapScoreClient({
   sidebarMode = "tap",
   verificationToken = null,
   exactProblemOnCanvas = false,
+  openingCanvasScene = null,
   canvasProblem = null,
   enforcedChannels: enforcedChannelsProp = null,
 }: TapScoreClientProps) {
@@ -958,6 +960,7 @@ export function TapScoreClient({
       kind={kind}
       verificationToken={verificationToken}
       exactProblemOnCanvas={exactProblemOnCanvas}
+      openingCanvasScene={openingCanvasScene}
       canvasProblem={canvasProblem}
       audioEnforced={enforcedChannels.audio}
       enforcedChannels={enforcedChannels}

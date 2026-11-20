@@ -612,6 +612,7 @@ export function SessionView({
     whiteboardSceneDataRef,
     canvasApplyNonce,
     canvasApplyElements,
+    canvasApplyFiles,
     openWorkIds,
     sessionInsights,
     setSessionInsights,
@@ -751,6 +752,7 @@ export function SessionView({
       whiteboardSceneDataRef={whiteboardSceneDataRef}
       updateActiveChapterWorkspace={updateActiveChapterWorkspace}
       canvasApplyElements={canvasApplyElements}
+      canvasApplyFiles={canvasApplyFiles}
       canvasApplyNonce={canvasApplyNonce}
       handleCanvasPowActions={handleCanvasPowActions}
       handleAskCanvasSelection={handleAskCanvasSelection}

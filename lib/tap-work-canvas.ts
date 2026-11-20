@@ -19,12 +19,15 @@ import {
   ILE_XAI_LOADING_TEXT,
   parseIleXaiCanvasTurn,
   replaceIleXaiLoadingPlaceholder,
+  ileWorkCanvasLiveApply,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
+  type IleWorkCanvasFiles,
   type IleWorkCanvasScene,
   type IleXaiCanvasTurnPayload,
 } from "@/lib/learn-work-canvas";
+import { seedPreparedOpeningCanvas } from "@/lib/flow-opening-canvas";
 
 export { ILE_XAI_LOADING_CUSTOM_DATA_KEY, ILE_XAI_LOADING_TEXT };
 import {
@@ -142,8 +145,13 @@ export function applyTapVerificationOpeningToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   turns: readonly TapAssistantCanvasTurn[] | null | undefined,
   exactProblem?: string | null,
+  preparedScene?: IleWorkCanvasScene | null,
 ): IleWorkCanvasScene {
   const assistant = assistantCanvasTurns(turns);
+  const prepared = seedPreparedOpeningCanvas(scene, preparedScene);
+  if (prepared.seeded) {
+    return applyTapAssistantTurnsToWorkCanvas(prepared.scene, assistant);
+  }
   const problem = String(exactProblem || "").replace(/\s+/g, " ").trim();
   if (problem) {
     const seeded = seedIleChapterWorkCanvas(scene, {
@@ -158,6 +166,31 @@ export function applyTapVerificationOpeningToWorkCanvas(
     chapterId: "session",
   });
   return applyTapAssistantTurnsToWorkCanvas(seeded.scene, rest);
+}
+
+/** Full scene for remount plus files for live apply. Image marks keep their fileId. */
+export function tapWorkCanvasOpeningLiveSeed(
+  scene: IleWorkCanvasScene | null | undefined,
+  turns: readonly TapAssistantCanvasTurn[] | null | undefined,
+  exactProblem?: string | null,
+  preparedScene?: IleWorkCanvasScene | null,
+): {
+  scene: IleWorkCanvasScene;
+  applyElements: IleWorkCanvasElement[];
+  applyFiles: IleWorkCanvasFiles;
+} {
+  const next = applyTapVerificationOpeningToWorkCanvas(
+    scene,
+    turns,
+    exactProblem,
+    preparedScene,
+  );
+  const apply = ileWorkCanvasLiveApply(next);
+  return {
+    scene: next,
+    applyElements: apply.elements,
+    applyFiles: apply.files,
+  };
 }
 
 /**

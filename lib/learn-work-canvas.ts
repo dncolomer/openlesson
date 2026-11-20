@@ -100,6 +100,8 @@ export {
   ileWorkCanvasInitialSeedText,
   resetIleWorkCanvasSceneOnTimerExpiry,
   serializeIleWorkCanvasScene,
+  ileWorkCanvasLiveApply,
+  ileWorkCanvasMergeFiles,
   wrapIleWorkCanvasText,
   convertIleWorkCanvasSkeletons,
   convertToExcalidrawElements,

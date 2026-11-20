@@ -20,11 +20,11 @@ function read(rel: string): string {
 }
 
 describe("learning model vocabulary and catalogs", () => {
-  it("names the product the unsys model", () => {
-    expect(LEARNING_MODEL_NAME).toBe("unsys model");
-    expect(LEARNING_MODEL_PUBLIC_LABEL).toBe("Unsys model");
-    expect(read("lib/science/learning-model-copy.ts")).toContain("The unsys model");
-    expect(read("lib/science/learning-model-copy.ts")).toContain("UNSYS MODEL");
+  it("names the product the uncertainty model", () => {
+    expect(LEARNING_MODEL_NAME).toBe("uncertainty model");
+    expect(LEARNING_MODEL_PUBLIC_LABEL).toBe("Uncertainty model");
+    expect(read("lib/science/learning-model-copy.ts")).toContain("Our uncertainty model");
+    expect(read("lib/science/learning-model-copy.ts")).toContain("UNCERTAINTY MODEL");
     expect(read("lib/science/hub.ts")).toContain("LEARNING_MODEL_PUBLIC_LABEL");
     expect(read("app/science/learning-model/page.tsx")).toContain("LEARNING_MODEL_PUBLIC_LABEL");
   });

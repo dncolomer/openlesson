@@ -93,7 +93,7 @@ describe("science hub", () => {
     expect(SCIENCE_WHY_PATH).toBe("/science#why");
     expect(
       SCIENCE_HUB_DIRECTORY.find((row) => row.href === "#science-unsys-model")?.label,
-    ).toBe("Unsys model");
+    ).toBe("Uncertainty model");
   });
 
   it("harness, verification, and pricing deep-link into the hub", () => {
@@ -112,7 +112,7 @@ describe("science hub", () => {
     ]);
     expect(
       HARNESS_THESIS_LINKS.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,
-    ).toBe("Unsys model");
+    ).toBe("Uncertainty model");
     expect(read("app/solve-protocols/page.tsx")).toContain("MarketingDirectoryHero");
     expect(read("app/solve-protocols/page.tsx")).toContain('marker="harness"');
     expect(read("app/verify-protocols/page.tsx")).toContain("MarketingDirectoryHero");
@@ -121,7 +121,7 @@ describe("science hub", () => {
     expect(read("app/mapping-protocols/page.tsx")).toContain('marker="mapping"');
     expect(read("app/pricing/page.tsx")).not.toContain("ThesisDirectory");
     expect(HARNESS_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);
-    expect(HARNESS_PRICING_COPY.thesisLinks.map((row) => row.label)).toContain("Unsys model");
+    expect(HARNESS_PRICING_COPY.thesisLinks.map((row) => row.label)).toContain("Uncertainty model");
     expect(VERIFICATION_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);
   });
 });

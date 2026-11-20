@@ -1,5 +1,5 @@
 /**
- * Canonical Free Energy Principle names for the unsys model.
+ * Canonical Free Energy Principle names for our uncertainty model.
  * Stored keys (territory, try/hold/drop/insight, scout) stay for persistence.
  * Visitor-facing FEP copy uses these names: generative model, hidden state,
  * state factor, observation, action, policy. Do not call the generative model a
@@ -9,8 +9,8 @@
  * research copy are other surfaces and may still say "map".
  */
 
-export const LEARNING_MODEL_NAME = "unsys model" as const;
-export const LEARNING_MODEL_PUBLIC_LABEL = "Unsys model" as const;
+export const LEARNING_MODEL_NAME = "uncertainty model" as const;
+export const LEARNING_MODEL_PUBLIC_LABEL = "Uncertainty model" as const;
 
 export const FEP_CONCEPT_NAMES = [
   "generative model",

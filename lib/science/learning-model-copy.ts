@@ -1,5 +1,5 @@
 /**
- * Public explainer for the unsys model.
+ * Public explainer for our uncertainty model.
  * Visitor copy uses FEP names: generative model, hidden state, state factor,
  * observation, action, policy. Calibrate, Learn, and Verify are how the system
  * uses that model. Do not call the generative model a map.
@@ -27,10 +27,10 @@ export const SCIENCE_LEARNING_MODEL_TERMS = [
 ] as const;
 
 export const SCIENCE_LEARNING_MODEL_COPY = {
-  eyebrow: "UNSYS MODEL",
+  eyebrow: "UNCERTAINTY MODEL",
   title: "A generative model you can act on.",
   lead:
-    "The unsys model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning. The policy is how the autopilot helps choose what to explore next. The thinking stays yours.",
+    "Our uncertainty model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning. The policy is how the autopilot helps choose what to explore next. The thinking stays yours.",
   foundationTitle: "Where this comes from",
   foundation:
     "Karl Friston’s Free Energy Principle says living systems keep a generative model of the world, then act to reduce uncertainty about its hidden states. A mismatch between the observation a hidden state would generate and what the learner produces is a surprise. We use those Concepts for Calibrate, Learn, and Verify. We do not compute variational free energy, and we do not claim the full formal theory.",
@@ -50,7 +50,7 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   verify:
     "The same projection, on a clock, for someone whose knowledge we are verifying. Edge costs stay hidden. Each projected step is compared with the cheapest priced edge on that hidden state. Distance is the average of how much more those steps cost. Distance 0 means every step followed the cheapest policy. The score is stored with the identity they claimed.",
   caveat:
-    "The Free Energy Principle is an influence on the unsys model. We do not claim that Uncertain Systems is Friston’s full formal theory, and we do not claim completed FEP empirical results.",
+    "The Free Energy Principle is an influence on our uncertainty model. We do not claim that Uncertain Systems is Friston’s full formal theory, and we do not claim completed FEP empirical results.",
   explorerTitle: "A small generative model",
   explorerLead:
     "Integrals is a frozen generative model of the concept the user is trying to learn or verify. Three state factors structure it: Meaning, Technique, and Setup. A hidden state can open several finer hidden states at the same depth. Each hidden state carries an observation: what we would expect while focusing on it. Travel from a hidden state is a priced edge: the expected-free-energy cost of going to the next hidden state. Costs change with the hidden state you are on. Switch the explorer between Learn and Verify. In Learn the costs stay visible and the cheapest edge is marked as the policy, so the policy can steer. In Verify the costs stay hidden; each step is scored as distance from that cheapest policy. Click or drag a hidden state, then take an edge.",

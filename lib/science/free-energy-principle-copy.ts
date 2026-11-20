@@ -23,7 +23,7 @@ export const SCIENCE_FEP_COPY = {
   name:
     "That is why the platform is named Uncertain Systems: knowledge building is reducing uncertainty about hidden structure, rather than accumulating test scores.",
   caveat:
-    "The Free Energy Principle is an influence on this point of view. We do not claim that Uncertain Systems is Friston's full formal theory, and we do not claim completed FEP empirical results. The live Unsys model uses these Concepts for Calibrate, Learn, and Verify. It does not compute variational free energy.",
+    "The Free Energy Principle is an influence on this point of view. We do not claim that Uncertain Systems is Friston's full formal theory, and we do not claim completed FEP empirical results. Our uncertainty model uses these Concepts for Calibrate, Learn, and Verify. It does not compute variational free energy.",
 } as const;
 
 /** Flatten all visitor-facing strings for term search / tests. */

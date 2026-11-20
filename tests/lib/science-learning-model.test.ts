@@ -30,8 +30,8 @@ describe("science learning model page", () => {
     for (const term of SCIENCE_LEARNING_MODEL_TERMS) {
       expect(full.toLowerCase(), term).toContain(term.toLowerCase());
     }
-    expect(SCIENCE_LEARNING_MODEL_COPY.eyebrow).toBe("UNSYS MODEL");
-    expect(SCIENCE_LEARNING_MODEL_COPY.lead).toMatch(/^The unsys model is a generative model/);
+    expect(SCIENCE_LEARNING_MODEL_COPY.eyebrow).toBe("UNCERTAINTY MODEL");
+    expect(SCIENCE_LEARNING_MODEL_COPY.lead).toMatch(/^Our uncertainty model is a generative model/);
     expect(full.toLowerCase()).not.toMatch(/\blearning model\b/);
     for (const value of Object.values(SCIENCE_LEARNING_MODEL_COPY)) {
       expect(value, value).not.toMatch(/\blearning model\b/i);

@@ -29,7 +29,7 @@ export const HARNESS_PRODUCT_COPY = {
     },
     {
       title: "Investigate the gaps",
-      body: "The session can point you toward relevant further exploration based on the unsys model of the concept. You still do the investigation. Completing a session records work. It does not guarantee retention or mastery.",
+      body: "The session can point you toward relevant further exploration based on our uncertainty model of the concept. You still do the investigation. Completing a session records work. It does not guarantee retention or mastery.",
     },
   ],
   exampleEyebrow: "ILLUSTRATIVE",
@@ -60,7 +60,7 @@ export const HARNESS_PRODUCT_COPY = {
       imageAlt: "Blueprint of a gold search path foraging through a scatter of unknown diamond marks",
     },
     {
-      eyebrow: "UNSYS MODEL",
+      eyebrow: "UNCERTAINTY MODEL",
       title: LEARNING_MODEL_PUBLIC_LABEL,
       body: "A generative model of the concept you are trying to learn or verify: hidden states, observations, priced edges, and policies. Calibrate, Learn, and Verify freeze that model and act on it.",
       href: SCIENCE_LEARNING_MODEL_PATH,

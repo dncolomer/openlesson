@@ -278,7 +278,7 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     expect(page).toContain("lg:grid-cols-12");
     expect(HARNESS_PRODUCT_COPY.points.map((p) => p.title)).toEqual([
       "Epistemic foraging",
-      "Unsys model",
+      "Uncertainty model",
       "Uncertainty minimization",
     ]);
     expect(HARNESS_PRODUCT_COPY.points[0].href).toBe("/science#science-epistemic-foraging");

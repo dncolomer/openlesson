@@ -23,7 +23,7 @@ export const SCIENCE_EPISTEMIC_FORAGING_COPY = {
   definition:
     "Epistemic foraging is an active search for information to reduce uncertainty about an environment, rather than immediately chasing rewards. In Karl Friston's active-inference account, actions carry epistemic value: the expected information that would shrink uncertainty about hidden states.",
   platform:
-    "That policy is how we think about the understanding gap. If the bottleneck is inspection, questioning, and use, then the useful next step is often the one that exposes what is still unheld, rather than immediately chasing rewards. On Uncertain Systems, Think Aloud Protocol probes, interruptions, and Proof of Work traces are the current forage: they search for signal in observable work. The Unsys model is the generative model that forage is scored against.",
+    "That policy is how we think about the understanding gap. If the bottleneck is inspection, questioning, and use, then the useful next step is often the one that exposes what is still unheld, rather than immediately chasing rewards. On Uncertain Systems, Think Aloud Protocol probes, interruptions, and Proof of Work traces are the current forage: they search for signal in observable work. Our uncertainty model is the generative model that forage is scored against.",
   caveat:
     "Epistemic foraging is an influence on this point of view. We do not claim that Uncertain Systems is Friston's full formal theory, and we do not claim completed active-inference empirical results.",
 } as const;

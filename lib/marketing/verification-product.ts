@@ -57,7 +57,7 @@ export const VERIFICATION_FLOW_COPY = {
 export const VERIFICATION_APPROACH_COPY = {
   eyebrow: "THE MODEL",
   title: "How the model informs verification",
-  p1: "Uncertain Systems uses an unsys model built from the concept you are examining: hidden states, observations, priced edges, and a policy. Hosted Calibrate, Learn, and Verify sessions act on that frozen model. Observable work is the input. The model estimates a provisional relationship to the target. Understanding still happens in the person.",
+  p1: "Uncertain Systems uses our uncertainty model built from the concept you are examining: hidden states, observations, priced edges, and a policy. Hosted Calibrate, Learn, and Verify sessions act on that frozen model. Observable work is the input. The model estimates a provisional relationship to the target. Understanding still happens in the person.",
   p2: "Conversational sessions follow a Free Energy Principle influence based on epistemic foraging: search for information that reduces uncertainty about what is held. That policy can shape what the session asks next. It is an influence on the software, not a claim that the result is scientifically validated or immune to assistance.",
   p3: "A related application is examining how an agent setup works a defined problem. That use needs a confirmed configuration. It is not evidence that people and agents are measured the same way.",
   foraging:

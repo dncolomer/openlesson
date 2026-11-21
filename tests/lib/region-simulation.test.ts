@@ -14,7 +14,9 @@ import {
   nearestStrategyCluster,
   parseCustomExplorationStrategy,
   parseSimulationStrategies,
+  parseSimulationStrategiesWithRecovered,
   planRegionSimulationSamples,
+  regionSimulationFlowIds,
   REGION_SIMULATION_DEFAULT_SAMPLES,
   REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_SOURCE,
@@ -25,14 +27,21 @@ import {
   studioEmbeddingOrigin,
   walkExplorationStrategy,
 } from "@/lib/region-simulation";
-import { runRegionSimulation } from "@/lib/region-simulation-run";
+import {
+  addRegionSimulationSamples,
+  removeRegionSimulationSamples,
+  runRegionSimulation,
+} from "@/lib/region-simulation-run";
 import {
   listFlowEmbeddingsForOwner,
   persistCompletedFlowEmbedding,
   resetFlowEmbeddingStore,
 } from "@/lib/flow-embedding-store";
 import { presentDashboardKnowledgeRegions } from "@/lib/dashboard-knowledge-regions";
-import { parseRegionSimulationClusterStrategyId } from "@/lib/knowledge-region-details";
+import {
+  parseRegionSimulationClusterStrategyId,
+  presentKnowledgeRegionDetails,
+} from "@/lib/knowledge-region-details";
 
 const ROOT = join(__dirname, "../..");
 
@@ -371,5 +380,294 @@ describe("region simulation", () => {
       flowKind: "calibrate",
     });
     expect(stored.filter((row) => row.source === REGION_SIMULATION_SOURCE)).toHaveLength(3);
+  });
+
+  it("adds custom simulated samples to an existing region and removes them", async () => {
+    await persistCompletedFlowEmbedding({
+      ownerUserId: "owner-mutate",
+      flowKind: "verify",
+      flowId: "flow-a",
+      runId: "human-mutate",
+      identity: "ada",
+      source: "runner",
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "real proof" }],
+    });
+    const flows = [{ id: "flow-a", name: "Limits", problems: ["ε-δ"] }];
+    const created = await runRegionSimulation({
+      ownerUserId: "owner-mutate",
+      name: "Limits styles",
+      flows,
+      strategyIds: ["exploit-heavy"],
+      samplesPerStrategy: 3,
+      includeHumanData: true,
+    });
+    const regionId = created.id || "limits-mutate";
+    const custom = parseCustomExplorationStrategy({
+      name: "Cautious",
+      instructions: "Ask more questions before you commit to an answer.",
+    })!;
+    const added = await addRegionSimulationSamples({
+      ownerUserId: "owner-mutate",
+      regionId,
+      name: "Limits styles",
+      flows,
+      strategyIds: [custom.id],
+      customStrategies: [custom],
+      samplesPerStrategy: 3,
+    });
+    expect(added.id).toBe(regionId);
+    expect(added.addedSampleIds).toHaveLength(3);
+    expect(added.clusters.map((cluster) => cluster.strategyName).sort()).toEqual([
+      "Cautious",
+      "Exploit-heavy",
+    ]);
+    const afterAdd = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-mutate",
+      flowKind: "verify",
+    });
+    const simulatedAfterAdd = afterAdd.filter((row) => row.source === REGION_SIMULATION_SOURCE);
+    expect(simulatedAfterAdd).toHaveLength(6);
+    expect(
+      simulatedAfterAdd.every(
+        (row) =>
+          row.source === REGION_SIMULATION_SOURCE &&
+          String(row.identity).startsWith("Simulated ·"),
+      ),
+    ).toBe(true);
+    expect(simulatedAfterAdd.filter((row) => row.identity === "Simulated · Cautious")).toHaveLength(
+      3,
+    );
+    expect(afterAdd.some((row) => row.identity === "ada" && row.source === "runner")).toBe(true);
+
+    const addedDetails = presentKnowledgeRegionDetails({
+      kind: "verification",
+      parent: added.parentRow,
+      clusters: added.clusterRows,
+      embeddings: afterAdd,
+      flowNames: { "flow-a": "Limits" },
+    });
+    expect(addedDetails?.id).toBe(regionId);
+    expect(addedDetails?.simulatedCount).toBe(6);
+    expect(addedDetails?.strategies.map((row) => row.name).sort()).toEqual([
+      "Cautious",
+      "Exploit-heavy",
+    ]);
+    expect(addedDetails?.clusters.find((row) => row.strategyName === "Cautious")?.sampleCount).toBe(
+      3,
+    );
+    expect(
+      addedDetails?.samples.filter((row) => row.identity === "Simulated · Cautious"),
+    ).toHaveLength(3);
+    expect(addedDetails?.samples.some((row) => row.identity === "ada")).toBe(true);
+
+    const cautiousIds = simulatedAfterAdd
+      .filter((row) => row.identity === "Simulated · Cautious")
+      .map((row) => row.id);
+    const removedSampleId = cautiousIds[0]!;
+    const afterSampleRemove = await removeRegionSimulationSamples({
+      ownerUserId: "owner-mutate",
+      regionId,
+      name: "Limits styles",
+      flows,
+      sampleIds: [removedSampleId],
+    });
+    expect(afterSampleRemove.removedSampleIds).toContain(removedSampleId);
+    const afterOneGone = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-mutate",
+      flowKind: "verify",
+    });
+    expect(afterOneGone.some((row) => row.id === removedSampleId)).toBe(false);
+    expect(afterOneGone.some((row) => row.identity === "ada")).toBe(true);
+
+    const afterClusterRemove = await removeRegionSimulationSamples({
+      ownerUserId: "owner-mutate",
+      regionId,
+      name: "Limits styles",
+      flows,
+      strategyIds: ["exploit-heavy"],
+    });
+    expect(afterClusterRemove.clusters.map((cluster) => cluster.strategyName)).toEqual(["Cautious"]);
+    const leftover = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-mutate",
+      flowKind: "verify",
+    });
+    const leftoverSimulated = leftover.filter((row) => row.source === REGION_SIMULATION_SOURCE);
+    expect(leftoverSimulated.every((row) => row.identity === "Simulated · Cautious")).toBe(true);
+    expect(leftoverSimulated).toHaveLength(2);
+    expect(leftoverSimulated.some((row) => row.id === removedSampleId)).toBe(false);
+    expect(leftover.some((row) => row.identity === "ada" && row.source === "runner")).toBe(true);
+
+    const removedDetails = presentKnowledgeRegionDetails({
+      kind: "verification",
+      parent: afterClusterRemove.parentRow,
+      clusters: afterClusterRemove.clusterRows,
+      embeddings: leftover,
+      flowNames: { "flow-a": "Limits" },
+    });
+    expect(removedDetails?.simulatedCount).toBe(2);
+    expect(removedDetails?.strategies.map((row) => row.name)).toEqual(["Cautious"]);
+    expect(removedDetails?.samples.map((row) => row.id)).not.toContain(removedSampleId);
+    expect(
+      removedDetails?.samples.some((row) => row.identity === "Simulated · Exploit-heavy"),
+    ).toBe(false);
+    expect(removedDetails?.samples.some((row) => row.identity === "ada")).toBe(true);
+    expect(
+      leftoverSimulated.map((row) => row.identity).sort(),
+    ).toEqual(["Simulated · Cautious", "Simulated · Cautious"]);
+  });
+
+  it("keeps mutate flows on this region's seed and cluster embeddings", () => {
+    const ids = regionSimulationFlowIds({
+      seedFlowId: "flow-a",
+      embeddings: [
+        {
+          flow_id: "flow-a",
+          source: REGION_SIMULATION_SOURCE,
+          identity: "Simulated · Exploit-heavy",
+        },
+        {
+          flow_id: "flow-b",
+          source: REGION_SIMULATION_SOURCE,
+          identity: "Simulated · Exploit-heavy",
+        },
+        {
+          flow_id: "flow-c",
+          source: "runner",
+          identity: "ada",
+        },
+      ],
+      strategies: [{ id: "exploit-heavy", name: "Exploit-heavy" }],
+    });
+    expect(ids).toEqual(["flow-a"]);
+    const route = read("app/api/dashboard/knowledge-regions/[id]/simulation/route.ts");
+    expect(route).toContain("regionSimulationFlowIds");
+    expect(route).toContain("parseSimulationStrategiesWithRecovered");
+    expect(route).not.toContain("listVerificationFlowsForOwnerUserId");
+    expect(route).not.toContain("listSolveFlowsForOwnerUserId");
+  });
+
+  it("remove on region A leaves region B samples of the same strategy", async () => {
+    const flowA = { id: "flow-a", name: "Limits", problems: ["ε-δ"] };
+    const flowB = { id: "flow-b", name: "Series", problems: ["sum"] };
+    await runRegionSimulation({
+      ownerUserId: "owner-isolate",
+      name: "Region A",
+      flows: [flowA],
+      strategyIds: ["exploit-heavy"],
+      samplesPerStrategy: 3,
+      includeHumanData: false,
+    });
+    await runRegionSimulation({
+      ownerUserId: "owner-isolate",
+      name: "Region B",
+      flows: [flowB],
+      strategyIds: ["exploit-heavy"],
+      samplesPerStrategy: 3,
+      includeHumanData: false,
+    });
+    const before = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-isolate",
+      flowKind: "verify",
+    });
+    expect(
+      before.filter(
+        (row) => row.flow_id === "flow-b" && row.source === REGION_SIMULATION_SOURCE,
+      ),
+    ).toHaveLength(3);
+    await removeRegionSimulationSamples({
+      ownerUserId: "owner-isolate",
+      regionId: "region-a",
+      name: "Region A",
+      flows: [flowA, flowB],
+      strategyIds: ["exploit-heavy"],
+    });
+    const leftover = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-isolate",
+      flowKind: "verify",
+    });
+    expect(
+      leftover.filter(
+        (row) => row.flow_id === "flow-a" && row.source === REGION_SIMULATION_SOURCE,
+      ),
+    ).toHaveLength(0);
+    expect(
+      leftover.filter(
+        (row) => row.flow_id === "flow-b" && row.source === REGION_SIMULATION_SOURCE,
+      ),
+    ).toHaveLength(3);
+    expect(
+      leftover
+        .filter((row) => row.flow_id === "flow-b")
+        .every((row) => row.identity === "Simulated · Exploit-heavy"),
+    ).toBe(true);
+  });
+
+  it("adds more samples of an existing custom strategy from recovered instructions", async () => {
+    const custom = parseCustomExplorationStrategy({
+      name: "Cautious",
+      instructions: "Ask more questions before you commit to an answer.",
+    })!;
+    expect(
+      parseSimulationStrategies({ strategyIds: [custom.id] }).map((row) => row.id),
+    ).toEqual([]);
+    const flows = [{ id: "flow-a", name: "Limits", problems: ["ε-δ"] }];
+    await runRegionSimulation({
+      ownerUserId: "owner-custom-again",
+      name: "Limits styles",
+      flows,
+      strategyIds: [custom.id],
+      customStrategies: [custom],
+      samplesPerStrategy: 3,
+      includeHumanData: false,
+    });
+    const stored = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-custom-again",
+      flowKind: "verify",
+    });
+    const recovered = parseSimulationStrategiesWithRecovered({
+      strategyIds: [custom.id],
+      embeddings: stored,
+    });
+    expect(recovered.map((row) => row.id)).toEqual([custom.id]);
+    expect(recovered[0]?.instructions).toContain("Ask more questions");
+    const added = await addRegionSimulationSamples({
+      ownerUserId: "owner-custom-again",
+      regionId: "limits-custom-again",
+      name: "Limits styles",
+      flows,
+      strategyIds: [custom.id],
+      samplesPerStrategy: 3,
+    });
+    expect(added.addedSampleIds).toHaveLength(3);
+    expect(added.clusters.map((cluster) => cluster.strategyName)).toEqual(["Cautious"]);
+    const after = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-custom-again",
+      flowKind: "verify",
+    });
+    expect(after.filter((row) => row.identity === "Simulated · Cautious")).toHaveLength(6);
+    const detailsPage = read("components/product-flow/knowledge-region-page.tsx");
+    expect(detailsPage).toContain("explorationStrategyFromSimulatedEmbedding");
+    expect(detailsPage).toContain("recoveredCustomStrategies");
+  });
+
+  it("exposes add and remove simulated data on owner region details", () => {
+    const detailsPage = read("components/product-flow/knowledge-region-page.tsx");
+    expect(detailsPage).toContain("data-knowledge-region-details");
+    expect(detailsPage).toContain("data-knowledge-region-add-simulation");
+    expect(detailsPage).toContain("data-knowledge-region-add-custom");
+    expect(detailsPage).toContain("data-knowledge-region-custom-name");
+    expect(detailsPage).toContain("data-knowledge-region-custom-instructions");
+    expect(detailsPage).toContain("data-knowledge-region-remove-simulated");
+    expect(detailsPage).toContain("data-knowledge-region-remove-cluster");
+    expect(read("components/product-flow/region-simulation-setup.tsx")).toContain(
+      "data-run-simulation",
+    );
+    expect(read("lib/flow-embedding-store.ts")).toContain("export async function deleteFlowEmbeddings");
+    expect(read("app/api/dashboard/knowledge-regions/[id]/simulation/route.ts")).toContain(
+      "addRegionSimulationSamples",
+    );
+    expect(read("app/api/dashboard/knowledge-regions/[id]/simulation/route.ts")).toContain(
+      "removeRegionSimulationSamples",
+    );
   });
 });

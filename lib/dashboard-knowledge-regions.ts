@@ -12,6 +12,13 @@ import {
 
 export const DASHBOARD_KNOWLEDGE_REGIONS_PATH = "/api/dashboard/knowledge-regions";
 
+export function dashboardKnowledgeRegionSimulationPath(regionId: string): string {
+  const id = String(regionId || "").trim();
+  return id
+    ? `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(id)}/simulation`
+    : `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/simulation`;
+}
+
 export type DashboardKnowledgeRegionKind = "verification" | "calibration" | "solve";
 
 export type DashboardKnowledgeRegion = {

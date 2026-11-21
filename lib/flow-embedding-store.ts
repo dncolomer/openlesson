@@ -372,3 +372,31 @@ export async function getFlowEmbedding(input: {
   const mapped = mapRow(data as Record<string, unknown>);
   return mapped ? presentFlowEmbedding(mapped) : null;
 }
+
+export async function deleteFlowEmbeddings(input: {
+  ownerUserId: string;
+  ids: readonly string[];
+}): Promise<number> {
+  const ownerUserId = text(input.ownerUserId);
+  const ids = [...new Set(input.ids.map((id) => text(id)).filter(Boolean))];
+  if (!ownerUserId || !ids.length) return 0;
+  const allow = new Set(ids);
+  if ((await resolveBackend()) === "memory") {
+    const store = storeGlobal();
+    const before = store.memory.length;
+    store.memory = store.memory.filter((row) => {
+      if (text(row.owner_user_id) !== ownerUserId) return true;
+      return !allow.has(row.id);
+    });
+    return before - store.memory.length;
+  }
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("session_embeddings")
+    .delete()
+    .eq("owner_user_id", ownerUserId)
+    .in("id", ids)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data || []).length;
+}

@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { StudioMultiSelect } from "@/components/data-studio/StudioMultiSelect";
 import { KnowledgeRegionInspect } from "@/components/product-flow/knowledge-region-inspect";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
+  FLOW_FORM_INPUT,
   FLOW_FORM_LABEL,
+  FLOW_FORM_TEXTAREA,
+  FLOW_GHOST_BTN,
+  FLOW_PRIMARY_BTN,
   FlowFormCard,
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
@@ -45,7 +49,19 @@ import {
   type KnowledgeRegionPointKind,
 } from "@/lib/knowledge-region-figure";
 import type { FlowPowRow } from "@/lib/flow-embedding";
-import { DASHBOARD_KNOWLEDGE_REGIONS_PATH } from "@/lib/dashboard-knowledge-regions";
+import {
+  DASHBOARD_KNOWLEDGE_REGIONS_PATH,
+  dashboardKnowledgeRegionSimulationPath,
+} from "@/lib/dashboard-knowledge-regions";
+import {
+  EXPLORATION_STRATEGIES,
+  explorationStrategyFromSimulatedEmbedding,
+  parseCustomExplorationStrategy,
+  REGION_SIMULATION_DEFAULT_SAMPLES,
+  REGION_SIMULATION_MAX_SAMPLES,
+  REGION_SIMULATION_MIN_SAMPLES,
+  type ExplorationStrategyId,
+} from "@/lib/region-simulation";
 import {
   type KnowledgeRegionDetails,
   type KnowledgeRegionDetailsSample,
@@ -71,6 +87,10 @@ const POINT_KIND_IDS: readonly KnowledgeRegionPointKind[] = [
   "analysis",
 ];
 
+function toggleId<T extends string>(current: readonly T[], id: T): T[] {
+  return current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+}
+
 export function KnowledgeRegionPage({
   kind,
   regionId,
@@ -93,8 +113,17 @@ export function KnowledgeRegionPage({
   const [figureMode, setFigureMode] = useState<KnowledgeRegionFigureMode>("individual");
   const [runPow, setRunPow] = useState<FlowPowRow[]>([]);
   const [rosterNames, setRosterNames] = useState<Record<string, string>>({});
+  const [addStrategyIds, setAddStrategyIds] = useState<ExplorationStrategyId[]>([]);
+  const [customName, setCustomName] = useState("");
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [customStrategies, setCustomStrategies] = useState<
+    Array<{ id: ExplorationStrategyId; name: string; instructions: string }>
+  >([]);
+  const [addSamples, setAddSamples] = useState(REGION_SIMULATION_DEFAULT_SAMPLES);
+  const [simBusy, setSimBusy] = useState(false);
+  const [simError, setSimError] = useState("");
 
-  useEffect(() => {
+  const loadDetails = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
@@ -128,6 +157,10 @@ export function KnowledgeRegionPage({
       cancelled = true;
     };
   }, [kind, regionId, detailsUrl]);
+
+  useEffect(() => {
+    return loadDetails();
+  }, [loadDetails]);
 
   const clusterIds = useMemo(
     () => (details?.clusters ?? []).map((cluster) => cluster.id),
@@ -285,6 +318,78 @@ export function KnowledgeRegionPage({
     if (first) selectIdentity(first.id);
   }
 
+  const simulationPath = dashboardKnowledgeRegionSimulationPath(regionId);
+  const catalogStrategyIds = new Set(EXPLORATION_STRATEGIES.map((row) => row.id));
+  const existingCustomStrategies = (details?.strategies ?? []).filter(
+    (row) => row.id && !catalogStrategyIds.has(row.id),
+  );
+  const recoveredCustomStrategies = (() => {
+    const seen = new Set<string>();
+    const out: Array<{ id: ExplorationStrategyId; name: string; instructions: string }> = [];
+    for (const sample of details?.samples ?? []) {
+      const strategy = explorationStrategyFromSimulatedEmbedding(sample.embedding);
+      if (!strategy || catalogStrategyIds.has(strategy.id) || seen.has(strategy.id)) continue;
+      if (!strategy.instructions) continue;
+      seen.add(strategy.id);
+      out.push({
+        id: strategy.id,
+        name: strategy.name,
+        instructions: strategy.instructions,
+      });
+    }
+    return out;
+  })();
+  const simulatedSamples = (details?.samples ?? []).filter(
+    (sample) => sample.origin === "simulated" || sample.pointKind === "simulated",
+  );
+
+  function addCustomStrategy() {
+    const parsed = parseCustomExplorationStrategy({
+      name: customName,
+      instructions: customInstructions,
+    });
+    if (!parsed) return;
+    setCustomStrategies((current) =>
+      current.some((row) => row.id === parsed.id) ? current : [...current, parsed],
+    );
+    setAddStrategyIds((current) =>
+      current.includes(parsed.id) ? current : [...current, parsed.id],
+    );
+    setCustomName("");
+    setCustomInstructions("");
+  }
+
+  async function mutateSimulation(input: {
+    method: "POST" | "DELETE";
+    body: Record<string, unknown>;
+  }): Promise<void> {
+    setSimBusy(true);
+    setSimError("");
+    try {
+      const response = await fetch(simulationPath, {
+        method: input.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, ...input.body }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          errorMessageFromBody(
+            payload,
+            input.method === "POST"
+              ? "Could not add simulated samples"
+              : "Could not remove simulated samples",
+          ),
+        );
+      }
+      loadDetails();
+    } catch (err) {
+      setSimError(err instanceof Error ? err.message : "Could not update simulated data");
+    } finally {
+      setSimBusy(false);
+    }
+  }
+
   return (
     <ProductSurface
       label={`${productLabel} knowledge region`}
@@ -357,6 +462,202 @@ export function KnowledgeRegionPage({
             </p>
           ) : details ? (
             <>
+              <FlowFormCard data-knowledge-region-simulation="">
+                <div className="space-y-5">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                      Simulated data
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Add more simulated samples to this region, including a custom behaviour
+                      strategy, or remove simulated samples and strategy clusters. Reference and
+                      real sessions stay.
+                    </p>
+                  </div>
+                  <fieldset className="space-y-2" data-knowledge-region-add-strategies="">
+                    <legend className={FLOW_FORM_LABEL}>Add exploration strategies</legend>
+                    {EXPLORATION_STRATEGIES.map((strategy) => (
+                      <label
+                        key={strategy.id}
+                        className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={addStrategyIds.includes(strategy.id)}
+                          onChange={() => setAddStrategyIds(toggleId(addStrategyIds, strategy.id))}
+                          data-knowledge-region-add-strategy={strategy.id}
+                        />
+                        <span>
+                          <span className="block">{strategy.name}</span>
+                          <span className="block text-xs text-neutral-400">{strategy.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                    {existingCustomStrategies.map((strategy) => (
+                      <label
+                        key={strategy.id}
+                        className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={addStrategyIds.includes(strategy.id)}
+                          onChange={() => setAddStrategyIds(toggleId(addStrategyIds, strategy.id))}
+                          data-knowledge-region-add-strategy={strategy.id}
+                        />
+                        <span>{strategy.name}</span>
+                      </label>
+                    ))}
+                    {customStrategies.map((strategy) => (
+                      <label
+                        key={strategy.id}
+                        className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
+                        data-knowledge-region-custom-strategy={strategy.id}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={addStrategyIds.includes(strategy.id)}
+                          onChange={() => setAddStrategyIds(toggleId(addStrategyIds, strategy.id))}
+                          data-knowledge-region-add-strategy={strategy.id}
+                        />
+                        <span>
+                          <span className="block">{strategy.name}</span>
+                          <span className="block text-xs text-neutral-400">{strategy.instructions}</span>
+                        </span>
+                      </label>
+                    ))}
+                    <div className="space-y-2 border border-dashed border-white/20 px-3 py-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                        Custom strategy
+                      </p>
+                      <input
+                        value={customName}
+                        onChange={(event) => setCustomName(event.target.value)}
+                        placeholder="Strategy name"
+                        data-knowledge-region-custom-name=""
+                        className={FLOW_FORM_INPUT}
+                      />
+                      <textarea
+                        value={customInstructions}
+                        onChange={(event) => setCustomInstructions(event.target.value)}
+                        placeholder="Prompt for this exploration style"
+                        rows={3}
+                        data-knowledge-region-custom-instructions=""
+                        className={FLOW_FORM_TEXTAREA}
+                      />
+                      <button
+                        type="button"
+                        disabled={!customName.trim() || !customInstructions.trim()}
+                        onClick={addCustomStrategy}
+                        data-knowledge-region-add-custom=""
+                        className={FLOW_GHOST_BTN}
+                      >
+                        Add strategy
+                      </button>
+                    </div>
+                  </fieldset>
+                  <label className="block space-y-1">
+                    <span className={FLOW_FORM_LABEL}>Samples per strategy</span>
+                    <input
+                      type="number"
+                      min={REGION_SIMULATION_MIN_SAMPLES}
+                      max={REGION_SIMULATION_MAX_SAMPLES}
+                      value={addSamples}
+                      onChange={(event) =>
+                        setAddSamples(
+                          Math.max(
+                            REGION_SIMULATION_MIN_SAMPLES,
+                            Math.min(
+                              REGION_SIMULATION_MAX_SAMPLES,
+                              Math.round(
+                                Number(event.target.value) || REGION_SIMULATION_DEFAULT_SAMPLES,
+                              ),
+                            ),
+                          ),
+                        )
+                      }
+                      data-knowledge-region-add-samples=""
+                      className={FLOW_FORM_INPUT}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={simBusy || !addStrategyIds.length}
+                    data-knowledge-region-add-simulation=""
+                    className={FLOW_PRIMARY_BTN}
+                    onClick={() =>
+                      void mutateSimulation({
+                        method: "POST",
+                        body: {
+                          strategyIds: addStrategyIds,
+                          customStrategies: [
+                            ...recoveredCustomStrategies,
+                            ...customStrategies,
+                          ].filter((row) => addStrategyIds.includes(row.id)),
+                          samplesPerStrategy: addSamples,
+                        },
+                      })
+                    }
+                  >
+                    {simBusy ? "Updating simulation…" : "Add simulated samples"}
+                  </button>
+                  {simError ? <p className="text-sm text-red-300">{simError}</p> : null}
+                  {simulatedSamples.length ? (
+                    <ul className="space-y-2" data-knowledge-region-simulated-samples="">
+                      {simulatedSamples.map((sample) => (
+                        <li
+                          key={sample.id}
+                          className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white"
+                        >
+                          <span>{sample.identity || sample.id}</span>
+                          <button
+                            type="button"
+                            disabled={simBusy}
+                            data-knowledge-region-remove-simulated={sample.id}
+                            className={FLOW_GHOST_BTN}
+                            onClick={() =>
+                              void mutateSimulation({
+                                method: "DELETE",
+                                body: { sampleIds: [sample.id] },
+                              })
+                            }
+                          >
+                            Remove sample
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {details.clusters.length ? (
+                    <ul className="space-y-2" data-knowledge-region-remove-clusters="">
+                      {details.clusters.map((cluster) => (
+                        <li
+                          key={cluster.id}
+                          className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white"
+                        >
+                          <span>
+                            {cluster.strategyName}
+                            <span className="ml-2 text-neutral-500">{cluster.sampleCount}</span>
+                          </span>
+                          <button
+                            type="button"
+                            disabled={simBusy || !cluster.strategyId}
+                            data-knowledge-region-remove-cluster={cluster.strategyId || cluster.id}
+                            className={FLOW_GHOST_BTN}
+                            onClick={() =>
+                              void mutateSimulation({
+                                method: "DELETE",
+                                body: { strategyIds: [cluster.strategyId || cluster.id] },
+                              })
+                            }
+                          >
+                            Remove cluster
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </FlowFormCard>
               {figure ? (
                 <FlowFormCard className="overflow-hidden p-4 sm:p-5">
                   <div className="grid items-start gap-5 lg:grid-cols-[7fr_3fr]">

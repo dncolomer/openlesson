@@ -220,6 +220,57 @@ export function parseSimulationStrategies(input: {
   return out;
 }
 
+export function collectRegionSimulationStrategies(
+  embeddings: readonly {
+    identity?: unknown;
+    source?: unknown;
+    raw?: unknown;
+  }[],
+): ExplorationStrategy[] {
+  const seen = new Set<string>();
+  const out: ExplorationStrategy[] = [];
+  for (const row of embeddings) {
+    if (!isSimulatedEmbedding(row)) continue;
+    const strategy = explorationStrategyFromSimulatedEmbedding(row);
+    if (!strategy || seen.has(strategy.id)) continue;
+    seen.add(strategy.id);
+    out.push(strategy);
+  }
+  return out;
+}
+
+export function parseSimulationStrategiesWithRecovered(input: {
+  strategyIds?: unknown;
+  customStrategies?: unknown;
+  embeddings?: readonly {
+    identity?: unknown;
+    source?: unknown;
+    raw?: unknown;
+  }[];
+}): ExplorationStrategy[] {
+  return parseSimulationStrategies({
+    strategyIds: input.strategyIds,
+    customStrategies: [
+      ...(Array.isArray(input.customStrategies) ? input.customStrategies : []),
+      ...collectRegionSimulationStrategies(input.embeddings ?? []),
+    ],
+  });
+}
+
+export function regionSimulationFlowIds(input: {
+  seedFlowId?: string | null;
+  embeddings?: readonly {
+    flow_id?: unknown;
+    identity?: unknown;
+    source?: unknown;
+    raw?: unknown;
+  }[];
+  strategies?: readonly Pick<ExplorationStrategy, "id" | "name">[];
+}): string[] {
+  const seed = text(input.seedFlowId);
+  return seed ? [seed] : [];
+}
+
 export function matchSimulationFlows<T extends { id: string; name: string; topic?: string | null }>(
   flows: readonly T[],
   query: string,
@@ -322,11 +373,71 @@ function sampleSeed(input: {
   return `${input.strategyId}:${input.flowId}:${input.index}:${unit.toFixed(8)}`;
 }
 
+export function simulationStrategyNameFromIdentity(identity: unknown): string | null {
+  const match = text(identity).match(/^simulated\s*[·:.-]\s*(.+)$/i);
+  const name = match?.[1]?.trim();
+  return name || null;
+}
+
+function powFromRaw(raw: unknown): readonly FlowPowRow[] {
+  if (!raw || typeof raw !== "object") return [];
+  const pow = (raw as { pow?: unknown }).pow;
+  return Array.isArray(pow) ? (pow as FlowPowRow[]) : [];
+}
+
+export function explorationStrategyFromSimulatedEmbedding(row: {
+  identity?: unknown;
+  raw?: unknown;
+}): ExplorationStrategy | null {
+  const pow = powFromRaw(row.raw);
+  for (const item of pow) {
+    const meta = item?.metadata;
+    if (!meta || typeof meta !== "object") continue;
+    const id = text(meta.strategyId);
+    if (!isExplorationStrategyId(id)) continue;
+    const builtIn = explorationStrategyById(id);
+    if (builtIn) return builtIn;
+    const parsed = parseCustomExplorationStrategy({
+      id,
+      name: text(meta.strategyName) || simulationStrategyNameFromIdentity(row.identity),
+      instructions: text(meta.instructions),
+      description: text(meta.description),
+    });
+    if (parsed) return parsed;
+  }
+  const name = simulationStrategyNameFromIdentity(row.identity);
+  if (!name) return null;
+  return EXPLORATION_STRATEGIES.find((strategy) => strategy.name === name) ?? null;
+}
+
+export function simulatedEmbeddingMatchesStrategy(
+  row: { identity?: unknown; raw?: unknown },
+  strategy: Pick<ExplorationStrategy, "id" | "name">,
+): boolean {
+  const recovered = explorationStrategyFromSimulatedEmbedding(row);
+  if (recovered?.id === strategy.id) return true;
+  return text(row.identity) === simulatedIdentityLabel(strategy.name);
+}
+
+export function regionSimulationParentDescription(input: {
+  flowCount: number;
+  strategyNames: readonly string[];
+  samplesPerStrategy: number;
+  realSessionCount: number;
+}): string {
+  return `region-simulation: ${input.flowCount} flows · ${input.strategyNames.join(", ")} · ${input.samplesPerStrategy}/strategy · ${input.realSessionCount} real`;
+}
+
+export function regionSimulationClusterDescription(strategyId: string): string {
+  return `region-simulation-cluster:${text(strategyId)}`;
+}
+
 export function planRegionSimulationSamples(input: {
   flowIds: readonly string[];
   problemsByFlowId: Record<string, readonly string[]>;
   strategyIds: readonly string[];
   samplesPerStrategy: number;
+  startIndexByStrategy?: Readonly<Record<string, number>>;
 }): RegionSimulationSamplePlan[] {
   const flowIds = input.flowIds.map((id) => text(id)).filter(Boolean);
   const strategyIds = parseExplorationStrategyIds(input.strategyIds);
@@ -334,7 +445,10 @@ export function planRegionSimulationSamples(input: {
   const allocation = allocateSamplesAcrossFlows(flowIds, samplesPerStrategy);
   const out: RegionSimulationSamplePlan[] = [];
   for (const strategyId of strategyIds) {
-    let index = 0;
+    let index = Math.max(
+      0,
+      Math.floor(Number(input.startIndexByStrategy?.[strategyId]) || 0),
+    );
     for (let flowIndex = 0; flowIndex < flowIds.length; flowIndex += 1) {
       const flowId = flowIds[flowIndex]!;
       const count = allocation[flowIndex] ?? 0;

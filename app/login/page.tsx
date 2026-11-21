@@ -17,9 +17,11 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
+  const ssoError = searchParams.get("error");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +120,17 @@ function LoginForm() {
     }
   };
 
+  const handleSso = () => {
+    setError(null);
+    setMessage(null);
+    setSsoLoading(true);
+    const params = new URLSearchParams();
+    const redirectTo = searchParams.get("redirect") || "/dashboard";
+    params.set("next", redirectTo);
+    if (email.trim()) params.set("login_hint", email.trim());
+    window.location.href = `/auth/workos/start?${params.toString()}`;
+  };
+
   return (
     <div className="w-full max-w-sm">
       <h2 className="text-xl font-semibold text-white mb-1">{t('auth.welcomeBack')}</h2>
@@ -152,9 +165,12 @@ function LoginForm() {
           />
         </div>
 
-        {error && (
+        {(error || ssoError) && (
           <div className="rounded-none border border-white/30 bg-black p-3 text-xs text-white/80">
-            {error}
+            {error ||
+              (ssoError === "sso_unconfigured"
+                ? t("auth.ssoUnconfigured")
+                : t("auth.ssoFailed"))}
           </div>
         )}
 
@@ -166,7 +182,7 @@ function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading || recoveryLoading || magicLinkLoading}
+          disabled={loading || recoveryLoading || magicLinkLoading || ssoLoading}
           className="w-full py-2.5 bg-white hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600 text-black text-sm font-medium rounded-none transition-colors mt-2"
         >
           {loading ? t('auth.signingIn') : t('auth.signIn')}
@@ -175,7 +191,7 @@ function LoginForm() {
         <button
           type="button"
           onClick={handleMagicLink}
-          disabled={loading || recoveryLoading || magicLinkLoading}
+          disabled={loading || recoveryLoading || magicLinkLoading || ssoLoading}
           className="w-full py-2.5 border border-neutral-800 hover:border-neutral-700 disabled:border-neutral-900 disabled:text-neutral-700 text-neutral-200 text-sm font-medium rounded-none transition-colors"
         >
           {magicLinkLoading ? t('auth.sendingMagicLink') : t('auth.emailMagicLink')}
@@ -183,8 +199,18 @@ function LoginForm() {
 
         <button
           type="button"
+          data-auth-workos-sso=""
+          onClick={handleSso}
+          disabled={loading || recoveryLoading || magicLinkLoading || ssoLoading}
+          className="w-full py-2.5 border border-neutral-800 hover:border-neutral-700 disabled:border-neutral-900 disabled:text-neutral-700 text-neutral-200 text-sm font-medium rounded-none transition-colors"
+        >
+          {ssoLoading ? t("auth.ssoSigningIn") : t("auth.ssoSignIn")}
+        </button>
+
+        <button
+          type="button"
           onClick={handlePasswordRecovery}
-          disabled={loading || recoveryLoading || magicLinkLoading}
+          disabled={loading || recoveryLoading || magicLinkLoading || ssoLoading}
           className="w-full py-2 text-neutral-400 hover:text-white disabled:text-neutral-700 text-xs font-medium transition-colors"
         >
           {recoveryLoading ? t('auth.sendingRecoveryEmail') : t('auth.forgotPassword')}

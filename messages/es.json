@@ -158,7 +158,11 @@
     "updatingPassword": "Actualizando contraseña...",
     "updatePassword": "Actualizar contraseña",
     "passwordUpdated": "Contraseña actualizada. Ahora puedes iniciar sesión con tu nueva contraseña.",
-    "backToSignIn": "Volver a iniciar sesión"
+    "backToSignIn": "Volver a iniciar sesión",
+    "ssoSignIn": "Sign in with company SSO",
+    "ssoSigningIn": "Redirecting to SSO...",
+    "ssoUnconfigured": "Company SSO is not configured on this server.",
+    "ssoFailed": "Company SSO sign-in failed. Use password or a magic link, or try again."
   },
   "problemInput": {
     "placeholder": "¿Qué quieres aprender hoy? (ej., Explica recursión, ¿Cómo funciona el GPS?)",
@@ -1351,6 +1355,12 @@
     "aestheticUploadError": "Failed to update custom aesthetics",
     "aestheticRemoveError": "Failed to remove image",
     "backends": "Model and storage",
+    "sso": "Company SSO",
+    "ssoTitle": "WorkOS single sign-on",
+    "ssoHelper": "Open the WorkOS Admin Portal to attach this organization's SAML or OIDC identity provider. Members then sign in with company SSO.",
+    "ssoOpenPortal": "Set up company SSO",
+    "ssoOpening": "Opening SSO setup...",
+    "ssoError": "Could not start SSO setup.",
     "backendsTitle": "LLM and document storage",
     "backendsHelper": "Default is Uncertain Systems credits on xAI. Connect your own OpenAI-compatible LLM or document storage. Sessions that use xAI debit half the usual credits.",
     "llmBackend": "LLM backend",

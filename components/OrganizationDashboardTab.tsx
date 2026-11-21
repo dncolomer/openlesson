@@ -104,6 +104,7 @@ export function OrganizationDashboardTab() {
   const [blobBaseUrl, setBlobBaseUrl] = useState("");
   const [blobApiKey, setBlobApiKey] = useState("");
   const [savingBackends, setSavingBackends] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
 
   const applyBackends = (next: OrgBackendPublic | null | undefined) => {
     if (!next) return;
@@ -352,6 +353,29 @@ export function OrganizationDashboardTab() {
     }
   };
 
+  const handleOpenSsoPortal = async () => {
+    setSsoLoading(true);
+    try {
+      const res = await fetch("/api/organization/workos/sso", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.ssoError")));
+        return;
+      }
+      const setupUrl = String(data.setupUrl || "").trim();
+      if (!setupUrl.startsWith("http")) {
+        alert(t("organization.ssoError"));
+        return;
+      }
+      window.location.href = setupUrl;
+    } catch (ssoErr) {
+      console.error("WorkOS SSO portal error:", ssoErr);
+      alert(t("organization.ssoError"));
+    } finally {
+      setSsoLoading(false);
+    }
+  };
+
   const handleRemoveAesthetic = async (url: string) => {
     setRemovingAestheticUrl(url);
     try {
@@ -486,6 +510,27 @@ export function OrganizationDashboardTab() {
           </div>
         </div>
       </section>
+
+      {isOrgAdmin && (
+        <section className={cardPaddedClass} data-org-workos-sso>
+          <p className={labelClass}>{t("organization.sso")}</p>
+          <h3 className="mt-1 text-sm font-medium text-white">
+            {t("organization.ssoTitle")}
+          </h3>
+          <p className="mt-2 max-w-xl text-xs text-neutral-500">
+            {t("organization.ssoHelper")}
+          </p>
+          <button
+            type="button"
+            data-org-workos-sso-open
+            className={`${secondaryBtnClass} mt-4`}
+            disabled={ssoLoading}
+            onClick={() => void handleOpenSsoPortal()}
+          >
+            {ssoLoading ? t("organization.ssoOpening") : t("organization.ssoOpenPortal")}
+          </button>
+        </section>
+      )}
 
       {isOrgAdmin && (
         <section className={cardPaddedClass} data-org-backends>

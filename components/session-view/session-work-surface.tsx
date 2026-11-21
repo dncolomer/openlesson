@@ -33,7 +33,6 @@ export function SessionWorkSurface({
   transcript = null,
   actions = null,
   stackBelow = false,
-  authoring = false,
 }: {
   mode: SessionSidebarMode;
   stage: ReactNode;
@@ -48,8 +47,6 @@ export function SessionWorkSurface({
   actions?: ReactNode;
   /** Phone width: canvas on top, sidebar under it. Desktop stays a row. */
   stackBelow?: boolean;
-  /** Flow authoring: same chrome, sidebar visible but deactivated. */
-  authoring?: boolean;
 }) {
   const stacked = useNarrowViewport(stackBelow);
   return (
@@ -57,16 +54,9 @@ export function SessionWorkSurface({
       data-session-work-surface
       data-ile-canvas-sidebar-split
       data-session-work-stacked={stacked ? "true" : "false"}
-      data-flow-opening-canvas-authoring-surface={authoring ? "" : undefined}
       className={`relative flex min-h-0 min-w-0 flex-1 overflow-hidden ${stacked ? "flex-col" : "flex-row"}`}
     >
-      <div
-        data-flow-opening-canvas-sidebar={authoring ? "" : undefined}
-        aria-disabled={authoring ? true : undefined}
-        className={`flex h-full min-h-0 ${stacked ? "order-2" : "order-1"} ${
-          authoring ? "pointer-events-none select-none opacity-40" : ""
-        }`}
-      >
+      <div className={`flex h-full min-h-0 ${stacked ? "order-2" : "order-1"}`}>
         <SessionSidebar
           mode={mode}
           clock={clock}

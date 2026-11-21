@@ -221,7 +221,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(welcome).not.toContain("data-ile-pregame-preset");
     expect(welcome).not.toContain("applyIlePregamePreset");
     expect(welcome).not.toContain("explainFully");
-    expect(welcome).toContain("AestheticPicker");
+    expect(welcome).not.toContain("AestheticPicker");
+    expect(welcome).toContain("TapAestheticSection");
+    expect(welcome).toContain("selectedAesthetic?.previewImage");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("data-ile-session-chapter-count");

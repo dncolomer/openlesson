@@ -69,6 +69,7 @@ export type WorkspaceAddBlockSubmitOpts = {
   problem?: string;
   artifacts?: FlowArtifact[];
   exactProblemOnCanvas?: boolean;
+  generateProblemOnOpen?: boolean;
 };
 
 /**
@@ -149,6 +150,7 @@ export function WorkspaceAddBlockPane({
   const [problem, setProblem] = useState("");
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
+  const [generateProblemOnOpen, setGenerateProblemOnOpen] = useState(false);
 
   // Reset draft when the target cell changes.
   useEffect(() => {
@@ -164,6 +166,7 @@ export function WorkspaceAddBlockPane({
     setProblem("");
     setArtifacts([]);
     setExactProblemOnCanvas(false);
+    setGenerateProblemOnOpen(false);
   }, [cell.row, cell.col]);
 
   // Load workspace Context inventory for attach picker (same as generate-in-shape).
@@ -312,7 +315,12 @@ export function WorkspaceAddBlockPane({
   const canSubmitTyped =
     blockKind === "content"
       ? Boolean(prompt.trim() || contentAttachments.length > 0)
-      : Boolean(selectedFlow?.id || prompt.trim() || problem.trim());
+      : Boolean(
+          selectedFlow?.id ||
+            prompt.trim() ||
+            problem.trim() ||
+            (generateProblemOnOpen && artifacts.length > 0),
+        );
   const canSubmit = canSubmitTyped;
 
   const handleSubmit = async () => {
@@ -338,12 +346,14 @@ export function WorkspaceAddBlockPane({
               problem: problem.trim() || titleForTyped,
               artifacts,
               exactProblemOnCanvas,
+              generateProblemOnOpen,
             }),
       });
       setPrompt("");
       setProblem("");
       setArtifacts([]);
       setExactProblemOnCanvas(false);
+      setGenerateProblemOnOpen(false);
       setRange(0);
       setDensity(ADD_DENSITY_MAX);
       setSampleSeed(1);
@@ -413,6 +423,9 @@ export function WorkspaceAddBlockPane({
               topicHook={blockKind}
               exactProblemOnCanvas={exactProblemOnCanvas}
               onExactProblemOnCanvasChange={setExactProblemOnCanvas}
+              generateProblemOnOpen={generateProblemOnOpen}
+              onGenerateProblemOnOpenChange={setGenerateProblemOnOpen}
+              flowName={prompt}
             />
           </div>
         ) : null}

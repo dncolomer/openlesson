@@ -3,7 +3,6 @@
 import type { OrgUsageSummary } from "@/lib/plans";
 import type { DashboardTab } from "@/lib/dashboard-nav";
 import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/constants";
-import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
 
 type XaiPeriodPreset = "7d" | "30d" | "90d" | "billing";
 
@@ -191,6 +190,16 @@ export function DashboardUsageTab({
                         <p className="mt-1 text-xs text-neutral-500">
                           Creating a Knowledge Region does not spend credits.
                         </p>
+                        {!usageData.isAdmin && (
+                          <button
+                            type="button"
+                            data-dashboard-buy-more-credits
+                            onClick={() => setDashboardTab("upgrade")}
+                            className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
+                          >
+                            Buy more credits →
+                          </button>
+                        )}
                       </div>
                       {usageData.organization && (
                         <p className="mt-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
@@ -265,22 +274,6 @@ export function DashboardUsageTab({
                             </p>
                           </>
                         )}
-                        {!usageData.isAdmin &&
-                          (usageData.plan === "inactive" ||
-                            usageData.subscriptionStatus === "trial_expired" ||
-                            usageData.plan === "trial") && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                document
-                                  .getElementById("dashboard-upgrade")
-                                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                              }
-                              className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
-                            >
-                              {t("dashboard.upgradeToPro")} →
-                            </button>
-                          )}
                       </div>
                     )}
                   </div>
@@ -576,17 +569,6 @@ export function DashboardUsageTab({
               </div>
             )}
 
-            {!usageData?.isAdmin && (
-            <div id="dashboard-upgrade">
-              <DashboardUpgradeTab
-                plan={usageData?.plan || "inactive"}
-                subscriptionStatus={usageData?.subscriptionStatus || "inactive"}
-                periodEnd={usageData?.periodEnd ?? null}
-                isAdmin={Boolean(usageData?.isAdmin)}
-                balance={usageData?.creditBalance}
-              />
-            </div>
-            )}
           </div>
           );
 }

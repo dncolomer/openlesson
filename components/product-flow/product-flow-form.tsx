@@ -31,6 +31,11 @@ export const FLOW_COMPACT_GHOST_BTN =
 export const FLOW_DANGER_BTN =
   "console-button inline-flex h-12 items-center justify-center px-6 text-sm font-medium text-red-300 transition hover:border-red-300/70 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40";
 
+/** Same full main-column width as dashboard Flows / Knowledge regions tables. */
+export const PRODUCT_CREATE_SHELL = "w-full space-y-6";
+export const PRODUCT_CREATE_SHELL_FILL =
+  "flex min-h-0 w-full flex-1 flex-col overflow-hidden";
+
 export function FlowFormHeader({
   kicker,
   title,

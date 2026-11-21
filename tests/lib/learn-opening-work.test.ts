@@ -139,6 +139,8 @@ describe("learn opening work", () => {
     expect(route).toContain("openingWork");
     expect(route).toContain("openingWorkExact");
     expect(route).toContain("exactProblemOnCanvas");
+    expect(route).toContain("openingWorkFromArtifactProblem");
+    expect(route).toContain("generateProblemOnOpen");
     const field = read("components/session-view/use-session-field.ts");
     expect(field).toContain("seedOpeningWorkCanvas");
     expect(field).toContain("resolveLearnOpeningWork");

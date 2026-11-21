@@ -13,6 +13,7 @@ import {
   assignIleWorkAestheticImages,
   decideActiveAestheticPool,
   FALLBACK_AESTHETIC_IMAGES,
+  pickRandomAestheticPackage,
   pickWorkspaceCoverFromPool,
   resolveIleWorkAestheticImage,
   selectSurfaceAestheticImages,
@@ -112,6 +113,11 @@ describe("decideActiveAestheticPool", () => {
     const pkg = aestheticPackageFromCustomUrls(custom.images);
     expect(pkg.images).toEqual(customUrls);
     expect(pkg.images.some((url) => url.startsWith("/aesthetics/"))).toBe(false);
+    expect(pickRandomAestheticPackage([pkg], () => 0)?.previewImage).toBe(customUrls[0]);
+    expect(pickRandomAestheticPackage([pkg], () => 0.99)?.previewImage).toBe(
+      customUrls[customUrls.length - 1],
+    );
+    expect(pickRandomAestheticPackage([pkg], () => 0.99)?.id).toBe(ORG_CUSTOM_AESTHETIC_PACKAGE_ID);
 
     const empty = decideActiveAestheticPool({ customUrls: [], systemImages });
     expect(empty.source).toBe("system");
@@ -426,6 +432,36 @@ describe("custom aesthetic surfaces", () => {
     expect(chrome).not.toContain("End turn");
   });
 
+  it("session start picks a random package (org custom set when present) without a picker", () => {
+    const packs = [
+      {
+        id: "architecture",
+        name: "Architecture",
+        images: ["/aesthetics/architecture/a.jpeg", "/aesthetics/architecture/b.jpeg"],
+        previewImage: "/aesthetics/architecture/a.jpeg",
+      },
+      {
+        id: "lunar",
+        name: "Lunar",
+        images: ["/aesthetics/lunar/a.jpeg", "/aesthetics/lunar/b.jpeg"],
+        previewImage: "/aesthetics/lunar/a.jpeg",
+      },
+    ];
+    expect(pickRandomAestheticPackage([], () => 0)).toBeUndefined();
+    expect(pickRandomAestheticPackage(packs, () => 0)?.id).toBe("architecture");
+    expect(pickRandomAestheticPackage(packs, () => 0.99)?.id).toBe("lunar");
+    expect(pickRandomAestheticPackage(packs, () => 0.99)?.previewImage).toBe(
+      "/aesthetics/lunar/b.jpeg",
+    );
+
+    const hook = read("components/session-view/use-aesthetic-packages.ts");
+    const welcome = read("components/session-view/session-welcome-modal.tsx");
+    expect(hook).toContain("pickRandomAestheticPackage");
+    expect(welcome).not.toContain("AestheticPicker");
+    expect(welcome).toContain("selectedAesthetic?.previewImage");
+    expect(welcome).toContain("TapAestheticSection");
+  });
+
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {
     const hook = read("components/session-view/use-aesthetic-packages.ts");
     expect(hook).toContain("fetchAestheticPackages");
@@ -489,6 +525,8 @@ describe("custom aesthetic surfaces", () => {
     // No new control that chooses a named pack versus the custom set.
     expect(covers).not.toContain("Greco-futurism");
     expect(sessionChrome).toContain("selectedAestheticId");
+    expect(sessionChrome).toContain("pickRandomAestheticPackage");
+    expect(read("components/session-view/session-welcome-modal.tsx")).not.toContain("AestheticPicker");
     expect(read("components/AestheticPicker.tsx")).not.toContain("custom versus");
     expect(read("components/OrganizationDashboardTab.tsx")).not.toContain("Greco-futurism");
   });

@@ -27,6 +27,7 @@ export type HeliosFlowCreateInput = {
   questions: string[];
   artifacts: FlowArtifact[];
   exactProblemOnCanvas: boolean;
+  generateProblemOnOpen: boolean;
   actionCatalog: number;
   durationMinutes: number;
   workspaceId?: string;
@@ -100,6 +101,9 @@ export function heliosFlowCreateInput(
     artifacts: parseFlowArtifacts(args.artifacts),
     exactProblemOnCanvas: parseExactProblemOnCanvas(
       args.exactProblemOnCanvas ?? args.exact_problem_on_canvas,
+    ),
+    generateProblemOnOpen: parseExactProblemOnCanvas(
+      args.generateProblemOnOpen ?? args.generate_problem_on_open,
     ),
     actionCatalog: Number.isFinite(actionCatalog)
       ? actionCatalog

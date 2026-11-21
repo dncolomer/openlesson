@@ -23,6 +23,7 @@ import {
 import {
   flowOpeningCanvasHasContent,
   flowShowsOpeningCanvas,
+  parseFlowOpeningCanvasScene,
   parseFlowOpeningCanvasSceneForKind,
   productFlowPublishTopicFromOpeningCanvas,
 } from "@/lib/flow-opening-canvas";
@@ -35,6 +36,8 @@ export const PRODUCT_FLOW_KINDS = ["solve", "verification", "calibration"] as co
 export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
 export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
 export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/flows/files";
+/** Client-safe path. Do not import `@/lib/flow-problem-generate` from client components. */
+export const DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH = "/api/dashboard/flows/generate-problem";
 
 export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "model", "channels", "publish"] as const;
 
@@ -54,6 +57,8 @@ export type ProductFlowDraft = {
   exactProblemOnCanvas: boolean;
   /** Solve / Verification: author-prepared opening Work canvas. */
   openingCanvasScene: IleWorkCanvasScene | null;
+  /** Generate the Problem from artifacts when a learner opens. */
+  generateProblemOnOpen: boolean;
   /** Author unsys seed used when a learner runs this flow. */
   answersModelSeed: AuthorUnsysModelSeed | null;
   /** Channels the run requires. Audio off leaves the microphone optional. */
@@ -84,6 +89,52 @@ export function parseExactProblemOnCanvas(value: unknown): boolean {
 
 export function flowShowsExactProblemOnCanvas(kind: ProductFlowKind): boolean {
   return kind === "solve" || kind === "verification";
+}
+
+/** Author option: write the Problem from attached files when a learner opens. */
+export function parseGenerateProblemOnOpen(value: unknown): boolean {
+  return parseExactProblemOnCanvas(value);
+}
+
+/** Exclusive Author source. Exact problem on canvas is only valid on `problem`. */
+export type FlowAuthoringSource = "problem" | "artifacts" | "canvas";
+
+export function flowAuthoringSource(input: {
+  kind?: ProductFlowKind | string | null;
+  topic?: string | null;
+  problem?: string | null;
+  generateProblemOnOpen?: unknown;
+  artifacts?: unknown;
+  openingCanvasScene?: unknown;
+}): FlowAuthoringSource {
+  const kind = parseProductFlowKind(input.kind) ?? input.kind;
+  if (
+    kind !== "calibration" &&
+    flowOpeningCanvasHasContent(parseFlowOpeningCanvasScene(input.openingCanvasScene))
+  ) {
+    return "canvas";
+  }
+  if (
+    parseGenerateProblemOnOpen(input.generateProblemOnOpen) &&
+    parseFlowArtifacts(input.artifacts).length > 0
+  ) {
+    return "artifacts";
+  }
+  return "problem";
+}
+
+export function flowAuthoringAllowsExactProblem(input: {
+  kind?: ProductFlowKind | string | null;
+  topic?: string | null;
+  problem?: string | null;
+  generateProblemOnOpen?: unknown;
+  artifacts?: unknown;
+  openingCanvasScene?: unknown;
+}): boolean {
+  const kind = parseProductFlowKind(input.kind);
+  if (!kind || !flowShowsExactProblemOnCanvas(kind)) return false;
+  if (flowAuthoringSource(input) !== "problem") return false;
+  return Boolean(String(input.problem || input.topic || "").trim());
 }
 
 /** Verification and Calibration lock the run clock at authoring. Solve has no run countdown. */
@@ -221,6 +272,7 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     durationMinutes: 15,
     exactProblemOnCanvas: false,
     openingCanvasScene: null,
+    generateProblemOnOpen: false,
     answersModelSeed: null,
     enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
       ? parseFlowEnforcedChannels(null)
@@ -261,9 +313,15 @@ export function productFlowQuestionsFromDraft(questions: unknown): string[] {
 
 export function productFlowAuthorHasMaterial(draft: ProductFlowDraft): boolean {
   if (productFlowProblem(draft)) return true;
-  return (
+  if (
     flowShowsOpeningCanvas(draft.kind) &&
     flowOpeningCanvasHasContent(draft.openingCanvasScene)
+  ) {
+    return true;
+  }
+  return (
+    parseGenerateProblemOnOpen(draft.generateProblemOnOpen) &&
+    draft.artifacts.length > 0
   );
 }
 
@@ -311,6 +369,7 @@ export type AcceptedProductFlowPublish =
       durationMinutes: number;
       exactProblemOnCanvas: boolean;
       openingCanvasScene: IleWorkCanvasScene | null;
+      generateProblemOnOpen: boolean;
       answersModelSeed: AuthorUnsysModelSeed | null;
       enforcedChannels: FlowEnforcedChannels;
     }
@@ -323,19 +382,42 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     draft.kind,
     draft.openingCanvasScene,
   );
-  const problem = productFlowPublishTopicFromOpeningCanvas({
-    problem: productFlowProblem(draft),
-    name,
-    scene: openingCanvasScene,
-  });
-  if (!problem) return { ok: false, reason: "topic_required" };
   const artifacts = parseFlowArtifacts(draft.artifacts);
+  const generateProblemOnOpen =
+    artifacts.length > 0 &&
+    (parseGenerateProblemOnOpen(draft.generateProblemOnOpen) ||
+      (!productFlowProblem(draft) && !flowOpeningCanvasHasContent(openingCanvasScene)));
+  const problem =
+    productFlowPublishTopicFromOpeningCanvas({
+      problem: productFlowProblem(draft),
+      name,
+      scene: openingCanvasScene,
+    }) || (generateProblemOnOpen ? name : "");
+  if (!problem) return { ok: false, reason: "topic_required" };
   const actionCatalog = parseLearningModelSize(draft.actionCatalog);
   const durationMinutes = flowCountdownMinutes(draft.durationMinutes);
   const pool = flowProblemQuestionPool(problem).map((item) => item.text);
-  const exactProblemOnCanvas = flowShowsExactProblemOnCanvas(draft.kind)
-    ? parseExactProblemOnCanvas(draft.exactProblemOnCanvas)
-    : false;
+  const source = flowAuthoringSource({
+    kind: draft.kind,
+    topic: productFlowProblem(draft),
+    problem: productFlowProblem(draft),
+    generateProblemOnOpen,
+    artifacts,
+    openingCanvasScene,
+  });
+  const persistGenerate = source === "artifacts";
+  const persistScene = source === "canvas" ? openingCanvasScene : null;
+  const exactProblemOnCanvas =
+    source === "problem" &&
+    flowAuthoringAllowsExactProblem({
+      kind: draft.kind,
+      topic: productFlowProblem(draft),
+      problem: productFlowProblem(draft),
+      generateProblemOnOpen: false,
+      artifacts,
+      openingCanvasScene: null,
+    }) &&
+    parseExactProblemOnCanvas(draft.exactProblemOnCanvas);
   const answersModelSeed = parseFlowUnsysSeed(draft.answersModelSeed);
   const enforcedChannels = flowAuthorShowsEnforcedChannels(draft.kind)
     ? serializeFlowEnforcedChannels(draft.enforcedChannels)
@@ -353,6 +435,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       durationMinutes,
       exactProblemOnCanvas: false,
       openingCanvasScene: null,
+      generateProblemOnOpen: persistGenerate,
       answersModelSeed,
       enforcedChannels,
     };
@@ -369,7 +452,8 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       actionCatalog,
       durationMinutes,
       exactProblemOnCanvas,
-      openingCanvasScene,
+      openingCanvasScene: persistScene,
+      generateProblemOnOpen: persistGenerate,
       answersModelSeed,
       enforcedChannels,
     };
@@ -385,7 +469,8 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     actionCatalog,
     durationMinutes,
     exactProblemOnCanvas,
-    openingCanvasScene,
+    openingCanvasScene: persistScene,
+    generateProblemOnOpen: persistGenerate,
     answersModelSeed,
     enforcedChannels,
   };

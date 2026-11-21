@@ -63,18 +63,38 @@ Content-Type: application/json`}</pre>
               <code className="text-neutral-300">get_flow</code>,{" "}
               <code className="text-neutral-300">update_flow</code>, and{" "}
               <code className="text-neutral-300">delete_flow</code> are 1:1 with these REST twins.
-              Create/update take the same options as the dashboard wizard (Problem, files, Unsys
-              model, exact problem on canvas, channels).
+              Create/update take one Author source: written problem, files, or a prepared board.
             </li>
           </ul>
+          <p className="mt-4 text-sm text-neutral-400">
+            Choose one source. <code className="text-neutral-300">exact_problem_on_canvas</code> is
+            valid only with a written <code className="text-neutral-300">topic</code>. Files as the
+            problem source generate a new statement when a learner opens.{" "}
+            <code className="text-neutral-300">opening_canvas_scene</code> ignores exact problem.
+            Prepared board wins if more than one source is sent.
+          </p>
           <pre className={codeBlockClass}>{`POST /api/v3/flows
 {
   "kind": "solve",
   "name": "Linear systems",
   "topic": "Solve Ax = b",
   "exact_problem_on_canvas": true,
-  "enforced_channels": { "audio": true, "muse": false, "video": false, "screenshots": false },
-  "artifacts": [{ "name": "brief.pdf", "xai_file_id": "file_…" }]
+  "enforced_channels": { "audio": true, "muse": false, "video": false, "screenshots": false }
+}
+
+POST /api/v3/flows
+{
+  "kind": "solve",
+  "name": "Decoder",
+  "artifacts": [{ "name": "brief.pdf", "xai_file_id": "file_…" }],
+  "generate_problem_on_open": true
+}
+
+POST /api/v3/flows
+{
+  "kind": "verification",
+  "name": "Board flow",
+  "opening_canvas_scene": { "elements": [], "appState": {}, "files": {} }
 }`}</pre>
         </section>
 

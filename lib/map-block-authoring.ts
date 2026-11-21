@@ -12,7 +12,7 @@ import {
   mapBlockAuthoringPlaceError,
   type MapBlock,
 } from "@/lib/block-kind";
-import { parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { parseExactProblemOnCanvas, parseGenerateProblemOnOpen } from "@/lib/product-flow";
 import { runCalibrationCommand } from "@/lib/calibration-flow-repository";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { runSolveCommand } from "@/lib/solve-flow-repository";
@@ -28,6 +28,7 @@ export type EnsureAuthoringMapBlockInput = {
   problem?: string;
   artifacts?: unknown;
   exactProblemOnCanvas?: unknown;
+  generateProblemOnOpen?: unknown;
   ownerUserId: string;
   workspaceId: string;
 };
@@ -61,6 +62,7 @@ export async function ensureAuthoringMapBlock(
       goal,
       topic,
       artifacts: input.artifacts,
+      generateProblemOnOpen: parseGenerateProblemOnOpen(input.generateProblemOnOpen),
     });
     if (!created.ok || !created.flow) {
       return { ok: false, error: created.ok ? "create_flow_failed" : created.reason };
@@ -85,6 +87,7 @@ export async function ensureAuthoringMapBlock(
       topic,
       artifacts: input.artifacts,
       exactProblemOnCanvas: parseExactProblemOnCanvas(input.exactProblemOnCanvas),
+      generateProblemOnOpen: parseGenerateProblemOnOpen(input.generateProblemOnOpen),
     });
     if (!created.ok || !created.flow) {
       return { ok: false, error: created.ok ? "create_flow_failed" : created.reason };
@@ -108,6 +111,7 @@ export async function ensureAuthoringMapBlock(
     topic,
     artifacts: input.artifacts,
     exactProblemOnCanvas: parseExactProblemOnCanvas(input.exactProblemOnCanvas),
+    generateProblemOnOpen: parseGenerateProblemOnOpen(input.generateProblemOnOpen),
   });
   if (!created.ok || !created.flow) {
     return { ok: false, error: created.ok ? "create_flow_failed" : created.reason };

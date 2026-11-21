@@ -20,8 +20,10 @@ import {
 import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
+  flowAuthoringSource,
   parseExactProblemOnCanvas,
   parseProductFlowKind,
+  type FlowAuthoringSource,
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import {
@@ -39,6 +41,7 @@ import {
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import {
   flowUnsysSeedFromModel,
   serializeFlowUnsysSeed,
@@ -77,8 +80,14 @@ export type PresentedAgentFlow = {
   artifacts: FlowArtifact[];
   duration_minutes: number | null;
   action_catalog: number | null;
+  /** Exclusive Author source after create/update coercion. */
+  authoring_source: FlowAuthoringSource;
   /** Solve / Verification: seed the Work canvas with the Problem as written. */
   exact_problem_on_canvas: boolean;
+  /** Generate the Problem from artifacts when a learner opens. */
+  generate_problem_on_open: boolean;
+  /** Solve / Verification: author-prepared opening Work canvas. */
+  opening_canvas_scene: IleWorkCanvasScene | null;
   /** Author Unsys seed used when a learner runs this flow. */
   answers_model_seed: Record<string, unknown> | null;
   /** Channels the run requires. Calibration is always all-off. */
@@ -121,18 +130,43 @@ function questionsFrom(value: unknown): string[] {
 
 function presentWizardFields(flow: {
   kind: AgentFlowKind;
+  topic?: string | null;
+  artifacts?: unknown;
   exactProblemOnCanvas?: boolean;
+  generateProblemOnOpen?: boolean;
+  openingCanvasScene?: unknown;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
 }): Pick<
   PresentedAgentFlow,
-  "exact_problem_on_canvas" | "answers_model_seed" | "enforced_channels"
+  | "authoring_source"
+  | "exact_problem_on_canvas"
+  | "generate_problem_on_open"
+  | "opening_canvas_scene"
+  | "answers_model_seed"
+  | "enforced_channels"
 > {
+  const artifacts = parseFlowArtifacts(flow.artifacts);
+  const openingCanvasScene = parseFlowOpeningCanvasSceneForKind(
+    flow.kind,
+    flow.openingCanvasScene,
+  );
+  const generateProblemOnOpen = parseExactProblemOnCanvas(flow.generateProblemOnOpen);
+  const authoring_source = flowAuthoringSource({
+    kind: flow.kind,
+    topic: flow.topic,
+    generateProblemOnOpen,
+    artifacts,
+    openingCanvasScene,
+  });
   return {
+    authoring_source,
     exact_problem_on_canvas:
       flow.kind === "calibration"
         ? false
         : parseExactProblemOnCanvas(flow.exactProblemOnCanvas),
+    generate_problem_on_open: generateProblemOnOpen,
+    opening_canvas_scene: flow.kind === "calibration" ? null : openingCanvasScene,
     answers_model_seed: serializeFlowUnsysSeed(flow.answersModelSeed),
     enforced_channels:
       flow.kind === "calibration"
@@ -149,6 +183,7 @@ function presentSolve(flow: {
   durationMinutes: number;
   actionCatalog: number;
   exactProblemOnCanvas?: boolean;
+  generateProblemOnOpen?: boolean;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
   publicToken: string;
@@ -185,6 +220,7 @@ function presentCalibration(flow: {
   artifacts?: FlowArtifact[];
   durationMinutes: number;
   actionCatalog: number;
+  generateProblemOnOpen?: boolean;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
   publicToken: string;
@@ -203,7 +239,11 @@ function presentCalibration(flow: {
     artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes,
     action_catalog: flow.actionCatalog,
-    ...presentWizardFields({ kind: "calibration", ...flow }),
+    ...presentWizardFields({
+      kind: "calibration",
+      ...flow,
+      topic: flow.topic || flow.goal,
+    }),
     public_token: flow.publicToken,
     workspace_id: presentWorkspaceId(flow.workspaceId),
     owner_user_id: flow.ownerUserId || null,
@@ -221,6 +261,7 @@ function presentVerification(flow: {
   durationMinutes?: number;
   actionCatalog: number;
   exactProblemOnCanvas?: boolean;
+  generateProblemOnOpen?: boolean;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
   publicToken: string;
@@ -412,6 +453,9 @@ export async function createAgentFlow(
       kind,
       body.opening_canvas_scene ?? body.openingCanvasScene,
     ),
+    generateProblemOnOpen: parseExactProblemOnCanvas(
+      body.generate_problem_on_open ?? body.generateProblemOnOpen,
+    ),
     answersModelSeed,
     enforcedChannels: parseFlowEnforcedChannels(
       body.enforced_channels ?? body.enforcedChannels,
@@ -430,6 +474,7 @@ export async function createAgentFlow(
       artifacts: accepted.artifacts,
       exactProblemOnCanvas: accepted.exactProblemOnCanvas,
       openingCanvasScene: accepted.openingCanvasScene,
+      generateProblemOnOpen: accepted.generateProblemOnOpen,
       durationMinutes: accepted.durationMinutes,
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
@@ -450,6 +495,7 @@ export async function createAgentFlow(
       goal: accepted.goal,
       topic: accepted.topic,
       artifacts: accepted.artifacts,
+      generateProblemOnOpen: accepted.generateProblemOnOpen,
       durationMinutes: accepted.durationMinutes,
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
@@ -470,6 +516,7 @@ export async function createAgentFlow(
     artifacts: accepted.artifacts,
     exactProblemOnCanvas: accepted.exactProblemOnCanvas,
     openingCanvasScene: accepted.openingCanvasScene,
+    generateProblemOnOpen: accepted.generateProblemOnOpen,
     durationMinutes: accepted.durationMinutes,
     actionCatalog: accepted.actionCatalog,
     answersModelSeed: accepted.answersModelSeed,
@@ -510,6 +557,10 @@ export async function updateAgentFlow(
     body.exact_problem_on_canvas,
     body.exactProblemOnCanvas,
   );
+  const generateProblemOnOpen = optionalBoolean(
+    body.generate_problem_on_open,
+    body.generateProblemOnOpen,
+  );
   const openingCanvasScene =
     body.opening_canvas_scene === undefined && body.openingCanvasScene === undefined
       ? undefined
@@ -545,6 +596,7 @@ export async function updateAgentFlow(
       artifacts,
       exactProblemOnCanvas,
       openingCanvasScene,
+      generateProblemOnOpen,
       durationMinutes,
       actionCatalog,
       answersModelSeed,
@@ -566,6 +618,7 @@ export async function updateAgentFlow(
       goal: problem,
       topic: problem,
       artifacts,
+      generateProblemOnOpen,
       durationMinutes,
       actionCatalog,
       answersModelSeed,
@@ -587,6 +640,7 @@ export async function updateAgentFlow(
     artifacts,
     exactProblemOnCanvas,
     openingCanvasScene,
+    generateProblemOnOpen,
     durationMinutes,
     actionCatalog,
     answersModelSeed,

@@ -11,6 +11,7 @@ const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neu
 
 export function DashboardUpgradeTab({
   balance,
+  isAdmin,
 }: {
   plan?: string;
   subscriptionStatus?: string;
@@ -39,11 +40,25 @@ export function DashboardUpgradeTab({
     }
   };
 
+  if (isAdmin) {
+    return (
+      <div data-dashboard-upgrade className="space-y-8">
+        <section className={usageCardClass}>
+          <p className={usageLabelClass}>Credits</p>
+          <h2 className="mt-2 text-2xl font-medium text-white">Buy more credits</h2>
+          <p className="mt-2 text-sm text-neutral-500">
+            Platform admin accounts have no credit limit.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div data-dashboard-upgrade className="space-y-8">
       <section className={usageCardClass}>
         <p className={usageLabelClass}>Credits</p>
-        <h2 className="mt-2 text-2xl font-medium text-white">Buy credits</h2>
+        <h2 className="mt-2 text-2xl font-medium text-white">Buy more credits</h2>
         <p className="mt-2 text-sm text-neutral-500">
           {typeof balance === "number" ? `Balance ${balance}. ` : ""}
           Free signup includes {STARTER_CREDIT_GRANT} credits. Each Calibrate, Verify, or

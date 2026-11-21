@@ -40,7 +40,7 @@ Each key is a single full-access token.
 | Method | Path | MCP tool | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | `list_flows` | Owner-scoped list. Query `kind=`, `workspace_id=`. |
-| `POST` | `/` | `create_flow` | Independent flow. Optional `workspace_id`. Wizard fields: `topic`, `artifacts` / `files`, `answers_model_seed` / `generate_unsys`, `exact_problem_on_canvas`, `enforced_channels`, `duration_minutes`. |
+| `POST` | `/` | `create_flow` | Independent flow. Optional `workspace_id`. One Author source: `topic` (optional `exact_problem_on_canvas`), `artifacts` / `files` (problem generated when a learner opens), or `opening_canvas_scene`. Also `answers_model_seed` / `generate_unsys`, `enforced_channels`, `duration_minutes`. |
 | `POST` | `/files` | `upload_flow_file` | Upload Problem-context file. |
 | `POST` | `/unsys-seed` | `generate_flow_unsys_seed` | Generate Unsys model from Problem + artifacts. |
 | `GET` | `/{flow_id}` | `get_flow` | Read one flow. |

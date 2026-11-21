@@ -1,9 +1,12 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
+  flowAuthoringSource,
   flowAuthorShowsCountdown,
   flowOwnedByUser,
   nextProductFlowWizardStep,
@@ -39,6 +42,7 @@ import {
   FLOW_DANGER_BTN,
   FLOW_PRIMARY_BTN,
 } from "@/components/product-flow/product-flow-form";
+import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 
 const root = join(__dirname, "../..");
 
@@ -117,6 +121,74 @@ describe("product flow owner_user_id", () => {
     expect(accepted.answersModelSeed).toBeNull();
   });
 
+  it("advances authoring when artifacts generate the problem on open", () => {
+    const draft = {
+      ...emptyProductFlowDraft("solve"),
+      name: "Decoder",
+      artifacts: [
+        {
+          name: "brief.pdf",
+          mimeType: "application/pdf",
+          xaiFileId: "file_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        },
+      ],
+      generateProblemOnOpen: true,
+    };
+    expect(productFlowWizardCanAdvance("author", draft)).toBe(true);
+    const accepted = acceptProductFlowPublish(draft);
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.generateProblemOnOpen).toBe(true);
+    expect(accepted.topic).toBe("Decoder");
+    expect(accepted.exactProblemOnCanvas).toBe(false);
+
+    const implied = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Decoder",
+      artifacts: [
+        {
+          name: "brief.pdf",
+          mimeType: "application/pdf",
+          xaiFileId: "file_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        },
+      ],
+    });
+    expect(implied.ok).toBe(true);
+    if (!implied.ok) return;
+    expect(implied.generateProblemOnOpen).toBe(true);
+  });
+
+  it("keeps Exact problem on canvas on written problem text only", () => {
+    const written = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Limits practice",
+      topic: "epsilon-delta limits",
+      exactProblemOnCanvas: true,
+    });
+    expect(written.ok).toBe(true);
+    if (!written.ok) return;
+    expect(flowAuthoringSource(written)).toBe("problem");
+    expect(written.exactProblemOnCanvas).toBe(true);
+
+    const fromFiles = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Decoder",
+      artifacts: [
+        {
+          name: "brief.pdf",
+          mimeType: "application/pdf",
+          xaiFileId: "file_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        },
+      ],
+      generateProblemOnOpen: true,
+      exactProblemOnCanvas: true,
+    });
+    expect(fromFiles.ok).toBe(true);
+    if (!fromFiles.ok) return;
+    expect(flowAuthoringSource(fromFiles)).toBe("artifacts");
+    expect(fromFiles.exactProblemOnCanvas).toBe(false);
+  });
+
   it("advances authoring when a prepared canvas is the problem", () => {
     const scene = serializeFlowOpeningCanvasScene({
       elements: [
@@ -139,6 +211,7 @@ describe("product flow owner_user_id", () => {
       ...emptyProductFlowDraft("solve"),
       name: "Board flow",
       openingCanvasScene: scene,
+      exactProblemOnCanvas: true,
     };
     expect(productFlowWizardCanAdvance("author", draft)).toBe(true);
     expect(productFlowWizardCanAdvance("model", draft)).toBe(true);
@@ -146,6 +219,8 @@ describe("product flow owner_user_id", () => {
     expect(accepted.ok).toBe(true);
     if (!accepted.ok) return;
     expect(accepted.topic).toContain("Board-only problem");
+    expect(flowAuthoringSource(accepted)).toBe("canvas");
+    expect(accepted.exactProblemOnCanvas).toBe(false);
   });
 
   it("inserts an unsys model step between author and publish", () => {
@@ -371,5 +446,126 @@ describe("product flow owner_user_id", () => {
     expect(one).toContain("flowOwnedByUser");
     expect(one).toContain("ownerUserId: loaded.ownerUserId");
     expect(one).not.toContain("listProductFlowWorkspaceIds");
+  });
+
+  it("splits the Author step: one source, details beside countdown", () => {
+    const html = renderToStaticMarkup(
+      createElement(FlowProblemFields, {
+        layout: "split",
+        problem: "Define a limit",
+        onProblemChange: () => {},
+        artifacts: [],
+        onArtifactsChange: () => {},
+        topicHook: "verification",
+        onExactProblemOnCanvasChange: () => {},
+        onPrepareOpeningCanvas: () => {},
+        aside: createElement("p", { "data-flow-countdown": "" }, "15 min"),
+      }),
+    );
+    expect(html).toContain('data-flow-problem-layout="split"');
+    expect(html).toContain("lg:grid-cols-2");
+    expect(html).toContain('data-flow-author-source="problem"');
+    expect(html).toContain('data-flow-author-panel="problem"');
+    expect(html).toContain("Write the problem");
+    expect(html).toContain("From files");
+    expect(html).toContain("Prepared board");
+    expect(html).toContain("Exact problem on canvas");
+    expect(html).toContain("data-flow-countdown");
+    expect(html).toContain("Define a limit");
+    expect(html).not.toContain("data-flow-author-panel=\"artifacts\"");
+    expect(html).not.toContain("data-flow-author-panel=\"canvas\"");
+
+    const fromFiles = renderToStaticMarkup(
+      createElement(FlowProblemFields, {
+        layout: "split",
+        problem: "",
+        onProblemChange: () => {},
+        artifacts: [
+          {
+            name: "brief.pdf",
+            mimeType: "application/pdf",
+            xaiFileId: "file_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+          },
+        ],
+        onArtifactsChange: () => {},
+        topicHook: "solve",
+        generateProblemOnOpen: true,
+        onGenerateProblemOnOpenChange: () => {},
+        onExactProblemOnCanvasChange: () => {},
+        onPrepareOpeningCanvas: () => {},
+      }),
+    );
+    expect(fromFiles).toContain('data-flow-author-source="artifacts"');
+    expect(fromFiles).toContain('data-flow-author-panel="artifacts"');
+    expect(fromFiles).toContain("A new problem is written from these files when a learner opens.");
+    expect(fromFiles).not.toContain("Generate problem from artifacts");
+    expect(fromFiles).not.toContain("Generate problem when a learner opens");
+    expect(fromFiles).not.toContain("Exact problem on canvas");
+
+    const scene = serializeFlowOpeningCanvasScene({
+      elements: [
+        {
+          id: "n1",
+          type: "text",
+          x: 0,
+          y: 0,
+          width: 120,
+          height: 32,
+          text: "Board-only problem",
+          originalText: "Board-only problem",
+          isDeleted: false,
+        },
+      ],
+      appState: {},
+      files: {},
+    });
+    const prepared = renderToStaticMarkup(
+      createElement(FlowProblemFields, {
+        layout: "split",
+        problem: "",
+        onProblemChange: () => {},
+        artifacts: [],
+        onArtifactsChange: () => {},
+        topicHook: "solve",
+        openingCanvasScene: scene,
+        openingCanvasPrepared: true,
+        onPrepareOpeningCanvas: () => {},
+        onClearOpeningCanvas: () => {},
+      }),
+    );
+    expect(prepared).toContain("data-flow-opening-canvas-preview");
+    expect(prepared).toContain("data-flow-opening-canvas-preview-open");
+    expect(prepared).toContain("Edit canvas");
+    expect(prepared).toContain("Board-only problem");
+    expect(prepared).toContain("data-flow-opening-canvas-open");
+    expect(prepared).toContain("data-flow-opening-canvas-clear");
+    expect(prepared).toContain('data-flow-author-source="canvas"');
+    expect(prepared).toContain('data-flow-author-panel="canvas"');
+    expect(prepared).not.toContain("Exact problem on canvas");
+
+    const stacked = renderToStaticMarkup(
+      createElement(FlowProblemFields, {
+        problem: "Define a limit",
+        onProblemChange: () => {},
+        artifacts: [],
+        onArtifactsChange: () => {},
+        topicHook: "solve",
+        onExactProblemOnCanvasChange: () => {},
+        onPrepareOpeningCanvas: () => {},
+      }),
+    );
+    expect(stacked).toContain('data-flow-problem-layout="stack"');
+    expect(stacked).toContain("Write the problem");
+    expect(stacked).toContain("Exact problem on canvas");
+    expect(stacked).not.toContain("data-flow-author-panel");
+
+    const wizard = read("components/product-flow/product-flow-wizard.tsx");
+    const host = read("components/product-flow/flow-opening-canvas-host.tsx");
+    expect(wizard).toContain('layout="split"');
+    expect(wizard).toContain("PRODUCT_CREATE_SHELL");
+    expect(wizard).not.toContain("max-w-3xl");
+    expect(wizard).not.toContain("max-w-6xl");
+    expect(host).not.toContain("SessionWorkSurface");
+    expect(host).toContain("ExcalidrawCanvas");
   });
 });

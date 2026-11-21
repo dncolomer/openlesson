@@ -18,6 +18,7 @@ import {
   FLOW_FORM_TEXTAREA,
   FLOW_GHOST_BTN,
   FLOW_PRIMARY_BTN,
+  PRODUCT_CREATE_SHELL,
   FlowField,
   FlowFormCard,
   FlowFormHeader,
@@ -289,7 +290,7 @@ export function RegionSimulationSetup({
       label={`${productLabel} knowledge region`}
       activeTab={dashboardTabForProductSurface(kind, "region")}
     >
-      <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-create={kind}>
+      <div className={PRODUCT_CREATE_SHELL} data-knowledge-region-create={kind}>
         <FlowFormHeader
           backHref={productRegionDashboardPath()}
           backLabel="Back to knowledge regions"
@@ -381,6 +382,8 @@ export function RegionSimulationSetup({
               </Link>
             ) : (
               <>
+                <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+                <div className="space-y-5">
                 <FlowField label="Region name">
                   <input
                     value={name}
@@ -457,7 +460,9 @@ export function RegionSimulationSetup({
                     </p>
                   )}
                 </fieldset>
+                </div>
 
+                <div className="space-y-5">
                 <fieldset className="space-y-2" data-region-simulation-strategies="">
                   <legend className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                     Exploration strategies
@@ -584,6 +589,8 @@ export function RegionSimulationSetup({
                     </span>
                   </label>
                 ) : null}
+                </div>
+                </div>
 
                 {busy && progress.length > 0 ? (
                   <ul className="space-y-2" data-region-simulation-progress="">

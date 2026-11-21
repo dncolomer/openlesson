@@ -7,10 +7,12 @@ import { FLOW_FILES_API_PATH, FLOW_UNSYS_SEED_API_PATH } from "@/lib/api/agent-a
 import { generateFlowUnsysSeedFromBody } from "@/lib/flow-unsys-generate";
 import { resolveFlowArtifactsFromBody } from "@/lib/flow-artifact-upload";
 import { exampleAuthorUnsysModel } from "@/lib/author-unsys-model";
+import { FLOW_AUTHORING_CREATE_SPEC } from "@/lib/flow-authoring-spec";
 import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
 } from "@/lib/product-flow";
+import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import { OPTIONAL_FLOW_ENFORCED_CHANNELS } from "@/lib/flow-channels";
 
 const ROOT = join(__dirname, "../..");
@@ -37,6 +39,8 @@ describe("public flow create/update matches the dashboard wizard", () => {
       expect(properties).toHaveProperty("artifacts");
       expect(properties).toHaveProperty("files");
       expect(properties).toHaveProperty("exact_problem_on_canvas");
+      expect(properties).toHaveProperty("generate_problem_on_open");
+      expect(properties).toHaveProperty("opening_canvas_scene");
       expect(properties).toHaveProperty("answers_model_seed");
       expect(properties).toHaveProperty("uncertainty_model");
       expect(properties).toHaveProperty("generate_unsys");
@@ -45,6 +49,14 @@ describe("public flow create/update matches the dashboard wizard", () => {
     }
     expect(create?.inputSchema.required).toEqual(["kind"]);
     expect(update?.inputSchema.required).toEqual(["flow_id"]);
+    expect(create?.description).toContain(FLOW_AUTHORING_CREATE_SPEC);
+    expect(update?.description).toContain(FLOW_AUTHORING_CREATE_SPEC);
+    const exactDoc = JSON.stringify(create?.inputSchema.properties.exact_problem_on_canvas || {});
+    expect(exactDoc).toContain("written problem source only");
+    expect(read("lib/pow-api/mcp-tools/helpers.ts")).toContain("generate_problem_on_open");
+    expect(read("lib/pow-api/mcp-tools/helpers.ts")).toContain("opening_canvas_scene");
+    expect(read("public/skill.md")).toContain("generate_problem_on_open");
+    expect(read("docs/PROOF_OF_WORK_API.md")).toContain("opening_canvas_scene");
   });
 
   it("MCP and REST expose file upload and Unsys generate twins", () => {
@@ -64,6 +76,7 @@ describe("public flow create/update matches the dashboard wizard", () => {
     const src = read("lib/pow-api/agent-flow-management.ts");
     expect(src).toContain("acceptProductFlowPublish");
     expect(src).toContain("exactProblemOnCanvas: accepted.exactProblemOnCanvas");
+    expect(src).toContain("generateProblemOnOpen: accepted.generateProblemOnOpen");
     expect(src).toContain("answersModelSeed: accepted.answersModelSeed");
     expect(src).toContain("enforcedChannels: accepted.enforcedChannels");
     expect(src).toContain("resolveFlowArtifactsFromBody");
@@ -85,6 +98,64 @@ describe("public flow create/update matches the dashboard wizard", () => {
     if (!accepted.ok) return;
     expect(accepted.exactProblemOnCanvas).toBe(false);
     expect(accepted.enforcedChannels).toEqual(OPTIONAL_FLOW_ENFORCED_CHANNELS);
+  });
+
+  it("create_flow keeps Exact only on written topic and drops it on files or canvas", () => {
+    const written = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Limits",
+      topic: "epsilon-delta limits",
+      exactProblemOnCanvas: true,
+      artifacts: [ARTIFACT],
+    });
+    expect(written.ok).toBe(true);
+    if (!written.ok) return;
+    expect(written.exactProblemOnCanvas).toBe(true);
+    expect(written.generateProblemOnOpen).toBe(false);
+
+    const fromFiles = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Decoder",
+      artifacts: [ARTIFACT],
+      generateProblemOnOpen: true,
+      exactProblemOnCanvas: true,
+    });
+    expect(fromFiles.ok).toBe(true);
+    if (!fromFiles.ok) return;
+    expect(fromFiles.generateProblemOnOpen).toBe(true);
+    expect(fromFiles.exactProblemOnCanvas).toBe(false);
+    expect(fromFiles.openingCanvasScene).toBeNull();
+
+    const scene = serializeFlowOpeningCanvasScene({
+      elements: [
+        {
+          id: "n1",
+          type: "text",
+          x: 0,
+          y: 0,
+          width: 80,
+          height: 24,
+          text: "Board",
+          originalText: "Board",
+          isDeleted: false,
+        },
+      ],
+      appState: {},
+      files: {},
+    });
+    const canvas = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Board flow",
+      openingCanvasScene: scene,
+      generateProblemOnOpen: true,
+      artifacts: [ARTIFACT],
+      exactProblemOnCanvas: true,
+    });
+    expect(canvas.ok).toBe(true);
+    if (!canvas.ok) return;
+    expect(canvas.openingCanvasScene).toEqual(scene);
+    expect(canvas.generateProblemOnOpen).toBe(false);
+    expect(canvas.exactProblemOnCanvas).toBe(false);
   });
 
   it("keeps existing artifact pointers without uploading", async () => {

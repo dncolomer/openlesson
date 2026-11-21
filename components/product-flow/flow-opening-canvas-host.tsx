@@ -2,8 +2,6 @@
 
 import { useRef } from "react";
 import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
-import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
-import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import {
   FLOW_PRIMARY_BTN,
   FLOW_SECONDARY_BTN,
@@ -16,12 +14,10 @@ import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 
 export function FlowOpeningCanvasHost({
   scene,
-  topicName,
   onSave,
   onCancel,
 }: {
   scene: IleWorkCanvasScene | null;
-  topicName?: string;
   onSave: (next: IleWorkCanvasScene | null) => void;
   onCancel: () => void;
 }) {
@@ -54,21 +50,8 @@ export function FlowOpeningCanvasHost({
           Save
         </button>
       </div>
-      <SessionWorkSurface
-        mode="ile"
-        authoring
-        chapters={
-          <p className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-400">
-            {topicName?.trim() || "Work"}
-          </p>
-        }
-        focus={<SessionGuidePanel guide="learn" />}
-        actions={
-          <p className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-            Exit
-          </p>
-        }
-        stage={
+      <div className="relative min-h-0 flex-1" data-ile-canvas-stage="">
+        <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col">
           <ExcalidrawCanvas
             boardId="flow-opening-canvas-authoring"
             initialSceneData={initial}
@@ -77,8 +60,8 @@ export function FlowOpeningCanvasHost({
               liveRef.current = authoringOpeningCanvasScene(next);
             }}
           />
-        }
-      />
+        </div>
+      </div>
     </div>
   );
 }

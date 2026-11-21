@@ -182,6 +182,12 @@ export async function POST(
             loaded.kind,
             body.openingCanvasScene ?? body.opening_canvas_scene,
           );
+    const generateProblemOnOpen =
+      body.generateProblemOnOpen === undefined && body.generate_problem_on_open === undefined
+        ? undefined
+        : parseExactProblemOnCanvas(
+            body.generateProblemOnOpen ?? body.generate_problem_on_open,
+          );
     const answersModelSeed = !requestHasUnsysSeed(body)
       ? undefined
       : parseFlowUnsysSeed(unsysSeedFromRequestBody(body));
@@ -201,6 +207,7 @@ export async function POST(
         artifacts,
         exactProblemOnCanvas,
         openingCanvasScene,
+        generateProblemOnOpen,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
         answersModelSeed,
@@ -220,6 +227,7 @@ export async function POST(
         goal: problem,
         topic: problem,
         artifacts,
+        generateProblemOnOpen,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
         answersModelSeed,
@@ -238,6 +246,7 @@ export async function POST(
       artifacts,
       exactProblemOnCanvas,
       openingCanvasScene,
+      generateProblemOnOpen,
       actionCatalog: body.actionCatalog as number | undefined,
       answersModelSeed,
       enforcedChannels,

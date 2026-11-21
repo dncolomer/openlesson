@@ -223,6 +223,9 @@ describe("region simulation", () => {
     expect(create).toContain("kind?: ProductFlowKind");
     expect(create).not.toContain("LegacyKnowledgeRegionCreate");
     const setup = read("components/product-flow/region-simulation-setup.tsx");
+    expect(setup).toContain("PRODUCT_CREATE_SHELL");
+    expect(setup).toContain("lg:grid-cols-2");
+    expect(setup).not.toContain("max-w-3xl");
     expect(setup).toContain("data-region-kind");
     expect(setup).toContain("data-run-simulation");
     expect(setup).toContain("data-region-simulation-setup");

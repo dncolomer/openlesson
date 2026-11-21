@@ -27,6 +27,7 @@ import {
   OPTIONAL_FLOW_ENFORCED_CHANNELS,
   serializeFlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import { parseExactProblemOnCanvas } from "@/lib/product-flow";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
@@ -107,6 +108,7 @@ function mapFlow(row: Record<string, unknown>): CalibrationFlow {
     topic: String(row.topic || goal),
     questions: normalizeCalibrateQuestions(row.questions),
     artifacts: parseFlowArtifacts(row.artifacts),
+    generateProblemOnOpen: parseExactProblemOnCanvas(row.generate_problem_on_open),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
@@ -193,6 +195,7 @@ async function persistCommand(
       topic: value.flow.topic || value.flow.goal,
       questions: value.flow.questions,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
+      generate_problem_on_open: value.flow.generateProblemOnOpen,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -211,6 +214,7 @@ async function persistCommand(
       topic: value.flow.topic || value.flow.goal,
       questions: value.flow.questions,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
+      generate_problem_on_open: value.flow.generateProblemOnOpen,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -323,6 +327,7 @@ const CALIBRATE_OPTIONAL_COLUMNS = [
   "archived_at",
   "topic",
   "artifacts",
+  "generate_problem_on_open",
   "answers_model_seed",
   "enforced_channels",
 ] as const;

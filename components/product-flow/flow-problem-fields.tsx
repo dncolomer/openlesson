@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   FLOW_ARTIFACT_ACCEPT,
   FLOW_ARTIFACT_MAX_COUNT,
@@ -8,12 +8,86 @@ import {
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
 import {
+  FLOW_FORM_LABEL,
   FLOW_FORM_TEXTAREA,
   FLOW_GHOST_BTN,
   FLOW_SECONDARY_BTN,
-  FlowField,
 } from "@/components/product-flow/product-flow-form";
-import { FLOW_OPENING_CANVAS_LABEL } from "@/lib/flow-opening-canvas";
+import { FlowOpeningCanvasPreview } from "@/components/product-flow/flow-opening-canvas-preview";
+import {
+  FLOW_OPENING_CANVAS_LABEL,
+  flowOpeningCanvasHasContent,
+} from "@/lib/flow-opening-canvas";
+import {
+  flowAuthoringSource,
+  type FlowAuthoringSource,
+} from "@/lib/product-flow";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
+
+function AuthorSection({
+  label,
+  hook,
+  split,
+  children,
+}: {
+  label: string;
+  hook?: string;
+  split?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className="space-y-3"
+      {...(split && hook ? { "data-flow-author-panel": hook } : {})}
+    >
+      {label ? <p className={FLOW_FORM_LABEL}>{label}</p> : null}
+      {children}
+    </section>
+  );
+}
+
+function Choice({
+  name,
+  value,
+  checked,
+  onChange,
+  title,
+  hint,
+  hook,
+}: {
+  name: string;
+  value: string;
+  checked: boolean;
+  onChange: () => void;
+  title: string;
+  hint?: string;
+  hook?: string;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 border px-3 py-2.5 ${
+        checked ? "border-white/40 bg-white/[0.03]" : "border-transparent"
+      }`}
+      data-flow-choice={hook || value}
+    >
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        data-flow-choice-input={value}
+        className="mt-1 h-4 w-4 rounded-none border-white/40 bg-black accent-white"
+      />
+      <span className="min-w-0 space-y-1">
+        <span className="block text-sm text-neutral-200">{title}</span>
+        {hint ? (
+          <span className="block text-xs leading-relaxed text-neutral-500">{hint}</span>
+        ) : null}
+      </span>
+    </label>
+  );
+}
 
 export function FlowProblemFields({
   problem,
@@ -25,9 +99,15 @@ export function FlowProblemFields({
   exactProblemOnCanvas = false,
   onExactProblemOnCanvasChange,
   openingCanvasPrepared = false,
+  openingCanvasScene = null,
   onPrepareOpeningCanvas,
   onClearOpeningCanvas,
+  generateProblemOnOpen = false,
+  onGenerateProblemOnOpenChange,
+  flowName = "",
   problemReadOnly = false,
+  layout = "stack",
+  aside = null,
 }: {
   problem: string;
   onProblemChange: (value: string) => void;
@@ -39,14 +119,38 @@ export function FlowProblemFields({
   exactProblemOnCanvas?: boolean;
   onExactProblemOnCanvasChange?: (value: boolean) => void;
   openingCanvasPrepared?: boolean;
+  openingCanvasScene?: IleWorkCanvasScene | null;
   onPrepareOpeningCanvas?: () => void;
   onClearOpeningCanvas?: () => void;
+  generateProblemOnOpen?: boolean;
+  onGenerateProblemOnOpenChange?: (value: boolean) => void;
+  flowName?: string;
   /** Published flows keep the Problem as written. */
   problemReadOnly?: boolean;
+  /** Wizard Author step uses a two-column layout. Drawers stay stacked. */
+  layout?: "stack" | "split";
+  aside?: ReactNode;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [picked, setPicked] = useState<FlowAuthoringSource | null>(null);
+  const split = layout === "split";
+  const canvasPrepared =
+    openingCanvasPrepared || flowOpeningCanvasHasContent(openingCanvasScene);
+  const previewScene =
+    openingCanvasScene && flowOpeningCanvasHasContent(openingCanvasScene)
+      ? openingCanvasScene
+      : null;
+  const showCanvasSource = Boolean(onPrepareOpeningCanvas) && topicHook !== "calibration";
+  const derived = flowAuthoringSource({
+    kind: topicHook,
+    problem,
+    generateProblemOnOpen,
+    artifacts,
+    openingCanvasScene,
+  });
+  const source = picked ?? derived;
 
   async function onFiles(list: FileList | null) {
     if (!list?.length) return;
@@ -59,6 +163,9 @@ export function FlowProblemFields({
         next.push(await uploadFlowArtifact({ file, workspaceId }));
       }
       onArtifactsChange(next);
+      setPicked("artifacts");
+      onGenerateProblemOnOpenChange?.(true);
+      onExactProblemOnCanvasChange?.(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not upload file");
     } finally {
@@ -67,98 +174,114 @@ export function FlowProblemFields({
     }
   }
 
-  return (
-    <div className="space-y-5" data-flow-problem-fields="">
-      <FlowField label="Problem">
-        <textarea
-          value={problem}
-          onChange={(event) => {
-            if (problemReadOnly) return;
-            onProblemChange(event.target.value);
-          }}
-          placeholder="Define the problem"
-          rows={6}
-          readOnly={problemReadOnly}
-          data-flow-problem=""
-          data-flow-problem-locked={problemReadOnly ? "" : undefined}
-          data-solve-flow-topic={topicHook === "solve" ? "" : undefined}
-          data-verification-flow-topic={topicHook === "verification" ? "" : undefined}
-          data-calibration-flow-goal={topicHook === "calibration" ? "" : undefined}
-          className={`${FLOW_FORM_TEXTAREA}${problemReadOnly ? " cursor-default text-neutral-300" : ""}`}
+  function setSource(next: FlowAuthoringSource) {
+    setPicked(next);
+    if (next === "problem") {
+      onGenerateProblemOnOpenChange?.(false);
+      if (previewScene) onClearOpeningCanvas?.();
+      return;
+    }
+    onExactProblemOnCanvasChange?.(false);
+    if (next === "artifacts") {
+      if (previewScene) onClearOpeningCanvas?.();
+      onGenerateProblemOnOpenChange?.(true);
+      return;
+    }
+    onGenerateProblemOnOpenChange?.(false);
+    if (!previewScene) onPrepareOpeningCanvas?.();
+  }
+
+  const problemTextarea = (
+    <textarea
+      value={problem}
+      onChange={(event) => {
+        if (problemReadOnly) return;
+        onProblemChange(event.target.value);
+      }}
+      placeholder="Define the problem"
+      rows={split ? 12 : 6}
+      readOnly={problemReadOnly}
+      data-flow-problem=""
+      data-flow-problem-locked={problemReadOnly ? "" : undefined}
+      data-solve-flow-topic={topicHook === "solve" ? "" : undefined}
+      data-verification-flow-topic={topicHook === "verification" ? "" : undefined}
+      data-calibration-flow-goal={topicHook === "calibration" ? "" : undefined}
+      className={`${FLOW_FORM_TEXTAREA}${split ? " min-h-[16rem]" : ""}${
+        problemReadOnly ? " cursor-default text-neutral-300" : ""
+      }`}
+    />
+  );
+
+  const sourceList = (
+    <div className="space-y-1" data-flow-author-source={source}>
+      <Choice
+        name="flow-author-source"
+        value="problem"
+        checked={source === "problem"}
+        onChange={() => setSource("problem")}
+        title="Write the problem"
+        hint="Type the problem the learner works."
+        hook="problem"
+      />
+      <Choice
+        name="flow-author-source"
+        value="artifacts"
+        checked={source === "artifacts"}
+        onChange={() => setSource("artifacts")}
+        title="From files"
+        hint="A new problem is written from these files when a learner opens."
+        hook="artifacts"
+      />
+      {showCanvasSource ? (
+        <Choice
+          name="flow-author-source"
+          value="canvas"
+          checked={source === "canvas"}
+          onChange={() => setSource("canvas")}
+          title="Prepared board"
+          hint="The board is the problem."
+          hook="canvas"
         />
-        {problemReadOnly ? (
-          <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-            The problem cannot be changed after the flow is created.
-          </p>
-        ) : null}
-      </FlowField>
-      {topicHook !== "calibration" &&
-      (onExactProblemOnCanvasChange || onPrepareOpeningCanvas) ? (
-        <div className="space-y-4" data-flow-work-canvas-options="">
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Work canvas
-          </p>
-          {onExactProblemOnCanvasChange ? (
-            <label
-              className="flex cursor-pointer items-start gap-3"
-              data-flow-exact-problem-on-canvas=""
-            >
-              <input
-                type="checkbox"
-                checked={exactProblemOnCanvas}
-                onChange={(event) => onExactProblemOnCanvasChange(event.target.checked)}
-                data-flow-exact-problem-on-canvas-input=""
-                className="mt-1 h-4 w-4 rounded-none border-white/40 bg-black accent-white"
-              />
-              <span className="space-y-1">
-                <span className="block text-sm text-neutral-200">Exact problem on canvas</span>
-                <span className="block text-xs leading-relaxed text-neutral-500">
-                  Open the Work canvas with this problem as written.
-                </span>
-              </span>
-            </label>
-          ) : null}
-          {onPrepareOpeningCanvas ? (
-            <div className="space-y-2" data-flow-opening-canvas="">
-              <p className="text-sm text-neutral-200">{FLOW_OPENING_CANVAS_LABEL}</p>
-              <p className="text-xs leading-relaxed text-neutral-500">
-                Draw, write, and place images on the same Work canvas learners will open.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={FLOW_SECONDARY_BTN}
-                  onClick={onPrepareOpeningCanvas}
-                  data-flow-opening-canvas-open=""
-                >
-                  {openingCanvasPrepared ? "Edit canvas" : FLOW_OPENING_CANVAS_LABEL}
-                </button>
-                {openingCanvasPrepared && onClearOpeningCanvas ? (
-                  <button
-                    type="button"
-                    className={FLOW_GHOST_BTN}
-                    onClick={onClearOpeningCanvas}
-                    data-flow-opening-canvas-clear=""
-                  >
-                    Clear canvas
-                  </button>
-                ) : null}
-              </div>
-              {openingCanvasPrepared ? (
-                <p
-                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                  data-flow-opening-canvas-prepared=""
-                >
-                  Canvas prepared
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
       ) : null}
+    </div>
+  );
+
+  const problemDetails = (
+    <AuthorSection label="Problem" hook="problem" split={split}>
+      {problemTextarea}
+      {problemReadOnly ? (
+        <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+          The problem cannot be changed after the flow is created.
+        </p>
+      ) : null}
+      {onExactProblemOnCanvasChange && topicHook !== "calibration" ? (
+        <label
+          className="flex cursor-pointer items-start gap-3"
+          data-flow-exact-problem-on-canvas=""
+        >
+          <input
+            type="checkbox"
+            checked={exactProblemOnCanvas}
+            onChange={(event) => onExactProblemOnCanvasChange(event.target.checked)}
+            data-flow-exact-problem-on-canvas-input=""
+            className="mt-1 h-4 w-4 rounded-none border-white/40 bg-black accent-white"
+          />
+          <span className="space-y-1">
+            <span className="block text-sm text-neutral-200">Exact problem on canvas</span>
+            <span className="block text-xs leading-relaxed text-neutral-500">
+              Put this text on the board as written.
+            </span>
+          </span>
+        </label>
+      ) : null}
+    </AuthorSection>
+  );
+
+  const filesDetails = (
+    <AuthorSection label="Files" hook="artifacts" split={split}>
       <div className="space-y-3" data-flow-artifacts="">
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          Artifacts
+        <p className="text-xs leading-relaxed text-neutral-500" data-flow-generate-from-artifacts="">
+          A new problem is written from these files when a learner opens.
         </p>
         {artifacts.map((item) => (
           <div
@@ -184,13 +307,94 @@ export function FlowProblemFields({
           multiple
           accept={FLOW_ARTIFACT_ACCEPT}
           data-flow-artifact-file=""
-          className="block w-full text-xs text-neutral-400 file:mr-3 file:border file:border-white/40 file:bg-black file:px-3 file:py-1.5 file:text-xs file:text-white"
+          className="sr-only"
           disabled={busy || artifacts.length >= FLOW_ARTIFACT_MAX_COUNT}
           onChange={(event) => void onFiles(event.target.files)}
         />
+        <button
+          type="button"
+          className={FLOW_GHOST_BTN}
+          disabled={busy || artifacts.length >= FLOW_ARTIFACT_MAX_COUNT}
+          onClick={() => inputRef.current?.click()}
+        >
+          {busy ? "Uploading…" : "Add files"}
+        </button>
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
-        {busy ? <p className="text-xs text-neutral-500">Uploading…</p> : null}
       </div>
+    </AuthorSection>
+  );
+
+  const canvasDetails = showCanvasSource ? (
+    <AuthorSection label="Work canvas" hook="canvas" split={split}>
+      <div className="space-y-3" data-flow-work-canvas-options="">
+        <div className="space-y-3" data-flow-opening-canvas="">
+          {previewScene ? (
+            <div className="space-y-2">
+              <FlowOpeningCanvasPreview
+                scene={previewScene}
+                onEdit={() => onPrepareOpeningCanvas?.()}
+              />
+              {onClearOpeningCanvas ? (
+                <button
+                  type="button"
+                  className={FLOW_GHOST_BTN}
+                  onClick={() => {
+                    onClearOpeningCanvas();
+                    setPicked("canvas");
+                  }}
+                  data-flow-opening-canvas-clear=""
+                >
+                  Clear canvas
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <button
+                type="button"
+                className={FLOW_SECONDARY_BTN}
+                onClick={onPrepareOpeningCanvas}
+                data-flow-opening-canvas-open=""
+              >
+                {FLOW_OPENING_CANVAS_LABEL}
+              </button>
+              {canvasPrepared ? (
+                <p
+                  className="mt-2 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-opening-canvas-prepared=""
+                >
+                  Canvas prepared
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    </AuthorSection>
+  ) : null;
+
+  const details =
+    source === "artifacts" ? filesDetails : source === "canvas" ? canvasDetails : problemDetails;
+
+  return (
+    <div
+      className={split ? "grid items-start gap-10 lg:grid-cols-2" : "space-y-8"}
+      data-flow-problem-fields=""
+      data-flow-problem-layout={split ? "split" : "stack"}
+    >
+      <div className="min-w-0 space-y-4">
+        <p className={FLOW_FORM_LABEL}>Author</p>
+        <p className="text-xs leading-relaxed text-neutral-500">Choose one source for the problem.</p>
+        {sourceList}
+        {split ? null : details}
+        {split ? null : aside}
+      </div>
+      {split ? (
+        <div className="flex min-w-0 flex-col gap-8">
+          {details}
+          {aside}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -393,6 +393,7 @@ export async function applyHeliosMapToolsForAgent(input: {
           goal: flowInput.goal,
           artifacts: flowInput.artifacts,
           exactProblemOnCanvas: flowInput.exactProblemOnCanvas,
+          generateProblemOnOpen: flowInput.generateProblemOnOpen,
           ownerUserId,
           workspaceId: input.workspaceId,
         });

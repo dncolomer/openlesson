@@ -171,6 +171,9 @@ export async function POST(req: NextRequest) {
         kind,
         body.openingCanvasScene ?? body.opening_canvas_scene,
       ),
+      generateProblemOnOpen: parseExactProblemOnCanvas(
+        body.generateProblemOnOpen ?? body.generate_problem_on_open,
+      ),
       answersModelSeed: parseFlowUnsysSeed(
         unsysSeedFromRequestBody(body) ?? body.answersModelSeed ?? body.answers_model_seed,
       ),
@@ -191,6 +194,7 @@ export async function POST(req: NextRequest) {
         artifacts: accepted.artifacts,
         exactProblemOnCanvas: accepted.exactProblemOnCanvas,
         openingCanvasScene: accepted.openingCanvasScene,
+        generateProblemOnOpen: accepted.generateProblemOnOpen,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
         answersModelSeed: accepted.answersModelSeed,
@@ -219,6 +223,7 @@ export async function POST(req: NextRequest) {
         goal: accepted.goal,
         topic: accepted.topic,
         artifacts: accepted.artifacts,
+        generateProblemOnOpen: accepted.generateProblemOnOpen,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
         answersModelSeed: accepted.answersModelSeed,
@@ -247,6 +252,7 @@ export async function POST(req: NextRequest) {
       artifacts: accepted.artifacts,
       exactProblemOnCanvas: accepted.exactProblemOnCanvas,
       openingCanvasScene: accepted.openingCanvasScene,
+      generateProblemOnOpen: accepted.generateProblemOnOpen,
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
       enforcedChannels: accepted.enforcedChannels,

@@ -150,7 +150,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "edit",
     title: "Create flow",
     description:
-      "Create an owner calibration, verification, or solve flow without placing a block. Arguments: kind (calibration|verification|solve), name, topic (the Problem), optional exactProblemOnCanvas (Solve/Verification: put that Problem on the Work canvas as written). All three kinds share name + topic. Prefer add_block with omitted flowId when you also need to place a tile.",
+      "Create an owner calibration, verification, or solve flow without placing a block. Arguments: kind (calibration|verification|solve), name, then one Author source — topic (optional exactProblemOnCanvas on Solve/Verification), artifacts (problem generated when a learner opens), or openingCanvasScene (Solve/Verification). Prefer add_block with omitted flowId when you also need to place a tile.",
   },
   {
     id: "search_web",

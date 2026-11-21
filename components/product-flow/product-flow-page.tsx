@@ -48,6 +48,7 @@ type LoadedFlow = {
   artifacts?: FlowArtifact[];
   exactProblemOnCanvas?: boolean;
   openingCanvasScene?: IleWorkCanvasScene | null;
+  generateProblemOnOpen?: boolean;
   questions: Array<{ id?: string; text?: string }>;
   durationMinutes?: number;
   publicToken: string;
@@ -71,6 +72,7 @@ export function ProductFlowPage({
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
   const [openingCanvasScene, setOpeningCanvasScene] = useState<IleWorkCanvasScene | null>(null);
+  const [generateProblemOnOpen, setGenerateProblemOnOpen] = useState(false);
   const [authoringCanvas, setAuthoringCanvas] = useState(false);
   const [answersModelSeed, setAnswersModelSeed] = useState<AuthorUnsysModelSeed | null>(null);
   const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
@@ -98,6 +100,7 @@ export function ProductFlowPage({
     setArtifacts(parseFlowArtifacts(next.artifacts));
     setExactProblemOnCanvas(Boolean(next.exactProblemOnCanvas));
     setOpeningCanvasScene(parseFlowOpeningCanvasScene(next.openingCanvasScene));
+    setGenerateProblemOnOpen(Boolean(next.generateProblemOnOpen));
     setAnswersModelSeed(parseFlowUnsysSeed(next.answersModelSeed));
     setEnforcedChannels(parseFlowEnforcedChannels(next.enforcedChannels));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
@@ -122,6 +125,7 @@ export function ProductFlowPage({
           artifacts,
           exactProblemOnCanvas,
           openingCanvasScene,
+          generateProblemOnOpen,
           durationMinutes: minutes,
           answersModelSeed,
           enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
@@ -200,7 +204,6 @@ export function ProductFlowPage({
           <div className="flex min-h-[70vh] flex-col">
             <FlowOpeningCanvasHost
               scene={openingCanvasScene}
-              topicName={name}
               onSave={(next) => {
                 setOpeningCanvasScene(next);
                 setAuthoringCanvas(false);
@@ -228,6 +231,7 @@ export function ProductFlowPage({
             data-calibration-flow-editor={kind === "calibration" ? "" : undefined}
           >
             <FlowProblemFields
+              layout="split"
               problem={problem}
               onProblemChange={setProblem}
               artifacts={artifacts}
@@ -237,30 +241,36 @@ export function ProductFlowPage({
               exactProblemOnCanvas={exactProblemOnCanvas}
               onExactProblemOnCanvasChange={setExactProblemOnCanvas}
               openingCanvasPrepared={flowOpeningCanvasHasContent(openingCanvasScene)}
+              openingCanvasScene={openingCanvasScene}
               onPrepareOpeningCanvas={
                 flowShowsOpeningCanvas(kind) ? () => setAuthoringCanvas(true) : undefined
               }
               onClearOpeningCanvas={() => setOpeningCanvasScene(null)}
+              generateProblemOnOpen={generateProblemOnOpen}
+              onGenerateProblemOnOpenChange={setGenerateProblemOnOpen}
+              flowName={name}
               problemReadOnly
+              aside={
+                flowAuthorShowsCountdown(kind) ? (
+                  <FlowField label="Countdown">
+                    <select
+                      value={minutes}
+                      data-flow-countdown=""
+                      data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
+                      data-verification-flow-minutes={kind === "verification" ? "" : undefined}
+                      onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
+                      className={FLOW_FORM_INPUT}
+                    >
+                      {FLOW_COUNTDOWN_MINUTES.map((value) => (
+                        <option key={value} value={value}>
+                          {value} min
+                        </option>
+                      ))}
+                    </select>
+                  </FlowField>
+                ) : null
+              }
             />
-            {flowAuthorShowsCountdown(kind) ? (
-              <FlowField label="Countdown">
-                <select
-                  value={minutes}
-                  data-flow-countdown=""
-                  data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
-                  data-verification-flow-minutes={kind === "verification" ? "" : undefined}
-                  onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
-                  className={FLOW_FORM_INPUT}
-                >
-                  {FLOW_COUNTDOWN_MINUTES.map((value) => (
-                    <option key={value} value={value}>
-                      {value} min
-                    </option>
-                  ))}
-                </select>
-              </FlowField>
-            ) : null}
           </section>
 
           <section className="space-y-3" data-flow-unsys-editor="">

@@ -18,7 +18,7 @@ export const FLOW_END_KICKERS = {
   verify: "Verify",
 } as const;
 
-/** Language/aesthetics start heading. Solve sessions title this screen Solve. */
+/** Language start heading. Solve sessions title this screen Solve. */
 export const SESSION_WELCOME_TITLES = {
   learn: FLOW_END_KICKERS.learn,
   solve: "Solve",

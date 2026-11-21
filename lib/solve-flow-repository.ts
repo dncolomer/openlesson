@@ -95,6 +95,7 @@ function memorySolveSessionRow(input: {
       ...(input.flow.openingCanvasScene
         ? { openingCanvasScene: input.flow.openingCanvasScene }
         : {}),
+      ...(input.flow.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
       enforcedChannels: serializeFlowEnforcedChannels(input.flow.enforcedChannels),
     },
     created_at: new Date().toISOString(),
@@ -140,6 +141,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     artifacts: parseFlowArtifacts(row.artifacts),
     exactProblemOnCanvas: parseExactProblemOnCanvas(row.exact_problem_on_canvas),
     openingCanvasScene: parseFlowOpeningCanvasSceneForKind("solve", row.opening_canvas_scene),
+    generateProblemOnOpen: parseExactProblemOnCanvas(row.generate_problem_on_open),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
@@ -200,6 +202,7 @@ async function persistCommand(
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       opening_canvas_scene: value.flow.openingCanvasScene,
+      generate_problem_on_open: value.flow.generateProblemOnOpen,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -218,6 +221,7 @@ async function persistCommand(
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       opening_canvas_scene: value.flow.openingCanvasScene,
+      generate_problem_on_open: value.flow.generateProblemOnOpen,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
@@ -272,6 +276,7 @@ async function persistCommand(
           ...(mapped?.openingCanvasScene
             ? { openingCanvasScene: mapped.openingCanvasScene }
             : {}),
+          ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
         },
         parseFlowEnforcedChannels(mapped?.enforcedChannels),
       ),
@@ -303,6 +308,7 @@ async function writeSolveFlow(
       "artifacts",
       "exact_problem_on_canvas",
       "opening_canvas_scene",
+      "generate_problem_on_open",
       "answers_model_seed",
       "enforced_channels",
     ],

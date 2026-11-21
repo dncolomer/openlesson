@@ -5,7 +5,11 @@
  * Callers (UI, routes) must use these functions — do not re-implement them.
  */
 
-import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
+import {
+  normalizeFlowName,
+  parseExactProblemOnCanvas,
+  parseGenerateProblemOnOpen,
+} from "@/lib/product-flow";
 import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
@@ -59,6 +63,7 @@ export type VerificationFlow = {
   artifacts: FlowArtifact[];
   exactProblemOnCanvas: boolean;
   openingCanvasScene?: IleWorkCanvasScene | null;
+  generateProblemOnOpen: boolean;
   /** Author-set run clock. The public start screen does not let the runner change it. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
@@ -527,6 +532,7 @@ export type VerificationCommand =
       artifacts?: unknown;
       exactProblemOnCanvas?: boolean;
       openingCanvasScene?: unknown;
+      generateProblemOnOpen?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -546,6 +552,7 @@ export type VerificationCommand =
       artifacts?: unknown;
       exactProblemOnCanvas?: boolean;
       openingCanvasScene?: unknown;
+      generateProblemOnOpen?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -604,6 +611,7 @@ export function applyVerificationCommand(
         "verification",
         command.openingCanvasScene,
       ),
+      generateProblemOnOpen: parseGenerateProblemOnOpen(command.generateProblemOnOpen),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
@@ -646,6 +654,10 @@ export function applyVerificationCommand(
         command.openingCanvasScene === undefined
           ? current.openingCanvasScene ?? null
           : parseFlowOpeningCanvasSceneForKind("verification", command.openingCanvasScene),
+      generateProblemOnOpen:
+        command.generateProblemOnOpen === undefined
+          ? Boolean(current.generateProblemOnOpen)
+          : parseGenerateProblemOnOpen(command.generateProblemOnOpen),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

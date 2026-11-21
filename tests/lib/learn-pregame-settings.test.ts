@@ -485,15 +485,14 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(welcome).not.toContain("data-ile-pregame-economy-map");
     expect(welcome).toContain("lg:grid-cols-2");
     expect(picker).toContain("line-clamp-3");
-    const aestheticUi = read("components/AestheticPicker.tsx");
-    const aesAt = welcome.indexOf("<AestheticPicker");
-    expect(aesAt).toBeGreaterThan(-1);
-    expect(welcome.slice(aesAt, aesAt + 500)).toContain("fillHeight");
+    expect(welcome).not.toContain("<AestheticPicker");
+    expect(welcome).not.toContain("data-ile-aesthetic-picker");
+    expect(welcome).toContain("TapAestheticSection");
+    expect(welcome).toContain("selectedAesthetic?.previewImage");
     expect(welcome).not.toContain("ile-pregame-panel-other");
-    expect(aestheticUi).toContain("data-ile-aesthetic-picker");
-    expect(aestheticUi).toContain("data-ile-aesthetic-vibe");
-    expect(aestheticUi).toContain("aestheticPackageVibe");
-    expect(aestheticUi).toContain("auto-rows-fr");
+    expect(read("components/session-view/use-aesthetic-packages.ts")).toContain(
+      "pickRandomAestheticPackage",
+    );
     expect(aestheticPackageVibe("architecture")).toMatch(/teal|palace|forest/i);
     expect(aestheticPackageVibe("Greco-futurism")).toMatch(/marble|colonnade/i);
     expect(aestheticPackageVibe("galactic-stoneworks")).toMatch(/forest|window/i);

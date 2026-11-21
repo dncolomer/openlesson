@@ -14,6 +14,7 @@ export const DASHBOARD_TABS = [
   "flows",
   "regions",
   "usage",
+  "upgrade",
   "organization",
   "integrations",
   "sessions",
@@ -60,6 +61,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     label: "Account",
     items: [
       { id: "usage", label: "Usage" },
+      { id: "upgrade", label: "Buy more credits" },
       { id: "organization", label: "Organization" },
       { id: "integrations", label: "Integrations" },
     ],
@@ -150,7 +152,6 @@ export function isDashboardNavTabItem(
 
 /** Query `tab` → sidebar section. Retired map/shop/help tabs land on Home. */
 export function parseDashboardTab(value: unknown): DashboardTab {
-  if (value === "upgrade") return "usage";
   if (
     value === "practice" ||
     value === "practice_performance" ||
@@ -231,6 +232,7 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";
+  if (tab === "upgrade") return "Buy more credits";
   if (tab === "sessions") return "Sessions";
   if (tab === "config") return "Config";
   return "Home";

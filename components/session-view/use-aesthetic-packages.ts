@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
+import {
+  fetchAestheticPackages,
+  pickRandomAestheticPackage,
+  type AestheticPackage,
+} from "@/lib/aesthetics";
 
 export function useAestheticPackages() {
   const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
@@ -14,8 +18,13 @@ export function useAestheticPackages() {
     fetchAestheticPackages()
       .then((packages) => {
         if (cancelled) return;
-        setAestheticPackages(packages);
-        setSelectedAestheticId((current) => current ?? packages[0]?.id ?? null);
+        const chosen = pickRandomAestheticPackage(packages);
+        setAestheticPackages(
+          chosen
+            ? packages.map((pkg) => (pkg.id === chosen.id ? chosen : pkg))
+            : packages,
+        );
+        setSelectedAestheticId((current) => current ?? chosen?.id ?? null);
       })
       .catch(() => {
         if (cancelled) return;

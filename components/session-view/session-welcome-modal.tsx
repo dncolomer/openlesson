@@ -1,6 +1,5 @@
 "use client";
 
-import { AestheticPicker } from "@/components/AestheticPicker";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
@@ -27,11 +26,7 @@ export function SessionWelcomeModal({
   isPreparing,
   tutoringLanguage,
   onTutoringLanguageChange,
-  aestheticPackages,
   selectedAesthetic,
-  selectedAestheticId,
-  onSelectAesthetic,
-  aestheticsLoading,
   chapterPlanStatus,
   powExpense: _powExpense = ILE_POW_EXPENSE_DEFAULT,
   onPowExpenseChange: _onPowExpenseChange,
@@ -205,16 +200,7 @@ export function SessionWelcomeModal({
                 </button>
               </div>
             </div>
-            <TapAestheticSection bgImage={selectedAesthetic?.previewImage ?? null} kind="shortcuts">
-              <AestheticPicker
-                packages={aestheticPackages}
-                selectedId={selectedAesthetic?.id ?? selectedAestheticId}
-                onSelect={onSelectAesthetic}
-                disabled={isButtonDisabled}
-                loading={aestheticsLoading}
-                fillHeight
-              />
-            </TapAestheticSection>
+            <TapAestheticSection bgImage={selectedAesthetic?.previewImage ?? null} kind="shortcuts" />
           </div>
     </SessionStartShell>
   );

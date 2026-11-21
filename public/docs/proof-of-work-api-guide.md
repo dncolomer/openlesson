@@ -13,7 +13,7 @@ Authenticate with `Authorization: Bearer <api_key>`. MCP (`POST /api/mcp`) has 1
 
 | Method | Path | MCP tool | Purpose |
 | :--- | :--- | :--- | :--- |
-| `GET` / `POST` | `/api/v3/flows` | `list_flows` / `create_flow` | List or create independent Solve, Calibration, or Verification (`kind`). Create body matches the dashboard wizard (Problem, files, Unsys model, exact problem on canvas, channels). |
+| `GET` / `POST` | `/api/v3/flows` | `list_flows` / `create_flow` | List or create independent Solve, Calibration, or Verification (`kind`). Create uses one Author source: written `topic` (optional `exact_problem_on_canvas`), files (problem generated when a learner opens), or `opening_canvas_scene`. |
 | `POST` | `/api/v3/flows/files` | `upload_flow_file` | Upload a Problem-context file; attach `xai_file_id` on create/update. |
 | `POST` | `/api/v3/flows/unsys-seed` | `generate_flow_unsys_seed` | Generate the Unsys model from the Problem and artifacts. |
 | `GET` / `PATCH` / `DELETE` | `/api/v3/flows/{flow_id}` | `get_flow` / `update_flow` / `delete_flow` | Read, update, or delete one flow. |
@@ -27,7 +27,7 @@ MCP tools: `list_flows`, `create_flow`, `upload_flow_file`, `generate_flow_unsys
 1. `list_flows`
 2. `upload_flow_file` (optional)
 3. `generate_flow_unsys_seed` (optional)
-4. `create_flow` with `kind` `solve` | `calibration` | `verification` and wizard fields (`topic`, `artifacts`, `answers_model_seed`, `exact_problem_on_canvas`, `enforced_channels`, `duration_minutes`)
+4. `create_flow` with `kind` `solve` | `calibration` | `verification`. Choose one Author source: `topic` (optional `exact_problem_on_canvas`), `artifacts` (problem generated when a learner opens), or `opening_canvas_scene`. Also `answers_model_seed`, `enforced_channels`, `duration_minutes`.
 5. `get_flow`
 6. `update_flow`
 7. `delete_flow` when a flow should be removed

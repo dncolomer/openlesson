@@ -35,6 +35,7 @@ import {
   type SessionBranchContinuation,
 } from "@/lib/session-branch-model-generate";
 import { openingWorkForSessionField } from "@/lib/learn-opening-work-generate";
+import { openingWorkFromArtifactProblem } from "@/lib/flow-problem-generate";
 import { sessionBranchParentsNeedingGrowth } from "@/lib/session-branch-model";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
@@ -51,6 +52,7 @@ type OpeningGenerateContext = {
   fileIds?: string[];
   exactProblemOnCanvas?: boolean;
   openingCanvasScene?: IleWorkCanvasScene | null;
+  generateProblemOnOpen?: boolean;
 };
 
 async function openingWorkPayload(
@@ -65,6 +67,21 @@ async function openingWorkPayload(
   const openingCanvasScene = parseFlowOpeningCanvasScene(generateContext.openingCanvasScene);
   if (flowOpeningCanvasHasContent(openingCanvasScene)) {
     return { openingWork: "", openingWorkExact: false, openingCanvasScene };
+  }
+  const generated = await openingWorkFromArtifactProblem({
+    generateProblemOnOpen: Boolean(generateContext.generateProblemOnOpen),
+    exactProblemOnCanvas: Boolean(generateContext.exactProblemOnCanvas),
+    artifacts: generateContext.artifacts,
+    name: plan.chapterTitle,
+    problem: generateContext.problem || plan.chapterBrief,
+    kind: generateContext.kind,
+  });
+  if (generated?.openingWork) {
+    return {
+      openingWork: generated.openingWork,
+      openingWorkExact: generated.openingWorkExact,
+      openingCanvasScene: null,
+    };
   }
   if (generateContext.exactProblemOnCanvas) {
     const openingWork = exactProblemOpeningWork(
@@ -136,6 +153,7 @@ export async function POST(request: NextRequest) {
             kind: "calibration",
             problem: flow.topic || flow.goal,
             artifacts: flow.artifacts,
+            generateProblemOnOpen: flow.generateProblemOnOpen,
           };
         }
       } else if (tokenedEarly?.kind === "verification") {
@@ -147,6 +165,7 @@ export async function POST(request: NextRequest) {
             artifacts: flow.artifacts,
             exactProblemOnCanvas: flow.exactProblemOnCanvas,
             openingCanvasScene: flow.openingCanvasScene,
+            generateProblemOnOpen: flow.generateProblemOnOpen,
           };
         }
       } else if (tokenedEarly?.kind === "solve") {
@@ -158,6 +177,7 @@ export async function POST(request: NextRequest) {
             artifacts: flow.artifacts,
             exactProblemOnCanvas: flow.exactProblemOnCanvas,
             openingCanvasScene: flow.openingCanvasScene,
+            generateProblemOnOpen: flow.generateProblemOnOpen,
           };
         }
       }
@@ -182,6 +202,7 @@ export async function POST(request: NextRequest) {
               kind: "calibration",
               problem: flow.topic || flow.goal,
               artifacts: flow.artifacts,
+              generateProblemOnOpen: flow.generateProblemOnOpen,
             };
           }
         } else if (tokened?.kind === "verification") {
@@ -196,6 +217,7 @@ export async function POST(request: NextRequest) {
               artifacts: flow.artifacts,
               exactProblemOnCanvas: flow.exactProblemOnCanvas,
               openingCanvasScene: flow.openingCanvasScene,
+              generateProblemOnOpen: flow.generateProblemOnOpen,
             };
           }
         } else if (tokened?.kind === "solve") {
@@ -210,6 +232,7 @@ export async function POST(request: NextRequest) {
               artifacts: flow.artifacts,
               exactProblemOnCanvas: flow.exactProblemOnCanvas,
               openingCanvasScene: flow.openingCanvasScene,
+              generateProblemOnOpen: flow.generateProblemOnOpen,
             };
           }
         }
@@ -245,6 +268,12 @@ export async function POST(request: NextRequest) {
                 openingCanvasScene: parseFlowOpeningCanvasScene(meta.openingCanvasScene),
               };
             }
+            if (meta?.generateProblemOnOpen === true) {
+              generateContext = {
+                ...generateContext,
+                generateProblemOnOpen: true,
+              };
+            }
           }
         }
         if (flowId) {
@@ -257,6 +286,7 @@ export async function POST(request: NextRequest) {
               artifacts: solve.artifacts,
               exactProblemOnCanvas: solve.exactProblemOnCanvas,
               openingCanvasScene: solve.openingCanvasScene,
+              generateProblemOnOpen: solve.generateProblemOnOpen,
             };
           } else {
             const verify = await getVerificationFlowById(flowId);
@@ -268,6 +298,7 @@ export async function POST(request: NextRequest) {
                 artifacts: verify.artifacts,
                 exactProblemOnCanvas: verify.exactProblemOnCanvas,
                 openingCanvasScene: verify.openingCanvasScene,
+                generateProblemOnOpen: verify.generateProblemOnOpen,
               };
             } else {
               const calibrate = await getCalibrationFlowById(flowId);
@@ -277,6 +308,7 @@ export async function POST(request: NextRequest) {
                   kind: "calibration",
                   problem: calibrate.topic || calibrate.goal,
                   artifacts: calibrate.artifacts,
+                  generateProblemOnOpen: calibrate.generateProblemOnOpen,
                 };
               }
             }

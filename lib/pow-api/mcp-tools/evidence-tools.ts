@@ -10,6 +10,7 @@ import {
   KNOWLEDGE_REGION_API_BASE,
 } from "@/lib/api/agent-api-paths";
 import { FLOW_CHANNEL_IDS } from "@/lib/flow-channels";
+import { FLOW_AUTHORING_CREATE_SPEC } from "@/lib/flow-authoring-spec";
 
 const CATALOG_SIZE_ENUM = [4, 8, 16] as const;
 const PRODUCT_FLOW_KIND_ENUM = ["solve", "calibration", "verification"] as const;
@@ -55,7 +56,8 @@ const FLOW_WRITE_PROPERTIES = {
   name: { type: "string" },
   topic: {
     type: "string",
-    description: "Problem text (wizard Author step). Calibration stores the same string as goal.",
+    description:
+      "Written problem source. Required unless artifacts/files (problem generated when a learner opens) or opening_canvas_scene on Solve/Verification. Calibration stores the same string as goal.",
   },
   goal: { type: "string" },
   problem: { type: "string" },
@@ -68,7 +70,7 @@ const FLOW_WRITE_PROPERTIES = {
   artifacts: {
     type: "array",
     description:
-      "Problem-context files. Pass xai_file_id from upload_flow_file, or inline base64 data.",
+      "From files source, or Unsys context on a written problem. Pass xai_file_id from upload_flow_file, or inline base64 data. As the problem source, a new statement is generated when a learner opens.",
     items: ARTIFACT_ITEM_SCHEMA,
   },
   files: {
@@ -79,7 +81,17 @@ const FLOW_WRITE_PROPERTIES = {
   exact_problem_on_canvas: {
     type: "boolean",
     description:
-      "Solve / Verification: put the Problem on the Work canvas as written (no LLM probe rewrite). Default false. Ignored for Calibration.",
+      "Solve / Verification, written problem source only. Puts topic on the Work canvas as written. Ignored when artifacts are the problem source, with opening_canvas_scene, or for Calibration. Default false.",
+  },
+  generate_problem_on_open: {
+    type: "boolean",
+    description:
+      "From files source. Implied true when artifacts are the problem: a new statement is generated when a learner opens. Topic may be empty. Ignored when opening_canvas_scene is set.",
+  },
+  opening_canvas_scene: {
+    type: "object",
+    description:
+      "Prepared board source (Solve / Verification). The Work canvas is the problem. Ignored for Calibration. Takes priority over generate_problem_on_open and exact_problem_on_canvas.",
   },
   answers_model_seed: {
     type: ["object", "string"],
@@ -136,7 +148,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
     annotations: { readOnlyHint: true },
   },
   create_flow: {
-    description: `Create a Solve, Calibration, or Verification flow (same options as the dashboard wizard: Problem, files, Unsys model, exact problem on canvas, channels). REST: POST ${FLOW_API_BASE}.`,
+    description: `Create a Solve, Calibration, or Verification flow (same Author sources as the dashboard wizard). REST: POST ${FLOW_API_BASE}. ${FLOW_AUTHORING_CREATE_SPEC}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -203,7 +215,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
     annotations: { readOnlyHint: true },
   },
   update_flow: {
-    description: `Update a Solve, Calibration, or Verification flow (same wizard options as create_flow). REST: PATCH ${FLOW_API_BASE}/{flow_id}.`,
+    description: `Update a Solve, Calibration, or Verification flow (same Author sources as create_flow). REST: PATCH ${FLOW_API_BASE}/{flow_id}. ${FLOW_AUTHORING_CREATE_SPEC}`,
     inputSchema: {
       type: "object",
       properties: {

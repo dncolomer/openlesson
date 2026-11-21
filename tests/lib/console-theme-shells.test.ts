@@ -47,8 +47,13 @@ describe("console theme shells", () => {
         tutoringLanguage: "en",
         onTutoringLanguageChange: () => {},
         aestheticPackages: [],
-        selectedAesthetic: undefined,
-        selectedAestheticId: null,
+        selectedAesthetic: {
+          id: "lunar",
+          name: "Lunar",
+          images: ["/aesthetics/lunar/preview.jpeg"],
+          previewImage: "/aesthetics/lunar/preview.jpeg",
+        },
+        selectedAestheticId: "lunar",
         onSelectAesthetic: () => {},
         aestheticsLoading: false,
         chapterPlanStatus: "exists",
@@ -69,7 +74,9 @@ describe("console theme shells", () => {
     expect(html).not.toContain("data-ile-silence-lock-minutes");
     expect(html).not.toContain("data-ile-learn-presets");
     expect(html).not.toContain("data-ile-session-insight-goal");
-    expect(html).toContain("data-ile-aesthetic-picker");
+    expect(html).not.toContain("data-ile-aesthetic-picker");
+    expect(html).toContain("data-tap-aesthetic-section");
+    expect(html).toContain("/aesthetics/lunar/preview.jpeg");
     expect(html).not.toContain("session.getStarted");
 
     const confirmed = renderToStaticMarkup(
@@ -97,7 +104,8 @@ describe("console theme shells", () => {
     expect(confirmed).not.toContain("data-ile-silence-lock-minutes");
     expect(confirmed).not.toContain("data-ile-learn-presets");
     expect(confirmed).not.toContain("data-ile-session-insight-goal");
-    expect(confirmed).toContain("data-ile-aesthetic-picker");
+    expect(confirmed).not.toContain("data-ile-aesthetic-picker");
+    expect(confirmed).toContain("data-tap-aesthetic-section");
     expect(confirmed).toContain("data-ile-confirm-settings");
     expect(confirmed).not.toContain("session.getStarted");
     expect(confirmed).toContain("Learn");
@@ -126,7 +134,8 @@ describe("console theme shells", () => {
       }),
     );
     expect(solveHtml).toContain("Solve");
-    expect(solveHtml).toContain("data-ile-aesthetic-picker");
+    expect(solveHtml).not.toContain("data-ile-aesthetic-picker");
+    expect(solveHtml).toContain("data-tap-aesthetic-section");
     expect(solveHtml).not.toContain(">Learn<");
   });
 

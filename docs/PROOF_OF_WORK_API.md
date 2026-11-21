@@ -28,7 +28,7 @@ Each key is a single full-access token.
 | Method | Path | MCP tool | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | `list_flows` | List accessible Solve, Calibration, and Verification flows. |
-| `POST` | `/` | `create_flow` | Create an independent flow (`kind`: `solve` \| `calibration` \| `verification`). Body matches the dashboard wizard: `name`, `topic` (Problem), `artifacts` / `files`, `answers_model_seed` or `generate_unsys`, `exact_problem_on_canvas` (Solve / Verification), `enforced_channels` (Solve / Verification), `duration_minutes` (Verification / Calibration). |
+| `POST` | `/` | `create_flow` | Create an independent flow (`kind`: `solve` \| `calibration` \| `verification`). Choose one Author source: `topic` (optional `exact_problem_on_canvas` on Solve / Verification), `artifacts` / `files` (problem generated when a learner opens), or `opening_canvas_scene` (Solve / Verification). Also `answers_model_seed` or `generate_unsys`, `enforced_channels` (Solve / Verification), `duration_minutes` (Verification / Calibration). |
 | `POST` | `/files` | `upload_flow_file` | Upload a Problem-context file. Pass `xai_file_id` in `artifacts`. |
 | `POST` | `/unsys-seed` | `generate_flow_unsys_seed` | Generate the Unsys model from the Problem and artifacts. |
 | `GET` | `/{flow_id}` | `get_flow` | Read one flow. |

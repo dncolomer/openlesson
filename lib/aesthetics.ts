@@ -104,6 +104,33 @@ export function pickWorkspaceCoverFromPool(
   return images[index] ?? null;
 }
 
+/**
+ * Session start picks one package at random. An org custom set arrives as a
+ * single package; the preview still is then a random image from that set.
+ */
+export function pickRandomAestheticPackage(
+  packages: readonly AestheticPackage[],
+  random: () => number = Math.random,
+): AestheticPackage | undefined {
+  if (packages.length === 0) return undefined;
+  const pkgIndex = Math.min(
+    packages.length - 1,
+    Math.max(0, Math.floor(random() * packages.length)),
+  );
+  const pkg = packages[pkgIndex];
+  if (!pkg) return undefined;
+  const pool =
+    pkg.images.length > 0 ? pkg.images : pkg.previewImage ? [pkg.previewImage] : [];
+  if (pool.length === 0) return pkg;
+  const imageIndex = Math.min(
+    pool.length - 1,
+    Math.max(0, Math.floor(random() * pool.length)),
+  );
+  const previewImage = pool[imageIndex] ?? pkg.previewImage;
+  if (previewImage === pkg.previewImage) return pkg;
+  return { ...pkg, previewImage };
+}
+
 /** Assign distinct images to a fixed number of UI slots (cycles only if pool is smaller). */
 export function aestheticImagesForSlots(count: number, images = FALLBACK_AESTHETIC_IMAGES) {
   const pool = images.length > 0 ? images : FALLBACK_AESTHETIC_IMAGES;

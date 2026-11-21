@@ -30,6 +30,8 @@ import {
   FLOW_FORM_INPUT,
   FLOW_PRIMARY_BTN,
   FLOW_SECONDARY_BTN,
+  PRODUCT_CREATE_SHELL,
+  PRODUCT_CREATE_SHELL_FILL,
   FlowField,
   FlowFormCard,
   FlowFormHeader,
@@ -58,8 +60,13 @@ function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): 
   if (step === "publish") {
     return "Review, then publish. The public run asks for identification first.";
   }
-  if (flowAuthorShowsCountdown(kind)) return "Problem, optional files, and countdown.";
-  return "The problem learners work on, and optional files used to generate the unsys model.";
+  if (kind === "calibration") {
+    return "Choose one: write the problem or attach files (a problem is written when a learner opens), and set the countdown.";
+  }
+  if (flowAuthorShowsCountdown(kind)) {
+    return "Choose one: write the problem, attach files (a problem is written when a learner opens), or prepare the board, and set the countdown.";
+  }
+  return "Choose one: write the problem, attach files (a problem is written when a learner opens), or prepare the board.";
 }
 
 export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind }) {
@@ -114,6 +121,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           artifacts: accepted.artifacts,
           exactProblemOnCanvas: accepted.exactProblemOnCanvas,
           openingCanvasScene: accepted.openingCanvasScene,
+          generateProblemOnOpen: accepted.generateProblemOnOpen,
           actionCatalog: accepted.actionCatalog,
           durationMinutes: accepted.durationMinutes,
           answersModelSeed: accepted.answersModelSeed,
@@ -185,11 +193,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
       activeTab={dashboardTabForProductSurface(kind)}
     >
       <div
-        className={
-          fillViewport
-            ? "mx-auto flex min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden"
-            : "mx-auto w-full max-w-3xl space-y-6"
-        }
+        className={fillViewport ? PRODUCT_CREATE_SHELL_FILL : PRODUCT_CREATE_SHELL}
         data-flow-wizard=""
         data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}
@@ -208,7 +212,6 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         {authoringCanvas ? (
           <FlowOpeningCanvasHost
             scene={draft.openingCanvasScene}
-            topicName={draft.name}
             onSave={(openingCanvasScene) => {
               patch({ openingCanvasScene });
               setAuthoringCanvas(false);
@@ -219,33 +222,35 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
 
         {!authoringCanvas && step === "name" ? (
           <FlowFormCard>
-            <FlowField label="Type">
-              <select
-                className={FLOW_FORM_INPUT}
-                value={draft.kind}
-                disabled={Boolean(lockedKind)}
-                data-flow-kind=""
-                onChange={(event) => {
-                  const next = parseProductFlowKind(event.target.value);
-                  if (next) patch({ kind: next });
-                }}
-              >
-                {PRODUCT_FLOW_KINDS.map((item) => (
-                  <option key={item} value={item}>
-                    {productFlowKindLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </FlowField>
-            <FlowField label="Flow name">
-              <input
-                value={draft.name}
-                onChange={(event) => patch({ name: event.target.value })}
-                placeholder="Flow name"
-                data-flow-name=""
-                className={FLOW_FORM_INPUT}
-              />
-            </FlowField>
+            <div className="grid gap-6 md:grid-cols-2">
+              <FlowField label="Type">
+                <select
+                  className={FLOW_FORM_INPUT}
+                  value={draft.kind}
+                  disabled={Boolean(lockedKind)}
+                  data-flow-kind=""
+                  onChange={(event) => {
+                    const next = parseProductFlowKind(event.target.value);
+                    if (next) patch({ kind: next });
+                  }}
+                >
+                  {PRODUCT_FLOW_KINDS.map((item) => (
+                    <option key={item} value={item}>
+                      {productFlowKindLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </FlowField>
+              <FlowField label="Flow name">
+                <input
+                  value={draft.name}
+                  onChange={(event) => patch({ name: event.target.value })}
+                  placeholder="Flow name"
+                  data-flow-name=""
+                  className={FLOW_FORM_INPUT}
+                />
+              </FlowField>
+            </div>
             {actions}
           </FlowFormCard>
         ) : null}
@@ -258,6 +263,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
             data-calibration-flow-editor={kind === "calibration" ? "" : undefined}
           >
             <FlowProblemFields
+              layout="split"
               problem={problem}
               onProblemChange={setProblem}
               artifacts={draft.artifacts}
@@ -268,33 +274,41 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
                 patch({ exactProblemOnCanvas })
               }
               openingCanvasPrepared={flowOpeningCanvasHasContent(draft.openingCanvasScene)}
+              openingCanvasScene={draft.openingCanvasScene}
               onPrepareOpeningCanvas={
                 flowShowsOpeningCanvas(kind)
                   ? () => setAuthoringCanvas(true)
                   : undefined
               }
               onClearOpeningCanvas={() => patch({ openingCanvasScene: null })}
+              generateProblemOnOpen={draft.generateProblemOnOpen}
+              onGenerateProblemOnOpenChange={(generateProblemOnOpen) =>
+                patch({ generateProblemOnOpen })
+              }
+              flowName={draft.name}
+              aside={
+                flowAuthorShowsCountdown(kind) ? (
+                  <FlowField label="Countdown">
+                    <select
+                      value={draft.durationMinutes}
+                      data-flow-countdown=""
+                      data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
+                      data-verification-flow-minutes={kind === "verification" ? "" : undefined}
+                      onChange={(event) =>
+                        patch({ durationMinutes: flowCountdownMinutes(event.target.value) })
+                      }
+                      className={FLOW_FORM_INPUT}
+                    >
+                      {FLOW_COUNTDOWN_MINUTES.map((value) => (
+                        <option key={value} value={value}>
+                          {value} min
+                        </option>
+                      ))}
+                    </select>
+                  </FlowField>
+                ) : null
+              }
             />
-            {flowAuthorShowsCountdown(kind) ? (
-              <FlowField label="Countdown">
-                <select
-                  value={draft.durationMinutes}
-                  data-flow-countdown=""
-                  data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
-                  data-verification-flow-minutes={kind === "verification" ? "" : undefined}
-                  onChange={(event) =>
-                    patch({ durationMinutes: flowCountdownMinutes(event.target.value) })
-                  }
-                  className={FLOW_FORM_INPUT}
-                >
-                  {FLOW_COUNTDOWN_MINUTES.map((value) => (
-                    <option key={value} value={value}>
-                      {value} min
-                    </option>
-                  ))}
-                </select>
-              </FlowField>
-            ) : null}
             {actions}
           </FlowFormCard>
         ) : null}
@@ -346,6 +360,14 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               {draft.exactProblemOnCanvas && kind !== "calibration" ? (
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                   Exact problem on canvas
+                </p>
+              ) : null}
+              {draft.generateProblemOnOpen ? (
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-publish-generate-on-open=""
+                >
+                  Generate problem on open
                 </p>
               ) : null}
               {flowOpeningCanvasHasContent(draft.openingCanvasScene) ? (

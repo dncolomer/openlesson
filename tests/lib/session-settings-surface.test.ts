@@ -33,6 +33,8 @@ describe("shared TAP settings surface", () => {
     expect(learn).toContain("<TapBriefingConfig");
     expect(learn).toContain("showDurationPicker={false}");
     expect(learn).toContain("<TapAestheticSection");
+    expect(learn).not.toContain("AestheticPicker");
+    expect(learn).toContain("selectedAesthetic?.previewImage");
     expect(learn).toContain('kind="shortcuts"');
     expect(learn).toContain("conversationLanguage={tutoringLanguage}");
     expect(learn).toContain("wideLanguage");

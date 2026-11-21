@@ -7,7 +7,8 @@ import type { SpokenLocale } from "@/lib/tutoring-languages";
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /**
- * Public Solve / Verification / Calibration start: language, aesthetic, Start Session.
+ * Public Solve / Verification / Calibration start: language, Start Session.
+ * The chosen aesthetic (random, or the org custom set) is the right-side image.
  * Same shell as Solve (`SessionWelcomeModal`). Duration is not chosen here.
  */
 export function ProductFlowSetupScreen({

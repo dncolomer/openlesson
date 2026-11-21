@@ -4,7 +4,7 @@
  * sounding. It does not pick one verification question.
  */
 
-import { normalizeFlowName } from "@/lib/product-flow";
+import { normalizeFlowName, parseGenerateProblemOnOpen } from "@/lib/product-flow";
 import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import {
@@ -40,6 +40,7 @@ export type CalibrationFlow = {
   topic: string;
   questions: CalibrateQuestion[];
   artifacts: FlowArtifact[];
+  generateProblemOnOpen: boolean;
   /** Countdown chosen when the flow is created, in minutes. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
@@ -151,6 +152,7 @@ export type CalibrationCommand =
       problem?: string;
       questions?: unknown;
       artifacts?: unknown;
+      generateProblemOnOpen?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -169,6 +171,7 @@ export type CalibrationCommand =
       problem?: string;
       questions?: unknown;
       artifacts?: unknown;
+      generateProblemOnOpen?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
       answersModelSeed?: unknown;
@@ -259,6 +262,7 @@ export function applyCalibrationCommand(
       topic: draft.topic,
       questions: draft.questions,
       artifacts: draft.artifacts,
+      generateProblemOnOpen: parseGenerateProblemOnOpen(command.generateProblemOnOpen),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
@@ -298,6 +302,10 @@ export function applyCalibrationCommand(
         command.artifacts === undefined
           ? parseFlowArtifacts(current.artifacts)
           : parseFlowArtifacts(command.artifacts),
+      generateProblemOnOpen:
+        command.generateProblemOnOpen === undefined
+          ? Boolean(current.generateProblemOnOpen)
+          : parseGenerateProblemOnOpen(command.generateProblemOnOpen),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

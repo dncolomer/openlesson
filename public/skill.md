@@ -4,7 +4,7 @@ Use this skill when ChatGPT, Claude, or another agent should authorize against U
 
 Public agent families:
 
-1. **Flow management** — `GET/POST /api/v3/flows`, `GET/PATCH/DELETE /api/v3/flows/{flow_id}`, `POST /api/v3/flows/files`, `POST /api/v3/flows/unsys-seed`. Create Solve, Calibration, and Verification with `create_flow` using the same wizard options (Problem, files, Unsys model, exact problem on canvas, channels). Flows are independent.
+1. **Flow management** — `GET/POST /api/v3/flows`, `GET/PATCH/DELETE /api/v3/flows/{flow_id}`, `POST /api/v3/flows/files`, `POST /api/v3/flows/unsys-seed`. Create Solve, Calibration, and Verification with `create_flow` using one Author source: written `topic` (optional `exact_problem_on_canvas`), files (problem generated when a learner opens), or `opening_canvas_scene`. Flows are independent.
 2. **Knowledge region candidate** — `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}`. Optional query `space` (`path`, `path+audio`, …).
 
 **Human-readable spec:** `/docs/proof-of-work-api`  
@@ -58,7 +58,7 @@ Content-Type: application/json
 1. `list_flows` — independent Solve, Calibration, and Verification flows
 2. `upload_flow_file` for Problem-context files (PDF, text, image)
 3. `generate_flow_unsys_seed` from the Problem and artifacts (or pass `answers_model_seed` / `generate_unsys` on create)
-4. `create_flow` with `kind` `solve` | `calibration` | `verification`, plus wizard fields: `topic`, `artifacts`, `exact_problem_on_canvas`, `enforced_channels`, `answers_model_seed`, `duration_minutes`
+4. `create_flow` with `kind` `solve` | `calibration` | `verification`. Choose one Author source: `topic` (optional `exact_problem_on_canvas`), `artifacts` (`generate_problem_on_open` — a new problem when a learner opens), or `opening_canvas_scene`. Also `enforced_channels`, `answers_model_seed`, `duration_minutes`.
 5. `get_flow`
 6. `update_flow`
 7. `delete_flow` when a flow should be removed

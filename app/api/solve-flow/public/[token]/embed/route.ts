@@ -41,6 +41,7 @@ export async function POST(
     runId: sessionId,
     identity: String(body.identity || access.identity || "").trim() || access.identity,
     source: playCopy ? "play_copy" : "solve",
+    linkLabel: access.linkLabel,
     model: sessionBranchModelFromUnknown(body.model),
     sequence,
     pow: parsePow(body.pow),

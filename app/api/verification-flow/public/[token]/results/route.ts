@@ -7,6 +7,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { completeFlowEmbedding } from "@/lib/flow-embedding";
 import { persistCompletedFlowEmbedding } from "@/lib/flow-embedding-store";
 import { addPublicFlowResult, getVerificationFlowByToken } from "@/lib/verification-flow-repository";
+import { getFlowLinkByToken } from "@/lib/flow-links";
 import { policyScoreFromUnknown } from "@/lib/session-policy-score";
 
 export const runtime = "nodejs";
@@ -55,6 +56,7 @@ export async function POST(
     return jsonError(status, saved.reason);
   }
   if (saved.result) {
+    const link = await getFlowLinkByToken(token);
     await persistCompletedFlowEmbedding({
       workspaceId: saved.result.workspaceId,
       ownerUserId: flow?.ownerUserId,
@@ -63,6 +65,7 @@ export async function POST(
       runId: saved.result.id,
       identity: saved.result.identity,
       source,
+      linkLabel: link?.label ?? null,
       raw: embedding.raw,
       audioEnforced: flow?.enforcedChannels.audio,
     });

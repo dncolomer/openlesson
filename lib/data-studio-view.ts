@@ -89,6 +89,7 @@ export type DataStudioEmbeddingRow = {
   embedding_model_id?: string | null;
   created_at?: string | null;
   source?: string | null;
+  link_label?: string | null;
   user_id?: string | null;
   is_play_copy?: boolean | null;
   owner_user_id?: string | null;

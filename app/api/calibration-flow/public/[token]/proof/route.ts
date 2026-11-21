@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { addCalibrationProof, getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
+import { getFlowLinkByToken } from "@/lib/flow-links";
 import { persistCompletedFlowEmbedding } from "@/lib/flow-embedding-store";
 import { sessionBranchModelFromUnknown } from "@/lib/session-branch-model";
 
@@ -33,6 +34,7 @@ export async function POST(
       ? JSON.stringify(body.metadata)
       : JSON.stringify(stored.proof?.events ?? []);
   if (stored.proof && flow) {
+    const link = await getFlowLinkByToken(token);
     await persistCompletedFlowEmbedding({
       workspaceId: stored.proof.workspaceId,
       ownerUserId: flow.ownerUserId,
@@ -41,6 +43,7 @@ export async function POST(
       runId: stored.proof.id,
       identity: stored.proof.identity,
       source: "sounding",
+      linkLabel: link?.label ?? null,
       model: sessionBranchModelFromUnknown(body.model),
       catalogSize: body.catalogSize ?? flow.actionCatalog,
       sequence: null,

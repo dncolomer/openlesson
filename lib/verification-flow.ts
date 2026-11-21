@@ -566,7 +566,14 @@ export type VerificationCommand =
       enforcedChannels?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
-  | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
+  | {
+      type: "claim";
+      flowId: string;
+      identity: string;
+      runnerUserId?: string | null;
+      flowLinkLabel?: string | null;
+      flowLinkId?: string | null;
+    }
   | {
       type: "addResult";
       flowId: string;

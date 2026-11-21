@@ -150,6 +150,19 @@ describe("knowledge region figure", () => {
       }),
     ).toBe("analysis");
     expect(
+      knowledgeRegionPointKind({
+        origin: "human",
+        identity: "K4M9Q2",
+      }),
+    ).toBe("analysis");
+    expect(
+      knowledgeRegionPointKind({
+        origin: "human",
+        identity: "K4M9Q2",
+        linkLabel: "reference",
+      }),
+    ).toBe("cohort");
+    expect(
       knowledgeRegionGlyphForPoint({
         id: "c1",
         origin: "human",

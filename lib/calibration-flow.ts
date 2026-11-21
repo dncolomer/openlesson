@@ -178,7 +178,14 @@ export type CalibrationCommand =
       enforcedChannels?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
-  | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
+  | {
+      type: "claim";
+      flowId: string;
+      identity: string;
+      runnerUserId?: string | null;
+      flowLinkLabel?: string | null;
+      flowLinkId?: string | null;
+    }
   | {
       type: "addProof";
       flowId: string;

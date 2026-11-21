@@ -569,7 +569,7 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-start");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("absoluteFlowPublicUrl");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("flowPublicHref");
-    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("FlowPublicActions");
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("FlowPublicLinks");
     expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("problemReadOnly");
     expect(flowPublicHref("/s/tok")).toBe("/s/tok");
     expect(flowPublicHref("https://app.example/v/tok")).toBe("/v/tok");

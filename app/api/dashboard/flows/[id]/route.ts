@@ -30,8 +30,37 @@ import {
   getVerificationFlowById,
   runVerificationCommand,
 } from "@/lib/verification-flow-repository";
+import {
+  createFlowLink,
+  deleteFlowLink,
+  flowLinkPublicPath,
+  listFlowLinksForFlow,
+  type FlowLink,
+} from "@/lib/flow-links";
 
 export const runtime = "nodejs";
+
+function publicPathForKind(
+  kind: "verification" | "calibration" | "solve",
+  token: string,
+): string {
+  if (kind === "calibration") return calibrationFlowPublicPath(token);
+  if (kind === "solve") return solveFlowPublicPath(token);
+  return verificationFlowPublicPath(token);
+}
+
+function presentOwnedLinks(links: readonly FlowLink[], origin: string) {
+  return links.map((link) => {
+    const publicPath = flowLinkPublicPath(link.flowKind, link.publicToken);
+    return {
+      id: link.id,
+      label: link.label,
+      publicToken: link.publicToken,
+      publicPath,
+      publicUrl: `${origin}${publicPath}`,
+    };
+  });
+}
 
 async function loadOwnedFlow(
   req: NextRequest,
@@ -105,12 +134,15 @@ export async function GET(
     const { id } = await context.params;
     const loaded = await loadOwnedFlow(req, id);
     if (!loaded.ok) return loaded.response;
-    const publicPath =
-      loaded.kind === "calibration"
-        ? calibrationFlowPublicPath(String(loaded.flow.publicToken || ""))
-        : loaded.kind === "solve"
-          ? solveFlowPublicPath(String(loaded.flow.publicToken || ""))
-          : verificationFlowPublicPath(String(loaded.flow.publicToken || ""));
+    const publicPath = publicPathForKind(
+      loaded.kind,
+      String(loaded.flow.publicToken || ""),
+    );
+    const links = await listFlowLinksForFlow({
+      ownerUserId: loaded.ownerUserId,
+      flowKind: loaded.kind,
+      flowId: id,
+    });
     return NextResponse.json({
       kind: loaded.kind,
       flow: loaded.flow,
@@ -118,6 +150,7 @@ export async function GET(
       flowPath: productFlowPagePath(loaded.kind, id),
       publicPath,
       publicUrl: `${loaded.origin}${publicPath}`,
+      links: presentOwnedLinks(links, loaded.origin),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load flow";
@@ -135,6 +168,34 @@ export async function POST(
     if (!loaded.ok) return loaded.response;
     const body = (await req.json()) as Record<string, unknown>;
     const action = typeof body.action === "string" ? body.action : "update";
+    if (action === "addLink") {
+      const created = await createFlowLink({
+        ownerUserId: loaded.ownerUserId,
+        flowKind: loaded.kind,
+        flowId: id,
+        label: body.label,
+      });
+      const publicPath = flowLinkPublicPath(created.flowKind, created.publicToken);
+      return NextResponse.json({
+        ok: true,
+        link: {
+          id: created.id,
+          label: created.label,
+          publicToken: created.publicToken,
+          publicPath,
+          publicUrl: `${loaded.origin}${publicPath}`,
+        },
+      });
+    }
+    if (action === "removeLink") {
+      const linkId = typeof body.linkId === "string" ? body.linkId : "";
+      const removed = await deleteFlowLink({
+        ownerUserId: loaded.ownerUserId,
+        linkId,
+      });
+      if (!removed) return jsonError(404, "Link not found");
+      return NextResponse.json({ ok: true });
+    }
     if (action === "remove") {
       if (loaded.kind === "solve") {
         const removed = await runSolveCommand({

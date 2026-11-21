@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
     const ownerUserId = access.ownerUserId;
     const source =
       (typeof body.source === "string" && body.source.trim()) || flowKind;
+    const linkLabel =
+      (typeof body.linkLabel === "string" && body.linkLabel.trim()) ||
+      access.linkLabel ||
+      null;
 
     const stored =
       flowKind === "solve" && flowId && runId
@@ -65,6 +69,7 @@ export async function POST(req: NextRequest) {
             runId,
             identity,
             source,
+            linkLabel,
             model: sessionBranchModelFromUnknown(body.model),
             sequence,
             pow: parsePow(body.pow),
@@ -77,6 +82,7 @@ export async function POST(req: NextRequest) {
             runId,
             identity,
             source,
+            linkLabel,
             model: sessionBranchModelFromUnknown(body.model),
             sequence: flowKind === "calibrate" ? null : sequence,
             pow: parsePow(body.pow),

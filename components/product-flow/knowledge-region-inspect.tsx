@@ -166,6 +166,14 @@ export function KnowledgeRegionInspect({
             <dd className="text-white" data-knowledge-region-inspect-kind={sample.pointKind}>
               {knowledgeRegionPointKindLabel(sample.pointKind, productKind)}
             </dd>
+            {sample.embedding.link_label ? (
+              <>
+                <dt className={FLOW_FORM_LABEL}>Link</dt>
+                <dd className="text-white" data-knowledge-region-inspect-link="">
+                  {sample.embedding.link_label}
+                </dd>
+              </>
+            ) : null}
             <dt className={FLOW_FORM_LABEL}>Created</dt>
             <dd className="font-mono text-[12px] text-white" data-knowledge-region-inspect-created="">
               {formatKnowledgeRegionTimestamp(

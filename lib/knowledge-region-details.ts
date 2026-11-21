@@ -186,6 +186,7 @@ function asEmbeddingRow(row: DataStudioEmbeddingRow | Record<string, unknown>): 
     embedding_model_id: text(row.embedding_model_id) || null,
     created_at: text(row.created_at) || null,
     source: text(row.source) || null,
+    link_label: text(row.link_label) || null,
     user_id: text(row.user_id) || null,
     is_play_copy: typeof row.is_play_copy === "boolean" ? row.is_play_copy : null,
     workspace_title: text(row.workspace_title) || null,
@@ -320,6 +321,7 @@ export function presentKnowledgeRegionDetails(input: {
         id: embedding.id,
         identity: embedding.identity,
         userId: embedding.user_id,
+        linkLabel: embedding.link_label,
         subjects,
       }),
       flow_id: embedding.flow_id ?? null,
@@ -377,12 +379,14 @@ export function presentKnowledgeRegionDetails(input: {
 
   for (const embedding of rows) {
     if (studioEmbeddingOrigin(embedding) !== "human") continue;
+    const flowId = text(embedding.flow_id);
+    const onRegionFlow = Boolean(
+      (seededFlowId && flowId === seededFlowId) || (flowId && flowIds.has(flowId)),
+    );
     if (hasGeometry) {
-      if (!insideThisRegion(embedding.vector, null)) continue;
-    } else {
-      const flowId = text(embedding.flow_id);
-      const onRegionFlow = Boolean(flowId && flowIds.has(flowId));
-      if (!onRegionFlow) continue;
+      if (!insideThisRegion(embedding.vector, null) && !onRegionFlow) continue;
+    } else if (!onRegionFlow) {
+      continue;
     }
     pushSample(embedding, null);
   }

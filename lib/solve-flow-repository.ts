@@ -28,6 +28,7 @@ import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
+import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
 
 const SOLVE_FLOW_GLOBAL = "__openlessonSolveFlowRepository";
 
@@ -74,6 +75,8 @@ function memorySolveSessionRow(input: {
   id: string;
   flow: SolveFlow;
   identity: string;
+  flowLinkLabel?: string | null;
+  flowLinkId?: string | null;
 }): Record<string, unknown> {
   return {
     id: input.id,
@@ -87,17 +90,20 @@ function memorySolveSessionRow(input: {
     ended_at: null,
     planning_prompt: null,
     probes: [],
-    metadata: {
-      title: input.flow.topic || input.flow.name,
-      solve_flow_id: input.flow.id,
-      identity: input.identity,
-      ...(input.flow.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-      ...(input.flow.openingCanvasScene
-        ? { openingCanvasScene: input.flow.openingCanvasScene }
-        : {}),
-      ...(input.flow.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
-      enforcedChannels: serializeFlowEnforcedChannels(input.flow.enforcedChannels),
-    },
+    metadata: withFlowLinkMetadata(
+      {
+        title: input.flow.topic || input.flow.name,
+        solve_flow_id: input.flow.id,
+        identity: input.identity,
+        ...(input.flow.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+        ...(input.flow.openingCanvasScene
+          ? { openingCanvasScene: input.flow.openingCanvasScene }
+          : {}),
+        ...(input.flow.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
+        enforcedChannels: serializeFlowEnforcedChannels(input.flow.enforcedChannels),
+      },
+      { id: input.flowLinkId, label: input.flowLinkLabel },
+    ),
     created_at: new Date().toISOString(),
   };
 }
@@ -269,15 +275,18 @@ async function persistCommand(
         projectedPolicy: null,
       },
       metadata: withEnforcedChannelsMetadata(
-        {
-          title: topic,
-          solve_flow_id: command.flowId,
-          ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-          ...(mapped?.openingCanvasScene
-            ? { openingCanvasScene: mapped.openingCanvasScene }
-            : {}),
-          ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
-        },
+        withFlowLinkMetadata(
+          {
+            title: topic,
+            solve_flow_id: command.flowId,
+            ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+            ...(mapped?.openingCanvasScene
+              ? { openingCanvasScene: mapped.openingCanvasScene }
+              : {}),
+            ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
+          },
+          { id: command.flowLinkId, label: command.flowLinkLabel },
+        ),
         parseFlowEnforcedChannels(mapped?.enforcedChannels),
       ),
     });
@@ -388,11 +397,16 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
 }
 
 export async function getSolveFlowByToken(token: string): Promise<SolveFlow | null> {
+  const publicToken = String(token || "").trim();
+  if (!publicToken) return null;
   const flow =
     (await resolveBackend()) === "memory"
-      ? flowByPublicToken(solveRepositoryGlobal().memory, token)
-      : flowByPublicToken(await loadSupabaseState({ publicToken: token }), token);
-  return flow ? presentFlow(flow) : null;
+      ? flowByPublicToken(solveRepositoryGlobal().memory, publicToken)
+      : flowByPublicToken(await loadSupabaseState({ publicToken }), publicToken);
+  if (flow) return presentFlow(flow);
+  const link = await getFlowLinkByToken(publicToken);
+  if (!link || link.flowKind !== "solve") return null;
+  return getSolveFlowById(link.flowId);
 }
 
 export async function claimSolveIdentity(
@@ -402,11 +416,14 @@ export async function claimSolveIdentity(
 ) {
   const flow = await getSolveFlowByToken(token);
   if (!flow) return { ok: false as const, reason: "not_found" };
+  const link = await getFlowLinkByToken(token);
   const claimed = await runSolveCommand({
     type: "claim",
     flowId: flow.id,
     identity,
     runnerUserId: opts?.runnerUserId,
+    flowLinkLabel: link?.label ?? null,
+    flowLinkId: link?.id ?? null,
   });
   if (!claimed.ok) return { ok: false as const, reason: claimed.reason };
   let sessionId: string | null = null;
@@ -430,6 +447,8 @@ export async function claimSolveIdentity(
       id: sessionId,
       flow,
       identity: claimedIdentity,
+      flowLinkLabel: link?.label ?? null,
+      flowLinkId: link?.id ?? null,
     });
   }
   return {

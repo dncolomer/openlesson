@@ -22,6 +22,7 @@ import {
 import type { AuthContext } from "@/lib/pow-api/types";
 import type { UploadWorkspaceProofOfWorkWorkspace } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import type { FlowKind } from "@/lib/flow-embedding";
+import { flowLinkLabelFromMetadata } from "@/lib/flow-links";
 
 export type SessionProofAccess = {
   supabase: SupabaseClient;
@@ -35,6 +36,7 @@ export type SessionProofAccess = {
   flowKind: FlowKind | null;
   flowId: string | null;
   identity: string | null;
+  linkLabel?: string | null;
   ileLinkId?: string | null;
 };
 
@@ -178,6 +180,7 @@ export async function requireSessionProofAccess(
       flowKind: "solve",
       flowId: access.flow.id,
       identity: access.identity,
+      linkLabel: flowLinkLabelFromMetadata(access.session.metadata),
     };
   }
 
@@ -258,6 +261,7 @@ export async function requireSessionProofAccess(
       flowKind,
       flowId: flows.flowId,
       identity: flows.identity,
+      linkLabel: flowLinkLabelFromMetadata(sessionRow?.metadata),
     };
   }
 
@@ -324,5 +328,6 @@ export async function requireSessionProofAccess(
     flowKind: flows.flowKind,
     flowId: flows.flowId,
     identity: flows.identity,
+    linkLabel: flowLinkLabelFromMetadata(row.metadata),
   };
 }

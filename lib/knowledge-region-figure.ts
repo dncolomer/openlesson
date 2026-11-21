@@ -14,6 +14,7 @@ import {
 import { recoverFlowEmbeddingRaw } from "@/lib/flow-embedding";
 import type { RegionCentroidInput } from "@/lib/knowledge-config";
 import { l2Distance } from "@/lib/knowledge-config/math";
+import { flowLinkDefinesReference, normalizeFlowLinkLabel } from "@/lib/flow-links";
 import type { StudioEmbeddingOrigin } from "@/lib/region-simulation";
 
 export const KNOWLEDGE_REGION_CLUSTER_COLORS = [
@@ -241,6 +242,7 @@ export function knowledgeRegionPointKind(input: {
   id?: string | null;
   identity?: string | null;
   userId?: string | null;
+  linkLabel?: string | null;
   subjects?: readonly {
     user_id?: unknown;
     guest_user_id?: unknown;
@@ -248,6 +250,9 @@ export function knowledgeRegionPointKind(input: {
   }[] | null;
 }): KnowledgeRegionPointKind {
   if (input.origin === "simulated") return "simulated";
+  const linkLabel = normalizeFlowLinkLabel(input.linkLabel);
+  if (flowLinkDefinesReference(linkLabel)) return "cohort";
+  if (linkLabel && linkLabel.toLowerCase() === "test") return "analysis";
   const identity = subjectText(input.identity);
   const id = subjectText(input.id);
   const userId = subjectText(input.userId);

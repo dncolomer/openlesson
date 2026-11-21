@@ -13,6 +13,7 @@ export async function persistSolveCompletedEmbedding(input: {
   workspaceId?: string | null;
   identity?: string | null;
   source?: string | null;
+  linkLabel?: string | null;
   model?: SessionBranchModel | null;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
@@ -26,6 +27,7 @@ export async function persistSolveCompletedEmbedding(input: {
     runId: input.runId,
     identity: input.identity,
     source: input.source || "solve",
+    linkLabel: input.linkLabel,
     model: input.model ?? null,
     sequence: input.sequence ?? null,
     pow: input.pow ?? [],

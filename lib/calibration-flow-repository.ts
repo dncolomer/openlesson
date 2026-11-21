@@ -30,6 +30,7 @@ import {
 import { parseExactProblemOnCanvas } from "@/lib/product-flow";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
+import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
 
 const CALIBRATION_FLOW_GLOBAL = "__openlessonCalibrationFlowRepository";
 
@@ -255,6 +256,10 @@ async function persistCommand(
       user_id: owner.user_id,
       calibrate_flow_id: command.flowId,
       identity: value.identity,
+      metadata: withFlowLinkMetadata(
+        {},
+        { id: command.flowLinkId, label: command.flowLinkLabel },
+      ),
     });
     if (error) {
       await refundClaimedFlowSession(charged?.billedUserId);
@@ -402,11 +407,16 @@ export async function listCalibrationFlows(workspaceId: string): Promise<Calibra
 }
 
 export async function getCalibrationFlowByToken(token: string): Promise<CalibrationFlow | null> {
+  const publicToken = String(token || "").trim();
+  if (!publicToken) return null;
   const flow =
     (await resolveBackend()) === "memory"
-      ? flowByPublicToken(memoryState(), token)
-      : flowByPublicToken(await loadSupabaseState({ publicToken: token }), token);
-  return flow ? presentFlow(flow) : null;
+      ? flowByPublicToken(memoryState(), publicToken)
+      : flowByPublicToken(await loadSupabaseState({ publicToken }), publicToken);
+  if (flow) return presentFlow(flow);
+  const link = await getFlowLinkByToken(publicToken);
+  if (!link || link.flowKind !== "calibration") return null;
+  return getCalibrationFlowById(link.flowId);
 }
 
 export async function claimCalibrationIdentity(
@@ -416,11 +426,14 @@ export async function claimCalibrationIdentity(
 ) {
   const flow = await getCalibrationFlowByToken(token);
   if (!flow) return { ok: false as const, reason: "not_found" };
+  const link = await getFlowLinkByToken(token);
   const claimed = await runCalibrationCommand({
     type: "claim",
     flowId: flow.id,
     identity,
     runnerUserId: opts?.runnerUserId,
+    flowLinkLabel: link?.label ?? null,
+    flowLinkId: link?.id ?? null,
   });
   if (!claimed.ok) return { ok: false as const, reason: claimed.reason };
   return { ok: true as const, flow, identity: claimed.identity };

@@ -5,6 +5,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSolveFlowByToken, getSolveSessionById } from "@/lib/solve-flow-repository";
 import type { SolveFlow } from "@/lib/solve-flow";
+import { flowLinkLabelFromMetadata } from "@/lib/flow-links";
 
 export type ResolvedSolveSessionAccess = {
   supabase: ReturnType<typeof createAdminClient>;
@@ -14,6 +15,7 @@ export type ResolvedSolveSessionAccess = {
   runOwnerUserId: string;
   workspaceId: string;
   identity: string | null;
+  linkLabel: string | null;
 };
 
 export async function resolveSolveFlowAccess(
@@ -58,5 +60,6 @@ export async function resolveSolveSessionAccess(
     runOwnerUserId,
     workspaceId,
     identity: String(row.identity || "").trim() || null,
+    linkLabel: flowLinkLabelFromMetadata(meta),
   };
 }

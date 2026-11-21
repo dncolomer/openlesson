@@ -18,6 +18,7 @@ import {
   persistCompletedFlowEmbedding,
   type StoredFlowEmbedding,
 } from "@/lib/flow-embedding-store";
+import { flowLinkDefinesReference } from "@/lib/flow-links";
 import {
   isRegionSimulationClusterRow,
   parseRegionSimulationClusterStrategyId,
@@ -115,12 +116,27 @@ function humanEmbeddingsForFlows(
 
 function specFromEmbeddings(
   name: string,
-  rows: readonly { vector: number[]; identity?: string | null; id?: string }[],
+  rows: readonly {
+    vector: number[];
+    identity?: string | null;
+    id?: string;
+    source?: string | null;
+    link_label?: string | null;
+  }[],
 ): CustomVerificationModelSpec {
+  const defining = rows.filter((row) => {
+    if ("source" in row || "link_label" in row) {
+      return (
+        isSimulatedEmbedding(row) || flowLinkDefinesReference(row.link_label)
+      );
+    }
+    return true;
+  });
+  const used = defining.length ? defining : rows;
   return createCustomVerificationModelFromVectors({
     name,
-    vectors: rows.map((row) => row.vector),
-    subjects: rows.map((row) => ({
+    vectors: used.map((row) => row.vector),
+    subjects: used.map((row) => ({
       label: row.identity || row.id || name,
     })),
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,

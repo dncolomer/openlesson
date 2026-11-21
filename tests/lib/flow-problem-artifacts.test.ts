@@ -579,7 +579,7 @@ describe("flow create/edit UI", () => {
     expect(page).toContain("FlowProblemFields");
     expect(page).toContain("problemReadOnly");
     expect(fields).toContain("data-flow-problem-locked");
-    expect(page).toContain("FlowPublicActions");
+    expect(page).toContain("FlowPublicLinks");
     const verificationPanel = read("components/VerificationFlowsPanel.tsx");
     const calibrationPanel = read("components/CalibrationFlowsPanel.tsx");
     expect(verificationPanel).toContain("FlowProblemFields");

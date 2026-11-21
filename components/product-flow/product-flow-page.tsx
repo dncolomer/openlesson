@@ -38,7 +38,7 @@ import {
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
-import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
+import { FlowPublicLinks } from "@/components/product-flow/copy-flow-url-button";
 
 type LoadedFlow = {
   id: string;
@@ -80,6 +80,7 @@ export function ProductFlowPage({
   );
   const [minutes, setMinutes] = useState(15);
   const [publicUrl, setPublicUrl] = useState("");
+  const [links, setLinks] = useState<Array<{ id: string; label: string | null; url: string }>>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [modelBusy, setModelBusy] = useState(false);
@@ -105,6 +106,16 @@ export function ProductFlowPage({
     setEnforcedChannels(parseFlowEnforcedChannels(next.enforcedChannels));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setPublicUrl(String(payload.publicUrl || ""));
+    const extra = Array.isArray(payload.links) ? payload.links : [];
+    setLinks(
+      extra
+        .map((row: { id?: unknown; label?: unknown; publicUrl?: unknown; publicPath?: unknown }) => ({
+          id: String(row.id || "").trim(),
+          label: typeof row.label === "string" && row.label.trim() ? row.label.trim() : null,
+          url: String(row.publicUrl || row.publicPath || "").trim(),
+        }))
+        .filter((row: { id: string; url: string }) => row.id && row.url),
+    );
   }, [flowId, kind]);
 
   useEffect(() => {
@@ -166,6 +177,50 @@ export function ProductFlowPage({
     }
   }
 
+  async function addLink(label: string) {
+    if (!flow) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "addLink", label }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessageFromBody(payload, "Could not add link"));
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add link");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeLink(linkId: string) {
+    if (!flow) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "removeLink", linkId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessageFromBody(payload, "Could not remove link"));
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove link");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const description =
     kind === "calibration"
       ? "The problem is fixed. Name, files, and countdown can still change."
@@ -191,8 +246,14 @@ export function ProductFlowPage({
           description={description}
           extra={
             publicUrl ? (
-              <div className="mt-6">
-                <FlowPublicActions url={publicUrl} />
+              <div className="mt-6 max-w-xl">
+                <FlowPublicLinks
+                  defaultUrl={publicUrl}
+                  links={links}
+                  busy={busy}
+                  onAdd={(label) => void addLink(label)}
+                  onRemove={(linkId) => void removeLink(linkId)}
+                />
               </div>
             ) : null
           }

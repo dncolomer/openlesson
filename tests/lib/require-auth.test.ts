@@ -172,6 +172,7 @@ describe("require-auth helpers", () => {
       ownerUserId: "owner-1",
       runOwnerUserId: "owner-1",
       workspaceId: "ws-1",
+      linkLabel: null,
       identity: "ada",
     });
     const result = await guardSessionRoute("sess-1", { solveToken: "stok" });

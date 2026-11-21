@@ -19,6 +19,7 @@ import {
   parseFlowEmbeddingChannelVectors,
   type FlowEmbeddingChannelVectors,
 } from "@/lib/flow-embedding-space";
+import { normalizeFlowLinkLabel } from "@/lib/flow-links";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
 const FLOW_EMBEDDING_GLOBAL = "__openlessonFlowEmbeddingStore";
@@ -32,6 +33,7 @@ export type StoredFlowEmbedding = {
   run_id: string | null;
   identity: string | null;
   source: string | null;
+  link_label?: string | null;
   embedding_model_id: typeof FLOW_EMBEDDING_MODEL_ID;
   dim: typeof FLOW_EMBEDDING_DIM;
   vector: number[];
@@ -49,6 +51,7 @@ export type PersistFlowEmbeddingInput = {
   runId?: string | null;
   identity?: string | null;
   source?: string | null;
+  linkLabel?: string | null;
   model?: SessionBranchModel | null;
   /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
@@ -134,6 +137,7 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
     run_id: row.run_id ? String(row.run_id) : null,
     identity: row.identity ? String(row.identity) : null,
     source: row.source ? String(row.source) : null,
+    link_label: normalizeFlowLinkLabel(row.link_label ?? row.linkLabel),
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: channel_vectors.path,
@@ -203,6 +207,7 @@ export async function persistCompletedFlowEmbedding(
     run_id: text(input.runId) || null,
     identity: text(input.identity) || null,
     source: text(input.source) || null,
+    link_label: normalizeFlowLinkLabel(input.linkLabel),
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: record.vector,
@@ -234,6 +239,7 @@ export async function persistCompletedFlowEmbedding(
     run_id: stored.run_id,
     identity: stored.identity,
     source: stored.source,
+    link_label: stored.link_label,
     embedding_model_id: stored.embedding_model_id,
     dim: stored.dim,
     vector: stored.vector,
@@ -252,6 +258,10 @@ export async function persistCompletedFlowEmbedding(
     }
     if (message.includes("channel_vectors") && "channel_vectors" in retry) {
       delete retry.channel_vectors;
+      dropped = true;
+    }
+    if (message.includes("link_label") && "link_label" in retry) {
+      delete retry.link_label;
       dropped = true;
     }
     if (dropped) {

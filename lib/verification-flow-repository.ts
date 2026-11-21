@@ -35,6 +35,7 @@ import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
+import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
 
 const VERIFICATION_FLOW_GLOBAL = "__openlessonVerificationFlowRepository";
 
@@ -284,13 +285,19 @@ async function persistCommand(
         answers: [],
       },
       metadata: withEnforcedChannelsMetadata(
-        {
-          ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-          ...(mapped?.openingCanvasScene
-            ? { openingCanvasScene: mapped.openingCanvasScene }
-            : {}),
-          ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
-        },
+        withFlowLinkMetadata(
+          {
+            ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+            ...(mapped?.openingCanvasScene
+              ? { openingCanvasScene: mapped.openingCanvasScene }
+              : {}),
+            ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
+          },
+          {
+            id: command.flowLinkId,
+            label: command.flowLinkLabel,
+          },
+        ),
         parseFlowEnforcedChannels(mapped?.enforcedChannels),
       ),
     });
@@ -498,11 +505,16 @@ export async function listVerificationResultsForFlowId(
 }
 
 export async function getVerificationFlowByToken(token: string): Promise<VerificationFlow | null> {
+  const publicToken = String(token || "").trim();
+  if (!publicToken) return null;
   const flow =
     (await resolveBackend()) === "memory"
-      ? flowByPublicToken(verificationRepositoryGlobal().memory, token)
-      : flowByPublicToken(await loadSupabaseState({ publicToken: token }), token);
-  return flow ? presentFlow(flow) : null;
+      ? flowByPublicToken(verificationRepositoryGlobal().memory, publicToken)
+      : flowByPublicToken(await loadSupabaseState({ publicToken }), publicToken);
+  if (flow) return presentFlow(flow);
+  const link = await getFlowLinkByToken(publicToken);
+  if (!link || link.flowKind !== "verification") return null;
+  return getVerificationFlowById(link.flowId);
 }
 
 export async function claimPublicIdentity(
@@ -512,11 +524,14 @@ export async function claimPublicIdentity(
 ) {
   const flow = await getVerificationFlowByToken(token);
   if (!flow) return { ok: false as const, reason: "not_found" };
+  const link = await getFlowLinkByToken(token);
   const claimed = await runVerificationCommand({
     type: "claim",
     flowId: flow.id,
     identity,
     runnerUserId: opts?.runnerUserId,
+    flowLinkLabel: link?.label ?? null,
+    flowLinkId: link?.id ?? null,
   });
   if (!claimed.ok) return { ok: false as const, reason: claimed.reason };
   const choices = startChoicesForFlow(flow);

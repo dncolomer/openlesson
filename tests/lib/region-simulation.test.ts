@@ -188,6 +188,7 @@ describe("region simulation", () => {
     const simulated = stored.filter((row) => row.source === REGION_SIMULATION_SOURCE);
     expect(simulated).toHaveLength(6);
     expect(simulated.every((row) => String(row.identity).startsWith("Simulated ·"))).toBe(true);
+    expect(read("lib/region-simulation-run.ts")).toContain("flowLinkDefinesReference");
     expect(simulationClusterRegionName("Limits styles", "Exploit-heavy")).toBe(
       "Limits styles · Exploit-heavy",
     );

@@ -254,6 +254,8 @@ describe("dashboard knowledge regions", () => {
     expect(detailsPage).toContain("data-knowledge-region-legend");
     expect(detailsPage).toContain("data-knowledge-region-polar");
     expect(detailsPage).toContain("data-knowledge-region-projection");
+    expect(detailsPage).toContain("data-knowledge-region-figure-zoom-fit");
+    expect(detailsPage).toContain("data-knowledge-region-figure-frame");
     expect(detailsPage).toContain("data-knowledge-region-figure-mode");
     expect(detailsPage).toContain('data-knowledge-region-figure-mode-option="quadrant"');
     expect(detailsPage).toContain('data-knowledge-region-figure-space-option="quadrant"');

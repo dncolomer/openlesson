@@ -21,6 +21,12 @@ import {
   knowledgeRegionFigureMode,
   knowledgeRegionFigureSpace,
   knowledgeRegionFigureTrack,
+  knowledgeRegionFigureViewBox,
+  knowledgeRegionFigureZoomIn,
+  knowledgeRegionFigureZoomOut,
+  clampKnowledgeRegionFigureZoom,
+  KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
+  KNOWLEDGE_REGION_MAP_SIZE,
   knowledgeRegionUnsysDistance,
   placeKnowledgeRegionQuadrantPoints,
   presentKnowledgeRegionClusterDistances,
@@ -225,6 +231,26 @@ describe("knowledge region figure", () => {
     expect(knowledgeRegionFigureMode("quadrant", "path")).toBe("quadrant-path");
     expect(knowledgeRegionFigureSpace("quadrant-path")).toBe("quadrant");
     expect(knowledgeRegionFigureTrack("quadrant-path")).toBe("path");
+    expect(clampKnowledgeRegionFigureZoom(0)).toBe(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
+    expect(knowledgeRegionFigureZoomOut(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT)).toBe(
+      KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
+    );
+    expect(knowledgeRegionFigureZoomIn(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT)).toBeGreaterThan(
+      KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
+    );
+    const fitted = knowledgeRegionFigureViewBox({
+      size: KNOWLEDGE_REGION_MAP_SIZE,
+      zoom: KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
+    });
+    expect(fitted.value).toBe(`0 0 ${KNOWLEDGE_REGION_MAP_SIZE} ${KNOWLEDGE_REGION_MAP_SIZE}`);
+    const zoomed = knowledgeRegionFigureViewBox({
+      size: KNOWLEDGE_REGION_MAP_SIZE,
+      zoom: 2,
+    });
+    expect(zoomed.width).toBe(KNOWLEDGE_REGION_MAP_SIZE / 2);
+    expect(zoomed.height).toBe(KNOWLEDGE_REGION_MAP_SIZE / 2);
+    expect(zoomed.x).toBe(KNOWLEDGE_REGION_MAP_SIZE / 4);
+    expect(zoomed.y).toBe(KNOWLEDGE_REGION_MAP_SIZE / 4);
     expect(knowledgeRegionUnsysDistance({ projectedPolicy: { distance: 1.25 } })).toBe(1.25);
     expect(knowledgeRegionUnsysDistance(null)).toBeNull();
 
@@ -513,6 +539,13 @@ describe("knowledge region figure", () => {
     expect(page).toContain("<details");
     expect(page).toContain("KnowledgeRegionInspect");
     expect(page).toContain("presentKnowledgeRegionClusterDistances");
+    expect(page).toContain("data-knowledge-region-figure-frame");
+    expect(page).toContain("data-knowledge-region-figure-zoom-controls");
+    expect(page).toContain("data-knowledge-region-figure-zoom-in");
+    expect(page).toContain("data-knowledge-region-figure-zoom-out");
+    expect(page).toContain("data-knowledge-region-figure-zoom-fit");
+    expect(page).toContain("aspect-square");
+    expect(page).toContain("knowledgeRegionFigureViewBox");
     expect(page).toContain("data-knowledge-region-figure-mode");
     expect(page).toContain("data-knowledge-region-figure-mode-option");
     expect(page).toContain('data-knowledge-region-figure-mode-option="quadrant"');

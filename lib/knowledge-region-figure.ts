@@ -72,6 +72,64 @@ export function parseKnowledgeRegionFigureMode(value: unknown): KnowledgeRegionF
   return "individual";
 }
 
+export const KNOWLEDGE_REGION_FIGURE_ZOOM_FIT = 1;
+export const KNOWLEDGE_REGION_FIGURE_ZOOM_MIN = 1;
+export const KNOWLEDGE_REGION_FIGURE_ZOOM_MAX = 8;
+export const KNOWLEDGE_REGION_FIGURE_ZOOM_STEP = 1.25;
+
+export function clampKnowledgeRegionFigureZoom(value: unknown): number {
+  const zoom = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(zoom) || zoom <= 0) return KNOWLEDGE_REGION_FIGURE_ZOOM_FIT;
+  return Math.min(
+    KNOWLEDGE_REGION_FIGURE_ZOOM_MAX,
+    Math.max(KNOWLEDGE_REGION_FIGURE_ZOOM_MIN, zoom),
+  );
+}
+
+export function knowledgeRegionFigureZoomIn(zoom: unknown): number {
+  return clampKnowledgeRegionFigureZoom(
+    clampKnowledgeRegionFigureZoom(zoom) * KNOWLEDGE_REGION_FIGURE_ZOOM_STEP,
+  );
+}
+
+export function knowledgeRegionFigureZoomOut(zoom: unknown): number {
+  return clampKnowledgeRegionFigureZoom(
+    clampKnowledgeRegionFigureZoom(zoom) / KNOWLEDGE_REGION_FIGURE_ZOOM_STEP,
+  );
+}
+
+export function clampKnowledgeRegionFigurePan(
+  pan: unknown,
+  size: number,
+  zoom: unknown,
+): number {
+  const value = typeof pan === "number" ? pan : Number(pan);
+  const map = Number.isFinite(size) && size > 0 ? size : KNOWLEDGE_REGION_MAP_SIZE;
+  const visible = map / clampKnowledgeRegionFigureZoom(zoom);
+  const max = (map - visible) / 2;
+  if (!Number.isFinite(value)) return 0;
+  if (max <= 0) return 0;
+  return Math.max(-max, Math.min(max, value));
+}
+
+export function knowledgeRegionFigureViewBox(input: {
+  size?: number;
+  zoom?: unknown;
+  panX?: unknown;
+  panY?: unknown;
+}): { x: number; y: number; width: number; height: number; value: string } {
+  const size =
+    Number.isFinite(input.size) && (input.size as number) > 0
+      ? (input.size as number)
+      : KNOWLEDGE_REGION_MAP_SIZE;
+  const zoom = clampKnowledgeRegionFigureZoom(input.zoom);
+  const width = size / zoom;
+  const height = size / zoom;
+  const x = (size - width) / 2 + clampKnowledgeRegionFigurePan(input.panX, size, zoom);
+  const y = (size - height) / 2 + clampKnowledgeRegionFigurePan(input.panY, size, zoom);
+  return { x, y, width, height, value: `${x} ${y} ${width} ${height}` };
+}
+
 export function knowledgeRegionIdentityKey(point: {
   id?: string | null;
   identity?: string | null;

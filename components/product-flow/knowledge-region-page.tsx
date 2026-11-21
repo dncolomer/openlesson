@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { StudioMultiSelect } from "@/components/data-studio/StudioMultiSelect";
@@ -32,14 +32,19 @@ import {
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import {
+  clampKnowledgeRegionFigurePan,
   clusterVisibleInKnowledgeRegion,
   diamondGlyphPoints,
   KNOWLEDGE_REGION_ANALYSIS_FILL,
+  KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
   KNOWLEDGE_REGION_MAP_SIZE,
   knowledgeRegionAnalysisPointLabel,
   knowledgeRegionFigureMode,
   knowledgeRegionFigureSpace,
   knowledgeRegionFigureTrack,
+  knowledgeRegionFigureViewBox,
+  knowledgeRegionFigureZoomIn,
+  knowledgeRegionFigureZoomOut,
   knowledgeRegionIdentityKey,
   knowledgeRegionIdentityLabel,
   knowledgeRegionIdentityOptions,
@@ -90,6 +95,8 @@ const MODE_BTN =
   "h-7 flex-1 border text-[10px] uppercase tracking-[0.14em]";
 const MODE_ON = `${MODE_BTN} border-white bg-white/10 text-white`;
 const MODE_OFF = `${MODE_BTN} border-white/20 text-neutral-500 hover:text-white`;
+const ZOOM_BTN =
+  "h-7 min-w-7 border border-white/25 bg-black/70 px-2 font-mono text-[10px] uppercase tracking-[0.14em] text-white hover:border-white hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40";
 const POINT_KIND_IDS: readonly KnowledgeRegionPointKind[] = [
   "simulated",
   "cohort",
@@ -123,6 +130,16 @@ export function KnowledgeRegionPage({
   ]);
   const [algorithm, setAlgorithm] = useState<ProjectionAlgorithmId>("pca");
   const [figureMode, setFigureMode] = useState<KnowledgeRegionFigureMode>("individual");
+  const [figureZoom, setFigureZoom] = useState(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
+  const [figurePan, setFigurePan] = useState({ x: 0, y: 0 });
+  const figureFrameRef = useRef<HTMLDivElement | null>(null);
+  const figureDragRef = useRef<{
+    clientX: number;
+    clientY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
+  const figurePannedRef = useRef(false);
   const [runPow, setRunPow] = useState<FlowPowRow[]>([]);
   const [rosterNames, setRosterNames] = useState<Record<string, string>>({});
   const [addStrategyIds, setAddStrategyIds] = useState<ExplorationStrategyId[]>([]);
@@ -314,6 +331,69 @@ export function KnowledgeRegionPage({
     () => new Set((figure?.path?.steps ?? []).map((step) => step.id)),
     [figure?.path],
   );
+
+  const figureViewBox = useMemo(
+    () =>
+      knowledgeRegionFigureViewBox({
+        size: figure?.map.size ?? KNOWLEDGE_REGION_MAP_SIZE,
+        zoom: figureZoom,
+        panX: figurePan.x,
+        panY: figurePan.y,
+      }),
+    [figure?.map.size, figurePan.x, figurePan.y, figureZoom],
+  );
+
+  function applyFigureZoom(next: number) {
+    setFigureZoom(next);
+    setFigurePan((pan) => ({
+      x: clampKnowledgeRegionFigurePan(pan.x, KNOWLEDGE_REGION_MAP_SIZE, next),
+      y: clampKnowledgeRegionFigurePan(pan.y, KNOWLEDGE_REGION_MAP_SIZE, next),
+    }));
+  }
+
+  function fitFigure() {
+    setFigureZoom(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
+    setFigurePan({ x: 0, y: 0 });
+  }
+
+  function onFigurePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (figureZoom <= KNOWLEDGE_REGION_FIGURE_ZOOM_FIT || event.button !== 0) return;
+    figurePannedRef.current = false;
+    figureDragRef.current = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      panX: figurePan.x,
+      panY: figurePan.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onFigurePointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = figureDragRef.current;
+    const frame = figureFrameRef.current;
+    if (!drag || !frame) return;
+    const width = frame.clientWidth || 1;
+    const scale = figureViewBox.width / width;
+    const nextX = drag.panX - (event.clientX - drag.clientX) * scale;
+    const nextY = drag.panY - (event.clientY - drag.clientY) * scale;
+    if (
+      Math.abs(event.clientX - drag.clientX) > 3 ||
+      Math.abs(event.clientY - drag.clientY) > 3
+    ) {
+      figurePannedRef.current = true;
+    }
+    setFigurePan({
+      x: clampKnowledgeRegionFigurePan(nextX, KNOWLEDGE_REGION_MAP_SIZE, figureZoom),
+      y: clampKnowledgeRegionFigurePan(nextY, KNOWLEDGE_REGION_MAP_SIZE, figureZoom),
+    });
+  }
+
+  function onFigurePointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (figureDragRef.current) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    figureDragRef.current = null;
+  }
 
   function selectIdentity(key: string) {
     const id = knowledgeRegionSampleIdForIdentity({
@@ -680,10 +760,55 @@ export function KnowledgeRegionPage({
               {mode === "view" && figure ? (
                 <FlowFormCard className="overflow-hidden p-4 sm:p-5">
                   <div className="grid items-start gap-5 lg:grid-cols-[7fr_3fr]">
-                  <div className="w-full overflow-hidden bg-black">
+                  <div
+                    ref={figureFrameRef}
+                    className={`relative aspect-square w-full overflow-hidden bg-black ${
+                      figureZoom > KNOWLEDGE_REGION_FIGURE_ZOOM_FIT ? "cursor-grab" : ""
+                    }`}
+                    data-knowledge-region-figure-frame=""
+                    data-knowledge-region-figure-zoom={String(figureZoom)}
+                    onPointerDown={onFigurePointerDown}
+                    onPointerMove={onFigurePointerMove}
+                    onPointerUp={onFigurePointerUp}
+                    onPointerCancel={onFigurePointerUp}
+                  >
+                  <div
+                    className="absolute right-2 top-2 z-10 flex gap-1"
+                    data-knowledge-region-figure-zoom-controls=""
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className={ZOOM_BTN}
+                      data-knowledge-region-figure-zoom-out=""
+                      aria-label="Zoom out"
+                      disabled={figureZoom <= KNOWLEDGE_REGION_FIGURE_ZOOM_FIT}
+                      onClick={() => applyFigureZoom(knowledgeRegionFigureZoomOut(figureZoom))}
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      className={ZOOM_BTN}
+                      data-knowledge-region-figure-zoom-fit=""
+                      aria-label="Fit figure"
+                      onClick={() => fitFigure()}
+                    >
+                      Fit
+                    </button>
+                    <button
+                      type="button"
+                      className={ZOOM_BTN}
+                      data-knowledge-region-figure-zoom-in=""
+                      aria-label="Zoom in"
+                      onClick={() => applyFigureZoom(knowledgeRegionFigureZoomIn(figureZoom))}
+                    >
+                      +
+                    </button>
+                  </div>
                   <svg
-                    viewBox={`0 0 ${figure.map.size} ${figure.map.size}`}
-                    className="block h-auto w-full"
+                    viewBox={figureViewBox.value}
+                    className="block h-full w-full"
                     data-knowledge-region-figure=""
                     data-knowledge-region-figure-mode={figureMode}
                     role="img"
@@ -868,7 +993,10 @@ export function KnowledgeRegionPage({
                             data-knowledge-region-on-path={
                               figureTrack === "path" ? String(onPath) : undefined
                             }
-                            onClick={() => setSelectedSampleId(point.id)}
+                            onClick={() => {
+                              if (figurePannedRef.current) return;
+                              setSelectedSampleId(point.id);
+                            }}
                           >
                             <title>{showRosterName ? rosterName : point.identity || point.id}</title>
                             {point.glyph === "diamond" || point.glyph === "open-diamond" ? (

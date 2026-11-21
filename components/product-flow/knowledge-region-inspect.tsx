@@ -9,6 +9,7 @@ import {
 } from "@/lib/data-studio-view";
 import {
   formatKnowledgeRegionTimestamp,
+  knowledgeRegionFigureTrack,
   knowledgeRegionPointKindLabel,
   parseKnowledgeRegionFigureMode,
   type KnowledgeRegionClusterDistance,
@@ -50,7 +51,8 @@ export function KnowledgeRegionInspect({
   const shownIdentity =
     String(identityLabel || "").trim() || inspect.identity || sample.id;
   const figureMode = parseKnowledgeRegionFigureMode(mode);
-  const primaryTab: InspectTab = figureMode === "path" ? "path" : "distances";
+  const figureTrack = knowledgeRegionFigureTrack(figureMode);
+  const primaryTab: InspectTab = figureTrack === "path" ? "path" : "distances";
   const [tab, setTab] = useState<InspectTab>(primaryTab);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export function KnowledgeRegionInspect({
         </button>
       </div>
       <div className="flex" role="tablist" aria-label="Point inspect">
-        {figureMode === "path" ? (
+        {figureTrack === "path" ? (
           <button
             type="button"
             role="tab"

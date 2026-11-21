@@ -37,11 +37,38 @@ export type KnowledgeRegionGlyphKind =
   | "diamond"
   | "open-diamond";
 
-export type KnowledgeRegionFigureMode = "individual" | "path" | "quadrant";
+export type KnowledgeRegionFigureSpace = "full" | "quadrant";
+export type KnowledgeRegionFigureTrack = "individual" | "path";
+export type KnowledgeRegionFigureMode = "individual" | "path" | "quadrant" | "quadrant-path";
+
+export function parseKnowledgeRegionFigureSpace(value: unknown): KnowledgeRegionFigureSpace {
+  return value === "quadrant" ? "quadrant" : "full";
+}
+
+export function parseKnowledgeRegionFigureTrack(value: unknown): KnowledgeRegionFigureTrack {
+  return value === "path" ? "path" : "individual";
+}
+
+export function knowledgeRegionFigureSpace(mode: KnowledgeRegionFigureMode): KnowledgeRegionFigureSpace {
+  return mode === "quadrant" || mode === "quadrant-path" ? "quadrant" : "full";
+}
+
+export function knowledgeRegionFigureTrack(mode: KnowledgeRegionFigureMode): KnowledgeRegionFigureTrack {
+  return mode === "path" || mode === "quadrant-path" ? "path" : "individual";
+}
+
+export function knowledgeRegionFigureMode(
+  space: KnowledgeRegionFigureSpace,
+  track: KnowledgeRegionFigureTrack,
+): KnowledgeRegionFigureMode {
+  if (space === "quadrant") return track === "path" ? "quadrant-path" : "quadrant";
+  return track === "path" ? "path" : "individual";
+}
 
 export function parseKnowledgeRegionFigureMode(value: unknown): KnowledgeRegionFigureMode {
   if (value === "path") return "path";
   if (value === "quadrant") return "quadrant";
+  if (value === "quadrant-path") return "quadrant-path";
   return "individual";
 }
 
@@ -906,6 +933,8 @@ export function presentKnowledgeRegionFigure(input: {
         : null;
   const selectedPointId = input.selectedPointId || null;
   const mode = parseKnowledgeRegionFigureMode(input.mode);
+  const space = knowledgeRegionFigureSpace(mode);
+  const track = knowledgeRegionFigureTrack(mode);
   const map = {
     size: KNOWLEDGE_REGION_MAP_SIZE,
     cx: KNOWLEDGE_REGION_MAP_CENTER.x,
@@ -928,7 +957,7 @@ export function presentKnowledgeRegionFigure(input: {
     }))
     .filter((cluster) => clusterVisibleInKnowledgeRegion(cluster.id, visibleClusterIds));
   const quadrant =
-    mode === "quadrant"
+    space === "quadrant"
       ? placeKnowledgeRegionQuadrantPoints({
           points: visible,
           clusters: wedgeClusters,
@@ -1098,7 +1127,7 @@ export function presentKnowledgeRegionFigure(input: {
   }
 
   const path =
-    mode === "path" && focusPoint
+    track === "path" && focusPoint
       ? presentKnowledgeRegionIdentityPath({
           points: located,
           identityKey: knowledgeRegionIdentityKey(focusPoint),
@@ -1107,7 +1136,7 @@ export function presentKnowledgeRegionFigure(input: {
       : null;
 
   const rays: KnowledgeRegionRay[] = [];
-  if (mode === "individual" && focus && focusPoint) {
+  if (track === "individual" && space === "full" && focus && focusPoint) {
     const ranked = [...clusterMeta]
       .filter((cluster) => cluster.center)
       .map((cluster) => ({

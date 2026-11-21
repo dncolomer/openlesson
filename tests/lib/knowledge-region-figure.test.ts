@@ -16,6 +16,11 @@ import {
   knowledgeRegionPolarGrid,
   knowledgeRegionSampleIdForIdentity,
   parseKnowledgeRegionFigureMode,
+  parseKnowledgeRegionFigureSpace,
+  parseKnowledgeRegionFigureTrack,
+  knowledgeRegionFigureMode,
+  knowledgeRegionFigureSpace,
+  knowledgeRegionFigureTrack,
   knowledgeRegionUnsysDistance,
   placeKnowledgeRegionQuadrantPoints,
   presentKnowledgeRegionClusterDistances,
@@ -208,7 +213,18 @@ describe("knowledge region figure", () => {
     expect(parseKnowledgeRegionFigureMode("path")).toBe("path");
     expect(parseKnowledgeRegionFigureMode("individual")).toBe("individual");
     expect(parseKnowledgeRegionFigureMode("quadrant")).toBe("quadrant");
+    expect(parseKnowledgeRegionFigureMode("quadrant-path")).toBe("quadrant-path");
     expect(parseKnowledgeRegionFigureMode("nope")).toBe("individual");
+    expect(parseKnowledgeRegionFigureSpace("quadrant")).toBe("quadrant");
+    expect(parseKnowledgeRegionFigureSpace("full")).toBe("full");
+    expect(parseKnowledgeRegionFigureTrack("path")).toBe("path");
+    expect(parseKnowledgeRegionFigureTrack("individual")).toBe("individual");
+    expect(knowledgeRegionFigureMode("full", "individual")).toBe("individual");
+    expect(knowledgeRegionFigureMode("full", "path")).toBe("path");
+    expect(knowledgeRegionFigureMode("quadrant", "individual")).toBe("quadrant");
+    expect(knowledgeRegionFigureMode("quadrant", "path")).toBe("quadrant-path");
+    expect(knowledgeRegionFigureSpace("quadrant-path")).toBe("quadrant");
+    expect(knowledgeRegionFigureTrack("quadrant-path")).toBe("path");
     expect(knowledgeRegionUnsysDistance({ projectedPolicy: { distance: 1.25 } })).toBe(1.25);
     expect(knowledgeRegionUnsysDistance(null)).toBeNull();
 
@@ -399,6 +415,74 @@ describe("knowledge region figure", () => {
     expect(farR).toBeGreaterThan(nearR);
   });
 
+  it("draws an identity path across quadrant sections", () => {
+    const clusters = [
+      { id: "c-exploit", strategyName: "Exploit-heavy", vector: [1, 0] },
+      { id: "c-balanced", strategyName: "Balanced", vector: [0, 1] },
+    ];
+    const points = [
+      {
+        id: "ada-early",
+        x: 10,
+        y: 10,
+        origin: "human" as const,
+        clusterId: null,
+        identity: "ada",
+        createdAt: "2024-06-01T00:00:00Z",
+        vector: [1, 0],
+        unsysDistance: 0.4,
+      },
+      {
+        id: "ada-late",
+        x: 80,
+        y: 80,
+        origin: "human" as const,
+        clusterId: null,
+        identity: "ada",
+        createdAt: "2024-06-04T00:00:00Z",
+        vector: [0, 1],
+        unsysDistance: 1.4,
+      },
+      {
+        id: "other",
+        x: 40,
+        y: 40,
+        origin: "simulated" as const,
+        clusterId: "c-balanced",
+        identity: "Simulated · Balanced",
+        createdAt: "2024-06-02T00:00:00Z",
+        vector: [0, 1],
+        unsysDistance: 1,
+      },
+    ];
+    const crossed = presentKnowledgeRegionFigure({
+      parent: { id: "parent", name: "Limits styles" },
+      clusters,
+      showReal: true,
+      selectedPointId: "ada-early",
+      mode: "quadrant-path",
+      points,
+    });
+    expect(crossed.sections).toHaveLength(2);
+    expect(crossed.contours).toEqual([]);
+    expect(crossed.centroids).toEqual([]);
+    expect(crossed.rays).toEqual([]);
+    expect(crossed.path?.label).toBe("ada");
+    expect(crossed.path?.steps.map((step) => step.id)).toEqual(["ada-early", "ada-late"]);
+    expect(crossed.path?.steps.map((step) => step.clusterId)).toEqual([
+      "c-exploit",
+      "c-balanced",
+    ]);
+    expect(crossed.path?.segments).toHaveLength(1);
+    const early = crossed.glyphs.find((glyph) => glyph.id === "ada-early")!;
+    const late = crossed.glyphs.find((glyph) => glyph.id === "ada-late")!;
+    expect(early.clusterId).toBe("c-exploit");
+    expect(late.clusterId).toBe("c-balanced");
+    const earlyAngle = Math.atan2(early.y - crossed.map.cy, early.x - crossed.map.cx);
+    const lateAngle = Math.atan2(late.y - crossed.map.cy, late.x - crossed.map.cx);
+    expect(Math.abs(earlyAngle - lateAngle)).toBeGreaterThan(0.4);
+  });
+
   it("renders the polar map chrome on the details page", () => {
     const page = readFileSync(
       join(ROOT, "components/product-flow/knowledge-region-page.tsx"),
@@ -432,6 +516,13 @@ describe("knowledge region figure", () => {
     expect(page).toContain("data-knowledge-region-figure-mode");
     expect(page).toContain("data-knowledge-region-figure-mode-option");
     expect(page).toContain('data-knowledge-region-figure-mode-option="quadrant"');
+    expect(page).toContain("data-knowledge-region-figure-space");
+    expect(page).toContain('data-knowledge-region-figure-space-option="full"');
+    expect(page).toContain('data-knowledge-region-figure-space-option="quadrant"');
+    expect(page).toContain("data-knowledge-region-figure-track");
+    expect(page).toContain('data-knowledge-region-figure-track-option="individual"');
+    expect(page).toContain('data-knowledge-region-figure-track-option="path"');
+    expect(page).toContain("knowledgeRegionFigureMode");
     expect(page).toContain("data-knowledge-region-section");
     expect(page).toContain("knowledgeRegionUnsysDistance");
     expect(page).toContain("data-knowledge-region-identity");

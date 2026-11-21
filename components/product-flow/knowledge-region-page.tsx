@@ -35,6 +35,9 @@ import {
   KNOWLEDGE_REGION_ANALYSIS_FILL,
   KNOWLEDGE_REGION_MAP_SIZE,
   knowledgeRegionAnalysisPointLabel,
+  knowledgeRegionFigureMode,
+  knowledgeRegionFigureSpace,
+  knowledgeRegionFigureTrack,
   knowledgeRegionIdentityKey,
   knowledgeRegionIdentityLabel,
   knowledgeRegionIdentityOptions,
@@ -42,10 +45,14 @@ import {
   knowledgeRegionUnsysDistance,
   knowledgeRegionVisibleIdsFromSelection,
   parseKnowledgeRegionFigureMode,
+  parseKnowledgeRegionFigureSpace,
+  parseKnowledgeRegionFigureTrack,
   presentKnowledgeRegionClusterDistances,
   presentKnowledgeRegionFigure,
   resolveKnowledgeRegionPointKind,
   type KnowledgeRegionFigureMode,
+  type KnowledgeRegionFigureSpace,
+  type KnowledgeRegionFigureTrack,
   type KnowledgeRegionPointKind,
 } from "@/lib/knowledge-region-figure";
 import type { FlowPowRow } from "@/lib/flow-embedding";
@@ -122,6 +129,8 @@ export function KnowledgeRegionPage({
   const [addSamples, setAddSamples] = useState(REGION_SIMULATION_DEFAULT_SAMPLES);
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState("");
+  const figureSpace = knowledgeRegionFigureSpace(figureMode);
+  const figureTrack = knowledgeRegionFigureTrack(figureMode);
 
   const loadDetails = useCallback(() => {
     let cancelled = false;
@@ -313,9 +322,21 @@ export function KnowledgeRegionPage({
   function setMode(next: KnowledgeRegionFigureMode) {
     const mode = parseKnowledgeRegionFigureMode(next);
     setFigureMode(mode);
-    if (mode !== "path" || selectedSampleId) return;
+    if (knowledgeRegionFigureTrack(mode) !== "path" || selectedSampleId) return;
     const first = identityOptions[0];
     if (first) selectIdentity(first.id);
+  }
+
+  function setSpace(next: KnowledgeRegionFigureSpace) {
+    setMode(
+      knowledgeRegionFigureMode(parseKnowledgeRegionFigureSpace(next), figureTrack),
+    );
+  }
+
+  function setTrack(next: KnowledgeRegionFigureTrack) {
+    setMode(
+      knowledgeRegionFigureMode(figureSpace, parseKnowledgeRegionFigureTrack(next)),
+    );
   }
 
   const simulationPath = dashboardKnowledgeRegionSimulationPath(regionId);
@@ -829,7 +850,7 @@ export function KnowledgeRegionPage({
                               : STUDIO_HUMAN_FILL;
                         const open = point.glyph === "open-circle" || point.glyph === "open-diamond";
                         const selected = point.id === selectedSampleId;
-                        const onPath = figureMode !== "path" || pathIds.has(point.id);
+                        const onPath = figureTrack !== "path" || pathIds.has(point.id);
                         const radius = selected ? 5.5 : 4.2;
                         const rosterName = knowledgeRegionIdentityLabel(
                           point.identity,
@@ -847,7 +868,7 @@ export function KnowledgeRegionPage({
                             data-knowledge-region-glyph={point.glyph}
                             data-knowledge-region-point-kind={kind}
                             data-knowledge-region-on-path={
-                              figureMode === "path" ? String(onPath) : undefined
+                              figureTrack === "path" ? String(onPath) : undefined
                             }
                             onClick={() => setSelectedSampleId(point.id)}
                           >
@@ -953,47 +974,73 @@ export function KnowledgeRegionPage({
                     data-knowledge-region-controls=""
                   >
                     <div data-knowledge-region-figure-mode="">
-                      <span className="text-[10px] uppercase tracking-wide text-neutral-500">
-                        View
-                      </span>
-                      <div
-                        className="mt-0.5 flex flex-wrap gap-1"
-                        role="tablist"
-                        aria-label="Figure mode"
-                      >
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={figureMode === "individual"}
-                          className={figureMode === "individual" ? MODE_ON : MODE_OFF}
-                          data-knowledge-region-figure-mode-option="individual"
-                          onClick={() => setMode("individual")}
+                      <div data-knowledge-region-figure-space="">
+                        <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                          Space
+                        </span>
+                        <div
+                          className="mt-0.5 flex flex-wrap gap-1"
+                          role="tablist"
+                          aria-label="Figure space"
                         >
-                          Individual
-                        </button>
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={figureMode === "path"}
-                          className={figureMode === "path" ? MODE_ON : MODE_OFF}
-                          data-knowledge-region-figure-mode-option="path"
-                          onClick={() => setMode("path")}
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={figureSpace === "full"}
+                            className={figureSpace === "full" ? MODE_ON : MODE_OFF}
+                            data-knowledge-region-figure-space-option="full"
+                            onClick={() => setSpace("full")}
+                          >
+                            Full space
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={figureSpace === "quadrant"}
+                            className={figureSpace === "quadrant" ? MODE_ON : MODE_OFF}
+                            data-knowledge-region-figure-space-option="quadrant"
+                            data-knowledge-region-figure-mode-option="quadrant"
+                            onClick={() => setSpace("quadrant")}
+                          >
+                            Quadrants
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2" data-knowledge-region-figure-track="">
+                        <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                          Track
+                        </span>
+                        <div
+                          className="mt-0.5 flex flex-wrap gap-1"
+                          role="tablist"
+                          aria-label="Figure track"
                         >
-                          Path
-                        </button>
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={figureMode === "quadrant"}
-                          className={figureMode === "quadrant" ? MODE_ON : MODE_OFF}
-                          data-knowledge-region-figure-mode-option="quadrant"
-                          onClick={() => setMode("quadrant")}
-                        >
-                          Quadrant
-                        </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={figureTrack === "individual"}
+                            className={figureTrack === "individual" ? MODE_ON : MODE_OFF}
+                            data-knowledge-region-figure-track-option="individual"
+                            data-knowledge-region-figure-mode-option="individual"
+                            onClick={() => setTrack("individual")}
+                          >
+                            Individual
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={figureTrack === "path"}
+                            className={figureTrack === "path" ? MODE_ON : MODE_OFF}
+                            data-knowledge-region-figure-track-option="path"
+                            data-knowledge-region-figure-mode-option="path"
+                            onClick={() => setTrack("path")}
+                          >
+                            Path
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    {figureMode === "path" ? (
+                    {figureTrack === "path" ? (
                       <label className="flex min-w-0 w-full flex-col gap-0.5">
                         <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                           Identity
@@ -1013,7 +1060,7 @@ export function KnowledgeRegionPage({
                         </select>
                       </label>
                     ) : null}
-                    {figureMode === "quadrant" ? null : (
+                    {figureSpace === "quadrant" ? null : (
                     <label className="flex min-w-0 w-full flex-col gap-0.5">
                       <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                         Project

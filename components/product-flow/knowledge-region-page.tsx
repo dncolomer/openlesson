@@ -32,6 +32,7 @@ import {
   KNOWLEDGE_REGION_MAP_SIZE,
   knowledgeRegionAnalysisPointLabel,
   knowledgeRegionIdentityKey,
+  knowledgeRegionIdentityLabel,
   knowledgeRegionIdentityOptions,
   knowledgeRegionSampleIdForIdentity,
   knowledgeRegionUnsysDistance,
@@ -50,6 +51,7 @@ import {
   type KnowledgeRegionDetailsSample,
 } from "@/lib/knowledge-region-details";
 import { productFlowKindLabel, type ProductFlowKind } from "@/lib/product-flow";
+import { parseLtiRosterNames } from "@/lib/lti/nrps";
 
 const FIGURE_SCREEN = {
   width: KNOWLEDGE_REGION_MAP_SIZE,
@@ -72,9 +74,11 @@ const POINT_KIND_IDS: readonly KnowledgeRegionPointKind[] = [
 export function KnowledgeRegionPage({
   kind,
   regionId,
+  detailsUrl,
 }: {
   kind: ProductFlowKind;
   regionId: string;
+  detailsUrl?: string;
 }) {
   const productLabel = productFlowKindLabel(kind);
   const [details, setDetails] = useState<KnowledgeRegionDetails | null>(null);
@@ -88,24 +92,32 @@ export function KnowledgeRegionPage({
   const [algorithm, setAlgorithm] = useState<ProjectionAlgorithmId>("pca");
   const [figureMode, setFigureMode] = useState<KnowledgeRegionFigureMode>("individual");
   const [runPow, setRunPow] = useState<FlowPowRow[]>([]);
+  const [rosterNames, setRosterNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
     const params = new URLSearchParams({ kind });
-    void fetch(`${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}?${params}`)
+    const href =
+      detailsUrl ||
+      `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}?${params}`;
+    void fetch(href)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           throw new Error(errorMessageFromBody(payload, "Could not load knowledge region"));
         }
         const next = payload.details as KnowledgeRegionDetails | undefined;
-        if (!cancelled) setDetails(next && next.id ? next : null);
+        if (!cancelled) {
+          setDetails(next && next.id ? next : null);
+          setRosterNames(parseLtiRosterNames(payload.rosterNames));
+        }
       })
       .catch((err) => {
         if (!cancelled) {
           setDetails(null);
+          setRosterNames({});
           setError(err instanceof Error ? err.message : "Could not load knowledge region");
         }
       })
@@ -115,7 +127,7 @@ export function KnowledgeRegionPage({
     return () => {
       cancelled = true;
     };
-  }, [kind, regionId]);
+  }, [kind, regionId, detailsUrl]);
 
   const clusterIds = useMemo(
     () => (details?.clusters ?? []).map((cluster) => cluster.id),
@@ -147,8 +159,8 @@ export function KnowledgeRegionPage({
   );
 
   const identityOptions = useMemo(
-    () => knowledgeRegionIdentityOptions(identityPoints),
-    [identityPoints],
+    () => knowledgeRegionIdentityOptions(identityPoints, rosterNames),
+    [identityPoints, rosterNames],
   );
 
   const selectedSample: KnowledgeRegionDetailsSample | null =
@@ -518,6 +530,13 @@ export function KnowledgeRegionPage({
                         const selected = point.id === selectedSampleId;
                         const onPath = figureMode !== "path" || pathIds.has(point.id);
                         const radius = selected ? 5.5 : 4.2;
+                        const rosterName = knowledgeRegionIdentityLabel(
+                          point.identity,
+                          rosterNames,
+                        );
+                        const showRosterName = Boolean(
+                          point.identity && rosterNames[String(point.identity).trim()],
+                        );
                         return (
                           <g
                             key={point.id}
@@ -531,7 +550,7 @@ export function KnowledgeRegionPage({
                             }
                             onClick={() => setSelectedSampleId(point.id)}
                           >
-                            <title>{point.identity || point.id}</title>
+                            <title>{showRosterName ? rosterName : point.identity || point.id}</title>
                             {point.glyph === "diamond" || point.glyph === "open-diamond" ? (
                               <polygon
                                 points={diamondGlyphPoints(point.x, point.y, radius)}
@@ -549,6 +568,18 @@ export function KnowledgeRegionPage({
                                 strokeWidth={open ? 1.35 : 1.05}
                               />
                             )}
+                            {showRosterName ? (
+                              <text
+                                x={point.x + 8}
+                                y={point.y + 3}
+                                fill="rgba(255,255,255,0.92)"
+                                fontSize={9}
+                                fontFamily="ui-sans-serif, system-ui, sans-serif"
+                                data-knowledge-region-roster-name={point.id}
+                              >
+                                {rosterName}
+                              </text>
+                            ) : null}
                           </g>
                         );
                       })}
@@ -767,10 +798,21 @@ export function KnowledgeRegionPage({
                   inspect={inspect}
                   sample={selectedSample}
                   distances={clusterDistances}
-                  path={figure?.path ?? null}
+                  path={
+                    figure?.path
+                      ? {
+                          ...figure.path,
+                          label: knowledgeRegionIdentityLabel(figure.path.key, rosterNames),
+                        }
+                      : null
+                  }
                   unsysDistance={knowledgeRegionUnsysDistance(selectedSample.embedding.raw)}
                   mode={figureMode}
                   productKind={details.kind}
+                  identityLabel={knowledgeRegionIdentityLabel(
+                    selectedSample.identity,
+                    rosterNames,
+                  )}
                   onClose={() => setSelectedSampleId(null)}
                   onSelectStep={setSelectedSampleId}
                 />

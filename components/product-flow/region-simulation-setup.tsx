@@ -103,8 +103,12 @@ async function readSimulationStream(
 
 export function RegionSimulationSetup({
   kind: lockedKind,
+  apiPath = DASHBOARD_REGION_SIMULATION_PATH,
+  detailsBasePath,
 }: {
   kind?: ProductFlowKind;
+  apiPath?: string;
+  detailsBasePath?: string;
 }) {
   const [kind, setKind] = useState<ProductFlowKind>(lockedKind ?? "solve");
   const productLabel = productFlowKindLabel(kind);
@@ -125,7 +129,7 @@ export function RegionSimulationSetup({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${DASHBOARD_REGION_SIMULATION_PATH}?kind=${kind}`)
+    fetch(`${apiPath}?kind=${kind}`)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -162,7 +166,7 @@ export function RegionSimulationSetup({
     return () => {
       cancelled = true;
     };
-  }, [kind]);
+  }, [kind, apiPath]);
 
   useEffect(() => {
     setFlowIds([]);
@@ -249,7 +253,7 @@ export function RegionSimulationSetup({
       }),
     );
     try {
-      const response = await fetch(DASHBOARD_REGION_SIMULATION_PATH, {
+      const response = await fetch(apiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -344,7 +348,11 @@ export function RegionSimulationSetup({
             </ul>
             <div className="flex flex-wrap gap-3">
               <Link
-                href={result.regionPath || productRegionPagePath(kind, result.id || "")}
+                href={
+                  detailsBasePath
+                    ? `${detailsBasePath}/${encodeURIComponent(result.id || "")}`
+                    : result.regionPath || productRegionPagePath(kind, result.id || "")
+                }
                 className={FLOW_PRIMARY_BTN}
                 data-open-region-details=""
               >

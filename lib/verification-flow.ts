@@ -216,13 +216,20 @@ export function verificationQuestionStartingPrompt(question: {
   return question.text.trim();
 }
 
+export function isLtiParticipantIdentity(raw: string): boolean {
+  return String(raw || "").trim().startsWith("lti:");
+}
+
 export function acceptParticipantIdentity(
   raw: string,
   existing: readonly string[],
 ): { ok: true; identity: string } | { ok: false; reason: "empty" | "duplicate" } {
   const identity = String(raw || "").trim();
   if (!identity) return { ok: false, reason: "empty" };
-  if (existing.some((value) => value.trim() === identity)) {
+  if (
+    !isLtiParticipantIdentity(identity) &&
+    existing.some((value) => value.trim() === identity)
+  ) {
     return { ok: false, reason: "duplicate" };
   }
   return { ok: true, identity };

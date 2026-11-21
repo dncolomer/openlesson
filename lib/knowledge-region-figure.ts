@@ -313,14 +313,24 @@ function createdAtMs(value: string | null | undefined): number {
   return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
 }
 
+export function knowledgeRegionIdentityLabel(
+  identity: string | null | undefined,
+  labels?: Record<string, string> | null,
+): string {
+  const key = String(identity || "").trim();
+  if (!key) return "";
+  return String(labels?.[key] || "").trim() || key;
+}
+
 export function knowledgeRegionIdentityOptions(
   points: readonly Pick<KnowledgeRegionFigurePoint, "id" | "identity">[],
+  labels?: Record<string, string> | null,
 ): KnowledgeRegionIdentityOption[] {
   const seen = new Map<string, string>();
   for (const point of points) {
     const key = knowledgeRegionIdentityKey(point);
     if (!key || seen.has(key)) continue;
-    seen.set(key, String(point.identity || "").trim() || key);
+    seen.set(key, knowledgeRegionIdentityLabel(String(point.identity || "").trim() || key, labels));
   }
   return [...seen.entries()]
     .map(([id, label]) => ({ id, label }))

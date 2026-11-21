@@ -32,6 +32,7 @@ export function KnowledgeRegionInspect({
   unsysDistance = null,
   mode = "individual",
   productKind,
+  identityLabel,
   onClose,
   onSelectStep,
 }: {
@@ -42,9 +43,12 @@ export function KnowledgeRegionInspect({
   unsysDistance?: number | null;
   mode?: KnowledgeRegionFigureMode | string | null;
   productKind?: string | null;
+  identityLabel?: string | null;
   onClose: () => void;
   onSelectStep?: (id: string) => void;
 }) {
+  const shownIdentity =
+    String(identityLabel || "").trim() || inspect.identity || sample.id;
   const figureMode = parseKnowledgeRegionFigureMode(mode);
   const primaryTab: InspectTab = figureMode === "path" ? "path" : "distances";
   const [tab, setTab] = useState<InspectTab>(primaryTab);
@@ -59,7 +63,7 @@ export function KnowledgeRegionInspect({
       data-knowledge-region-inspect=""
     >
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-        <p className="truncate text-sm text-white">{inspect.identity || sample.id}</p>
+        <p className="truncate text-sm text-white">{shownIdentity}</p>
         <button
           type="button"
           className="text-[11px] text-neutral-500 hover:text-white"
@@ -107,7 +111,7 @@ export function KnowledgeRegionInspect({
         <div className="space-y-4 p-4 text-sm text-neutral-300" data-knowledge-region-inspect-panel="path">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
             <dt className={FLOW_FORM_LABEL}>Identity</dt>
-            <dd className="text-white">{path?.label || inspect.identity || sample.id}</dd>
+            <dd className="text-white">{path?.label || shownIdentity}</dd>
             <dt className={FLOW_FORM_LABEL}>Observations</dt>
             <dd className="text-white">{path?.steps.length ?? 0}</dd>
           </dl>

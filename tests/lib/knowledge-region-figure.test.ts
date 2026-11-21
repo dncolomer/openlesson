@@ -10,6 +10,7 @@ import {
   KNOWLEDGE_REGION_CLUSTER_COLORS,
   knowledgeRegionAnalysisPointLabel,
   knowledgeRegionGlyphForPoint,
+  knowledgeRegionIdentityLabel,
   knowledgeRegionIdentityOptions,
   knowledgeRegionPointKind,
   knowledgeRegionPolarGrid,
@@ -245,6 +246,15 @@ describe("knowledge region figure", () => {
       "Simulated · Balanced",
       "Simulated · Exploit-heavy",
     ]);
+    expect(knowledgeRegionIdentityLabel("lti:https://school.brightspace.com:user-9", {
+      "lti:https://school.brightspace.com:user-9": "Ada",
+    })).toBe("Ada");
+    expect(
+      knowledgeRegionIdentityOptions(
+        [{ id: "p1", identity: "lti:https://school.brightspace.com:user-9" }],
+        { "lti:https://school.brightspace.com:user-9": "Ada" },
+      ).map((row) => row.label),
+    ).toEqual(["Ada"]);
     expect(
       knowledgeRegionSampleIdForIdentity({
         points,
@@ -412,6 +422,8 @@ describe("knowledge region figure", () => {
     expect(page).toContain("data-knowledge-region-section");
     expect(page).toContain("knowledgeRegionUnsysDistance");
     expect(page).toContain("data-knowledge-region-identity");
+    expect(page).toContain("data-knowledge-region-roster-name");
+    expect(page).toContain("parseLtiRosterNames");
     expect(page).toContain("data-knowledge-region-path");
     expect(page).toContain("data-knowledge-region-path-segment");
     expect(page).toContain("data-knowledge-region-on-path");

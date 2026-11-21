@@ -41,6 +41,7 @@ import {
   type SoundingState,
 } from "@/lib/calibrate-sounding";
 import { inferSoundingVoiceStep } from "@/lib/calibrate-sounding-voice-client";
+import { ltiIdentityForPublicToken } from "@/lib/lti/auto-claim";
 
 function CalibrationViewport({ children }: { children: ReactNode }) {
   return (
@@ -155,15 +156,14 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     setFieldHold(null);
   }
 
-  async function claim(event: React.FormEvent) {
-    event.preventDefault();
+  async function claimIdentity(nextIdentity: string) {
     setClaiming(true);
     setError("");
     try {
       const response = await fetch(`/api/calibration-flow/public/${encodeURIComponent(token)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identity }),
+        body: JSON.stringify({ identity: nextIdentity }),
       });
       const raw = await response.text();
       let payload: {
@@ -220,6 +220,17 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     } finally {
       setClaiming(false);
     }
+  }
+
+  useEffect(() => {
+    void ltiIdentityForPublicToken(token).then((ltiIdentity) => {
+      if (ltiIdentity) void claimIdentity(ltiIdentity);
+    });
+  }, [token]);
+
+  async function claim(event: React.FormEvent) {
+    event.preventDefault();
+    await claimIdentity(identity);
   }
 
   useEffect(() => {

@@ -115,6 +115,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const { maybePostLtiUnsysGrades } = await import("@/lib/lti/maybe-post-grades");
+    await maybePostLtiUnsysGrades({ stored });
+
     return NextResponse.json({
       id: stored.id,
       embedding_model_id: stored.embedding_model_id,

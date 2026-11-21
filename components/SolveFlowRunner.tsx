@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SessionView } from "@/components/SessionView";
 import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-identity-form";
+import { ltiIdentityForPublicToken } from "@/lib/lti/auto-claim";
 import { solvePublicApiPath } from "@/lib/session-pow-api-paths";
 
 type Phase = "identity" | "work";
@@ -14,15 +15,14 @@ export function SolveFlowRunner({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function claim(event: React.FormEvent) {
-    event.preventDefault();
+  async function claimIdentity(nextIdentity: string) {
     setBusy(true);
     setError("");
     try {
       const response = await fetch(solvePublicApiPath(token), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identity }),
+        body: JSON.stringify({ identity: nextIdentity }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -45,6 +45,17 @@ export function SolveFlowRunner({ token }: { token: string }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  useEffect(() => {
+    void ltiIdentityForPublicToken(token).then((ltiIdentity) => {
+      if (ltiIdentity) void claimIdentity(ltiIdentity);
+    });
+  }, [token]);
+
+  async function claim(event: React.FormEvent) {
+    event.preventDefault();
+    await claimIdentity(identity);
   }
 
   if (phase === "work" && sessionId) {

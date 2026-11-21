@@ -76,6 +76,9 @@ export async function POST(
       }
     }
   }
+  const { maybePostLtiUnsysGrades } = await import("@/lib/lti/maybe-post-grades");
+  await maybePostLtiUnsysGrades({ stored, flowName: access.flow.name });
+
   return NextResponse.json({
     id: stored.id,
     flow_kind: stored.flow_kind,

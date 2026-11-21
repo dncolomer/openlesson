@@ -152,6 +152,14 @@ describe("verification flow identity and result membership", () => {
     expect(acceptParticipantIdentity("  ada ", [])).toEqual({ ok: true, identity: "ada" });
     expect(acceptParticipantIdentity("ada", ["ada"])).toEqual({ ok: false, reason: "duplicate" });
     expect(acceptParticipantIdentity("Ada", ["ada"]).ok).toBe(true);
+    expect(
+      acceptParticipantIdentity("lti:https://school.brightspace.com:user-9", [
+        "lti:https://school.brightspace.com:user-9",
+      ]),
+    ).toEqual({
+      ok: true,
+      identity: "lti:https://school.brightspace.com:user-9",
+    });
 
     let state = emptyVerificationState();
     const created = applyVerificationCommand(state, {

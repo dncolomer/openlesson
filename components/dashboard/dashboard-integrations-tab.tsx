@@ -2,6 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
+import { DashboardLmsCard } from "@/components/lti/dashboard-lms-card";
 import { default as Link } from "next/link";
 
 interface AgentApiKey {
@@ -73,6 +74,8 @@ export function DashboardIntegrationsTab({
                 </Link>
               )}
             </div>
+
+            <DashboardLmsCard usageCardClass={usageCardClass} />
 
             <div className={usageCardClass}>
               <IntegrationQuickAccess

@@ -19,6 +19,7 @@ import {
   productFlowKindLabel,
   productFlowOwnerTitle,
   productFlowPagePath,
+  productRegionEditPath,
   productFlowWizardCanAdvance,
 } from "@/lib/product-flow";
 import { exampleAuthorUnsysModel, authorUnsysSeedForPersist } from "@/lib/author-unsys-model";
@@ -75,6 +76,7 @@ describe("product flow owner_user_id", () => {
     expect(productFlowNewPath("solve")).toBe("/solve/flows/new");
     expect(productFlowNewPath()).toBe("/flows/new");
     expect(productFlowPagePath("solve", "sf1")).toBe("/solve/flows/sf1");
+    expect(productRegionEditPath("verification", "r1")).toBe("/verification/regions/r1/edit");
   });
 
   it("accepts a publish draft without a workspace", () => {

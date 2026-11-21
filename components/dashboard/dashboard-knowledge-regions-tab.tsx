@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
+  dashboardKnowledgeRegionEditHref,
   dashboardKnowledgeRegionHref,
   type DashboardKnowledgeRegion,
 } from "@/lib/dashboard-knowledge-regions";
@@ -73,7 +74,7 @@ export function DashboardKnowledgeRegionsTab({
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
               Create a region by running a simulation of exploration strategies on your flows.
-              Open details to inspect that region.
+              Open details to inspect that region. Edit to add another simulation round.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -148,7 +149,7 @@ export function DashboardKnowledgeRegionsTab({
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Subjects</th>
                 <th className="px-4 py-3 font-medium">Created</th>
-                <th className="px-4 py-3 font-medium">Details</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -170,13 +171,22 @@ export function DashboardKnowledgeRegionsTab({
                     {region.createdAt ? formatDate(region.createdAt) : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={dashboardKnowledgeRegionHref(region.kind, region.id)}
-                      className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
-                      data-open-region-details={region.id}
-                    >
-                      Open details
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={dashboardKnowledgeRegionHref(region.kind, region.id)}
+                        className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
+                        data-open-region-details={region.id}
+                      >
+                        Open details
+                      </Link>
+                      <Link
+                        href={dashboardKnowledgeRegionEditHref(region.kind, region.id)}
+                        className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
+                        data-open-region-edit={region.id}
+                      >
+                        Edit
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -6,6 +6,7 @@
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
 import {
   productFlowOwnerTitle,
+  productRegionEditPath,
   productRegionNewPath,
   productRegionPagePath,
 } from "@/lib/product-flow";
@@ -46,6 +47,13 @@ export function dashboardKnowledgeRegionHref(
   regionId: string,
 ): string {
   return productRegionPagePath(kind, regionId);
+}
+
+export function dashboardKnowledgeRegionEditHref(
+  kind: DashboardKnowledgeRegionKind,
+  regionId: string,
+): string {
+  return productRegionEditPath(kind, regionId);
 }
 
 export function dashboardKnowledgeRegionCreateHref(kind: DashboardKnowledgeRegionKind): string {

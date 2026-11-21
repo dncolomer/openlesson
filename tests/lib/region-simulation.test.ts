@@ -651,23 +651,28 @@ describe("region simulation", () => {
     expect(detailsPage).toContain("recoveredCustomStrategies");
   });
 
-  it("exposes add and remove simulated data on owner region details", () => {
+  it("exposes add simulated data on the region edit view", () => {
     const detailsPage = read("components/product-flow/knowledge-region-page.tsx");
     expect(detailsPage).toContain("data-knowledge-region-details");
+    expect(detailsPage).toContain("data-knowledge-region-edit");
     expect(detailsPage).toContain("data-knowledge-region-add-simulation");
     expect(detailsPage).toContain("data-knowledge-region-add-custom");
     expect(detailsPage).toContain("data-knowledge-region-custom-name");
     expect(detailsPage).toContain("data-knowledge-region-custom-instructions");
-    expect(detailsPage).toContain("data-knowledge-region-remove-simulated");
-    expect(detailsPage).toContain("data-knowledge-region-remove-cluster");
+    expect(detailsPage).toContain("data-knowledge-region-trash");
+    expect(detailsPage).not.toContain("data-knowledge-region-remove-simulated");
+    expect(detailsPage).not.toContain("data-knowledge-region-remove-cluster");
     expect(read("components/product-flow/region-simulation-setup.tsx")).toContain(
       "data-run-simulation",
     );
-    expect(read("lib/flow-embedding-store.ts")).toContain("export async function deleteFlowEmbeddings");
+    expect(read("lib/region-simulation-run.ts")).toContain("export async function trashRegionSimulation");
+    expect(read("app/api/dashboard/knowledge-regions/[id]/route.ts")).not.toContain(
+      "deleteFlowEmbeddings",
+    );
     expect(read("app/api/dashboard/knowledge-regions/[id]/simulation/route.ts")).toContain(
       "addRegionSimulationSamples",
     );
-    expect(read("app/api/dashboard/knowledge-regions/[id]/simulation/route.ts")).toContain(
+    expect(read("app/api/dashboard/knowledge-regions/[id]/simulation/route.ts")).not.toContain(
       "removeRegionSimulationSamples",
     );
   });

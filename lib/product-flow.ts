@@ -233,6 +233,11 @@ export function productRegionPagePath(kind: ProductFlowKind, regionId: string): 
   return `/verification/regions/${id}`;
 }
 
+export function productRegionEditPath(kind: ProductFlowKind, regionId: string): string {
+  const page = productRegionPagePath(kind, regionId);
+  return page.endsWith("/new") ? page : `${page}/edit`;
+}
+
 export function productFlowKindLabel(kind: ProductFlowKind): string {
   if (kind === "calibration") return "Calibration";
   if (kind === "solve") return "Solve";

@@ -12,6 +12,7 @@ import {
 import { presentKnowledgeRegionDetails } from "@/lib/knowledge-region-details";
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import { productFlowEmbeddingKind } from "@/lib/product-flow";
+import { trashRegionSimulation } from "@/lib/region-simulation-run";
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
 import type { DataStudioEmbeddingRow } from "@/lib/data-studio-view";
 
@@ -129,5 +130,29 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load knowledge region";
     return jsonError(500, message);
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { id } = await context.params;
+    const result = await trashRegionSimulation({
+      ownerUserId: auth.user.id,
+      regionId: id,
+    });
+    return NextResponse.json({
+      id: result.id,
+      deletedIds: result.deletedIds,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to trash knowledge region";
+    const status = /not found/i.test(message) ? 404 : 500;
+    return jsonError(status, message);
   }
 }

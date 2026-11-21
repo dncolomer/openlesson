@@ -11,6 +11,7 @@ import {
 import {
   knowledgeRegionCreateOffersFlowSelect,
   productFlowNewPath,
+  productRegionEditPath,
   productRegionNewPath,
   productRegionPagePath,
 } from "@/lib/product-flow";
@@ -140,6 +141,8 @@ describe("dashboard knowledge regions", () => {
       productRegionPagePath("calibration", "r-c"),
     );
     expect(productRegionPagePath("calibration", "r-c")).toBe("/calibration/regions/r-c");
+    expect(productRegionEditPath("verification", "r-1")).toBe("/verification/regions/r-1/edit");
+    expect(productRegionEditPath("solve", "r-s")).toBe("/solve/regions/r-s/edit");
     expect(dashboardKnowledgeRegionCreateHref("verification")).toBe(
       productRegionNewPath("verification"),
     );
@@ -202,6 +205,12 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
       "Open details",
     );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "data-open-region-edit",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "dashboardKnowledgeRegionEditHref",
+    );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain(
       "Open in Data Studio",
     );
@@ -220,8 +229,22 @@ describe("dashboard knowledge regions", () => {
     expect(
       existsSync(join(__dirname, "../../components/product-flow/knowledge-region-page.tsx")),
     ).toBe(true);
+    expect(readRepo("app/verification/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
+    expect(readRepo("app/calibration/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
+    expect(readRepo("app/solve/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
+    expect(readRepo("app/api/dashboard/knowledge-regions/[id]/route.ts")).toContain(
+      "trashRegionSimulation",
+    );
+    expect(readRepo("app/api/dashboard/knowledge-regions/[id]/route.ts")).toContain(
+      "export async function DELETE",
+    );
     const detailsPage = readRepo("components/product-flow/knowledge-region-page.tsx");
     expect(detailsPage).toContain("data-knowledge-region-details");
+    expect(detailsPage).toContain('mode === "edit"');
+    expect(detailsPage).toContain('mode === "view" && figure');
+    expect(detailsPage).toContain("data-knowledge-region-trash");
+    expect(detailsPage).not.toContain("data-knowledge-region-remove-simulated");
+    expect(detailsPage).not.toContain("data-knowledge-region-remove-cluster");
     expect(detailsPage).toContain("data-knowledge-region-summary");
     expect(detailsPage).toContain("<details");
     expect(detailsPage).toContain("lg:grid-cols-[7fr_3fr]");

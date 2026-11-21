@@ -304,8 +304,14 @@ export function presentKnowledgeRegionDetails(input: {
 
   const samples: KnowledgeRegionDetailsSample[] = [];
   const embeddings: DataStudioEmbeddingRow[] = [];
-  const flowIds = new Set<string>();
-  if (seededFlowId) flowIds.add(seededFlowId);
+  const includedFlowIds = new Set<string>();
+  if (seededFlowId) includedFlowIds.add(seededFlowId);
+  const flowIds = new Set<string>(includedFlowIds);
+
+  function onIncludedFlow(embedding: DataStudioEmbeddingRow): boolean {
+    const flowId = text(embedding.flow_id);
+    return Boolean(flowId && includedFlowIds.has(flowId));
+  }
 
   function pushSample(
     embedding: DataStudioEmbeddingRow,
@@ -361,6 +367,7 @@ export function presentKnowledgeRegionDetails(input: {
   }
 
   const hasGeometry = Boolean(parentCentroid || clusterCentroids.length);
+  const hasIncludedFlows = includedFlowIds.size > 0;
 
   for (const embedding of rows) {
     if (studioEmbeddingOrigin(embedding) !== "simulated") continue;
@@ -368,24 +375,23 @@ export function presentKnowledgeRegionDetails(input: {
     const cluster =
       clusters.find((row) => identity === simulatedIdentityLabel(row.strategyName)) ?? null;
     if (clusters.length && !cluster) continue;
-    if (hasGeometry) {
+    if (hasIncludedFlows) {
+      if (!onIncludedFlow(embedding)) continue;
+    } else if (hasGeometry) {
       if (!insideThisRegion(embedding.vector, cluster)) continue;
-    } else {
-      const onSeeded = Boolean(seededFlowId && text(embedding.flow_id) === seededFlowId);
-      if (!cluster && !onSeeded) continue;
+    } else if (!cluster) {
+      continue;
     }
     pushSample(embedding, cluster);
   }
 
   for (const embedding of rows) {
     if (studioEmbeddingOrigin(embedding) !== "human") continue;
-    const flowId = text(embedding.flow_id);
-    const onRegionFlow = Boolean(
-      (seededFlowId && flowId === seededFlowId) || (flowId && flowIds.has(flowId)),
-    );
-    if (hasGeometry) {
-      if (!insideThisRegion(embedding.vector, null) && !onRegionFlow) continue;
-    } else if (!onRegionFlow) {
+    if (hasIncludedFlows) {
+      if (!onIncludedFlow(embedding)) continue;
+    } else if (hasGeometry) {
+      if (!insideThisRegion(embedding.vector, null)) continue;
+    } else {
       continue;
     }
     pushSample(embedding, null);

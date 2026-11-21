@@ -3,7 +3,6 @@ import {
   completeFlowEmbedding,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
-import { l2Normalize } from "@/lib/knowledge-config/math";
 import {
   inspectStudioEmbedding,
   type DataStudioEmbeddingRow,
@@ -103,7 +102,16 @@ describe("knowledge region details", () => {
       runId: "sim_exploit-heavy_0_otherseed",
       prompt: "other region's exploit walk",
     });
-    otherRegionSameStrategy.vector = l2Normalize(simulated.vector.map((value) => -value));
+    otherRegionSameStrategy.vector = simulated.vector;
+    const otherFlowHuman = embeddingRow({
+      id: "ada-other-flow",
+      identity: "ada",
+      source: "runner",
+      flowId: "flow-b",
+      runId: "ada-other",
+      prompt: "other test",
+    });
+    otherFlowHuman.vector = simulated.vector;
     const humanInRegion = { ...human, vector: simulated.vector };
     const candidate = embeddingRow({
       id: "human-2",
@@ -167,6 +175,7 @@ describe("knowledge region details", () => {
         candidateInRegion,
         outsider,
         otherRegionSameStrategy,
+        otherFlowHuman,
       ],
     });
     expect(details).not.toBeNull();
@@ -186,6 +195,7 @@ describe("knowledge region details", () => {
       "sim-2",
     ]);
     expect(details?.samples.some((row) => row.id === "sim-other-region")).toBe(false);
+    expect(details?.samples.some((row) => row.id === "ada-other-flow")).toBe(false);
     expect(details?.simulatedCount).toBe(2);
     expect(details?.cohortCount).toBe(1);
     expect(details?.analysisCount).toBe(1);

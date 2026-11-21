@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { StudioMultiSelect } from "@/components/data-studio/StudioMultiSelect";
 import { KnowledgeRegionInspect } from "@/components/product-flow/knowledge-region-inspect";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
+  FLOW_DANGER_BTN,
   FLOW_FORM_INPUT,
   FLOW_FORM_LABEL,
   FLOW_FORM_TEXTAREA,
@@ -102,11 +104,14 @@ export function KnowledgeRegionPage({
   kind,
   regionId,
   detailsUrl,
+  mode = "view",
 }: {
   kind: ProductFlowKind;
   regionId: string;
   detailsUrl?: string;
+  mode?: "view" | "edit";
 }) {
+  const router = useRouter();
   const productLabel = productFlowKindLabel(kind);
   const [details, setDetails] = useState<KnowledgeRegionDetails | null>(null);
   const [error, setError] = useState("");
@@ -360,10 +365,6 @@ export function KnowledgeRegionPage({
     }
     return out;
   })();
-  const simulatedSamples = (details?.samples ?? []).filter(
-    (sample) => sample.origin === "simulated" || sample.pointKind === "simulated",
-  );
-
   function addCustomStrategy() {
     const parsed = parseCustomExplorationStrategy({
       name: customName,
@@ -380,28 +381,18 @@ export function KnowledgeRegionPage({
     setCustomInstructions("");
   }
 
-  async function mutateSimulation(input: {
-    method: "POST" | "DELETE";
-    body: Record<string, unknown>;
-  }): Promise<void> {
+  async function mutateSimulation(body: Record<string, unknown>): Promise<void> {
     setSimBusy(true);
     setSimError("");
     try {
       const response = await fetch(simulationPath, {
-        method: input.method,
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, ...input.body }),
+        body: JSON.stringify({ kind, ...body }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(
-          errorMessageFromBody(
-            payload,
-            input.method === "POST"
-              ? "Could not add simulated samples"
-              : "Could not remove simulated samples",
-          ),
-        );
+        throw new Error(errorMessageFromBody(payload, "Could not add simulated samples"));
       }
       loadDetails();
     } catch (err) {
@@ -411,24 +402,63 @@ export function KnowledgeRegionPage({
     }
   }
 
+  async function trashRegion(): Promise<void> {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Trash this knowledge region? Data on the flows stays.")
+    ) {
+      return;
+    }
+    setSimBusy(true);
+    setSimError("");
+    try {
+      const response = await fetch(
+        `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}`,
+        { method: "DELETE" },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessageFromBody(payload, "Could not trash knowledge region"));
+      }
+      router.push("/dashboard?tab=regions");
+    } catch (err) {
+      setSimError(err instanceof Error ? err.message : "Could not trash knowledge region");
+      setSimBusy(false);
+    }
+  }
+
   return (
     <ProductSurface
       label={`${productLabel} knowledge region`}
       activeTab={dashboardTabForProductSurface(kind, "region")}
     >
-      <div className="mx-auto min-h-[32rem] w-full max-w-5xl space-y-6" data-knowledge-region-details={kind}>
+      <div
+        className="mx-auto min-h-[32rem] w-full max-w-5xl space-y-6"
+        data-knowledge-region-details={kind}
+        data-knowledge-region-mode={mode}
+      >
           <FlowFormHeader
             backHref="/dashboard?tab=regions"
             backLabel="Back to knowledge regions"
-            title={details?.name || (loading ? "Knowledge region" : "Region not found")}
+            title={
+              details
+                ? mode === "edit"
+                  ? `Edit ${details.name}`
+                  : details.name
+                : loading
+                  ? "Knowledge region"
+                  : "Region not found"
+            }
             description={
-              details?.description ||
-              (loading
-                ? `Loading this ${productLabel.toLowerCase()} region.`
-                : `This ${productLabel.toLowerCase()} knowledge region could not be opened.`)
+              mode === "edit"
+                ? "Add another simulation round. Trashing the region leaves flow data in place."
+                : details?.description ||
+                  (loading
+                    ? `Loading this ${productLabel.toLowerCase()} region.`
+                    : `This ${productLabel.toLowerCase()} knowledge region could not be opened.`)
             }
             extra={
-              details ? (
+              details && mode === "view" ? (
                 <div className="mt-6 space-y-4">
                   <details
                     className="border border-white/15"
@@ -483,16 +513,17 @@ export function KnowledgeRegionPage({
             </p>
           ) : details ? (
             <>
-              <FlowFormCard data-knowledge-region-simulation="">
+              {mode === "edit" ? (
+              <FlowFormCard data-knowledge-region-simulation="" data-knowledge-region-edit="">
                 <div className="space-y-5">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                       Simulated data
                     </p>
                     <p className="mt-1 text-sm text-neutral-400">
-                      Add more simulated samples to this region, including a custom behaviour
-                      strategy, or remove simulated samples and strategy clusters. Reference and
-                      real sessions stay.
+                      Add another simulation round to this region, including a custom behaviour
+                      strategy. Simulated and human data stay on the flows if you trash the
+                      region.
                     </p>
                   </div>
                   <fieldset className="space-y-2" data-knowledge-region-add-strategies="">
@@ -607,49 +638,20 @@ export function KnowledgeRegionPage({
                     className={FLOW_PRIMARY_BTN}
                     onClick={() =>
                       void mutateSimulation({
-                        method: "POST",
-                        body: {
-                          strategyIds: addStrategyIds,
-                          customStrategies: [
-                            ...recoveredCustomStrategies,
-                            ...customStrategies,
-                          ].filter((row) => addStrategyIds.includes(row.id)),
-                          samplesPerStrategy: addSamples,
-                        },
+                        strategyIds: addStrategyIds,
+                        customStrategies: [
+                          ...recoveredCustomStrategies,
+                          ...customStrategies,
+                        ].filter((row) => addStrategyIds.includes(row.id)),
+                        samplesPerStrategy: addSamples,
                       })
                     }
                   >
                     {simBusy ? "Updating simulation…" : "Add simulated samples"}
                   </button>
                   {simError ? <p className="text-sm text-red-300">{simError}</p> : null}
-                  {simulatedSamples.length ? (
-                    <ul className="space-y-2" data-knowledge-region-simulated-samples="">
-                      {simulatedSamples.map((sample) => (
-                        <li
-                          key={sample.id}
-                          className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white"
-                        >
-                          <span>{sample.identity || sample.id}</span>
-                          <button
-                            type="button"
-                            disabled={simBusy}
-                            data-knowledge-region-remove-simulated={sample.id}
-                            className={FLOW_GHOST_BTN}
-                            onClick={() =>
-                              void mutateSimulation({
-                                method: "DELETE",
-                                body: { sampleIds: [sample.id] },
-                              })
-                            }
-                          >
-                            Remove sample
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
                   {details.clusters.length ? (
-                    <ul className="space-y-2" data-knowledge-region-remove-clusters="">
+                    <ul className="space-y-2" data-knowledge-region-edit-clusters="">
                       {details.clusters.map((cluster) => (
                         <li
                           key={cluster.id}
@@ -659,27 +661,23 @@ export function KnowledgeRegionPage({
                             {cluster.strategyName}
                             <span className="ml-2 text-neutral-500">{cluster.sampleCount}</span>
                           </span>
-                          <button
-                            type="button"
-                            disabled={simBusy || !cluster.strategyId}
-                            data-knowledge-region-remove-cluster={cluster.strategyId || cluster.id}
-                            className={FLOW_GHOST_BTN}
-                            onClick={() =>
-                              void mutateSimulation({
-                                method: "DELETE",
-                                body: { strategyIds: [cluster.strategyId || cluster.id] },
-                              })
-                            }
-                          >
-                            Remove cluster
-                          </button>
                         </li>
                       ))}
                     </ul>
                   ) : null}
+                  <button
+                    type="button"
+                    disabled={simBusy}
+                    data-knowledge-region-trash=""
+                    className={FLOW_DANGER_BTN}
+                    onClick={() => void trashRegion()}
+                  >
+                    Trash knowledge region
+                  </button>
                 </div>
               </FlowFormCard>
-              {figure ? (
+              ) : null}
+              {mode === "view" && figure ? (
                 <FlowFormCard className="overflow-hidden p-4 sm:p-5">
                   <div className="grid items-start gap-5 lg:grid-cols-[7fr_3fr]">
                   <div className="w-full overflow-hidden bg-black">
@@ -1141,7 +1139,7 @@ export function KnowledgeRegionPage({
                 </FlowFormCard>
               ) : null}
 
-              {inspect && selectedSample ? (
+              {mode === "view" && inspect && selectedSample ? (
                 <KnowledgeRegionInspect
                   inspect={inspect}
                   sample={selectedSample}

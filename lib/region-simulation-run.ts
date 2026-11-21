@@ -9,6 +9,7 @@ import {
 } from "@/lib/verification-flow";
 import {
   createCustomVerificationModelFromVectors,
+  pathTextRegionCompanionNames,
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
 import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
@@ -928,6 +929,46 @@ export async function addRegionSimulationSamples(input: {
     addedSampleIds,
     removedSampleIds: [],
   };
+}
+
+export async function trashRegionSimulation(input: {
+  ownerUserId: string;
+  regionId: string;
+}): Promise<{ id: string; deletedIds: string[] }> {
+  const ownerUserId = String(input.ownerUserId || "").trim();
+  const regionId = String(input.regionId || "").trim();
+  if (!ownerUserId || !regionId) throw new Error("region is required");
+  const loaded = await loadOwnedSimulationParent({ ownerUserId, regionId });
+  if (supabaseConfigured() && !loaded) throw new Error("Region not found");
+  if (!loaded) return { id: regionId, deletedIds: [regionId] };
+  const clusters = await loadOwnedSimulationClusters({
+    ownerUserId,
+    kind: loaded.kind,
+    parentName: loaded.name,
+  });
+  const names = new Set<string>([loaded.name, ...clusters.map((cluster) => cluster.name)]);
+  for (const name of [...names]) {
+    for (const companion of pathTextRegionCompanionNames(name)) names.add(companion);
+  }
+  const deletedIds = new Set<string>([loaded.id, ...clusters.map((cluster) => cluster.id)]);
+  if (supabaseConfigured()) {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("knowledge_regions")
+      .select("id, name")
+      .eq("owner_user_id", ownerUserId)
+      .eq("product", loaded.kind);
+    if (error) throw new Error(error.message);
+    for (const row of data || []) {
+      const id = String(row.id || "").trim();
+      const name = String(row.name || "").trim();
+      if (id && names.has(name)) deletedIds.add(id);
+    }
+    for (const id of deletedIds) {
+      await deleteKnowledgeRegion({ id, ownerUserId });
+    }
+  }
+  return { id: regionId, deletedIds: [...deletedIds] };
 }
 
 export async function removeRegionSimulationSamples(input: {

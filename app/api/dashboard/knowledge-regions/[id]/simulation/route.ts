@@ -1,5 +1,5 @@
 /**
- * Owner dashboard: add or remove simulated samples on an existing region.
+ * Owner dashboard: add simulated samples on an existing region.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -26,7 +26,6 @@ import {
 import {
   addRegionSimulationSamples,
   problemsForSimulationFlow,
-  removeRegionSimulationSamples,
 } from "@/lib/region-simulation-run";
 import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
 import { getSolveFlowById } from "@/lib/solve-flow-repository";
@@ -223,45 +222,4 @@ export async function POST(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await context.params;
-    const loaded = await loadOwnedParent(req, id);
-    if (!loaded.ok) return loaded.response;
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const kind = parseProductFlowKind(body.kind) || loaded.kind;
-    const sampleIds = Array.isArray(body.sampleIds)
-      ? body.sampleIds.map((sampleId) => String(sampleId || "").trim()).filter(Boolean)
-      : [];
-    const strategyIds = Array.isArray(body.strategyIds)
-      ? body.strategyIds.map((strategyId) => String(strategyId || "").trim()).filter(Boolean)
-      : [];
-    if (!sampleIds.length && !strategyIds.length) {
-      return jsonError(400, "Select simulated samples or a strategy to remove");
-    }
-    const flows = await flowsForRegion({
-      kind,
-      ownerUserId: loaded.userId,
-      seedFlowId: loaded.seedFlowId,
-      parentName: loaded.name,
-      clusters: loaded.clusters,
-    });
-    const result = await removeRegionSimulationSamples({
-      ownerUserId: loaded.userId,
-      regionId: id,
-      name: loaded.name,
-      kind,
-      flows,
-      sampleIds,
-      strategyIds,
-    });
-    return NextResponse.json(result);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to remove simulated samples";
-    return jsonError(500, message);
-  }
-}
+

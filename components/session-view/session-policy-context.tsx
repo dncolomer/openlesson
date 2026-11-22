@@ -26,6 +26,7 @@ import {
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
 import { requestSessionPolicyReply } from "@/lib/session-policy-infer-client";
+import { recordUnsys } from "@/lib/behavior-capture-house";
 import {
   parsePolicySuggestionReply,
   recordPolicyInference,
@@ -342,6 +343,7 @@ function SessionPolicyInferLoop({
   useEffect(() => {
     if (slot?.status !== "ready" || !slot.model) return;
     const model = slot.model;
+    recordUnsys({ hid: model.focusId ?? null });
     const recommended = recommendSessionBranchAction(model, model.focusId);
     if (!recommended) return;
     const focus = sessionBranchById(model, model.focusId);

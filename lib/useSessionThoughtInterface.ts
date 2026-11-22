@@ -8,6 +8,7 @@ import {
   type IleThoughtMemoryRecord,
 } from "@/lib/learn-context-auto-stash";
 import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
+import { recordSpeech } from "@/lib/behavior-capture-house";
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,
@@ -543,7 +544,8 @@ export function useSessionThoughtInterface({
         let interim = "";
         for (let i = start; i < event.results.length; i += 1) {
           const result = event.results[i];
-          const transcript = normalize(result[0]?.transcript || "");
+          const alt = result[0] as { transcript?: string; confidence?: number } | undefined;
+          const transcript = normalize(alt?.transcript || "");
           if (!transcript) continue;
           if (result.isFinal) {
             finals.push(transcript);
@@ -551,6 +553,12 @@ export function useSessionThoughtInterface({
           } else {
             interim = normalize(`${interim} ${transcript}`);
           }
+          recordSpeech({
+            text: transcript,
+            isFinal: result.isFinal,
+            confidence: typeof alt?.confidence === "number" ? alt.confidence : null,
+            lang: recognitionRef.current?.lang || null,
+          });
         }
         finalBufferRef.current = finals;
         const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());

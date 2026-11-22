@@ -133,8 +133,16 @@ export function buildIleFacialUploadItem(
     timestampMs,
     toolName: "facial",
     toolAction: "facial_batch",
-    metadata: { point_count: data.length },
+    metadata: {
+      point_count: data.length,
+      absent: data.length > 0 && data.every((point) => facialPointAbsent(point)),
+    },
   };
+}
+
+function facialPointAbsent(point: unknown): boolean {
+  if (!point || typeof point !== "object") return true;
+  return (point as { facePresent?: unknown }).facePresent === false;
 }
 
 export function meetsCanvasUploadThreshold(length: number, force = false) {

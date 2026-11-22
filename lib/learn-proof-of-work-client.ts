@@ -1,3 +1,4 @@
+import { assertNoPersonMedia } from "@/lib/behavior-capture";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import type { IleBufferedScreenshot, IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 import type { WorkspaceProofOfWorkType } from "@/lib/pow-api/workspace-proof-of-work";
@@ -91,6 +92,11 @@ export async function uploadIleProofOfWork(
   input: UploadIleProofOfWorkInput,
 ): Promise<UploadIleProofOfWorkResult> {
   try {
+    assertNoPersonMedia({
+      mimeType: input.mime_type,
+      proof_of_work_type: input.type,
+      fileName: input.file_name,
+    });
     const { sessionId, ileToken, solveToken, entryQueryParams, ...rest } = input;
     const res = await fetch("/api/session/proof-of-work", {
       method: "POST",
@@ -127,6 +133,12 @@ export async function uploadIleEvidenceItem(
   entryQueryParams?: Record<string, string | string[]>,
   solveToken?: string,
 ): Promise<UploadIleProofOfWorkResult> {
+  assertNoPersonMedia({
+    mimeType: item.mimeType,
+    kind: item.kind,
+    payload: item.payload,
+    fileName: item.fileName,
+  });
   return uploadIleProofOfWork({
     workspaceId,
     sessionId,

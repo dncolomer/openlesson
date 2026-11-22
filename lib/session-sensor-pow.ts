@@ -1,9 +1,11 @@
 /**
  * Session sensor media → proof of work.
- * Audio, transcript, screen, tool, EEG, and facial writes land on
+ * Transcript, screen, tool, EEG, and facial writes land on
  * proof_of_work with an xAI file id. Product code does not delete them.
+ * Learner microphone audio is refused.
  */
 
+import { PERSON_MEDIA_REFUSED } from "@/lib/behavior-capture";
 import { POW_MODEL_VERSION, parseProofOfWorkType, type ProofOfWorkType } from "@/lib/core-data-model";
 
 export const SENSOR_POW_TOOL_NAMES = {
@@ -17,9 +19,11 @@ export const SENSOR_POW_TOOL_NAMES = {
 export type SessionSensorKind = "facial" | "tool" | "eeg" | "screen" | "transcript" | "audio" | "analysis";
 
 export function proofOfWorkTypeForSensor(kind: SessionSensorKind): ProofOfWorkType {
+  if (kind === "audio") {
+    throw new Error(PERSON_MEDIA_REFUSED);
+  }
   if (kind === "screen") return "screen";
   if (kind === "eeg") return "eeg";
-  if (kind === "audio") return "video";
   return "tool";
 }
 
@@ -47,6 +51,9 @@ export function sensorPowInsertPayload(input: {
   sampleCount?: number | null;
   blockId?: string | null;
 }): Record<string, unknown> {
+  if (input.kind === "audio") {
+    throw new Error(PERSON_MEDIA_REFUSED);
+  }
   const type = parseProofOfWorkType(proofOfWorkTypeForSensor(input.kind)) || "tool";
   return {
     workspace_id: input.workspaceId,

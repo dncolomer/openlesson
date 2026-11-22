@@ -13,6 +13,7 @@ import {
   uploadOrgScopedXaiFile,
 } from "@/lib/organization/org-xai-files";
 import { insertWorkspaceProofOfWorkRow } from "@/lib/pow-api/workspace-proof-of-work";
+import { PERSON_MEDIA_REFUSED, assertNoPersonMedia } from "@/lib/behavior-capture";
 import {
   sensorPowInsertPayload,
   workspaceIdForSession,
@@ -22,9 +23,9 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type DataKind = "facial" | "tool" | "eeg" | "screen" | "audio";
+type DataKind = "facial" | "tool" | "eeg" | "screen";
 
-const ALLOWED_KINDS = new Set<DataKind>(["facial", "tool", "eeg", "screen", "audio"]);
+const ALLOWED_KINDS = new Set<DataKind>(["facial", "tool", "eeg", "screen"]);
 
 interface UploadRequest {
   sessionId: string;
@@ -70,6 +71,12 @@ export async function POST(req: NextRequest) {
 
     if (!ALLOWED_KINDS.has(kind)) {
       return jsonError(400, `kind must be one of: ${[...ALLOWED_KINDS].join(", ")}`);
+    }
+    try {
+      assertNoPersonMedia({ mimeType, kind, fileName });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : PERSON_MEDIA_REFUSED;
+      return jsonError(400, message);
     }
 
     const { data: session } = await supabase

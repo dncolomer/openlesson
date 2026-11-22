@@ -128,7 +128,7 @@ describe("session sensor → proof of work", () => {
   it("maps leftover sensor kinds onto PoW types", () => {
     expect(proofOfWorkTypeForSensor("screen")).toBe("screen");
     expect(proofOfWorkTypeForSensor("eeg")).toBe("eeg");
-    expect(proofOfWorkTypeForSensor("audio")).toBe("video");
+    expect(() => proofOfWorkTypeForSensor("audio")).toThrow("person_media_refused");
     expect(proofOfWorkTypeForSensor("transcript")).toBe("tool");
     const row = sensorPowInsertPayload({
       sessionId: "s1",

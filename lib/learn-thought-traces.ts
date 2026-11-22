@@ -159,6 +159,31 @@ export interface IleSpeechSegmentPayload {
   at: string;
 }
 
+export function speechBehaviorFields(input: {
+  text: string;
+  isFinal: boolean;
+  confidence?: number | null;
+  lang?: string | null;
+  durationMs?: number | null;
+  silenceGapMs?: number | null;
+  error?: string | null;
+}): Record<string, unknown> {
+  const text = String(input.text || "").replace(/\s+/g, " ").trim();
+  return {
+    text,
+    is_final: Boolean(input.isFinal),
+    char_count: text.length,
+    word_count: text ? text.split(/\s+/).length : 0,
+    ...(typeof input.confidence === "number" ? { confidence: input.confidence } : {}),
+    ...(input.lang ? { lang: input.lang } : {}),
+    ...(typeof input.durationMs === "number" ? { duration_ms: Math.max(0, Math.trunc(input.durationMs)) } : {}),
+    ...(typeof input.silenceGapMs === "number"
+      ? { silence_gap_ms: Math.max(0, Math.trunc(input.silenceGapMs)) }
+      : {}),
+    ...(input.error ? { error: input.error } : {}),
+  };
+}
+
 export function buildIleSpeechSegmentPayload(input: {
   event: IleSpeechSegmentEvent;
   sessionId: string;

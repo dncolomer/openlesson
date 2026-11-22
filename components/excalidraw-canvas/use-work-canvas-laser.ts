@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import type { LiveExcalidrawAPI } from "@/components/excalidraw-canvas/excalidraw-api";
 import type { IleWorkCanvasCommandId, IleWorkCanvasElement } from "@/lib/learn-work-canvas";
 import {
+  classifyLaserStroke,
   emptyLaserGestureSession,
   finishLaserStroke,
   flushPendingLaserGesture,
   type LaserStroke,
 } from "@/lib/learn-work-canvas-laser-gestures";
+import { recordCommandAttempt, recordLaserStroke } from "@/lib/behavior-capture-house";
 
 type LaserPointerPayload = {
   pointer: { x: number; y: number; tool: "pointer" | "laser" };
@@ -66,6 +68,11 @@ export function useWorkCanvasLaser(input: {
         now: Date.now(),
       });
       sessionRef.current = result.session;
+      recordLaserStroke({
+        points: stroke,
+        kind: classifyLaserStroke(stroke),
+        command: result.fire?.command ?? null,
+      });
       const run = (targetId: string, command: IleWorkCanvasCommandId) => {
         const target = elements.find((el) => el.id === targetId && !el.isDeleted);
         if (!target) return;

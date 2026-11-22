@@ -624,6 +624,7 @@ describe("session sidebar mode configuration", () => {
     expect(signals).toContain("SessionDataCard");
     expect(signals).toContain("getUserMedia");
     expect(signals).toContain("getDisplayMedia");
+    expect(signals).toContain("audio: false");
     expect(signals).toContain("echoCancellation: true");
     expect(signals).toContain("MuseAthenaClient");
     expect(signals).toContain("enforcedChannels");

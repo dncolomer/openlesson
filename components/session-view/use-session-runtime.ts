@@ -28,7 +28,7 @@ import {
 } from "@/lib/learn-proof-of-work-client";
 import {
   buildIleCanvasUploadItem,
-  buildGatedIleEegUploadItem,
+  buildIleEegUploadItem,
   buildIleFacialUploadItem,
   buildIleToolEventUploadItem,
   hashIlePowContent,
@@ -44,6 +44,14 @@ import type { IlePowInterruptionHandler } from "@/components/session-view/use-se
 import { ilePowInterruptionOriginFromTool } from "@/lib/learn-tim-chapter-complete";
 import type { Session, ToolAction, ToolName } from "@/lib/storage";
 import { isIleSessionLive } from "@/lib/useSessionThoughtInterface";
+import { BehaviorChunker } from "@/lib/behavior-capture-chunk";
+import {
+  BehaviorBoardSampler,
+  attachBehaviorBoardSampler,
+  sessionMountsBehaviorPointer,
+} from "@/lib/behavior-capture-pointer";
+import { recordFocus } from "@/lib/behavior-capture-house";
+import { buildBehaviorSessionRollup } from "@/lib/behavior-capture-rollup";
 
 export type SessionRuntimeInput = {
   sessionRef: { current: Session | null };
@@ -105,6 +113,9 @@ const [latestFacialData, setLatestFacialData] = useState<FacialDataPoint | null>
 // Facial Data Tracking
 const [facialDataBuffer, setFacialDataBuffer] = useState<FacialDataPoint[]>([]);
 const facialBufferRef = useRef<FacialDataPoint[]>([]);
+const behaviorChunkerRef = useRef<BehaviorChunker | null>(null);
+const behaviorT0Ref = useRef(Date.now());
+const behaviorStreamsRef = useRef<Array<{ stream: string; xai_file_id?: string | null; sample_count: number }>>([]);
 
 // Logs
 const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -414,7 +425,7 @@ const tryUploadPendingEegChunk = useCallback(
     const sampleCount = totalIleEegSamples(channels);
     if (!meetsEegUploadThreshold(sampleCount, force)) return;
 
-    const item = buildGatedIleEegUploadItem(currentSession.id, {
+    const item = buildIleEegUploadItem(currentSession.id, {
       channels,
       bandPowers: bandPowersRef.current,
       sampleRateHz: EEG_SAMPLE_RATE_HZ,
@@ -428,7 +439,6 @@ const tryUploadPendingEegChunk = useCallback(
       timestampMs: eegLastSampleMsRef.current ?? Date.now(),
     });
     clearConsumedEegSamples(channels);
-    if (!item) return;
     void uploadPowItem(item, "eeg");
   },
   [clearConsumedEegSamples, consumePendingEegSamples, uploadPowItem],
@@ -460,6 +470,49 @@ const scheduleCanvasPowUpload = useCallback(() => {
   }, ILE_POW_DEBOUNCE_MS);
 }, [uploadCanvasPowNow]);
 
+const flushBehaviorCapture = useCallback(async (end = false) => {
+  const currentSession = sessionRef.current;
+  const chunker = behaviorChunkerRef.current;
+  if (!currentSession || !chunker || !powSessionEnabledRef.current) return;
+  const items = chunker.drainUploadItems();
+  const workspaceId = getWorkspaceId();
+  for (const item of items) {
+    chunker.markUploadStart();
+    const result = await uploadIleEvidenceItem(
+      workspaceId,
+      currentSession.id,
+      item,
+      ileToken,
+      entryQueryParams,
+      solveToken,
+    );
+    chunker.markUploadSettled();
+    if (result.ok) {
+      behaviorStreamsRef.current.push({
+        stream: String(item.metadata?.stream || "mixed"),
+        xai_file_id:
+          result.proof_of_work && typeof result.proof_of_work.xai_file_id === "string"
+            ? result.proof_of_work.xai_file_id
+            : null,
+        sample_count: item.sampleCount ?? 0,
+      });
+    }
+  }
+  if (!end) return;
+  const rollup = buildBehaviorSessionRollup({
+    sessionId: currentSession.id,
+    kind: String(
+      (currentSession as { kind?: string }).kind ||
+        (currentSession.metadata as { session_kind?: string } | undefined)?.session_kind ||
+        "",
+    ),
+    t0: behaviorT0Ref.current,
+    t1: Date.now(),
+    streams: behaviorStreamsRef.current,
+  });
+  await uploadPowItem(rollup, "tools");
+}, [entryQueryParams, getWorkspaceId, ileToken, solveToken, uploadPowItem]);
+
 const flushRemainingIlePow = useCallback(
   async (options?: { force?: boolean }) => {
     const force = options?.force ?? false;
@@ -470,8 +523,9 @@ const flushRemainingIlePow = useCallback(
     uploadCanvasPowNow(force);
     tryUploadFacialBatch(force);
     tryUploadPendingEegChunk(force);
+    await flushBehaviorCapture(force);
   },
-  [tryUploadFacialBatch, tryUploadPendingEegChunk, uploadCanvasPowNow],
+  [flushBehaviorCapture, tryUploadFacialBatch, tryUploadPendingEegChunk, uploadCanvasPowNow],
 );
 
 // Speech + PoW uploads arm only while the learner is actively in-session.
@@ -489,6 +543,40 @@ useEffect(() => {
     void flushRemainingIlePow({ force: true });
   }
 }, [powSessionEnabled, flushRemainingIlePow]);
+
+useEffect(() => {
+  const currentSession = sessionRef.current;
+  if (!powSessionEnabled || !currentSession) {
+    attachBehaviorBoardSampler(null);
+    behaviorChunkerRef.current = null;
+    return;
+  }
+  const chunker = new BehaviorChunker({ sessionId: currentSession.id });
+  behaviorChunkerRef.current = chunker;
+  behaviorT0Ref.current = Date.now();
+  behaviorStreamsRef.current = [];
+  if (sessionMountsBehaviorPointer(currentSession as { kind?: string; metadata?: Record<string, unknown> })) {
+    attachBehaviorBoardSampler(new BehaviorBoardSampler(chunker));
+  } else {
+    attachBehaviorBoardSampler(null);
+  }
+  const flushTimer = window.setInterval(() => {
+    void flushBehaviorCapture(false);
+  }, 4000);
+  const onVisibility = () => {
+    const visible = document.visibilityState !== "hidden";
+    recordFocus({ visible });
+    if (!visible) void flushBehaviorCapture(false);
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  return () => {
+    window.clearInterval(flushTimer);
+    document.removeEventListener("visibilitychange", onVisibility);
+    void flushBehaviorCapture(true);
+    attachBehaviorBoardSampler(null);
+    behaviorChunkerRef.current = null;
+  };
+}, [flushBehaviorCapture, powSessionEnabled, sessionId]);
 
 useEffect(() => {
   lastUploadedCanvasHashRef.current = null;

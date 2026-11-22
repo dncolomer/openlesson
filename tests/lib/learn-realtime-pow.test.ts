@@ -11,6 +11,7 @@ import {
   meetsCanvasUploadThreshold,
   meetsEegUploadThreshold,
   totalIleEegSamples,
+  buildIleFacialUploadItem,
 } from "@/lib/learn-realtime-pow";
 import {
   classifyIleWorkCanvasSceneDiff,
@@ -165,6 +166,8 @@ describe("ile-realtime-pow", () => {
     expect(filterSnapshotEligibleProofOfWorkRows([{ id: "eeg-poor", metadata: poor.metadata }])).toEqual(
       [],
     );
+    expect(poor.kind).toBe("eeg");
+    expect(poor.mimeType).toBe("application/json");
 
     const empty = buildGatedIleEegUploadItem("session-1", {
       channels: {},
@@ -181,5 +184,20 @@ describe("ile-realtime-pow", () => {
     expect(eegUploads).toHaveLength(1);
     expect(isCountableIleEegPow(eegUploads[0])).toBe(true);
     expect(JSON.parse(eegUploads[0].payload).calibration_passed).toBe(true);
+  });
+
+  it("builds facial batches as JSON points only", () => {
+    const points = [
+      { timestamp: 1, facePresent: true, gazeOffsetX: 0.1 },
+      { timestamp: 2, facePresent: false },
+    ];
+    const item = buildIleFacialUploadItem("session-1", points);
+    expect(item.kind).toBe("tool");
+    expect(item.mimeType).toBe("application/json");
+    expect(item.toolName).toBe("facial");
+    expect(item.fileName).not.toMatch(/\.(png|webm|mp4)$/);
+    const body = JSON.parse(item.payload) as { data: unknown[] };
+    expect(body.data).toHaveLength(2);
+    expect(item.payload).not.toContain("data:image");
   });
 });

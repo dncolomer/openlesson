@@ -48,6 +48,7 @@ describe("screen capture has no picture-in-picture host (shipped)", () => {
     expect(capture).not.toContain('host ?? "pip"');
     expect(capture).not.toContain("documentPictureInPicture");
     expect(capture).toContain("getDisplayMedia");
+    expect(capture).toContain("audio: false");
     expect(capture).toContain('source: "opener"');
     const hidden = resolveScreenCaptureMediaDevices({
       document: { visibilityState: "hidden" },

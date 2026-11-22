@@ -83,6 +83,7 @@ import { useWorkCanvasLaser } from "@/components/excalidraw-canvas/use-work-canv
 import { useWorkCanvasLatex } from "@/components/excalidraw-canvas/use-work-canvas-latex";
 import { WorkCanvasLatexLayer } from "@/components/excalidraw-canvas/work-canvas-latex-layer";
 import { IleLaserToolbarSlot } from "@/components/excalidraw-canvas/laser-toolbar-slot";
+import { behaviorBoardSampler, sampleBoardAppState } from "@/lib/behavior-capture-pointer";
 import "@excalidraw/excalidraw/index.css";
 import "@/app/learn-excalidraw-theme.css";
 
@@ -805,6 +806,8 @@ export function ExcalidrawCanvas({
       syncLatexOverlay(appState);
       const laserOn = ileWorkCanvasPointerToolActive(appState.activeTool);
       setLaserToolActive((prev) => (prev === laserOn ? prev : laserOn));
+      const sampler = behaviorBoardSampler();
+      if (sampler) sampleBoardAppState(sampler, appState);
     },
     [debouncedExportPNG, syncCanvasSelection, syncLatexOverlay, syncThinkingOverlay],
   );
@@ -815,6 +818,7 @@ export function ExcalidrawCanvas({
       button: "up" | "down";
     }) => {
       onLaserPointerUpdate(payload);
+      behaviorBoardSampler()?.onPointerUpdate(payload);
       const api = excalidrawAPIRef.current;
       if (payload.button === "down" && api) {
         syncCanvasSelection(api.getAppState?.() ?? {});
@@ -850,6 +854,16 @@ export function ExcalidrawCanvas({
       setIsSubmittingToHelios(false);
     }
   }, [onSubmitToHelios, isSubmittingToHelios, canSubmitToHelios, onCanvasChange, exportToPNG]);
+
+  useEffect(() => {
+    const host = canvasHostRef.current;
+    if (!host) return;
+    const onWheel = (event: WheelEvent) => {
+      behaviorBoardSampler()?.onWheel({ dx: event.deltaX, dy: event.deltaY });
+    };
+    host.addEventListener("wheel", onWheel, { passive: true });
+    return () => host.removeEventListener("wheel", onWheel);
+  }, []);
 
   useEffect(() => {
     return () => {

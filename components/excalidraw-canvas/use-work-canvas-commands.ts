@@ -28,6 +28,8 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/learn-work-canvas";
+import { behaviorBoardSampler } from "@/lib/behavior-capture-pointer";
+import { recordCommandAttempt } from "@/lib/behavior-capture-house";
 import { syncIleDictatedTextOnWorkCanvas } from "@/lib/learn-canvas-dictate";
 import type { IleWorkCanvasPowCollector, IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
 import type { SessionPolicyInference } from "@/lib/session-policy-infer";
@@ -177,6 +179,7 @@ export function useWorkCanvasCommands(input: {
                 .map((el) => [el.id, true]),
             );
         const reveal = ileWorkCanvasRevealScroll(added, api.getAppState() ?? live.appState);
+        if (reveal) behaviorBoardSampler()?.markReveal();
         commitScene(
           api,
           {
@@ -248,8 +251,14 @@ export function useWorkCanvasCommands(input: {
     (action: IleWorkCanvasCommandId, selectedOverride?: IleWorkCanvasElement[]) => {
       const api = apiRef.current;
       const selected = selectedOverride?.length ? selectedOverride : selectedCanvasElements();
-      if (!api) return;
-      if (ileWorkCanvasCommandNeedsSelection(action) && !selected.length) return;
+      if (!api) {
+        recordCommandAttempt({ command_id: action, path: "tile", ok: false, reason: "no_api" });
+        return;
+      }
+      if (ileWorkCanvasCommandNeedsSelection(action) && !selected.length) {
+        recordCommandAttempt({ command_id: action, path: "tile", ok: false, reason: "needs_selection" });
+        return;
+      }
       const live = liveWorkCanvasScene(api);
       const model = sessionBranchRef.current;
       const placedNext = ileWorkCanvasPlacedHarnessNext(live);
@@ -268,6 +277,7 @@ export function useWorkCanvasCommands(input: {
         nextHiddenStateId: explore.toId,
       });
       const emitCommand = (commandId: IleWorkCanvasCommandId, prompt: string) => {
+        recordCommandAttempt({ command_id: commandId, path: selectedOverride?.length ? "laser" : "tile", ok: true });
         const powEvents = canvasPowCollectorRef.current.command(commandId, {
           prompt,
           selectedElements: outcome.selected,
@@ -281,6 +291,7 @@ export function useWorkCanvasCommands(input: {
       ) => {
         const selectedElementIds = Object.fromEntries(parts.map((part) => [part.id, true]));
         const reveal = ileWorkCanvasRevealScroll(parts, api.getAppState() ?? {});
+        if (reveal) behaviorBoardSampler()?.markReveal();
         commitScene(
           api,
           {

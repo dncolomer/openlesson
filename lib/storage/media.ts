@@ -1,4 +1,5 @@
 // Session media / evidence persistence
+import { PERSON_MEDIA_REFUSED } from "@/lib/behavior-capture";
 import { createClient } from "@/lib/supabase/client";
 import type {
   FacialDataPoint,
@@ -37,83 +38,22 @@ function powKindRows(rows: Array<Record<string, unknown>>, kind: SessionSensorKi
   return powRowsForSensorKind(rows, kind);
 }
 
-function mimeToExtension(mime: string): string {
-  const base = mime.split(";")[0].trim().toLowerCase();
-  switch (base) {
-    case "audio/mp4": return "mp4";
-    case "audio/m4a": return "m4a";
-    case "audio/mpeg":
-    case "audio/mp3": return "mp3";
-    case "audio/ogg": return "ogg";
-    case "audio/opus": return "opus";
-    case "audio/wav":
-    case "audio/wave":
-    case "audio/x-wav": return "wav";
-    case "audio/flac": return "flac";
-    case "audio/aac": return "aac";
-    case "audio/webm": return "ogg"; // webm+opus → re-label as ogg for xAI
-    default: return "mp4";
-  }
-}
-
-// ---- Audio Storage ----
+// ---- Audio Storage (learner capture refused; historical reads stay below) ----
 
 export async function saveSessionAudio(
-  sessionId: string,
-  audioBlob: Blob
+  _sessionId: string,
+  _audioBlob: Blob
 ): Promise<string> {
-  const { uploadSessionFile } = await import("@/lib/session-files-client");
-  const contentType = audioBlob.type || "audio/mp4";
-  const ext = mimeToExtension(contentType);
-  const timestamp = Date.now();
-  const fileName = `${sessionId}_${timestamp}.${ext}`;
-  const result = await uploadSessionFile({
-    sessionId,
-    kind: "audio",
-    fileName,
-    mimeType: contentType,
-    data: audioBlob,
-    timestampMs: timestamp,
-    metadata: { sensor_kind: "audio" },
-  });
-  if (!result.success || !result.xai_file_id) {
-    throw new Error(result.error || "Audio upload failed");
-  }
-  return result.xai_file_id;
+  throw new Error(PERSON_MEDIA_REFUSED);
 }
 
-const MIN_AUDIO_SIZE_BYTES = 10240; // 10KB - minimum size for meaningful audio
-
 export async function saveAudioChunk(
-  sessionId: string,
-  chunkBlob: Blob,
-  chunkIndex: number,
-  timestamp: number
+  _sessionId: string,
+  _chunkBlob: Blob,
+  _chunkIndex: number,
+  _timestamp: number
 ): Promise<string | null> {
-  if (chunkBlob.size < MIN_AUDIO_SIZE_BYTES) {
-    console.log("[saveAudioChunk] Skipping - audio too small:", chunkBlob.size, "bytes (min:", MIN_AUDIO_SIZE_BYTES, ")");
-    return null;
-  }
-
-  const ts = Date.now();
-  const contentType = chunkBlob.type || "audio/mp4";
-  const ext = mimeToExtension(contentType);
-  const fileName = `chunk_${chunkIndex}_${ts}.${ext}`;
-  const { uploadSessionFile } = await import("@/lib/session-files-client");
-  const result = await uploadSessionFile({
-    sessionId,
-    kind: "audio",
-    fileName,
-    mimeType: contentType,
-    data: chunkBlob,
-    timestampMs: timestamp,
-    chunkIndex,
-    metadata: { sensor_kind: "audio" },
-  });
-  if (!result.success || !result.xai_file_id) {
-    throw new Error(result.error || "Audio chunk upload failed");
-  }
-  return result.xai_file_id;
+  throw new Error(PERSON_MEDIA_REFUSED);
 }
 
 export async function saveBrowserTranscript(

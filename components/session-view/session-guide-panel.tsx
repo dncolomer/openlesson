@@ -23,6 +23,7 @@ import {
 } from "@/lib/learn-work-canvas-commands";
 import { ileCanvasCraftInsightUsable } from "@/lib/learn-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
+import { recordChrome } from "@/lib/behavior-capture-house";
 
 const TAB_CLASS =
   "flex min-w-0 items-center justify-center rounded-none px-1 py-1 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.08em]";
@@ -71,7 +72,10 @@ export function SessionGuidePanel({
               role="tab"
               data-session-guide-tab="commands"
               aria-selected={commandsOpen}
-              onClick={() => setTab("commands")}
+              onClick={() => {
+                setTab("commands");
+                recordChrome({ surface: "commands" });
+              }}
               className={`${TAB_CLASS} ${commandsOpen ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
             >
               commands
@@ -83,7 +87,10 @@ export function SessionGuidePanel({
             role="tab"
             data-session-guide-tab="harness"
             aria-selected={harnessOpen}
-            onClick={() => setTab("harness")}
+            onClick={() => {
+              setTab("harness");
+              recordChrome({ surface: "harness" });
+            }}
             className={`${TAB_CLASS} ${harnessOpen ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
           >
             harness
@@ -94,7 +101,10 @@ export function SessionGuidePanel({
             role="tab"
             data-session-guide-tab="help"
             aria-selected={tab === "help"}
-            onClick={() => setTab("help")}
+            onClick={() => {
+              setTab("help");
+              recordChrome({ surface: "help" });
+            }}
             className={`${TAB_CLASS} ${tab === "help" ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
           >
             help

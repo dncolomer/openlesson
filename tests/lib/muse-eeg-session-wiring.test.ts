@@ -11,16 +11,21 @@ function read(rel: string) {
 }
 
 describe("session Muse EEG quality + PoW gate wiring", () => {
-  it("scores live sample windows and only uploads gated EEG PoW after a contact pass", () => {
+  it("scores live sample windows and uploads EEG PoW including impure contact", () => {
     const runtime = read("components/session-view/use-session-runtime.ts");
     expect(runtime).toContain("scoreEegContactWindow");
     expect(runtime).toContain("eegChannelsFromMap");
-    expect(runtime).toContain("buildGatedIleEegUploadItem");
+    expect(runtime).toContain("buildIleEegUploadItem");
     expect(runtime).toContain("calibrationPassed");
     expect(runtime).toContain("contactEvaluated");
     expect(runtime).toContain('void uploadPowItem(item, "eeg")');
-    expect(runtime).toMatch(/if \(!item\) return;/);
-    expect(runtime).not.toMatch(/buildIleEegUploadItem\(/);
+    expect(runtime).not.toMatch(/if \(!item\) return;/);
+
+    const runtimeCapture = read("components/session-view/use-session-runtime.ts");
+    expect(runtimeCapture).toContain("BehaviorChunker");
+    expect(runtimeCapture).toContain("attachBehaviorBoardSampler");
+    expect(runtimeCapture).toContain("buildBehaviorSessionRollup");
+    expect(runtimeCapture).toContain("sessionMountsBehaviorPointer");
 
     const client = read("lib/muse-athena.ts");
     expect(client).toContain("ingestEegForQuality");

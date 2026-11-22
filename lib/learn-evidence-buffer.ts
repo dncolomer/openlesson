@@ -10,7 +10,7 @@ import { isExcludedFromSnapshotPoW } from "@/lib/pow-api/pow-quality";
 
 export const ILE_EVIDENCE_THRESHOLDS = {
   transcriptMinChars: 12,
-  facialMinPoints: 5,
+  facialMinPoints: 2,
   eegMinTotalSamples: 64,
   notebookMinChars: 20,
   canvasMinChars: 100,

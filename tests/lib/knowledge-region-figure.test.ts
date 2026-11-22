@@ -21,6 +21,7 @@ import {
   knowledgeRegionFigureMode,
   knowledgeRegionFigureSpace,
   knowledgeRegionFigureTrack,
+  knowledgeRegionFigureFocusOnPoints,
   knowledgeRegionFigureViewBox,
   knowledgeRegionFigureZoomIn,
   knowledgeRegionFigureZoomOut,
@@ -251,6 +252,25 @@ describe("knowledge region figure", () => {
     expect(zoomed.height).toBe(KNOWLEDGE_REGION_MAP_SIZE / 2);
     expect(zoomed.x).toBe(KNOWLEDGE_REGION_MAP_SIZE / 4);
     expect(zoomed.y).toBe(KNOWLEDGE_REGION_MAP_SIZE / 4);
+    const focused = knowledgeRegionFigureFocusOnPoints([
+      { x: 300, y: 300 },
+      { x: 308, y: 304 },
+      { x: 302, y: 310 },
+    ]);
+    expect(focused.zoom).toBeGreaterThan(4);
+    expect(focused.panX).toBeGreaterThan(0);
+    expect(focused.panY).toBeGreaterThan(0);
+    expect(knowledgeRegionFigureFocusOnPoints([])).toEqual({
+      zoom: KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
+      panX: 0,
+      panY: 0,
+    });
+    expect(
+      knowledgeRegionFigureFocusOnPoints([
+        { x: 32, y: 32 },
+        { x: 448, y: 448 },
+      ]).zoom,
+    ).toBe(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
     expect(knowledgeRegionUnsysDistance({ projectedPolicy: { distance: 1.25 } })).toBe(1.25);
     expect(knowledgeRegionUnsysDistance(null)).toBeNull();
 
@@ -559,6 +579,8 @@ describe("knowledge region figure", () => {
     expect(page).toContain("data-knowledge-region-section");
     expect(page).toContain("knowledgeRegionUnsysDistance");
     expect(page).toContain("data-knowledge-region-identity");
+    expect(page).toContain("data-knowledge-region-identity-focus");
+    expect(page).toContain("knowledgeRegionFigureFocusOnPoints");
     expect(page).toContain("data-knowledge-region-roster-name");
     expect(page).toContain("parseLtiRosterNames");
     expect(page).toContain("data-knowledge-region-path");

@@ -262,6 +262,7 @@ describe("dashboard knowledge regions", () => {
     expect(detailsPage).toContain('data-knowledge-region-figure-track-option="path"');
     expect(detailsPage).toContain("data-knowledge-region-section");
     expect(detailsPage).toContain("data-knowledge-region-identity");
+    expect(detailsPage).toContain("data-knowledge-region-identity-focus");
     expect(detailsPage).toContain("KnowledgeRegionInspect");
     expect(detailsPage).toContain("inspectStudioEmbedding");
     expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(

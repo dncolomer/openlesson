@@ -42,6 +42,7 @@ import {
   knowledgeRegionFigureMode,
   knowledgeRegionFigureSpace,
   knowledgeRegionFigureTrack,
+  knowledgeRegionFigureFocusOnPoints,
   knowledgeRegionFigureViewBox,
   knowledgeRegionFigureZoomIn,
   knowledgeRegionFigureZoomOut,
@@ -354,6 +355,26 @@ export function KnowledgeRegionPage({
   function fitFigure() {
     setFigureZoom(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
     setFigurePan({ x: 0, y: 0 });
+  }
+
+  function focusIdentity() {
+    const key =
+      selectedIdentityKey ||
+      (selectedSample ? knowledgeRegionIdentityKey(selectedSample) : "") ||
+      identityOptions[0]?.id ||
+      "";
+    if (!key) return;
+    if (figureTrack !== "path") setTrack("path");
+    if (key !== selectedIdentityKey) selectIdentity(key);
+    const points = (figure?.glyphs ?? []).filter(
+      (point) => knowledgeRegionIdentityKey(point) === key,
+    );
+    const camera = knowledgeRegionFigureFocusOnPoints(
+      points,
+      figure?.map.size ?? KNOWLEDGE_REGION_MAP_SIZE,
+    );
+    setFigureZoom(camera.zoom);
+    setFigurePan({ x: camera.panX, y: camera.panY });
   }
 
   function onFigurePointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -805,6 +826,16 @@ export function KnowledgeRegionPage({
                     >
                       +
                     </button>
+                    <button
+                      type="button"
+                      className={ZOOM_BTN}
+                      data-knowledge-region-identity-focus=""
+                      aria-label="Identity focus"
+                      disabled={!selectedIdentityKey && !identityOptions[0]}
+                      onClick={() => focusIdentity()}
+                    >
+                      Focus
+                    </button>
                   </div>
                   <svg
                     viewBox={figureViewBox.value}
@@ -1167,6 +1198,7 @@ export function KnowledgeRegionPage({
                       </div>
                     </div>
                     {figureTrack === "path" ? (
+                      <div className="flex min-w-0 w-full flex-col gap-1">
                       <label className="flex min-w-0 w-full flex-col gap-0.5">
                         <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                           Identity
@@ -1185,6 +1217,16 @@ export function KnowledgeRegionPage({
                           ))}
                         </select>
                       </label>
+                      <button
+                        type="button"
+                        className={ZOOM_BTN}
+                        data-knowledge-region-identity-focus=""
+                        disabled={!selectedIdentityKey && !identityOptions[0]}
+                        onClick={() => focusIdentity()}
+                      >
+                        Identity focus
+                      </button>
+                      </div>
                     ) : null}
                     {figureSpace === "quadrant" ? null : (
                     <label className="flex min-w-0 w-full flex-col gap-0.5">

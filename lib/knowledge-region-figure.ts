@@ -74,8 +74,10 @@ export function parseKnowledgeRegionFigureMode(value: unknown): KnowledgeRegionF
 
 export const KNOWLEDGE_REGION_FIGURE_ZOOM_FIT = 1;
 export const KNOWLEDGE_REGION_FIGURE_ZOOM_MIN = 1;
-export const KNOWLEDGE_REGION_FIGURE_ZOOM_MAX = 8;
+export const KNOWLEDGE_REGION_FIGURE_ZOOM_MAX = 16;
 export const KNOWLEDGE_REGION_FIGURE_ZOOM_STEP = 1.25;
+export const KNOWLEDGE_REGION_FIGURE_FOCUS_PAD = 1.4;
+export const KNOWLEDGE_REGION_FIGURE_FOCUS_MIN_SPAN = 12;
 
 export function clampKnowledgeRegionFigureZoom(value: unknown): number {
   const zoom = typeof value === "number" ? value : Number(value);
@@ -128,6 +130,39 @@ export function knowledgeRegionFigureViewBox(input: {
   const x = (size - width) / 2 + clampKnowledgeRegionFigurePan(input.panX, size, zoom);
   const y = (size - height) / 2 + clampKnowledgeRegionFigurePan(input.panY, size, zoom);
   return { x, y, width, height, value: `${x} ${y} ${width} ${height}` };
+}
+
+export function knowledgeRegionFigureFocusOnPoints(
+  points: readonly { x: number; y: number }[],
+  size = KNOWLEDGE_REGION_MAP_SIZE,
+): { zoom: number; panX: number; panY: number } {
+  const map = Number.isFinite(size) && size > 0 ? size : KNOWLEDGE_REGION_MAP_SIZE;
+  const valid = points.filter(
+    (point) => Number.isFinite(point.x) && Number.isFinite(point.y),
+  );
+  if (!valid.length) {
+    return { zoom: KNOWLEDGE_REGION_FIGURE_ZOOM_FIT, panX: 0, panY: 0 };
+  }
+  let minX = valid[0]!.x;
+  let minY = valid[0]!.y;
+  let maxX = valid[0]!.x;
+  let maxY = valid[0]!.y;
+  for (const point of valid) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  const span = Math.max(
+    maxX - minX,
+    maxY - minY,
+    KNOWLEDGE_REGION_FIGURE_FOCUS_MIN_SPAN,
+  );
+  const box = span * KNOWLEDGE_REGION_FIGURE_FOCUS_PAD;
+  const zoom = clampKnowledgeRegionFigureZoom(map / box);
+  const panX = clampKnowledgeRegionFigurePan((minX + maxX) / 2 - map / 2, map, zoom);
+  const panY = clampKnowledgeRegionFigurePan((minY + maxY) / 2 - map / 2, map, zoom);
+  return { zoom, panX, panY };
 }
 
 export function knowledgeRegionIdentityKey(point: {

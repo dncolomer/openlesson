@@ -18,6 +18,7 @@ import {
   type FlowKind,
   type FlowPowRow,
 } from "@/lib/flow-embedding";
+import type { StoredRecordView } from "@/lib/behavior-record";
 import {
   buildStudioProjectionView,
   type StudioProjectionPoint,
@@ -143,12 +144,14 @@ export type DataStudioInspectPayload = {
   transcripts: string[];
   speech: string[];
   thoughts: string[];
+  record?: StoredRecordView | null;
 };
 
 export const STUDIO_INSPECT_WIDTH_MIN = 280;
 export const STUDIO_INSPECT_WIDTH_DEFAULT = 440;
 export const STUDIO_INSPECT_WIDTH_MAX = 960;
 export const DASHBOARD_KNOWLEDGE_REGION_RUN_PATH = "/api/dashboard/knowledge-regions/run";
+export const DASHBOARD_KNOWLEDGE_REGION_FILE_PATH = "/api/dashboard/knowledge-regions/file";
 
 export type LearningStudioWorkspace = {
   id: string;
@@ -490,6 +493,7 @@ function inspectFromPow(
     thoughts: entries
       .filter((entry) => entry.kind === "thought")
       .map((entry) => entry.text),
+    record: base.record ?? null,
   };
 }
 
@@ -530,11 +534,15 @@ export function flowPowFromWorkspaceRow(row: {
   timestamp_ms?: number | null;
   metadata?: unknown;
   file_name?: string | null;
+  xai_file_id?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
 }): FlowPowRow {
   const metadata =
     row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
       ? (row.metadata as Record<string, unknown>)
       : null;
+  const fileSize = Number(row.file_size);
   return {
     type: text(row.proof_of_work_type || row.type) || "tool",
     tool_name: text(row.tool_name) || null,
@@ -542,15 +550,19 @@ export function flowPowFromWorkspaceRow(row: {
     timestamp_ms: Number.isFinite(Number(row.timestamp_ms)) ? Number(row.timestamp_ms) : null,
     payload: text(row.file_name) || null,
     metadata,
+    xai_file_id: text(row.xai_file_id) || null,
+    mime_type: text(row.mime_type) || null,
+    file_size: Number.isFinite(fileSize) ? fileSize : null,
   };
 }
 
 export function mergeStudioInspectPow(
   inspect: DataStudioInspectPayload,
   extraPow: readonly FlowPowRow[],
+  record?: StoredRecordView | null,
 ): DataStudioInspectPayload {
   const pow = [...inspect.pow, ...extraPow];
-  return inspectFromPow(inspect, pow);
+  return inspectFromPow({ ...inspect, record: record ?? inspect.record ?? null }, pow);
 }
 
 export function clampStudioInspectWidth(width: number, max = STUDIO_INSPECT_WIDTH_MAX): number {

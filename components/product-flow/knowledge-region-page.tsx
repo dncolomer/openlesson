@@ -69,6 +69,7 @@ import {
   type KnowledgeRegionFigureTrack,
   type KnowledgeRegionPointKind,
 } from "@/lib/knowledge-region-figure";
+import type { StoredRecordView } from "@/lib/behavior-record";
 import type { FlowPowRow } from "@/lib/flow-embedding";
 import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
@@ -148,6 +149,7 @@ export function KnowledgeRegionPage({
   } | null>(null);
   const figurePannedRef = useRef(false);
   const [runPow, setRunPow] = useState<FlowPowRow[]>([]);
+  const [runRecord, setRunRecord] = useState<StoredRecordView | null>(null);
   const [rosterNames, setRosterNames] = useState<Record<string, string>>({});
   const [addStrategyIds, setAddStrategyIds] = useState<ExplorationStrategyId[]>([]);
   const [customName, setCustomName] = useState("");
@@ -243,8 +245,9 @@ export function KnowledgeRegionPage({
   const inspect: DataStudioInspectPayload | null = useMemo(() => {
     const base = inspectStudioEmbedding(selectedSample?.embedding);
     if (!base) return null;
-    return runPow.length ? mergeStudioInspectPow(base, runPow) : base;
-  }, [runPow, selectedSample]);
+    if (!runPow.length && !runRecord) return base;
+    return mergeStudioInspectPow(base, runPow, runRecord);
+  }, [runPow, runRecord, selectedSample]);
 
   const clusterDistances = useMemo(() => {
     if (!details || !selectedSample) return [];
@@ -258,6 +261,7 @@ export function KnowledgeRegionPage({
   useEffect(() => {
     if (!selectedSample?.workspace_id && !selectedSample?.run_id) {
       setRunPow([]);
+      setRunRecord(null);
       return;
     }
     let cancelled = false;
@@ -266,13 +270,20 @@ export function KnowledgeRegionPage({
     if (selectedSample.run_id) params.set("runId", selectedSample.run_id);
     void fetch(`${DASHBOARD_KNOWLEDGE_REGION_RUN_PATH}?${params.toString()}`)
       .then(async (response) => {
-        const body = (await response.json().catch(() => ({}))) as { pow?: FlowPowRow[] };
+        const body = (await response.json().catch(() => ({}))) as {
+          pow?: FlowPowRow[];
+          record?: StoredRecordView | null;
+        };
         if (!cancelled && response.ok && Array.isArray(body.pow)) {
           setRunPow(body.pow);
+          setRunRecord(body.record ?? null);
         }
       })
       .catch(() => {
-        if (!cancelled) setRunPow([]);
+        if (!cancelled) {
+          setRunPow([]);
+          setRunRecord(null);
+        }
       });
     return () => {
       cancelled = true;

@@ -49,6 +49,8 @@ export type FlowPowRow = {
   payload?: string | null;
   metadata?: Record<string, unknown> | null;
   xai_file_id?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
 };
 
 export type FlowGenModelRaw = {

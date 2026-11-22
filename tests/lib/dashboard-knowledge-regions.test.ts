@@ -271,6 +271,8 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
       "DataStudioInspectFields",
     );
+    expect(readRepo("components/data-studio/DataStudioInspect.tsx")).toContain("data-stored-record");
+    expect(readRepo("components/product-flow/knowledge-region-page.tsx")).toContain("runRecord");
     expect(detailsPage).not.toContain("zoomStudioCamera");
     expect(detailsPage).not.toContain("panStudioCamera");
     expect(readRepo("app/api/dashboard/knowledge-regions/[id]/route.ts")).toContain(

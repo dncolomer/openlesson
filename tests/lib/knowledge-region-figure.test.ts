@@ -627,7 +627,13 @@ describe("knowledge region figure", () => {
     expect(inspect).toContain("data-knowledge-region-path-table");
     expect(inspect).toContain('data-knowledge-region-inspect-tab="path"');
     expect(inspect).toContain("DataStudioInspectFields");
+    expect(inspect).toContain('data-knowledge-region-inspect-tab="record"');
     expect(inspect).not.toContain("scrollIntoView");
+    const inspectFields = readFileSync(
+      join(ROOT, "components/data-studio/DataStudioInspect.tsx"),
+      "utf8",
+    );
+    expect(inspectFields).toContain("data-stored-record");
   });
 
   it("ranks distances to every cluster and formats timestamps", () => {

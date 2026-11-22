@@ -22,6 +22,12 @@ import {
   knowledgeRegionFigureSpace,
   knowledgeRegionFigureTrack,
   knowledgeRegionFigureFocusOnPoints,
+  knowledgeRegionFigureLabelOffset,
+  knowledgeRegionFigureLabelScale,
+  knowledgeRegionFigureLabelTransform,
+  knowledgeRegionFigureOverviewLabels,
+  knowledgeRegionFigureShowSegmentLabel,
+  knowledgeRegionFigureStepLabelOffset,
   knowledgeRegionFigureViewBox,
   knowledgeRegionFigureZoomIn,
   knowledgeRegionFigureZoomOut,
@@ -271,6 +277,25 @@ describe("knowledge region figure", () => {
         { x: 448, y: 448 },
       ]).zoom,
     ).toBe(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
+    expect(knowledgeRegionFigureLabelScale(1)).toBe(1);
+    expect(knowledgeRegionFigureLabelScale(4)).toBe(0.25);
+    expect(knowledgeRegionFigureLabelTransform(120, 80, 2)).toBe("translate(120 80) scale(0.5)");
+    expect(knowledgeRegionFigureOverviewLabels(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT)).toBe(true);
+    expect(knowledgeRegionFigureOverviewLabels(4)).toBe(false);
+    expect(knowledgeRegionFigureShowSegmentLabel(100, 100, 108, 104, 1)).toBe(false);
+    expect(knowledgeRegionFigureShowSegmentLabel(100, 100, 108, 104, 8)).toBe(true);
+    expect(knowledgeRegionFigureLabelOffset(1)).toBeCloseTo(12.2);
+    expect(knowledgeRegionFigureLabelOffset(4)).toBeGreaterThan(knowledgeRegionFigureLabelOffset(1));
+    const stepOffset = knowledgeRegionFigureStepLabelOffset(
+      { x: 40, y: 40, index: 2 },
+      [
+        { x: 20, y: 40 },
+        { x: 40, y: 40 },
+        { x: 80, y: 40 },
+      ],
+      1,
+    );
+    expect(Math.abs(stepOffset.y)).toBeGreaterThan(Math.abs(stepOffset.x));
     expect(knowledgeRegionUnsysDistance({ projectedPolicy: { distance: 1.25 } })).toBe(1.25);
     expect(knowledgeRegionUnsysDistance(null)).toBeNull();
 
@@ -581,6 +606,11 @@ describe("knowledge region figure", () => {
     expect(page).toContain("data-knowledge-region-identity");
     expect(page).toContain("data-knowledge-region-identity-focus");
     expect(page).toContain("knowledgeRegionFigureFocusOnPoints");
+    expect(page).toContain("knowledgeRegionFigureLabelTransform");
+    expect(page).toContain("knowledgeRegionFigureOverviewLabels");
+    expect(page).toContain("knowledgeRegionFigureShowSegmentLabel");
+    expect(page).toContain("knowledgeRegionFigureStepLabelOffset");
+    expect(page).toContain('data-knowledge-region-figure-label="step"');
     expect(page).toContain("data-knowledge-region-roster-name");
     expect(page).toContain("parseLtiRosterNames");
     expect(page).toContain("data-knowledge-region-path");

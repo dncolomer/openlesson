@@ -43,6 +43,12 @@ import {
   knowledgeRegionFigureSpace,
   knowledgeRegionFigureTrack,
   knowledgeRegionFigureFocusOnPoints,
+  knowledgeRegionFigureLabelOffset,
+  knowledgeRegionFigureLabelScale,
+  knowledgeRegionFigureLabelTransform,
+  knowledgeRegionFigureOverviewLabels,
+  knowledgeRegionFigureShowSegmentLabel,
+  knowledgeRegionFigureStepLabelOffset,
   knowledgeRegionFigureViewBox,
   knowledgeRegionFigureZoomIn,
   knowledgeRegionFigureZoomOut,
@@ -343,6 +349,8 @@ export function KnowledgeRegionPage({
       }),
     [figure?.map.size, figurePan.x, figurePan.y, figureZoom],
   );
+  const overviewLabels = knowledgeRegionFigureOverviewLabels(figureZoom);
+  const pointLabelReach = knowledgeRegionFigureLabelOffset(figureZoom);
 
   function applyFigureZoom(next: number) {
     setFigureZoom(next);
@@ -922,25 +930,42 @@ export function KnowledgeRegionPage({
                             stroke="rgba(255,255,255,0.45)"
                             strokeWidth={0.9}
                           />
-                          <rect
-                            x={ray.midX - 18}
-                            y={ray.midY - 8}
-                            width={36}
-                            height={14}
-                            rx={3}
-                            fill="#0b0b0b"
-                            stroke="rgba(255,255,255,0.25)"
-                          />
-                          <text
-                            x={ray.midX}
-                            y={ray.midY + 3}
-                            textAnchor="middle"
-                            fill="rgba(255,255,255,0.82)"
-                            fontSize={9}
-                            fontFamily="ui-monospace, monospace"
-                          >
-                            {ray.label}
-                          </text>
+                          {knowledgeRegionFigureShowSegmentLabel(
+                            ray.x1,
+                            ray.y1,
+                            ray.x2,
+                            ray.y2,
+                            figureZoom,
+                          ) ? (
+                            <g
+                              transform={knowledgeRegionFigureLabelTransform(
+                                ray.midX,
+                                ray.midY,
+                                figureZoom,
+                              )}
+                              data-knowledge-region-figure-label="ray"
+                            >
+                              <rect
+                                x={-18}
+                                y={-8}
+                                width={36}
+                                height={14}
+                                rx={3}
+                                fill="#0b0b0b"
+                                stroke="rgba(255,255,255,0.25)"
+                              />
+                              <text
+                                x={0}
+                                y={3}
+                                textAnchor="middle"
+                                fill="rgba(255,255,255,0.82)"
+                                fontSize={9}
+                                fontFamily="ui-monospace, monospace"
+                              >
+                                {ray.label}
+                              </text>
+                            </g>
+                          ) : null}
                         </g>
                       ))}
                       {figure.path ? (
@@ -958,40 +983,73 @@ export function KnowledgeRegionPage({
                                 stroke="rgba(255,255,255,0.72)"
                                 strokeWidth={1.2}
                               />
-                              <rect
-                                x={segment.midX - 18}
-                                y={segment.midY - 8}
-                                width={36}
-                                height={14}
-                                rx={3}
-                                fill="#0b0b0b"
-                                stroke="rgba(255,255,255,0.25)"
-                              />
-                              <text
-                                x={segment.midX}
-                                y={segment.midY + 3}
-                                textAnchor="middle"
-                                fill="rgba(255,255,255,0.82)"
-                                fontSize={9}
-                                fontFamily="ui-monospace, monospace"
-                              >
-                                {segment.label}
-                              </text>
+                              {knowledgeRegionFigureShowSegmentLabel(
+                                segment.x1,
+                                segment.y1,
+                                segment.x2,
+                                segment.y2,
+                                figureZoom,
+                              ) ? (
+                                <g
+                                  transform={knowledgeRegionFigureLabelTransform(
+                                    segment.midX,
+                                    segment.midY,
+                                    figureZoom,
+                                  )}
+                                  data-knowledge-region-figure-label="segment"
+                                >
+                                  <rect
+                                    x={-18}
+                                    y={-8}
+                                    width={36}
+                                    height={14}
+                                    rx={3}
+                                    fill="#0b0b0b"
+                                    stroke="rgba(255,255,255,0.25)"
+                                  />
+                                  <text
+                                    x={0}
+                                    y={3}
+                                    textAnchor="middle"
+                                    fill="rgba(255,255,255,0.82)"
+                                    fontSize={9}
+                                    fontFamily="ui-monospace, monospace"
+                                  >
+                                    {segment.label}
+                                  </text>
+                                </g>
+                              ) : null}
                             </g>
                           ))}
-                          {figure.path.steps.map((step) => (
-                            <text
-                              key={step.id}
-                              x={step.x + 8}
-                              y={step.y - 8}
-                              fill="rgba(255,255,255,0.9)"
-                              fontSize={9}
-                              fontFamily="ui-monospace, monospace"
-                              data-knowledge-region-path-step={step.id}
-                            >
-                              {step.index}
-                            </text>
-                          ))}
+                          {figure.path.steps.map((step) => {
+                            const offset = knowledgeRegionFigureStepLabelOffset(
+                              step,
+                              figure.path!.steps,
+                              figureZoom,
+                            );
+                            return (
+                              <g
+                                key={step.id}
+                                transform={knowledgeRegionFigureLabelTransform(
+                                  step.x,
+                                  step.y,
+                                  figureZoom,
+                                )}
+                                data-knowledge-region-figure-label="step"
+                                data-knowledge-region-path-step={step.id}
+                              >
+                                <text
+                                  x={offset.x}
+                                  y={offset.y}
+                                  fill="rgba(255,255,255,0.9)"
+                                  fontSize={9}
+                                  fontFamily="ui-monospace, monospace"
+                                >
+                                  {step.index}
+                                </text>
+                              </g>
+                            );
+                          })}
                         </g>
                       ) : null}
                       {figure.glyphs.map((point) => {
@@ -1047,17 +1105,26 @@ export function KnowledgeRegionPage({
                                 strokeWidth={open ? 1.35 : 1.05}
                               />
                             )}
-                            {showRosterName ? (
-                              <text
-                                x={point.x + 8}
-                                y={point.y + 3}
-                                fill="rgba(255,255,255,0.92)"
-                                fontSize={9}
-                                fontFamily="ui-sans-serif, system-ui, sans-serif"
+                            {showRosterName && figureTrack !== "path" ? (
+                              <g
+                                transform={knowledgeRegionFigureLabelTransform(
+                                  point.x,
+                                  point.y,
+                                  figureZoom,
+                                )}
+                                data-knowledge-region-figure-label="roster"
                                 data-knowledge-region-roster-name={point.id}
                               >
-                                {rosterName}
-                              </text>
+                                <text
+                                  x={pointLabelReach}
+                                  y={3}
+                                  fill="rgba(255,255,255,0.92)"
+                                  fontSize={9}
+                                  fontFamily="ui-sans-serif, system-ui, sans-serif"
+                                >
+                                  {rosterName}
+                                </text>
+                              </g>
                             ) : null}
                           </g>
                         );
@@ -1087,43 +1154,51 @@ export function KnowledgeRegionPage({
                         <circle
                           cx={figure.focus.x}
                           cy={figure.focus.y}
-                          r={11}
+                          r={11 * knowledgeRegionFigureLabelScale(figureZoom)}
                           fill="none"
                           stroke="white"
-                          strokeWidth={1.35}
+                          strokeWidth={1.35 * knowledgeRegionFigureLabelScale(figureZoom)}
                           data-knowledge-region-focus=""
                         />
                       ) : null}
                     </g>
-                    {figure.badges.map((badge) => (
-                      <g
-                        key={badge.id}
-                        data-knowledge-region-badge={badge.kind}
-                        data-knowledge-region-cluster-label={
-                          badge.kind === "cluster" ? badge.id : undefined
-                        }
-                      >
-                        <rect
-                          x={badge.x}
-                          y={badge.y}
-                          width={badge.width}
-                          height={18}
-                          rx={4}
-                          fill="#101010"
-                          stroke={badge.color}
-                          strokeWidth={0.9}
-                        />
-                        <text
-                          x={badge.x + badge.width / 2}
-                          y={badge.y + 12.5}
-                          textAnchor="middle"
-                          fill={badge.color}
-                          fontSize={10}
-                        >
-                          {badge.label}
-                        </text>
-                      </g>
-                    ))}
+                    {overviewLabels
+                      ? figure.badges.map((badge) => (
+                          <g
+                            key={badge.id}
+                            transform={knowledgeRegionFigureLabelTransform(
+                              badge.x + badge.width / 2,
+                              badge.y + 9,
+                              figureZoom,
+                            )}
+                            data-knowledge-region-figure-label="badge"
+                            data-knowledge-region-badge={badge.kind}
+                            data-knowledge-region-cluster-label={
+                              badge.kind === "cluster" ? badge.id : undefined
+                            }
+                          >
+                            <rect
+                              x={-badge.width / 2}
+                              y={-9}
+                              width={badge.width}
+                              height={18}
+                              rx={4}
+                              fill="#101010"
+                              stroke={badge.color}
+                              strokeWidth={0.9}
+                            />
+                            <text
+                              x={0}
+                              y={3.5}
+                              textAnchor="middle"
+                              fill={badge.color}
+                              fontSize={10}
+                            >
+                              {badge.label}
+                            </text>
+                          </g>
+                        ))
+                      : null}
                   </svg>
                   </div>
                   <div

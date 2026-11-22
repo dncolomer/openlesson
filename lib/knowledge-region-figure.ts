@@ -78,6 +78,9 @@ export const KNOWLEDGE_REGION_FIGURE_ZOOM_MAX = 16;
 export const KNOWLEDGE_REGION_FIGURE_ZOOM_STEP = 1.25;
 export const KNOWLEDGE_REGION_FIGURE_FOCUS_PAD = 1.4;
 export const KNOWLEDGE_REGION_FIGURE_FOCUS_MIN_SPAN = 12;
+export const KNOWLEDGE_REGION_FIGURE_LABEL_PAD = 8;
+export const KNOWLEDGE_REGION_FIGURE_LABEL_GLYPH_RADIUS = 4.2;
+export const KNOWLEDGE_REGION_FIGURE_LABEL_MIN_SEGMENT = 40;
 
 export function clampKnowledgeRegionFigureZoom(value: unknown): number {
   const zoom = typeof value === "number" ? value : Number(value);
@@ -163,6 +166,67 @@ export function knowledgeRegionFigureFocusOnPoints(
   const panX = clampKnowledgeRegionFigurePan((minX + maxX) / 2 - map / 2, map, zoom);
   const panY = clampKnowledgeRegionFigurePan((minY + maxY) / 2 - map / 2, map, zoom);
   return { zoom, panX, panY };
+}
+
+export function knowledgeRegionFigureLabelScale(zoom: unknown): number {
+  return 1 / clampKnowledgeRegionFigureZoom(zoom);
+}
+
+export function knowledgeRegionFigureLabelTransform(
+  x: number,
+  y: number,
+  zoom: unknown,
+): string {
+  return `translate(${x} ${y}) scale(${knowledgeRegionFigureLabelScale(zoom)})`;
+}
+
+export function knowledgeRegionFigureOverviewLabels(zoom: unknown): boolean {
+  return clampKnowledgeRegionFigureZoom(zoom) <= KNOWLEDGE_REGION_FIGURE_ZOOM_FIT;
+}
+
+export function knowledgeRegionFigureShowSegmentLabel(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  zoom: unknown,
+): boolean {
+  const screen = Math.hypot(x2 - x1, y2 - y1) * clampKnowledgeRegionFigureZoom(zoom);
+  return screen >= KNOWLEDGE_REGION_FIGURE_LABEL_MIN_SEGMENT;
+}
+
+export function knowledgeRegionFigureLabelOffset(
+  zoom: unknown,
+  mapRadius = KNOWLEDGE_REGION_FIGURE_LABEL_GLYPH_RADIUS,
+  pad = KNOWLEDGE_REGION_FIGURE_LABEL_PAD,
+): number {
+  return mapRadius * clampKnowledgeRegionFigureZoom(zoom) + pad;
+}
+
+export function knowledgeRegionFigureStepLabelOffset(
+  step: { x: number; y: number; index: number },
+  steps: readonly { x: number; y: number }[],
+  zoom: unknown,
+): { x: number; y: number } {
+  const reach = knowledgeRegionFigureLabelOffset(zoom);
+  const i = Math.max(0, step.index - 1);
+  const prev = steps[i - 1];
+  const next = steps[i + 1];
+  let dx = 0;
+  let dy = -1;
+  if (prev && next) {
+    dx = next.x - prev.x;
+    dy = next.y - prev.y;
+  } else if (next) {
+    dx = next.x - step.x;
+    dy = next.y - step.y;
+  } else if (prev) {
+    dx = step.x - prev.x;
+    dy = step.y - prev.y;
+  }
+  const len = Math.hypot(dx, dy) || 1;
+  const side = step.index % 2 === 0 ? -1 : 1;
+  return { x: (-dy / len) * reach * side, y: (dx / len) * reach * side };
 }
 
 export function knowledgeRegionIdentityKey(point: {

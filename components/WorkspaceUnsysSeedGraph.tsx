@@ -29,6 +29,20 @@ const ZOOM_MIN = 0.12;
 const ZOOM_MAX = 4;
 const VISITED_COLOR = "#ffe14a";
 const HERE_COLOR = "#ff1f1f";
+const WALK_DIM_OPACITY = 0.22;
+const WALK_EDGE_DIM_OPACITY = 0.16;
+
+function walkOverlayEdgeKeys(
+  sequence: ReadonlyMap<string, number> | null | undefined,
+): Set<string> | null {
+  if (!sequence || sequence.size === 0) return null;
+  const ordered = [...sequence.entries()].sort((a, b) => a[1] - b[1]);
+  const keys = new Set<string>();
+  for (let i = 0; i < ordered.length - 1; i += 1) {
+    keys.add(`${ordered[i][0]}->${ordered[i + 1][0]}`);
+  }
+  return keys;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -55,7 +69,10 @@ export function WorkspaceUnsysSeedGraph({
   pulseHere = false,
   visitedIds = null,
   loadedIds = null,
+  visitSequence = null,
+  highlightId = null,
   onSelect,
+  onHover,
 }: {
   model: SessionBranchModel | null;
   focusId: string;
@@ -67,7 +84,12 @@ export function WorkspaceUnsysSeedGraph({
   visitedIds?: ReadonlySet<string> | null;
   /** Learn: the loaded focus path. Yellow edges. */
   loadedIds?: ReadonlySet<string> | null;
+  /** 1-based walk order on visited hidden states. */
+  visitSequence?: ReadonlyMap<string, number> | null;
+  /** Visual emphasis without authoring “recommended” leads. */
+  highlightId?: string | null;
   onSelect?: (id: string) => void;
+  onHover?: (id: string | null) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -122,6 +144,9 @@ export function WorkspaceUnsysSeedGraph({
   }, [model, size.height, size.width]);
 
   const edges = useMemo(() => (model ? pricedEdges(model) : []), [model]);
+  const walkedEdges = useMemo(() => walkOverlayEdgeKeys(visitSequence), [visitSequence]);
+  const walkOverlay = walkedEdges != null;
+  const markedId = String(highlightId || "").trim() || String(focusId || "").trim();
   const restRoot = {
     x: size.width / 2,
     y: size.height / 2,
@@ -311,10 +336,15 @@ export function WorkspaceUnsysSeedGraph({
             const fromFocus = edge.from === focusId;
             const recommended = fromFocus && edge.to === recommendedToId;
             const onLoaded = Boolean(loadedIds?.has(edge.from) && loadedIds?.has(edge.to));
+            const onWalk = Boolean(walkedEdges?.has(`${edge.from}->${edge.to}`));
+            const dimWalk = walkOverlay && !onWalk;
             return (
               <line
                 key={`${edge.from}-${edge.to}`}
                 data-session-unsys-edge-loaded={onLoaded ? "true" : undefined}
+                data-knowledge-region-unsys-walk-edge={
+                  walkOverlay ? (onWalk ? "true" : "false") : undefined
+                }
                 x1={segment.x1}
                 y1={segment.y1}
                 x2={segment.x2}
@@ -322,23 +352,32 @@ export function WorkspaceUnsysSeedGraph({
                 stroke={
                   recommended
                     ? "#fff"
-                    : onLoaded
+                    : onWalk || onLoaded
                       ? VISITED_COLOR
                       : model
                         ? authorUnsysRegionColor(model, edge.to)
                         : AUTHOR_UNSYS_ROOT_COLOR
                 }
-                strokeOpacity={fromFocus || recommended || onLoaded ? 1 : 0.55}
-                strokeWidth={recommended ? 2.25 : onLoaded ? 2 : fromFocus ? 1.75 : 1.2}
+                strokeOpacity={
+                  dimWalk
+                    ? WALK_EDGE_DIM_OPACITY
+                    : fromFocus || recommended || onWalk || onLoaded
+                      ? 1
+                      : 0.55
+                }
+                strokeWidth={
+                  recommended ? 2.25 : onWalk || onLoaded ? 2 : fromFocus ? 1.75 : 1.2
+                }
                 strokeLinecap="round"
               />
             );
           })}
           {(model?.branches ?? []).map((branch) => {
             const point = positions[branch.id] ?? restRoot;
-            const active = branch.id === focusId;
+            const active = Boolean(markedId) && branch.id === markedId;
             const recommended = branch.id === recommendedToId;
-            const visited = Boolean(visitedIds?.has(branch.id));
+            const sequence = visitSequence?.get(branch.id) ?? null;
+            const visited = Boolean(visitedIds?.has(branch.id) || sequence != null);
             const loaded = Boolean(loadedIds?.has(branch.id));
             const color =
               branch.id === model?.rootId
@@ -349,9 +388,19 @@ export function WorkspaceUnsysSeedGraph({
             const radius = graphDiamondRadius(branch.id === model?.rootId);
             const here = pulseHere && active;
             const lit = (active && !pulseHere) || recommended;
+            const dimWalk = walkOverlay && !visited && !active;
             const stroke = here ? HERE_COLOR : lit ? "#fff" : visited ? VISITED_COLOR : color;
             return (
-              <g key={`mark-${branch.id}`}>
+              <g
+                key={`mark-${branch.id}`}
+                opacity={dimWalk ? WALK_DIM_OPACITY : 1}
+                data-knowledge-region-unsys-attenuated={
+                  walkOverlay ? (dimWalk ? "true" : "false") : undefined
+                }
+                data-knowledge-region-unsys-focus={
+                  visitSequence ? (active ? "true" : "false") : undefined
+                }
+              >
                 <polygon
                   className={here ? "learn-hidden-state-here" : undefined}
                   points={graphDiamondPointsAttr(point, radius + 3.5)}
@@ -391,6 +440,8 @@ export function WorkspaceUnsysSeedGraph({
           const toRadius = graphDiamondRadius(edge.to === model?.rootId);
           const segment = graphDiamondEdge(from, to, fromRadius, toRadius);
           const recommended = edge.from === focusId && edge.to === recommendedToId;
+          const onWalk = Boolean(walkedEdges?.has(`${edge.from}->${edge.to}`));
+          const dimWalk = walkOverlay && !onWalk;
           return (
             <button
               key={`lead-${edge.from}-${edge.to}`}
@@ -401,9 +452,10 @@ export function WorkspaceUnsysSeedGraph({
               style={{
                 left: (segment.x1 + segment.x2) / 2,
                 top: (segment.y1 + segment.y2) / 2,
-                borderColor: recommended ? "#fff" : "rgba(255,255,255,0.35)",
-                color: recommended ? "#fff" : "#d4d4d4",
+                borderColor: recommended || onWalk ? "#fff" : "rgba(255,255,255,0.35)",
+                color: recommended || onWalk ? "#fff" : "#d4d4d4",
                 background: "#050505",
+                opacity: dimWalk ? WALK_DIM_OPACITY : 1,
               }}
               disabled={disabled}
               onPointerDown={(event) => event.stopPropagation()}
@@ -420,9 +472,11 @@ export function WorkspaceUnsysSeedGraph({
         {(model?.branches ?? []).map((branch) => {
           const point = positions[branch.id] ?? restRoot;
           const parentPoint = branch.parentId ? (positions[branch.parentId] ?? restRoot) : null;
-          const active = branch.id === focusId;
-          const visited = Boolean(visitedIds?.has(branch.id));
+          const active = Boolean(markedId) && branch.id === markedId;
+          const sequence = visitSequence?.get(branch.id) ?? null;
+          const visited = Boolean(visitedIds?.has(branch.id) || sequence != null);
           const here = pulseHere && active;
+          const dimWalk = walkOverlay && !visited && !active;
           const color =
             branch.id === model?.rootId
               ? AUTHOR_UNSYS_ROOT_COLOR
@@ -446,10 +500,26 @@ export function WorkspaceUnsysSeedGraph({
                 width: hit,
                 height: hit,
                 transform: "translate(-50%, -50%)",
-                zIndex: active ? 6 : 2,
+                zIndex: active ? 6 : walkOverlay && visited ? 4 : 2,
+                opacity: dimWalk ? WALK_DIM_OPACITY : 1,
               }}
               data-author-unsys-node={branch.id}
               data-author-unsys-focus={active ? "true" : "false"}
+              data-knowledge-region-unsys-node={visitSequence ? branch.id : undefined}
+              data-knowledge-region-unsys-visited={
+                visitSequence ? (visited ? "true" : "false") : undefined
+              }
+              data-knowledge-region-unsys-attenuated={
+                walkOverlay ? (dimWalk ? "true" : "false") : undefined
+              }
+              data-knowledge-region-unsys-sequence={
+                sequence != null ? String(sequence) : undefined
+              }
+              data-knowledge-region-unsys-focus={
+                visitSequence ? (active ? "true" : "false") : undefined
+              }
+              onPointerEnter={() => onHover?.(branch.id)}
+              onPointerLeave={() => onHover?.(null)}
               onPointerDown={(event) => onNodePointerDown(event, branch.id)}
               onClick={() => {
                 if (ignoreClickRef.current) {
@@ -469,7 +539,7 @@ export function WorkspaceUnsysSeedGraph({
                   textShadow: "0 0 8px #050505, 0 1px 0 #050505",
                 }}
               >
-                {branch.title}
+                {sequence != null ? `${sequence} · ${branch.title}` : branch.title}
               </span>
             </div>
           );

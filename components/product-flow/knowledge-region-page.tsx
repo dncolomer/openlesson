@@ -72,6 +72,10 @@ import {
 import type { StoredRecordView } from "@/lib/behavior-record";
 import type { FlowPowRow } from "@/lib/flow-embedding";
 import {
+  dashboardKnowledgeRegionUncertaintyModelPath,
+  type KnowledgeRegionUncertaintyModelRender,
+} from "@/lib/knowledge-region-unsys";
+import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
   dashboardKnowledgeRegionSimulationPath,
 } from "@/lib/dashboard-knowledge-regions";
@@ -150,6 +154,7 @@ export function KnowledgeRegionPage({
   const figurePannedRef = useRef(false);
   const [runPow, setRunPow] = useState<FlowPowRow[]>([]);
   const [runRecord, setRunRecord] = useState<StoredRecordView | null>(null);
+  const [unsysModel, setUnsysModel] = useState<KnowledgeRegionUncertaintyModelRender | null>(null);
   const [rosterNames, setRosterNames] = useState<Record<string, string>>({});
   const [addStrategyIds, setAddStrategyIds] = useState<ExplorationStrategyId[]>([]);
   const [customName, setCustomName] = useState("");
@@ -289,6 +294,33 @@ export function KnowledgeRegionPage({
       cancelled = true;
     };
   }, [selectedSample?.id, selectedSample?.run_id, selectedSample?.workspace_id]);
+
+  useEffect(() => {
+    if (!details?.id || !selectedSample) {
+      setUnsysModel(null);
+      return;
+    }
+    let cancelled = false;
+    const candidateId =
+      String(selectedSample.identity || selectedSample.id || "").trim() || selectedSample.id;
+    const href = dashboardKnowledgeRegionUncertaintyModelPath(details.id, {
+      candidateId,
+      runId: selectedSample.run_id || selectedSample.id,
+    });
+    void fetch(href)
+      .then(async (response) => {
+        const body = (await response.json().catch(() => ({}))) as KnowledgeRegionUncertaintyModelRender;
+        if (!cancelled && response.ok && body?.overlay) {
+          setUnsysModel(body);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setUnsysModel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [details?.id, selectedSample?.id, selectedSample?.identity, selectedSample?.run_id]);
 
   useEffect(() => {
     if (selectedSample && !visiblePointKinds.includes(selectedSample.pointKind)) {
@@ -1415,6 +1447,7 @@ export function KnowledgeRegionPage({
                     selectedSample.identity,
                     rosterNames,
                   )}
+                  unsysModel={unsysModel}
                   onClose={() => setSelectedSampleId(null)}
                   onSelectStep={setSelectedSampleId}
                 />

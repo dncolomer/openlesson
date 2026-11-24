@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DataStudioInspectFields } from "@/components/data-studio/DataStudioInspect";
 import { FLOW_FORM_LABEL } from "@/components/product-flow/product-flow-form";
+import { WorkspaceUnsysSeedGraph } from "@/components/WorkspaceUnsysSeedGraph";
 import {
   formatStudioHighDimDistance,
   type DataStudioInspectPayload,
@@ -17,8 +18,13 @@ import {
   type KnowledgeRegionIdentityPath,
 } from "@/lib/knowledge-region-figure";
 import type { KnowledgeRegionDetailsSample } from "@/lib/knowledge-region-details";
+import {
+  overlayToSessionBranchModel,
+  walkSequenceNumbers,
+  type KnowledgeRegionUncertaintyModelRender,
+} from "@/lib/knowledge-region-unsys";
 
-type InspectTab = "distances" | "path" | "record";
+type InspectTab = "distances" | "path" | "record" | "unsys";
 
 const TAB_CLASS =
   "border-b px-4 py-2 text-[11px] uppercase tracking-[0.16em]";
@@ -34,6 +40,7 @@ export function KnowledgeRegionInspect({
   mode = "individual",
   productKind,
   identityLabel,
+  unsysModel = null,
   onClose,
   onSelectStep,
 }: {
@@ -45,6 +52,7 @@ export function KnowledgeRegionInspect({
   mode?: KnowledgeRegionFigureMode | string | null;
   productKind?: string | null;
   identityLabel?: string | null;
+  unsysModel?: KnowledgeRegionUncertaintyModelRender | null;
   onClose: () => void;
   onSelectStep?: (id: string) => void;
 }) {
@@ -58,6 +66,30 @@ export function KnowledgeRegionInspect({
   useEffect(() => {
     setTab(primaryTab);
   }, [inspect.id, primaryTab]);
+
+  const overlayModel = useMemo(
+    () => overlayToSessionBranchModel(unsysModel?.overlay ?? null),
+    [unsysModel],
+  );
+  const visitSequence = useMemo(
+    () => walkSequenceNumbers(unsysModel?.overlay.walk ?? unsysModel?.mapped.sequence ?? []),
+    [unsysModel],
+  );
+  const walkSteps = useMemo(
+    () =>
+      (unsysModel?.overlay.hidden_states ?? [])
+        .filter((state) => state.visited)
+        .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
+    [unsysModel],
+  );
+  const [hoverHid, setHoverHid] = useState<string | null>(null);
+  const [selectedHid, setSelectedHid] = useState<string | null>(null);
+  const highlightHid = hoverHid || selectedHid;
+
+  useEffect(() => {
+    setHoverHid(null);
+    setSelectedHid(null);
+  }, [inspect.id, unsysModel?.run_id, unsysModel?.observation_id]);
 
   return (
     <section
@@ -98,6 +130,16 @@ export function KnowledgeRegionInspect({
             Distances
           </button>
         )}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "unsys"}
+          className={tab === "unsys" ? TAB_ON : TAB_OFF}
+          data-knowledge-region-inspect-tab="unsys"
+          onClick={() => setTab("unsys")}
+        >
+          Uncertainty model
+        </button>
         <button
           type="button"
           role="tab"
@@ -227,6 +269,77 @@ export function KnowledgeRegionInspect({
               <p className="mt-2 text-[12px] text-neutral-500">No cluster centroids to measure.</p>
             )}
           </div>
+        </div>
+      ) : tab === "unsys" ? (
+        <div className="text-sm text-neutral-300" data-knowledge-region-inspect-panel="unsys">
+          {overlayModel ? (
+            <div
+              className="flex h-[22rem] border-t border-white/10"
+              data-knowledge-region-unsys=""
+            >
+              <div className="relative min-w-0 flex-1" data-knowledge-region-unsys-graph="">
+                <WorkspaceUnsysSeedGraph
+                  model={overlayModel}
+                  focusId=""
+                  highlightId={highlightHid}
+                  draggableNodes={false}
+                  visitSequence={visitSequence}
+                  onSelect={setSelectedHid}
+                  onHover={setHoverHid}
+                />
+              </div>
+              <aside
+                className="flex w-44 shrink-0 flex-col border-l border-white/10"
+                data-knowledge-region-unsys-walk=""
+              >
+                <p className={`${FLOW_FORM_LABEL} px-3 py-2`}>Walk</p>
+                {walkSteps.length ? (
+                  <ol className="min-h-0 flex-1 overflow-y-auto px-1 pb-2">
+                    {walkSteps.map((state) => {
+                      const current = state.id === highlightHid;
+                      return (
+                        <li key={state.id}>
+                          <button
+                            type="button"
+                            className={`flex w-full items-baseline gap-2 px-2 py-1.5 text-left font-mono text-[11px] ${
+                              current
+                                ? "bg-white/10 text-white"
+                                : "text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
+                            }`}
+                            data-knowledge-region-unsys-step={state.sequence}
+                            data-knowledge-region-unsys-step-id={state.id}
+                            data-knowledge-region-unsys-step-current={String(current)}
+                            onMouseEnter={() => setHoverHid(state.id)}
+                            onMouseLeave={() => setHoverHid(null)}
+                            onFocus={() => setHoverHid(state.id)}
+                            onBlur={() => setHoverHid(null)}
+                            onClick={() => setSelectedHid(state.id)}
+                          >
+                            <span
+                              className={`w-5 shrink-0 tabular-nums ${
+                                current ? "text-[#ffe14a]" : "text-neutral-500"
+                              }`}
+                            >
+                              {state.sequence}
+                            </span>
+                            <span className="min-w-0 truncate uppercase tracking-[0.08em]">
+                              {state.title || state.id}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <p className="px-3 pb-3 text-[12px] text-neutral-500">
+                    No hidden-state walk on this run.
+                  </p>
+                )}
+              </aside>
+            </div>
+          ) : (
+            <p className="p-4 text-neutral-500">No uncertainty model on this run.</p>
+          )}
         </div>
       ) : (
         <div className="p-4 text-sm text-neutral-300" data-knowledge-region-inspect-panel="record">

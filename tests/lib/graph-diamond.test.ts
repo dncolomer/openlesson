@@ -61,6 +61,14 @@ describe("graph diamond marks", () => {
     expect(modal).toContain("pulseHere");
     expect(modal).not.toContain("draggableNodes={false}");
     expect(graph).toContain("learn-hidden-state-here");
+    expect(graph).toContain("data-knowledge-region-unsys-attenuated");
+    expect(graph).toContain("data-knowledge-region-unsys-walk-edge");
+    expect(graph).toContain("data-knowledge-region-unsys-focus");
+    expect(graph).toContain("highlightId");
+    expect(graph).toContain("onHover?.(branch.id)");
+    expect(graph).toContain("onHover?.(null)");
+    expect(graph).toContain("WALK_DIM_OPACITY");
+    expect(graph).toContain("walkOverlayEdgeKeys");
     expect(graph).toContain("touch-none");
     expect(graph).toContain("setPointerCapture");
     expect(graph).toContain("onSelect?.(branch.id)");

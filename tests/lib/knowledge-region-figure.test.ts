@@ -628,6 +628,17 @@ describe("knowledge region figure", () => {
     expect(inspect).toContain('data-knowledge-region-inspect-tab="path"');
     expect(inspect).toContain("DataStudioInspectFields");
     expect(inspect).toContain('data-knowledge-region-inspect-tab="record"');
+    expect(inspect).toContain('data-knowledge-region-inspect-tab="unsys"');
+    expect(inspect).toContain('data-knowledge-region-inspect-panel="unsys"');
+    expect(inspect).toContain("data-knowledge-region-distance-table");
+    expect(inspect).toContain("WorkspaceUnsysSeedGraph");
+    expect(inspect).toContain("visitSequence={visitSequence}");
+    expect(inspect).toContain("highlightId={highlightHid}");
+    expect(inspect).toContain("onHover={setHoverHid}");
+    expect(inspect).toContain("data-knowledge-region-unsys-walk");
+    expect(inspect).toContain("data-knowledge-region-unsys-step-id");
+    expect(inspect).toContain("data-knowledge-region-unsys-step-current");
+    expect(inspect).toContain("onMouseEnter");
     expect(inspect).not.toContain("scrollIntoView");
     const inspectFields = readFileSync(
       join(ROOT, "components/data-studio/DataStudioInspect.tsx"),

@@ -271,6 +271,24 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
       "DataStudioInspectFields",
     );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      'data-knowledge-region-inspect-tab="unsys"',
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      'data-knowledge-region-inspect-panel="unsys"',
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      "data-knowledge-region-unsys-walk",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      "highlightId={highlightHid}",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      'data-knowledge-region-inspect-tab="record"',
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      "data-knowledge-region-distance-table",
+    );
     expect(readRepo("components/data-studio/DataStudioInspect.tsx")).toContain("data-stored-record");
     expect(readRepo("components/product-flow/knowledge-region-page.tsx")).toContain("runRecord");
     expect(detailsPage).not.toContain("zoomStudioCamera");

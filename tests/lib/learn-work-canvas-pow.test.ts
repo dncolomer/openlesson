@@ -210,6 +210,9 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       "move",
       "rotate",
       "multi_select",
+      "pan",
+      "zoom",
+      "hover",
       "expand_more",
       "board_prompt",
       "dictate",
@@ -237,14 +240,40 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     );
   });
 
-  it("ignores pan/zoom/scroll, retired tools, and empty mount wipes", () => {
+  it("emits pan, zoom, and hover, and still ignores retired tools and empty mount wipes", () => {
     const rect = el("rectangle", "keep");
     const base = scene([rect], { zoom: { value: 1 }, scrollX: 0, scrollY: 0 });
-    const panned = classifyIleWorkCanvasSceneDiff(
+    const zoomed = classifyIleWorkCanvasSceneDiff(
       base,
       scene([rect], { zoom: { value: 2.4 }, scrollX: 80, scrollY: -40 }),
     );
-    expect(panned).toEqual([]);
+    expect(actionsOf(zoomed)).toEqual(["canvas/zoom"]);
+    expect(zoomed[0].metadata.zoom).toBe(2.4);
+    expect(zoomed[0].metadata.prompt).toBe("2.40");
+
+    const panned = classifyIleWorkCanvasSceneDiff(
+      base,
+      scene([rect], { zoom: { value: 1 }, scrollX: 80, scrollY: -40 }),
+    );
+    expect(actionsOf(panned)).toEqual(["canvas/pan"]);
+    expect(panned[0].metadata.dx).toBe(80);
+    expect(panned[0].metadata.dy).toBe(-40);
+
+    const hovered = classifyIleWorkCanvasSceneDiff(
+      base,
+      scene([rect], { hoveredElementIds: { keep: true } }),
+    );
+    expect(actionsOf(hovered)).toEqual(["canvas/hover"]);
+    expect(hovered[0].metadata.hovered_ids).toEqual(["keep"]);
+    expect(hovered[0].metadata.prompt).toBe("keep");
+
+    const left = classifyIleWorkCanvasSceneDiff(
+      scene([rect], { hoveredElementIds: { keep: true } }),
+      scene([rect], { hoveredElementIds: {} }),
+    );
+    expect(actionsOf(left)).toEqual(["canvas/hover"]);
+    expect(left[0].metadata.prompt).toBe("none");
+
     expect(ileWorkCanvasElementContentFingerprint(base)).toBe(
       ileWorkCanvasElementContentFingerprint(
         scene([rect], { zoom: { value: 8 }, scrollX: 999, scrollY: 999 }),
@@ -479,13 +508,24 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       expect(event.metadata.count).toBeGreaterThan(0);
       catalogRows.push(`${event.toolName}/${event.toolAction}`);
     }
-    expect(
-      classifyIleWorkCanvasSceneDiff(
-        before,
-        scene([rect], { zoom: { value: 3 }, scrollX: 40, scrollY: -12 }),
-      ),
-    ).toEqual([]);
-    catalogRows.push("pan_zoom_scroll=");
+    const zoomed = classifyIleWorkCanvasSceneDiff(
+      before,
+      scene([rect], { zoom: { value: 3 }, scrollX: 40, scrollY: -12 }),
+    );
+    expect(actionsOf(zoomed)).toEqual(["canvas/zoom"]);
+    catalogRows.push(`canvas/zoom prompt=${zoomed[0].metadata.prompt}`);
+    const panned = classifyIleWorkCanvasSceneDiff(
+      before,
+      scene([rect], { zoom: { value: 1 }, scrollX: 40, scrollY: -12 }),
+    );
+    expect(actionsOf(panned)).toEqual(["canvas/pan"]);
+    catalogRows.push(`canvas/pan prompt=${panned[0].metadata.prompt}`);
+    const hovered = classifyIleWorkCanvasSceneDiff(
+      before,
+      scene([rect], { hoveredElementIds: { "cat-rect": true } }),
+    );
+    expect(actionsOf(hovered)).toEqual(["canvas/hover"]);
+    catalogRows.push(`canvas/hover prompt=${hovered[0].metadata.prompt}`);
     catalogRows.push(`canvas/board_prompt prompt=${longPrompt}`);
     catalogRows.push(`canvas/expand_more prompt=${longPrompt} element_ids=sel-1,sel-2`);
 

@@ -95,14 +95,16 @@ describe("BehaviorBoardSampler", () => {
   });
 });
 
-describe("pan/zoom stay out of canvas work PoW", () => {
-  it("does not classify a scroll-only scene as a work action", () => {
+describe("pan/zoom/hover join canvas work PoW", () => {
+  it("classifies zoom when the camera scale changes", () => {
     const before = emptyIleWorkCanvasScene();
     const after = {
       ...before,
       appState: { ...(before.appState ?? {}), scrollX: 80, scrollY: 40, zoom: { value: 1.4 } },
     };
-    expect(classifyIleWorkCanvasSceneDiff(before, after)).toEqual([]);
+    const events = classifyIleWorkCanvasSceneDiff(before, after);
+    expect(events).toHaveLength(1);
+    expect(events[0].toolAction).toBe("zoom");
   });
 });
 

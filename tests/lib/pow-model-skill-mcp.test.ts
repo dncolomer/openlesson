@@ -133,6 +133,8 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(section).toContain(TAP_SPEECH_TOOL_NAME);
     expect(section).toContain("speech_start");
     expect(section).toContain("dictate. metadata.prompt is the transcript");
+    expect(section).toContain("pan, zoom, hover");
+    expect(section).toContain("Pan, zoom, and hover are canvas use actions");
     for (const id of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
       expect(section).toContain(id);
     }

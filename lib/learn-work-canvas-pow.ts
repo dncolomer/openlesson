@@ -9,7 +9,10 @@ import {
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas-scene";
-import { ileWorkCanvasPointerBusy } from "@/lib/learn-work-canvas-chrome";
+import {
+  ileWorkCanvasPointerBusy,
+  ileWorkCanvasZoomValue,
+} from "@/lib/learn-work-canvas-chrome";
 import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 
 export const ILE_WORK_CANVAS_POW_TOOL_NAME = "canvas" as const;
@@ -30,6 +33,9 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
   "move",
   "rotate",
   "multi_select",
+  "pan",
+  "zoom",
+  "hover",
   "expand_more",
   "board_prompt",
 ] as const;
@@ -93,6 +99,7 @@ const ELEMENT_DRAW_ACTION: Record<string, IleWorkCanvasPowAction> = {
 
 const POS_EPS = 0.5;
 const ANGLE_EPS = 0.01;
+const ZOOM_EPS = 0.001;
 
 export type IleWorkCanvasPowEvent = {
   toolName: typeof ILE_WORK_CANVAS_POW_TOOL_NAME;
@@ -203,9 +210,9 @@ function snapshotPowElement(el: IleWorkCanvasElement): IleWorkCanvasElement {
 }
 
 /**
- * PoW baseline: id/geom/text/points/colors plus selection and active tool.
- * Skips files and the rest of appState so pan/zoom does not clone the board.
- * Copies primitives so Excalidraw in-place mutation cannot collapse diffs.
+ * PoW baseline: id/geom/text/points/colors plus selection, hover, active tool,
+ * zoom, and scroll. Skips files. Copies primitives so Excalidraw in-place
+ * mutation cannot collapse diffs.
  */
 export function snapshotIleWorkCanvasPowScene(
   scene: IleWorkCanvasScene | null | undefined,
@@ -220,11 +227,20 @@ export function snapshotIleWorkCanvasPowScene(
     selectedRaw && typeof selectedRaw === "object" && !Array.isArray(selectedRaw)
       ? { ...(selectedRaw as Record<string, unknown>) }
       : {};
+  const hoveredRaw = appState.hoveredElementIds;
+  const hoveredElementIds =
+    hoveredRaw && typeof hoveredRaw === "object" && !Array.isArray(hoveredRaw)
+      ? { ...(hoveredRaw as Record<string, unknown>) }
+      : {};
   return {
     elements: elements.map((el) => snapshotPowElement(el)),
     appState: {
       selectedElementIds,
+      hoveredElementIds,
       activeTool: snapshotActiveTool(appState.activeTool),
+      zoom: ileWorkCanvasZoomValue(appState),
+      scrollX: Number(appState.scrollX) || 0,
+      scrollY: Number(appState.scrollY) || 0,
     },
     files: {},
   };
@@ -317,12 +333,72 @@ function eventOf(
   };
 }
 
-function isViewportOnlyAppStateChange(prev: IleWorkCanvasScene, next: IleWorkCanvasScene): boolean {
-  if (!liveContentEqual(prev, next)) return false;
-  const prevSelected = ileWorkCanvasSelectedIds(prev.appState).sort().join(",");
-  const nextSelected = ileWorkCanvasSelectedIds(next.appState).sort().join(",");
-  if (prevSelected !== nextSelected) return false;
-  return true;
+function appStateIdList(
+  appState: Record<string, unknown> | null | undefined,
+  key: string,
+): string[] {
+  const raw = appState?.[key];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  return Object.keys(raw as Record<string, unknown>).filter((id) =>
+    Boolean((raw as Record<string, unknown>)[id]),
+  );
+}
+
+function classifyViewportInteractions(
+  prev: IleWorkCanvasScene,
+  next: IleWorkCanvasScene,
+): IleWorkCanvasPowEvent[] {
+  const events: IleWorkCanvasPowEvent[] = [];
+  const prevZoom = ileWorkCanvasZoomValue(prev.appState);
+  const nextZoom = ileWorkCanvasZoomValue(next.appState);
+  const prevX = Number(prev.appState?.scrollX) || 0;
+  const prevY = Number(prev.appState?.scrollY) || 0;
+  const nextX = Number(next.appState?.scrollX) || 0;
+  const nextY = Number(next.appState?.scrollY) || 0;
+  const zoomed = !nearlyEqual(prevZoom, nextZoom, ZOOM_EPS);
+  const panned = !nearlyEqual(prevX, nextX, POS_EPS) || !nearlyEqual(prevY, nextY, POS_EPS);
+
+  if (zoomed) {
+    events.push(
+      eventOf("zoom", [], {
+        zoom: nextZoom,
+        previous_zoom: prevZoom,
+        scrollX: nextX,
+        scrollY: nextY,
+        prompt: nextZoom.toFixed(2),
+        count: 0,
+      }),
+    );
+  } else if (panned) {
+    events.push(
+      eventOf("pan", [], {
+        scrollX: nextX,
+        scrollY: nextY,
+        dx: nextX - prevX,
+        dy: nextY - prevY,
+        prompt: `${Math.round(nextX)},${Math.round(nextY)}`,
+        count: 0,
+      }),
+    );
+  }
+
+  const prevHover = appStateIdList(prev.appState, "hoveredElementIds");
+  const nextHover = appStateIdList(next.appState, "hoveredElementIds");
+  if (prevHover.slice().sort().join(",") !== nextHover.slice().sort().join(",")) {
+    const nextMap = indexById(liveElements(next));
+    const hoveredEls = nextHover
+      .map((id) => nextMap.get(id))
+      .filter((el): el is IleWorkCanvasElement => Boolean(el));
+    events.push(
+      eventOf("hover", hoveredEls, {
+        hovered_ids: nextHover,
+        element_ids: nextHover,
+        count: nextHover.length,
+        prompt: nextHover.join(",") || "none",
+      }),
+    );
+  }
+  return events;
 }
 
 const RETIRED_ILE_WORK_TOOLS = new Set(["notebook", "grokipedia", "dantes"]);
@@ -413,8 +489,9 @@ export function classifyIleWorkCanvasSceneDiff(
     nextSelected.length >= 2 && nextSelectKey !== prevSelectKey;
 
   const contentUnchanged = liveContentEqual(prev, next);
+  const viewport = classifyViewportInteractions(prev, next);
   if (contentUnchanged && !selectionBecameMulti) {
-    return [];
+    return viewport;
   }
   if (contentUnchanged && selectionBecameMulti) {
     const selectedEls = nextSelected
@@ -426,10 +503,8 @@ export function classifyIleWorkCanvasSceneDiff(
         selected_ids: nextSelected,
       }),
     );
-    return events;
+    return events.concat(viewport);
   }
-
-  if (isViewportOnlyAppStateChange(prev, next)) return [];
 
   if (created.length) events.push(...eventsForCreated(created));
 
@@ -499,7 +574,7 @@ export function classifyIleWorkCanvasSceneDiff(
     }
   }
 
-  return events;
+  return events.concat(viewport);
 }
 
 function eventsForCreated(created: IleWorkCanvasElement[]): IleWorkCanvasPowEvent[] {

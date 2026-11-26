@@ -1,5 +1,5 @@
 /**
- * Shared live-stage HUD grammar for Calibrate, Learn, and Verify.
+ * Shared live-stage HUD grammar for knowledge verification protocols.
  * Index 01 sits on the stage. The line beside it is pass, policy, or time.
  */
 

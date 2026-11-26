@@ -3,17 +3,15 @@ import { VERIFICATION_THESIS_LINKS } from "@/lib/science/hub";
 import {
   DISCOVERY_CTA_LABEL,
   HARNESS_PRICING_PATH,
-  KNOWLEDGE_MAPPING_PATH,
-  LEARNING_HARNESS_PATH,
   USE_CASES_PATH,
   discoveryMailto,
 } from "@/lib/marketing/paths";
 
 export const VERIFICATION_PRODUCT_COPY = {
-  eyebrow: "KNOWLEDGE VERIFICATION",
-  title: "Assess understanding through hard problems.",
-  lead: "Look beyond the final answer. Examine how someone explores a demanding problem, tests assumptions and develops their reasoning.",
-  body: "Knowledge Verification uses a supported session around a target you define. The useful record is the work itself: exploration, checks, and reasoning, together with the result. Interpretation depends on the conditions you stated and the work observed. One session is evidence for a decision, not definitive proof that someone holds a skill.",
+  eyebrow: "EMBEDDABLE KNOWLEDGE VERIFICATION PROTOCOLS",
+  title: "Assess understanding through The Protocol Challenge.",
+  lead: "Look beyond the final answer. Embeddable Knowledge Verification Protocols examine how someone explores a demanding problem, tests assumptions, and develops their reasoning.",
+  body: "An Embeddable Knowledge Verification Protocol uses a supported session around a knowledge region and The Protocol Challenge you define. The useful record is the work itself: exploration, checks, and reasoning, together with the result. Interpretation depends on the conditions you stated and the work observed. One session is evidence for a decision, not definitive proof that someone holds a skill.",
   pricingCta: "See pricing",
   pricingHref: HARNESS_PRICING_PATH,
   discoveryCta: DISCOVERY_CTA_LABEL,
@@ -23,7 +21,7 @@ export const VERIFICATION_PRODUCT_COPY = {
 export const VERIFICATION_PLATFORM_COPY = {
   eyebrow: "PLATFORM",
   title: "Relate work to a defined knowledge region.",
-  p1: "Define a knowledge region and a problem that represents the understanding you care about. Run a Verify session against that target. The session stores canvas work from the timed problem. Workspace views can then show how that work sits relative to the region in the current model.",
+  p1: "Define a knowledge region and The Protocol Challenge that represents the understanding you care about. Run an Embeddable Knowledge Verification Protocol against that target. The session stores canvas work from the timed problem. Workspace views can then show how that work sits relative to the region in the current model.",
   p2: "Distance in this setting is a model-specific relationship to the reference domain. It is not an intelligence score, a certified skill measurement, or a validated predictor of job performance. Regions stay in the workspace that owns them. That is an access boundary, not a confidentiality guarantee.",
   visualCaption: "Knowledge · Embeddings · Knowledge regions · Proof of Work",
   visualBody:
@@ -39,7 +37,7 @@ export const VERIFICATION_FLOW_COPY = {
   steps: [
     {
       title: "Set the target",
-      body: "Choose the knowledge region and the problem that should reveal the understanding you care about. Spell out the conditions of the session, including whether an AI tool is allowed. Those conditions live in the problem. The product does not enforce a tool policy.",
+      body: "Choose the knowledge region and The Protocol Challenge that should reveal the understanding you care about. Spell out the conditions of the session, including whether an AI tool is allowed. Those conditions live in the problem. The product does not enforce a tool policy.",
     },
     {
       title: "Run the session",
@@ -57,7 +55,7 @@ export const VERIFICATION_FLOW_COPY = {
 export const VERIFICATION_APPROACH_COPY = {
   eyebrow: "THE MODEL",
   title: "How the model informs verification",
-  p1: "Uncertain Systems uses our uncertainty model built from the concept you are examining: hidden states, observations, priced edges, and a policy. Hosted Calibrate, Learn, and Verify sessions act on that frozen model. Observable work is the input. The model estimates a provisional relationship to the target. Understanding still happens in the person.",
+  p1: "Uncertain Systems uses our uncertainty model built from the concept you are examining: hidden states, observations, priced edges, and a policy. An Embeddable Knowledge Verification Protocol acts on that frozen model. Observable work is the input. The model estimates a provisional relationship to the target. Understanding still happens in the person.",
   p2: "Conversational sessions follow a Free Energy Principle influence based on epistemic foraging: search for information that reduces uncertainty about what is held. That policy can shape what the session asks next. It is an influence on the software, not a claim that the result is scientifically validated or immune to assistance.",
   p3: "A related application is examining how an agent setup works a defined problem. That use needs a confirmed configuration. It is not evidence that people and agents are measured the same way.",
   foraging:
@@ -68,19 +66,19 @@ export const VERIFICATION_APPROACH_COPY = {
   directoryEyebrow: "THESIS",
   directoryTitle: "The science.",
   related:
-    "Use Knowledge Mapping as the domain reference, and Build Understanding when the evidence points to further development.",
+    "Knowledge regions stay the domain reference for Embeddable Knowledge Verification Protocols.",
   relatedLinks: [
     { href: `${USE_CASES_PATH}#technical-hiring`, label: "Hard-problem assessment" },
-    { href: LEARNING_HARNESS_PATH, label: "Solve" },
-    { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
+    { href: `${USE_CASES_PATH}#team-insight`, label: "Team insight" },
+    { href: `${USE_CASES_PATH}#research-ai`, label: "Frontier work" },
   ],
 } as const;
 
 export const VERIFICATION_SCALE_COPY = {
   eyebrow: "VERIFICATION AT SCALE",
   title: "Verify and rank knowledge against your own knowledge regions at scale.",
-  p1: "The same measurement stack can run knowledge verification for many people against the same knowledge regions, without placing proprietary skills and specs into a public repository.",
-  p2: "Hosted Calibrate, Learn, and Verify sessions run live, time-framed verification in parallel, without building your own session interface. Learn adds open-ended assignment depth as volume grows.",
+  p1: "The same measurement stack can run Embeddable Knowledge Verification Protocols for many people against the same knowledge regions, without placing proprietary skills and specs into a public repository.",
+  p2: "Hosted verification protocols run live, time-framed verification in parallel, without building your own session interface.",
   imageSrc: "/ranking_app.png",
   imageAlt: "Ranking by proximity to a knowledge region bar",
 } as const;

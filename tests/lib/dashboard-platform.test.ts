@@ -59,18 +59,18 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("home")).toBe("home");
     expect(parseDashboardTab("learning")).toBe("home");
     expect(parseDashboardTab("insights")).toBe("home");
-    expect(parseDashboardTab("verification")).toBe("flows");
-    expect(parseDashboardTab("calibration")).toBe("flows");
-    expect(parseDashboardTab("solve")).toBe("flows");
+    expect(parseDashboardTab("verification")).toBe("protocols");
+    expect(parseDashboardTab("calibration")).toBe("protocols");
+    expect(parseDashboardTab("solve")).toBe("protocols");
     expect(parseDashboardTab("solve_regions")).toBe("regions");
     expect(parseDashboardTab("solve_studio")).toBe("regions");
     expect(parseDashboardTab("shop")).toBe("home");
     expect(parseDashboardTab("verification_regions")).toBe("regions");
     expect(parseDashboardTab("calibration_regions")).toBe("regions");
     expect(parseDashboardTab("browse_maps")).toBe("home");
-    expect(parseDashboardTab("practice")).toBe("flows");
+    expect(parseDashboardTab("practice")).toBe("protocols");
     expect(parseDashboardTab("practice_studio")).toBe("regions");
-    expect(parseDashboardTab("practice_performance")).toBe("flows");
+    expect(parseDashboardTab("practice_performance")).toBe("protocols");
     expect(isDashboardPracticeTab("practice")).toBe(false);
     expect(isDashboardPracticePerformanceTab("practice_performance")).toBe(false);
     expect(parseDashboardTab("learning_studio")).toBe("home");
@@ -86,9 +86,10 @@ describe("dashboard nav", () => {
     expect(isDashboardProductTab(parseDashboardTab("learning"))).toBe(false);
     expect(isDashboardProductTab("home")).toBe(false);
     expect(dashboardTypeFilterForTab("home")).toBeNull();
-    expect(dashboardTypeFilterForTab("flows")).toBeNull();
+    expect(dashboardTypeFilterForTab("protocols")).toBeNull();
     expect(dashboardTypeFilterForTab("regions")).toBeNull();
-    expect(isDashboardProductTab("solve")).toBe(true);
+    expect(isDashboardProductTab("solve")).toBe(false);
+    expect(isDashboardProductTab("protocol")).toBe(true);
     expect(dashboardTypeFilterForTab(parseDashboardTab("shop"))).toBeNull();
     expect(dashboardListFilterForTab(parseDashboardTab("shop"))).toBeNull();
     expect(dashboardListFilterForTab(parseDashboardTab("learning"))).toBeNull();
@@ -98,27 +99,20 @@ describe("dashboard nav", () => {
     expect(dashboardRegionsProduct("regions")).toBeNull();
     expect(dashboardFrameLabel("regions")).toBe("Knowledge regions");
     expect(dashboardFrameLabel(parseDashboardTab("calibration_studio"))).toBe("Knowledge regions");
-    expect(dashboardCreateHref()).toBe("/flows/new");
-    expect(dashboardCreateHref("verification")).toBe("/verification/flows/new");
-    expect(dashboardCreateHref("calibration")).toBe("/calibration/flows/new");
-    expect(dashboardCreateHref("solve")).toBe("/solve/flows/new");
-    expect(dashboardCreateHref("solve")).toBe(productFlowNewPath("solve"));
-    expect(dashboardCreateHref("verification")).toBe(productFlowNewPath("verification"));
-    expect(dashboardCreateHref("calibration")).toBe(productFlowNewPath("calibration"));
-    expect(dashboardProductLabel("verification")).toBe("Verification");
-    expect(dashboardCreateLabel()).toBe("Create flow →");
-    expect(dashboardCreateLabel("verification")).toBe("Create Verification flow →");
-    expect(dashboardCreateLabel("calibration")).toBe("Create Calibration flow →");
-    expect(dashboardProductLabel("solve")).toBe("Solve");
-    expect(dashboardCreateLabel("solve")).toBe("Create Solve flow →");
-    expect(dashboardFrameLabel("flows")).toBe("Flows");
+    expect(dashboardCreateHref()).toBe("/protocols/new");
+    expect(dashboardCreateHref("protocol")).toBe("/protocols/new");
+    expect(dashboardCreateHref("protocol")).toBe(productFlowNewPath());
+    expect(dashboardProductLabel("protocol")).toBe("Protocol");
+    expect(dashboardCreateLabel()).toBe("Create protocol →");
+    expect(dashboardCreateLabel("protocol")).toBe("Create protocol →");
+    expect(dashboardFrameLabel("protocols")).toBe("Protocols");
     expect(dashboardFrameLabel("regions")).toBe("Knowledge regions");
-    expect(dashboardTabForProductSurface("solve")).toBe("flows");
+    expect(dashboardTabForProductSurface("solve")).toBe("protocols");
     expect(dashboardTabForProductSurface("solve", "region")).toBe("regions");
     expect(dashboardFrameLabel("home")).toBe("Home");
     expect(dashboardHrefForTab("home")).toBe("/dashboard");
-    expect(dashboardHrefForTab("flows")).toBe("/dashboard?tab=flows");
-    expect(dashboardTabForProductSurface("verification")).toBe("flows");
+    expect(dashboardHrefForTab("protocols")).toBe("/dashboard?tab=protocols");
+    expect(dashboardTabForProductSurface("verification")).toBe("protocols");
     expect(dashboardTabForProductSurface("calibration", "region")).toBe("regions");
   });
 
@@ -142,12 +136,12 @@ describe("dashboard nav", () => {
       "My Shop",
     );
     expect(dashboardNavGroupIdForTab("home")).toBeNull();
-    expect(dashboardNavGroupIdForTab("flows")).toBeNull();
+    expect(dashboardNavGroupIdForTab("protocols")).toBeNull();
     expect(dashboardNavGroupIdForTab("regions")).toBeNull();
-    expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.id)).toEqual(["home", "flows", "regions"]);
+    expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.id)).toEqual(["home", "protocols", "regions"]);
     expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.label)).toEqual([
       "Home",
-      "Flows",
+      "Protocols",
       "Knowledge regions",
     ]);
     expect(DASHBOARD_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.id))).not.toContain(
@@ -157,22 +151,22 @@ describe("dashboard nav", () => {
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("verification");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("calibration");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("products");
-    expect(dashboardHomeCtas().map((cta) => cta.id)).toEqual(["flows", "regions"]);
-    expect(dashboardHomeCtas().map((cta) => cta.label)).toEqual(["Flows", "Knowledge regions"]);
+    expect(dashboardHomeCtas().map((cta) => cta.id)).toEqual(["protocols", "regions"]);
+    expect(dashboardHomeCtas().map((cta) => cta.label)).toEqual(["Protocols", "Knowledge regions"]);
     expect(dashboardHomeCtas().map((cta) => cta.href)).toEqual([
-      dashboardHrefForTab("flows"),
+      dashboardHrefForTab("protocols"),
       dashboardHrefForTab("regions"),
     ]);
     expect(dashboardHomeCtas().map((cta) => cta.links.map((link) => link.label))).toEqual([
-      ["Open flows"],
+      ["Open protocols"],
       ["Open regions"],
     ]);
     expect(dashboardHomeCtas().map((cta) => cta.links.map((link) => link.id))).toEqual([
-      ["flows"],
+      ["protocols"],
       ["regions"],
     ]);
     expect(DASHBOARD_HOME_CTA_USE_CASE_IDS).toEqual({
-      flows: "research-ai",
+      protocols: "research-ai",
       regions: "team-insight",
     });
     const byId = Object.fromEntries(USE_CASES.map((row) => [row.id, row]));
@@ -222,10 +216,9 @@ describe("dashboard home summaries", () => {
     });
   });
 
-  it("presents verification and calibration flow rows, not workspaces", () => {
+  it("presents protocol rows, not workspaces", () => {
     const verify = presentDashboardRecentFlow({
       id: "vf1",
-      kind: "verify",
       title: "Linear maps",
       workspaceId: "ws1",
       workspaceTitle: "Algebra",
@@ -235,41 +228,41 @@ describe("dashboard home summaries", () => {
     });
     expect(verify).toMatchObject({
       id: "vf1",
-      kind: "verify",
       name: "Linear maps",
       title: "Linear maps",
       publicPath: "/v/tok",
-      workspacePath: "/verification/flows/vf1",
-      flowPath: "/verification/flows/vf1",
+      workspacePath: "/protocols/vf1",
+      protocolPath: "/protocols/vf1",
+      challenge: "",
       questionCount: 4,
     });
-    expect(verify?.flowPath).toBe(productFlowPagePath("verification", "vf1"));
+    expect(verify).not.toHaveProperty("kind");
+    expect(verify).not.toHaveProperty("flowPath");
+    expect(verify?.protocolPath).toBe(productFlowPagePath("vf1"));
 
-    const calibrate = presentDashboardRecentFlow({
+    const leftover = presentDashboardRecentFlow({
       id: "cf1",
-      kind: "calibrate",
       title: "Priors",
       workspaceId: "ws2",
       publicToken: "ctok",
       questionCount: ["a", "b"],
     });
-    expect(calibrate?.publicPath).toBe("/c/ctok");
-    expect(calibrate?.name).toBe("Priors");
-    expect(calibrate?.workspacePath).toBe("/calibration/flows/cf1");
-    expect(calibrate?.flowPath).toBe(productFlowPagePath("calibration", "cf1"));
-    const solve = presentDashboardRecentFlow({
+    expect(leftover?.publicPath).toBe("/v/ctok");
+    expect(leftover?.name).toBe("Priors");
+    expect(leftover?.workspacePath).toBe("/protocols/cf1");
+    expect(leftover?.protocolPath).toBe(productFlowPagePath("cf1"));
+    const named = presentDashboardRecentFlow({
       id: "sf1",
-      kind: "solve",
       name: "Limits",
       title: "epsilon-delta",
       topic: "epsilon-delta",
       publicToken: "stok",
     });
-    expect(solve?.publicPath).toBe("/s/stok");
-    expect(solve?.flowPath).toBe(productFlowPagePath("solve", "sf1"));
-    expect(solve?.workspacePath).toBe("/solve/flows/sf1");
-    expect(solve?.topic).toBe("epsilon-delta");
-    expect(solve?.questionCount).toBe(0);
+    expect(named?.publicPath).toBe("/v/stok");
+    expect(named?.protocolPath).toBe(productFlowPagePath("sf1"));
+    expect(named?.workspacePath).toBe("/protocols/sf1");
+    expect(named?.challenge).toBe("epsilon-delta");
+    expect(named?.questionCount).toBe(0);
     expect(truncateDashboardFlowTopic("")).toBe("—");
     expect(truncateDashboardFlowTopic("epsilon-delta")).toBe("epsilon-delta");
     expect(truncateDashboardFlowTopic("a".repeat(DASHBOARD_FLOW_TOPIC_MAX))).toHaveLength(
@@ -285,10 +278,9 @@ describe("dashboard home summaries", () => {
     );
     expect(DASHBOARD_FLOW_NAME_MAX).toBe(40);
     expect(DASHBOARD_FLOW_TOPIC_MAX).toBe(48);
-    expect(presentDashboardRecentFlow({ id: "", kind: "verify", workspaceId: "ws" })).toBeNull();
+    expect(presentDashboardRecentFlow({ id: "", workspaceId: "ws" })).toBeNull();
     const ownerScoped = presentDashboardRecentFlow({
       id: "vf-owner",
-      kind: "verify",
       title: "Owned",
       publicToken: "otok",
     });
@@ -302,30 +294,28 @@ describe("dashboard home summaries", () => {
       [
         {
           id: "a",
-          kind: "verify",
           name: "A",
           title: "A",
           workspaceId: "w",
           workspaceTitle: "W",
           createdAt: "2026-01-01T00:00:00.000Z",
           publicPath: "/v/a",
-          workspacePath: "/verification/flows/a",
-          flowPath: "/verification/flows/a",
-          topic: "",
+          workspacePath: "/protocols/a",
+          protocolPath: "/protocols/a",
+          challenge: "",
           questionCount: 1,
         },
         {
           id: "b",
-          kind: "calibrate",
           name: "B",
           title: "B",
           workspaceId: "w",
           workspaceTitle: "W",
           createdAt: "2026-05-01T00:00:00.000Z",
-          publicPath: "/c/b",
-          workspacePath: "/calibration/flows/b",
-          flowPath: "/calibration/flows/b",
-          topic: "",
+          publicPath: "/v/b",
+          workspacePath: "/protocols/b",
+          protocolPath: "/protocols/b",
+          challenge: "",
           questionCount: 2,
         },
       ],
@@ -333,37 +323,35 @@ describe("dashboard home summaries", () => {
     );
     expect(sorted.map((row) => row.id)).toEqual(["b"]);
     const mixed: DashboardRecentFlow[] = Array.from({ length: 101 }, (_, i) => ({
-      id: `solve-${i}`,
-      kind: "solve" as const,
+      id: `proto-${i}`,
       name: `S${i}`,
       title: `S${i}`,
       workspaceId: "w",
       workspaceTitle: "W",
       createdAt: `2026-11-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
-      publicPath: `/s/${i}`,
-      workspacePath: `/solve/flows/${i}`,
-      flowPath: `/solve/flows/${i}`,
-      topic: "",
+      publicPath: `/v/${i}`,
+      workspacePath: `/protocols/${i}`,
+      protocolPath: `/protocols/${i}`,
+      challenge: "",
       questionCount: 0,
     }));
     mixed.push({
       id: "verify-old",
-      kind: "verify",
       name: "Limits",
       title: "Limits",
       workspaceId: "w",
       workspaceTitle: "W",
       createdAt: "2026-10-01T00:00:00.000Z",
       publicPath: "/v/old",
-      workspacePath: "/verification/flows/old",
-      flowPath: "/verification/flows/old",
-      topic: "ε-δ",
+      workspacePath: "/protocols/old",
+      protocolPath: "/protocols/old",
+      challenge: "ε-δ",
       questionCount: 1,
     });
-    expect(sortDashboardRecentFlows(mixed, 100).some((row) => row.kind === "verify")).toBe(
+    expect(sortDashboardRecentFlows(mixed, 100).some((row) => row.id === "verify-old")).toBe(
       false,
     );
-    expect(sortDashboardFlowsByCreatedAt(mixed).some((row) => row.kind === "verify")).toBe(
+    expect(sortDashboardFlowsByCreatedAt(mixed).some((row) => row.id === "verify-old")).toBe(
       true,
     );
     expect(questionCountFromUnknown(["q1", "q2"])).toBe(2);
@@ -389,7 +377,7 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("DashboardPracticePerformanceTab");
     expect(dashSrc).not.toContain("DashboardPracticeTab");
     expect(dashboardFrameLabel(parseDashboardTab("solve_studio"))).toBe("Knowledge regions");
-    expect(dashboardFrameLabel(parseDashboardTab("practice_performance"))).toBe("Flows");
+    expect(dashboardFrameLabel(parseDashboardTab("practice_performance"))).toBe("Protocols");
     expect(dashSrc).not.toContain("isDashboardStudioTab");
     expect(dashSrc).not.toContain("data-dashboard-data-studio");
     expect(dashSrc).not.toContain("md:row-span-2");
@@ -411,7 +399,7 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
       'group.id === "account"',
     );
-    expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.id)).toEqual(["home", "flows", "regions"]);
+    expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.id)).toEqual(["home", "protocols", "regions"]);
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-nav-home");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
       "data-dashboard-nav-practice",
@@ -497,7 +485,7 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
       "sticky top-0 z-10",
     );
-    expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Flows");
+    expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Protocols");
     expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Knowledge regions");
     expect(readRepo("lib/dashboard-home-overview.ts")).not.toContain("Solve / Practice");
     expect(dashSrc).not.toContain("data-dashboard-home-announcements");
@@ -508,7 +496,7 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("Quick Work Session");
     expect(dashSrc).not.toContain("data-dashboard-home-stats");
     expect(dashSrc).not.toContain("data-dashboard-recent-flow");
-    expect(dashSrc).toContain("data-dashboard-type-filter");
+    expect(dashSrc).not.toContain("data-dashboard-type-filter");
     expect(dashSrc).not.toContain("data-dashboard-product-stats");
     expect(dashSrc).not.toContain("data-dashboard-shop");
     expect(dashSrc).toContain("data-dashboard-knowledge-regions");
@@ -521,7 +509,7 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("table-fixed");
     expect(dashSrc).toContain("truncateDashboardFlowName");
     expect(dashSrc).toContain("truncateDashboardFlowTopic");
-    expect(dashSrc).toContain("data-dashboard-flow-topic");
+    expect(dashSrc).toContain("data-dashboard-flow-challenge");
     expect(dashSrc).toContain("block truncate");
     expect(dashSrc).not.toContain("data-dashboard-flow-questions");
     expect(dashSrc).not.toContain("{showTopic ? \"Topic\" : \"Questions\"}");
@@ -543,21 +531,21 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/product-flow/product-surface.tsx")).toContain("DashboardSidebar");
     expect(readRepo("components/product-flow/product-surface.tsx")).toContain("data-dashboard-platform");
     expect(readRepo("components/product-flow/product-surface.tsx")).not.toContain("Navbar");
-    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "data-flow-kind",
     );
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-name");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("Publish");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-publish");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
-      "productFlowDashboardPath(kind)",
+      "productFlowDashboardPath()",
     );
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "payload.flowPath",
     );
-    expect(productFlowDashboardPath("verification")).toBe("/dashboard?tab=flows");
-    expect(productFlowDashboardPath("calibration")).toBe("/dashboard?tab=flows");
-    expect(productFlowDashboardPath("solve")).toBe("/dashboard?tab=flows");
+    expect(productFlowDashboardPath("verification")).toBe("/dashboard?tab=protocols");
+    expect(productFlowDashboardPath("calibration")).toBe("/dashboard?tab=protocols");
+    expect(productFlowDashboardPath("solve")).toBe("/dashboard?tab=protocols");
     expect(absoluteFlowPublicUrl("/s/tok", "https://app.example")).toBe("https://app.example/s/tok");
     expect(absoluteFlowPublicUrl("/v/tok", "https://app.example")).toBe("https://app.example/v/tok");
     expect(absoluteFlowPublicUrl("https://app.example/c/tok", "https://other")).toBe(
@@ -587,14 +575,12 @@ describe("dashboard platform surface", () => {
       "data-calibration-flow-add-question",
     );
     expect(dashSrc).not.toContain("learningWorkspaces");
-    expect(readRepo("app/verification/flows/new/page.tsx")).toContain('kind="verification"');
-    expect(readRepo("app/calibration/flows/new/page.tsx")).toContain('kind="calibration"');
-    expect(readRepo("app/solve/flows/new/page.tsx")).toContain('kind="solve"');
-    expect(readRepo("app/solve/flows/[id]/page.tsx")).toContain("ProductFlowPage");
-    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
+    expect(readRepo("app/protocols/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(readRepo("app/protocols/[id]/page.tsx")).toContain("ProductFlowPage");
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "data-solve-flow-editor",
     );
-    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain(
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).not.toContain(
       "data-solve-flow-editor",
     );
     const flowForm = readRepo("components/product-flow/product-flow-form.tsx");
@@ -616,22 +602,21 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/product-flow/product-surface.tsx")).not.toContain(
       "data-console-frame-label",
     );
-    expect(readRepo("app/verification/flows/[id]/page.tsx")).toContain("ProductFlowPage");
-    expect(readRepo("app/calibration/flows/[id]/page.tsx")).toContain("ProductFlowPage");
+    expect(readRepo("app/protocols/[id]/page.tsx")).toContain("ProductFlowPage");
     expect(readRepo("app/workspace/[[...slug]]/page.tsx")).toContain("RetiredProductPage");
     expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
       "dashboardCreateLabel()",
     );
-    expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).not.toContain(
       "data-dashboard-flow-kind",
     );
     expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
-      "sm:flex-row sm:items-end",
+      "md:flex-row md:items-end",
     );
-    expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
-      'const TYPE_SELECT =\n  "h-12',
+    expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).not.toContain(
+      "TYPE_SELECT",
     );
-    expect(readRepo("app/flows/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(readRepo("app/protocols/new/page.tsx")).toContain("ProductFlowWizard");
     expect(readRepo("app/regions/new/page.tsx")).toContain("KnowledgeRegionCreate");
     expect(flowDisplayName({ name: "Named", topic: "Topic" })).toBe("Named");
     expect(
@@ -712,17 +697,19 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-integrations-tab.tsx")).not.toContain(
       "showWorkspaceLevelNote",
     );
-    expect(readRepo("messages/en.json")).toContain("list_flows");
+    expect(readRepo("messages/en.json")).toContain("list_protocols");
     expect(readRepo("messages/en.json")).not.toContain("create_workspace or list_workspaces");
     expect(readRepo("messages/en.json")).not.toContain("list_map_tools");
     const enMessages = JSON.parse(readRepo("messages/en.json")) as {
       dashboard: Record<string, string>;
       integrationAccess: Record<string, string>;
     };
-    expect(enMessages.dashboard.mcpWorkflowSteps).toContain("list_flows");
-    expect(enMessages.dashboard.mcpWorkflowSteps).toContain("create_flow");
+    expect(enMessages.dashboard.mcpWorkflowSteps).toContain("list_protocols");
+    expect(enMessages.dashboard.mcpWorkflowSteps).toContain("create_protocol");
+    expect(enMessages.dashboard.mcpWorkflowSteps).toContain("challenge");
+    expect(enMessages.dashboard.mcpWorkflowSteps).not.toContain("create_flow");
     expect(enMessages.dashboard.mcpWorkflowSteps).not.toContain("create_workspace");
-    expect(enMessages.integrationAccess.skillDescription.toLowerCase()).toContain("flow");
+    expect(enMessages.integrationAccess.skillDescription.toLowerCase()).toContain("protocol");
     expect(enMessages.integrationAccess.skillDescription.toLowerCase()).not.toContain(
       "learning map",
     );
@@ -736,12 +723,14 @@ describe("dashboard platform surface", () => {
       "workspace-scoped",
     );
     const skill = readRepo("public/skill.md");
-    expect(skill).toContain("list_flows");
-    expect(skill).toContain("create_flow");
-    expect(skill).toContain("get_flow");
-    expect(skill).toContain("update_flow");
-    expect(skill).toContain("delete_flow");
-    expect(skill).toContain("/api/v3/flows");
+    expect(skill).toContain("list_protocols");
+    expect(skill).toContain("create_protocol");
+    expect(skill).toContain("get_protocol");
+    expect(skill).toContain("update_protocol");
+    expect(skill).toContain("delete_protocol");
+    expect(skill).toContain("/api/v3/protocols");
+    expect(skill).not.toContain("create_flow");
+    expect(skill).not.toContain("/api/v3/flows");
     expect(skill).toContain("/docs/proof-of-work-api");
     expect(skill).not.toContain("create_workspace");
     expect(skill).not.toContain("list_map_tools");
@@ -753,10 +742,10 @@ describe("dashboard platform surface", () => {
   });
 
   it("loads owner-wide recent flows from verification and calibration tables", () => {
-    const route = readRepo("app/api/dashboard/recent-flows/route.ts");
+    const route = readRepo("app/api/dashboard/recent-protocols/route.ts");
     expect(route).toContain("requireAuthenticatedUser");
     expect(route).toContain("verify_flows");
-    expect(route).toContain("calibrate_flows");
+    expect(route).not.toContain("calibrate_flows");
     expect(route).toContain("presentDashboardRecentFlow");
   });
 });

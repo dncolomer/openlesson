@@ -2,7 +2,7 @@
  * Credit ledger amounts. Tests import these constants; do not duplicate a second price list.
  */
 
-export const FLOW_SESSION_KINDS = ["learn", "calibrate", "verify", "solve"] as const;
+export const FLOW_SESSION_KINDS = ["learn", "verify"] as const;
 export type FlowSessionKind = (typeof FLOW_SESSION_KINDS)[number];
 
 /** Free-signup starter grant (credits). */
@@ -11,7 +11,7 @@ export const STARTER_CREDIT_GRANT = 50;
 /** Minted guest accounts (AYCL fork guests) start with this balance. */
 export const GUEST_CREDIT_GRANT = 100;
 
-/** Credits deducted for each Calibrate / Learn / Verify / Solve session start. */
+/** Credits deducted for each protocol run (Learn canvas kernel or Verify). */
 export const FLOW_SESSION_CREDIT_COST = 10;
 
 export const STARTER_GRANT_REASON = "signup_starter" as const;
@@ -46,7 +46,7 @@ export const CREDIT_PACKS: readonly CreditPack[] = [
     priceCents: 499,
     name: "100 credits",
     eyebrow: "STARTER PACK",
-    body: "One-time credits for Calibrate, Learn, Verify, and Solve sessions.",
+    body: "One-time credits for knowledge verification protocol runs.",
     cta: "Buy 100 credits",
   },
   {
@@ -55,7 +55,7 @@ export const CREDIT_PACKS: readonly CreditPack[] = [
     priceCents: 1999,
     name: "500 credits",
     eyebrow: "WORKING PACK",
-    body: "A larger one-time pack for running flows, including Learn inside a map.",
+    body: "A larger one-time pack for running Protocols, including the leftover Learn canvas inside a map.",
     cta: "Buy 500 credits",
     highlighted: true,
   },
@@ -65,7 +65,7 @@ export const CREDIT_PACKS: readonly CreditPack[] = [
     priceCents: 5999,
     name: "2,000 credits",
     eyebrow: "STUDIO PACK",
-    body: "Credits for heavy Solve, Verify, and Calibrate work.",
+    body: "Credits for heavy knowledge verification protocol work.",
     cta: "Buy 2,000 credits",
   },
 ] as const;
@@ -82,10 +82,5 @@ export function creditPackById(sku: string | null | undefined): CreditPack | nul
 }
 
 export function isFlowSessionKind(value: string | null | undefined): value is FlowSessionKind {
-  return (
-    value === "learn" ||
-    value === "calibrate" ||
-    value === "verify" ||
-    value === "solve"
-  );
+  return value === "learn" || value === "verify";
 }

@@ -1,5 +1,5 @@
 /**
- * Map stored Calibrate / Learn / Verify embeddings (flowcfg-v1-d96) onto the
+ * Map stored verification protocol embeddings (flowcfg-v1-d96) onto the
  * Knowledge projection payload.
  */
 

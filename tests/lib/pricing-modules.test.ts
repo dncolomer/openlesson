@@ -6,7 +6,6 @@ import {
   planFeatureList,
   planHasModule,
   priceCentsForPlan,
-  PUBLIC_SKU_CARDS,
   resolveModuleCheckout,
   skuAlreadyCovered,
   TRY_EVERYTHING_PRICE_CENTS,
@@ -75,12 +74,12 @@ describe("module combination plans", () => {
     expect(resolveModuleCheckout("author", "module_learn").alreadyEntitled).toBe(true);
   });
 
-  it("names Verification and Calibration as flows in plan and SKU copy", () => {
-    expect(planFeatureList("verify")).toContain("Verification flows and knowledge regions");
-    expect(planFeatureList("calibrate")).toContain("Calibration flows and knowledge regions");
+  it("names Protocols in plan and SKU copy", () => {
+    expect(planFeatureList("verify")).toContain("Knowledge verification protocols and knowledge regions");
+    expect(planFeatureList("calibrate")).toContain("Knowledge regions");
     expect(planFeatureList("verify")).not.toContain("Verification workspaces");
-    expect(planFeatureList("calibrate")).not.toContain("Calibration workspaces");
     expect(planFeatureList("inactive").join(" ")).toMatch(/starter credits/i);
+    expect(planFeatureList("inactive").join(" ")).toMatch(/knowledge verification protocols/i);
   });
 });
 

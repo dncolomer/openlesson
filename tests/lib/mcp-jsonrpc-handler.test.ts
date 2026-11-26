@@ -39,11 +39,13 @@ describe("mcp-jsonrpc-handler", () => {
 
     const tools = (response?.result as { tools?: { name: string }[] })?.tools ?? [];
     const names = tools.map((tool) => tool.name);
-    expect(names).toContain("list_workspaces");
-    expect(names).toContain("create_workspace");
-    expect(names).toContain("create_flow");
-    expect(names).toContain("link_flow");
-    expect(names).toContain("apply_map_tool");
+    expect(names).toContain("list_protocols");
+    expect(names).toContain("create_protocol");
+    expect(names).not.toContain("create_flow");
+    expect(names).not.toContain("list_workspaces");
+    expect(names).not.toContain("create_workspace");
+    expect(names).not.toContain("link_flow");
+    expect(names).not.toContain("apply_map_tool");
     expect(names).not.toContain("start_session");
     expect(names).not.toContain("upload_proof_of_work");
     expect(names).not.toContain("end_session");

@@ -88,7 +88,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     const platform = read("lib/marketing/platform.ts");
     const corpus = `${landing}\n${platform}`;
 
-    expect(corpus).toMatch(/Verify understanding through proof of work/);
+    expect(corpus).toMatch(/Embeddable Knowledge Verification Protocols/);
     expect(PLATFORM_HERO.p1).toMatch(/genuine work traces/);
     expect(landing).toContain("LandingHeroEditorial");
     expect(landing).toContain("{copy.h1}");
@@ -98,7 +98,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).not.toContain("AccelerandoRun");
     expect(landing).toContain("PublicConsoleWash");
     expect(landing).not.toContain("PUBLIC_MAGI_GRID_CLASS");
-    expect(PLATFORM_HERO.h1).toBe("Verify understanding through proof of work.");
+    expect(PLATFORM_HERO.h1).toBe("Embeddable Knowledge Verification Protocols.");
     expect(PLATFORM_HERO.p1).not.toMatch(/thinking stays yours/);
     expect("p2" in PLATFORM_HERO).toBe(true);
     expect(landing).not.toMatch(/three uses share the geometry/);
@@ -107,13 +107,12 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).not.toContain("The Unsys workspace is a course-seeded Learning Harness.");
     expect(corpus.toLowerCase()).not.toMatch(/cannot be cheated|cannot be faked/);
     expect(landing).not.toContain("PLATFORM_PRODUCT_LIST");
-    expect(PLATFORM_PRODUCTS.harness.name).toBe("Solve");
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
-    expect(PLATFORM_PRODUCTS.verification.name).toBe("Verify");
-    expect(PLATFORM_PRODUCTS.mapping.name).toBe("Map");
-    expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
+    expect(PLATFORM_PRODUCTS.verification.name).toBe("Protocols");
+    expect(PLATFORM_PRODUCTS.verification.title).toBe("Embeddable Knowledge Verification Protocols");
+    expect(PLATFORM_PRODUCTS.verification.body).toMatch(/Embeddable Knowledge Verification Protocols/);
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles-blueprint.jpg");
-    expect(PLATFORM_PRODUCTS.mapping.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
+    expect("harness" in PLATFORM_PRODUCTS).toBe(false);
+    expect("mapping" in PLATFORM_PRODUCTS).toBe(false);
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-books-blueprint.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles-blueprint.jpg"))).toBe(true);
@@ -128,12 +127,8 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(existsSync(join(ROOT, "components/TapbenchExperimentTutorial.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
-    expect(PLATFORM_LAYER_LIST).toHaveLength(3);
-    expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
-      "Solve",
-      "Verify",
-      "Map",
-    ]);
+    expect(PLATFORM_LAYER_LIST).toHaveLength(1);
+    expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual(["Protocols"]);
   });
 
   it("keeps landing and Harness stills out of the TAP Learning aesthetics library", () => {
@@ -145,9 +140,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(existsSync(join(ROOT, "public/aesthetics/harness-blocks"))).toBe(false);
     expect(existsSync(join(ROOT, "public/aesthetics/lp-boxes"))).toBe(false);
 
-    expect(PLATFORM_PRODUCTS.harness.image.startsWith("/aesthetics/")).toBe(false);
     expect(PLATFORM_PRODUCTS.verification.image.startsWith("/aesthetics/")).toBe(false);
-    expect(PLATFORM_PRODUCTS.mapping.image.startsWith("/aesthetics/")).toBe(false);
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(point.image.startsWith("/aesthetics/")).toBe(false);
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
@@ -210,89 +203,23 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/epistemic foraging/);
   });
 
-  it("mapping product page clones verification structure as a map of knowledge regions", () => {
-    expect(existsSync(join(ROOT, "app/mapping-protocols/page.tsx"))).toBe(true);
-    const page = read("app/mapping-protocols/page.tsx");
-    expect(page).toContain("MAPPING_PLATFORM_COPY.p1");
-    expect(page).toContain("MAPPING_PLATFORM_COPY.p2");
-    expect(page).not.toContain("learning world model");
-    expect(page).not.toContain('id="approach"');
-    expect(page).not.toContain('id="scale"');
-    expect(page).not.toContain("data-landing-ranking-visual");
-    expect(page).not.toContain("/ranking_app.png");
-    expect(page).not.toContain("TIM — Trace Interruption Model");
-    expect(page).not.toContain("Trace Interruption Model");
-    expect(page).not.toContain("TAP Learning");
-    expect(page).not.toMatch(/\bTAP\b/);
-    expect(page).not.toContain("TAPBench");
-    expect(page).toContain("MAPPING_PLATFORM_COPY.imageSrc");
-    expect(page).toContain("MARKETING_MEDIA_FILL_CLASS");
-    expect(page).toContain("MARKETING_MEDIA_STAGE_CLASS");
-    expect(MAPPING_PLATFORM_COPY.imageSrc).toBe("/map.jpg");
-    expect(existsSync(join(ROOT, "public/map.jpg"))).toBe(true);
-    expect(page).toContain("data-landing-knowledge-visual");
-    expect(page).toContain('marker="mapping"');
-    expect(MAPPING_PLATFORM_COPY.title).toMatch(/shared reference|region/i);
-    expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/knowledge regions/);
-    expect(MAPPING_PLATFORM_COPY.p3.toLowerCase()).toMatch(/verification exam/);
-    expect(page).toContain("MAPPING_PRODUCT_COPY.pricingHref");
-    expect(MAPPING_PRODUCT_COPY.pricingHref).toBe("/pricing#mapping");
-    expect(MAPPING_PRODUCT_COPY.pricingCta).toMatch(/pricing/i);
-  });
-
-  it("harness product path includes All-You-Can-Learn", () => {
-    expect(existsSync(join(ROOT, "app/solve-protocols/page.tsx"))).toBe(true);
+  it("retired mapping and solve protocol pages redirect onto verification", () => {
+    expect(existsSync(join(ROOT, "app/mapping-protocols/page.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/solve-protocols/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/learning-harness/page.tsx"))).toBe(false);
-    const page = read("app/solve-protocols/page.tsx");
-    expect(page).toContain("{HARNESS_PRODUCT_COPY.title}");
-    expect(HARNESS_PRODUCT_COPY.title).toBe("Build understanding through hard problems.");
-    expect(HARNESS_PRODUCT_COPY.eyebrow).toBe("PROBLEM SOLVING HARNESS");
-    expect(HARNESS_PRODUCT_COPY.productName).toBe("Problem Solving Harness");
+    expect(MAPPING_PRODUCT_COPY.title).toBe(VERIFICATION_PRODUCT_COPY.title);
+    expect(MAPPING_PLATFORM_COPY.title).toMatch(/knowledge region/i);
+    expect(HARNESS_PRODUCT_COPY.productName).toBe("Embeddable Knowledge Verification Protocols");
+    expect(JSON.stringify(HARNESS_PRODUCT_COPY)).not.toMatch(/Problem Solving Harness/);
     expect(JSON.stringify(HARNESS_PRODUCT_COPY)).not.toMatch(/Learning Harness/);
-    expect(page).not.toContain("Learning Harness");
-    expect(page).not.toContain("heroImage");
-    expect(page).not.toContain("session-canvas-blueprint");
-    expect(HARNESS_PRODUCT_COPY.lead.toLowerCase()).toMatch(/problem solving harness/);
-    expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/build understanding/);
-    expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/epistemic foraging/);
-    expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/reduces uncertainty/);
-    expect(page).toContain("data-harness-epistemic-foraging");
-    expect(page).toContain("epistemic foraging");
-    expect(page).toContain("HARNESS_PRODUCT_COPY.modelImageSrc");
-    expect(page).toContain("data-harness-model");
-    expect(page).not.toContain("HarnessScreenshotCarousel");
-    expect(page).not.toContain("data-harness-screenshots");
-    expect(HARNESS_PRODUCT_COPY.modelImageSrc).toBe("/unsysmodel.png");
-    expect(existsSync(join(ROOT, "public/unsysmodel.png"))).toBe(true);
-    expect(HARNESS_PRODUCT_COPY.screenshots.map((s) => s.src)).toEqual([
-      "/harness.png",
-      "/harness-2.png",
-    ]);
-    expect(existsSync(join(ROOT, "public/harness.png"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/harness-2.png"))).toBe(true);
-    expect(page).not.toContain("All-You-Can-Learn");
-    expect(page).not.toContain("data-harness-aycl");
-    expect(page).not.toContain("Lifetime workspace");
-    expect(page).toContain("data-harness-points");
-    expect(page).toContain("md:grid-cols-3");
-    expect(page).toContain("lg:grid-cols-12");
-    expect(HARNESS_PRODUCT_COPY.points.map((p) => p.title)).toEqual([
-      "Epistemic foraging",
-      "Uncertainty model",
-      "Uncertainty minimization",
-    ]);
-    expect(HARNESS_PRODUCT_COPY.points[0].href).toBe("/science#science-epistemic-foraging");
-    expect(HARNESS_PRODUCT_COPY.points[0].image).toBe("/lp-boxes/epistemic-foraging-blueprint.jpg");
-    expect(HARNESS_PRODUCT_COPY.points[1].href).toBe("/science/learning-model");
-    expect(HARNESS_PRODUCT_COPY.points[2].href).toBe("/science#science-free-energy");
-    expect(page).toContain('marker="harness"');
-    expect(page).not.toContain("grokipedia.com");
-    expect(page).toContain("target=\"_blank\"");
-    expect(page).not.toContain("point.external");
-    for (const point of HARNESS_PRODUCT_COPY.points) {
-      expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
-    }
     expect("ayclHref" in HARNESS_PRODUCT_COPY).toBe(false);
+    const config = read("next.config.ts");
+    expect(config).toMatch(
+      /source:\s*["']\/solve-protocols["']\s*,\s*destination:\s*["']\/verify-protocols["']/,
+    );
+    expect(config).toMatch(
+      /source:\s*["']\/mapping-protocols["']\s*,\s*destination:\s*["']\/verify-protocols["']/,
+    );
   });
 
   it("AYCL is not in the Community nav group", () => {
@@ -390,11 +317,11 @@ describe("unified pricing + public module checkout", () => {
 describe("sitemap lists new public pages", () => {
   it("includes product, support, unified pricing, and community events listing", () => {
     const sitemap = read("app/sitemap.ts");
-    expect(sitemap).toContain("/solve-protocols");
+    expect(sitemap).not.toContain("/solve-protocols");
     expect(sitemap).not.toContain("/learning-harness");
     expect(sitemap).not.toContain("/acquisition");
     expect(sitemap).toContain("/verify-protocols");
-    expect(sitemap).toContain("/mapping-protocols");
+    expect(sitemap).not.toContain("/mapping-protocols");
     expect(sitemap).toContain("/pricing");
     expect(sitemap).not.toContain("/pricing/authoring");
     expect(sitemap).not.toContain("/pricing/verification");

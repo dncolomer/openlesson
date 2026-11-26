@@ -380,7 +380,7 @@ export async function runAiUseHarnessRound(input: {
           step: mutatingOps,
           flowKind: input.flowKind,
         });
-        if (input.flowKind !== "calibrate" && next && next !== input.model.rootId && !sequence.includes(next)) {
+        if (next && next !== input.model.rootId && !sequence.includes(next)) {
           sequence.push(next);
         }
         applyBoardOp(runtime, { type: "commit" });
@@ -421,7 +421,7 @@ export async function runAiUseHarnessRound(input: {
               flowKind: input.flowKind,
             });
             hid = next;
-            if (input.flowKind !== "calibrate" && next && next !== input.model.rootId && !sequence.includes(next)) {
+            if (next && next !== input.model.rootId && !sequence.includes(next)) {
               sequence.push(next);
             }
           }
@@ -452,7 +452,7 @@ export async function runAiUseHarnessRound(input: {
     costUsd: input.checkpoint.costUsd + result.costUsd,
     toolRound: input.checkpoint.toolRound + 1,
     emptyToolRounds,
-    sequence: input.flowKind === "calibrate" ? [] : sequence,
+    sequence,
     done,
     failed: null,
   };

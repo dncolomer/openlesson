@@ -1,13 +1,12 @@
 import { ILE_SESSION_UNSAVED_EXIT_META_KEY } from "@/lib/learn-session-name";
 
-export const DASHBOARD_PLAY_KINDS = ["learn", "verify", "calibrate"] as const;
+export const DASHBOARD_PLAY_KINDS = ["learn", "verify"] as const;
 export type DashboardPlayKind = (typeof DASHBOARD_PLAY_KINDS)[number];
 
 export const DASHBOARD_PLAY_KIND_META_KEY = "play_kind";
 export const DASHBOARD_PLAY_DISPOSABLE_META_KEY = "disposable";
 export const DASHBOARD_PLAY_START_PATH = "/api/play/start";
 export const DASHBOARD_PLAY_CURIOUS_PATH = "/api/play/curious";
-export const DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH = "/api/play/calibrate-questions";
 export const DASHBOARD_PLAY_PROMPT_MAX = 400;
 export const DASHBOARD_PLAY_CURIOUS_KIND: DashboardPlayKind = "learn";
 
@@ -47,13 +46,11 @@ export function curiousPromptUserMessage(seed: string): string {
 export function dashboardPlayHref(kind: DashboardPlayKind, sessionId: string): string {
   const id = encodeURIComponent(String(sessionId || "").trim());
   if (kind === "learn") return `/session?id=${id}`;
-  if (kind === "verify") return `/play/verify?id=${id}`;
-  return `/play/calibrate?id=${id}`;
+  return `/play/verify?id=${id}`;
 }
 
 export function dashboardPlayKindLabel(kind: DashboardPlayKind): string {
   if (kind === "verify") return "Verification";
-  if (kind === "calibrate") return "Calibration";
   return "Learning";
 }
 

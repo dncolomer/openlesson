@@ -31,9 +31,9 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
     expect(dock).toContain("data-ile-chapter-chip-status");
     expect(dock).toContain("data-ile-chapter-chip-loading");
     expect(dock).toContain("export function IleWorkDockChip");
-    const craft = read("components/session-view/learn-turn-insight-craft.tsx");
-    expect(craft).toContain("IleWorkDockChip");
-    expect(craft).toContain('status: missing ? "attention"');
+    expect(existsSync(join(ROOT, "components/session-view/learn-turn-insight-craft.tsx"))).toBe(
+      false,
+    );
     expect(dock).toContain("data-ile-chapter-chip-attention");
     expect(dock).toContain("AlertTriangle");
     expect(dock).toContain("animate-ile-dock-indeterminate");

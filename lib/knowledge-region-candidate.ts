@@ -22,10 +22,6 @@ import {
   presentKnowledgeRegionClusters,
   type KnowledgeRegionDetailsRow,
 } from "@/lib/knowledge-region-details";
-import {
-  parseDashboardKnowledgeRegionKind,
-  type DashboardKnowledgeRegionKind,
-} from "@/lib/dashboard-knowledge-regions";
 import { productFlowEmbeddingKind } from "@/lib/product-flow";
 import {
   isAiUseEmbedding,
@@ -200,9 +196,7 @@ function createdAtMs(value: string | null | undefined): number {
   return Number.isFinite(ms) ? ms : 0;
 }
 
-function parentFlowId(row: KnowledgeRegionDetailsRow, kind: DashboardKnowledgeRegionKind): string {
-  if (kind === "calibration") return text(row.calibrate_flow_id);
-  if (kind === "solve") return text(row.solve_flow_id);
+function parentFlowId(row: KnowledgeRegionDetailsRow): string {
   return text(row.verify_flow_id);
 }
 
@@ -246,14 +240,13 @@ export function presentKnowledgeRegionCandidate(input: {
   parent: KnowledgeRegionDetailsRow;
   clusters?: readonly KnowledgeRegionDetailsRow[];
   embeddings?: readonly StoredFlowEmbedding[];
-  kind: DashboardKnowledgeRegionKind;
 }): KnowledgeRegionCandidateRender {
   const space = parseFlowEmbeddingSpace(input.space);
   const canonical = space.ok ? space.space : "path";
   const clusters = presentKnowledgeRegionClusters(input.parent, input.clusters ?? []);
   const subjects = parseSubjects(input.parent.subjects);
   const keys = candidateIdentityKeys(input.candidateId, subjects);
-  const seededFlowId = parentFlowId(input.parent, input.kind);
+  const seededFlowId = parentFlowId(input.parent);
   const clusterRows = (input.clusters ?? []).filter((row) =>
     clusters.some((cluster) => cluster.id === text(row.id)),
   );
@@ -406,7 +399,7 @@ export type LoadKnowledgeRegionCandidateResult =
   | { ok: false; status: 400 | 404; code: "not_found" | "validation_error"; message: string };
 
 const REGION_SELECT =
-  "id, workspace_id, owner_user_id, product, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id, calibrate_flow_id, solve_flow_id";
+  "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id";
 
 export async function loadKnowledgeRegionCandidate(
   input: {
@@ -443,20 +436,14 @@ export async function loadKnowledgeRegionCandidate(
   if (text(row.embedding_model_id) === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) {
     return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
   }
-  const kind = parseDashboardKnowledgeRegionKind(row.product);
-  if (!kind) {
-    return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
-  }
-
   const { data: siblings } = await supabase
     .from("knowledge_regions")
     .select(REGION_SELECT)
-    .eq("owner_user_id", ownerUserId)
-    .eq("product", kind);
+    .eq("owner_user_id", ownerUserId);
 
   const embeddings = await listFlowEmbeddingsForOwner({
     ownerUserId,
-    flowKind: productFlowEmbeddingKind(kind),
+    flowKind: productFlowEmbeddingKind(),
   });
 
   return {
@@ -468,7 +455,6 @@ export async function loadKnowledgeRegionCandidate(
       parent: row as KnowledgeRegionDetailsRow,
       clusters: (siblings || []) as KnowledgeRegionDetailsRow[],
       embeddings,
-      kind,
     }),
   };
 }

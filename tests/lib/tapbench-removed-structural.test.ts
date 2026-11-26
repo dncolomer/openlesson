@@ -1,6 +1,6 @@
 /**
  * Structural proof that TAPBench pages, APIs, and product chrome are gone.
- * Three base flows remain: Calibrate, Learn, Verify.
+ * Knowledge verification protocols remain.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";

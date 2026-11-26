@@ -10,7 +10,6 @@ import {
   parseIleWorkAestheticStored,
 } from "@/lib/aesthetics";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
-import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
 import {
   ileBlockSessionChapter,
   ileBlockSessionFrame,
@@ -171,8 +170,6 @@ export function useSessionField(input: SessionFieldInput) {
   const [canvasApplyFiles, setCanvasApplyFiles] = useState<IleWorkCanvasFiles>({});
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [workAestheticById, setWorkAestheticById] = useState<Record<string, string>>({});
-  const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
-  const [keptInsight, setKeptInsight] = useState<InsightSummary | null>(null);
 
   useEffect(() => {
     openWorkIdsRef.current = openWorkIds;
@@ -539,22 +536,6 @@ export function useSessionField(input: SessionFieldInput) {
     ],
   );
 
-  const loadSessionInsights = useCallback(async () => {
-    if (!session?.id) return;
-    try {
-      const response = await fetch(insightsSessionListUrl(session.id));
-      const data = await response.json();
-      if (!response.ok) return;
-      setSessionInsights(Array.isArray(data.insights) ? data.insights : []);
-    } catch {
-      /* Guest sessions cannot list insights. */
-    }
-  }, [session?.id]);
-
-  useEffect(() => {
-    void loadSessionInsights();
-  }, [loadSessionInsights]);
-
   const openWorkDockLabels = useMemo(() => {
     const topic = (session?.problem || "").trim();
     const ids = openWorkIds.length > 0 ? openWorkIds : session?.id ? [session.id] : [];
@@ -601,12 +582,6 @@ export function useSessionField(input: SessionFieldInput) {
       } else if (guestAccessKind === "ile" && ileToken) {
         const { saveIleLinkSession } = await import("@/lib/learn-link-storage");
         await saveIleLinkSession(ileToken, {
-          ...session,
-          metadata: { ...(session.metadata || {}), tutoringLanguage },
-        });
-      } else if (guestAccessKind === "solve" && solveToken) {
-        const { saveSolveLinkSession } = await import("@/lib/solve-session-storage");
-        await saveSolveLinkSession(solveToken, {
           ...session,
           metadata: { ...(session.metadata || {}), tutoringLanguage },
         });
@@ -791,10 +766,6 @@ export function useSessionField(input: SessionFieldInput) {
     canvasApplyElements,
     canvasApplyFiles,
     openWorkIds,
-    sessionInsights,
-    setSessionInsights,
-    keptInsight,
-    setKeptInsight,
     learnField,
     workspaceId,
     sessionBlockId,

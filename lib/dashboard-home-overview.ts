@@ -1,5 +1,5 @@
 /**
- * Compact Home overview: Flows and Knowledge regions.
+ * Compact Home overview: Protocols and Knowledge regions.
  */
 
 import { dashboardHrefForTab, type DashboardTab } from "@/lib/dashboard-nav";
@@ -7,7 +7,7 @@ import { USE_CASES } from "@/lib/marketing/use-cases";
 
 /** Home boxes reuse the use-cases stills. */
 export const DASHBOARD_HOME_CTA_USE_CASE_IDS = {
-  flows: "research-ai",
+  protocols: "research-ai",
   regions: "team-insight",
 } as const;
 
@@ -73,22 +73,22 @@ export function dashboardHomeIntegrationsCta(): DashboardHomeIntegrationsCta {
 }
 
 export function dashboardHomeCtas(): DashboardHomeCta[] {
-  const flows = surfaceLink("flows", "Open flows");
+  const protocols = surfaceLink("protocols", "Open protocols");
   const regions = surfaceLink("regions", "Open regions");
   return [
     {
-      id: "flows",
-      label: "Flows",
-      href: flows.href,
-      body: "Author Solve, Verification, and Calibration flows. Pick the type when you create one.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.flows),
-      links: [flows],
+      id: "protocols",
+      label: "Protocols",
+      href: protocols.href,
+      body: "Author Embeddable Knowledge Verification Protocols. The Protocol Challenge is the topic that run is scored against.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.protocols),
+      links: [protocols],
     },
     {
       id: "regions",
       label: "Knowledge regions",
       href: regions.href,
-      body: "Simulate exploration strategies on your flows and inspect the resulting regions.",
+      body: "Simulate exploration strategies on your protocols and inspect the resulting regions.",
       ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.regions),
       links: [regions],
     },

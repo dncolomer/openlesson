@@ -1,13 +1,13 @@
-# Uncertain Systems Flow API
+# Uncertain Systems Protocol API
 
 See `/docs/proof-of-work-api` and `/skill.md`.
 
 Public families:
 
-- **Flow management (`/api/v3/flows`)** — create, list, update, and delete independent **Solve / Calibration / Verification** flows.
+- **Protocol management (`/api/v3/protocols`)** — create, list, update, and delete **knowledge verification protocols**.
 - **Knowledge region candidate (`/api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}`)** — closed render payload. Query `space=`.
 
-Headless proof-of-work (`/api/v3/pow` sessions, upload, end, embeddings, schema), Snapshot, and Stash are not public agent APIs. Proof of work is recorded in the product UI (Calibrate, Learn, and Verify).
+Headless proof-of-work (`/api/v3/pow` sessions, upload, end, embeddings, schema), Snapshot, and Stash are not public agent APIs. Proof of work is recorded in the product UI (knowledge verification protocols).
 
 **MCP (`POST /api/mcp`)** exposes the same family with 100% tool ↔ REST parity. Key CRUD remains browser-session (`/api/dashboard/api-keys`).
 
@@ -23,17 +23,17 @@ Authorization: Bearer <api_key>
 
 Each key is a single full-access token.
 
-## Flows (base `/api/v3/flows`)
+## Protocols (base `/api/v3/protocols`)
 
 | Method | Path | MCP tool | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/` | `list_flows` | List accessible Solve, Calibration, and Verification flows. |
-| `POST` | `/` | `create_flow` | Create an independent flow (`kind`: `solve` \| `calibration` \| `verification`). Choose one Author source: `topic` (optional `exact_problem_on_canvas` on Solve / Verification), `artifacts` / `files` (problem generated when a learner opens), or `opening_canvas_scene` (Solve / Verification). Also `answers_model_seed` or `generate_unsys`, `enforced_channels` (Solve / Verification), `duration_minutes` (Verification / Calibration). |
-| `POST` | `/files` | `upload_flow_file` | Upload a Problem-context file. Pass `xai_file_id` in `artifacts`. |
-| `POST` | `/unsys-seed` | `generate_flow_unsys_seed` | Generate the Unsys model from the Problem and artifacts. |
-| `GET` | `/{flow_id}` | `get_flow` | Read one flow. |
-| `PATCH` | `/{flow_id}` | `update_flow` | Update one flow (same wizard fields as create). |
-| `DELETE` | `/{flow_id}` | `delete_flow` | Delete one flow. |
+| `GET` | `/` | `list_protocols` | List accessible knowledge verification protocols. Do not send `kind`. |
+| `POST` | `/` | `create_protocol` | Create an independent protocol. Choose one Author source: `challenge` (The Protocol Challenge; optional `exact_problem_on_canvas`), `artifacts` / `files` (challenge generated when a learner opens), or `opening_canvas_scene`. Also `answers_model_seed` or `generate_unsys`, `enforced_channels`, `duration_minutes`. Do not send `kind`. |
+| `POST` | `/files` | `upload_protocol_file` | Upload a Protocol Challenge context file. Pass `xai_file_id` in `artifacts`. |
+| `POST` | `/unsys-seed` | `generate_protocol_unsys_seed` | Generate the Unsys model from The Protocol Challenge and artifacts. |
+| `GET` | `/{protocol_id}` | `get_protocol` | Read one protocol. |
+| `PATCH` | `/{protocol_id}` | `update_protocol` | Update one protocol (same wizard fields as create). |
+| `DELETE` | `/{protocol_id}` | `delete_protocol` | Delete one protocol. |
 
 ## Knowledge regions (base `/api/v3/knowledge-regions`)
 

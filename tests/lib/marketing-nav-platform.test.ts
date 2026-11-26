@@ -35,7 +35,7 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav opens Explore the Protocols onto Solve, Verify, and Mapping Protocols, then Use cases, then Pricing", () => {
+  it("LandingNav opens Explore the Protocols onto Embeddable Knowledge Verification Protocols, then Use cases, then Pricing", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("USE_CASES_NAV_LINK");
     expect(nav).toContain("data-nav-products");
@@ -49,11 +49,7 @@ describe("marketing nav and platform rename", () => {
     expect(nav).not.toContain('href="/#platform"');
     expect(nav).toContain("MAIN_NAV_PRODUCT_LINKS");
     expect(PLATFORM_NAV_LABEL).toBe("Explore the Protocols");
-    expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual([
-      "/verify-protocols",
-      "/mapping-protocols",
-      "/solve-protocols",
-    ]);
+    expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual(["/verify-protocols"]);
     expect(USE_CASES_NAV_LINK).toEqual({ href: "/use-cases", label: "Use cases" });
     expect(nav).toContain("PRICING_NAV_LINKS");
     expect(nav).toContain('href="/dashboard"');
@@ -64,9 +60,7 @@ describe("marketing nav and platform rename", () => {
     expect(nav).not.toContain("Create your Workspace");
     expect(nav).not.toContain("TrackedCtaLink");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual([
-      "Verify Protocols",
-      "Mapping Protocols",
-      "Solve / Practice Protocols",
+      "Knowledge Verification Protocols",
     ]);
   });
 

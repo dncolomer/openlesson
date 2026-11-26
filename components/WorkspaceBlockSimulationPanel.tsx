@@ -1,15 +1,10 @@
 "use client";
 
-import { SimulateInsightsSurface } from "@/components/SimulateInsightsSurface";
-
 /**
- * Block drawer body for Simulate Insights.
- * Starts a background job; insight candidates are read after it finishes.
+ * Block drawer body for simulation. Insight rehearsal is unmounted.
  */
 export function WorkspaceBlockSimulationPanel({
-  workspaceId,
   blockId,
-  ayclToken,
 }: {
   workspaceId?: string;
   blockId: string;
@@ -28,17 +23,7 @@ export function WorkspaceBlockSimulationPanel({
   rootTopic?: string | null;
   workspaceNotes?: string | null;
 }) {
-  return (
-    <div data-block-simulation data-block-id={blockId}>
-      <SimulateInsightsSurface
-        workspaceId={workspaceId}
-        ayclToken={ayclToken}
-        scope="block"
-        blockId={blockId}
-        origin={{ kind: "block", blockId }}
-      />
-    </div>
-  );
+  return <div data-block-simulation data-block-id={blockId} />;
 }
 
 /** @deprecated Prefer WorkspaceBlockSimulationPanel */

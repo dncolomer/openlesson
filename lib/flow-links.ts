@@ -6,7 +6,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FLOW_LINKS_TABLE } from "@/lib/core-tables";
-import type { ProductFlowKind } from "@/lib/product-flow";
+export type FlowLinkKind = "verification";
 
 const FLOW_LINKS_GLOBAL = "__openlessonFlowLinksStore";
 const FLOW_LINK_LABEL_MAX = 40;
@@ -14,7 +14,7 @@ const FLOW_LINK_LABEL_MAX = 40;
 export type FlowLink = {
   id: string;
   ownerUserId: string;
-  flowKind: ProductFlowKind;
+  flowKind: FlowLinkKind;
   flowId: string;
   publicToken: string;
   label: string | null;
@@ -97,11 +97,9 @@ export function flowLinkIsAiUse(label: string | null | undefined): boolean {
   return flowLinkLabelKind(label) === "ai_use";
 }
 
-export function flowLinkPublicPath(kind: ProductFlowKind, token: string): string {
-  const value = encodeURIComponent(String(token || "").trim());
+export function flowLinkPublicPath(_kindOrToken: string, token?: string): string {
+  const value = encodeURIComponent(String(token || _kindOrToken || "").trim());
   if (!value) return "";
-  if (kind === "calibration") return `/c/${value}`;
-  if (kind === "solve") return `/s/${value}`;
   return `/v/${value}`;
 }
 
@@ -150,10 +148,10 @@ function mapRow(row: Record<string, unknown>): FlowLink | null {
   };
 }
 
-export function parseFlowLinkKind(value: unknown): ProductFlowKind | null {
-  if (value === "verification" || value === "verify") return "verification";
-  if (value === "calibration" || value === "calibrate") return "calibration";
-  if (value === "solve") return "solve";
+export function parseFlowLinkKind(value: unknown): FlowLinkKind | null {
+  if (value == null || value === "" || value === "verification" || value === "verify") {
+    return "verification";
+  }
   return null;
 }
 
@@ -196,7 +194,7 @@ export async function getFlowLinkByToken(token: string): Promise<FlowLink | null
 
 export async function listFlowLinksForFlow(input: {
   ownerUserId: string;
-  flowKind: ProductFlowKind;
+  flowKind?: FlowLinkKind;
   flowId: string;
 }): Promise<FlowLink[]> {
   const ownerUserId = text(input.ownerUserId);
@@ -207,7 +205,7 @@ export async function listFlowLinksForFlow(input: {
       .memory.filter(
         (row) =>
           row.ownerUserId === ownerUserId &&
-          row.flowKind === input.flowKind &&
+          row.flowKind === (input.flowKind || "verification") &&
           row.flowId === flowId,
       )
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -218,7 +216,7 @@ export async function listFlowLinksForFlow(input: {
       .from(FLOW_LINKS_TABLE)
       .select("*")
       .eq("owner_user_id", ownerUserId)
-      .eq("flow_kind", input.flowKind)
+      .eq("flow_kind", input.flowKind || "verification")
       .eq("flow_id", flowId)
       .order("created_at", { ascending: true });
     if (error || !Array.isArray(data)) return [];
@@ -232,7 +230,7 @@ export async function listFlowLinksForFlow(input: {
 
 export async function createFlowLink(input: {
   ownerUserId: string;
-  flowKind: ProductFlowKind;
+  flowKind?: FlowLinkKind;
   flowId: string;
   label?: unknown;
   publicToken?: string;
@@ -248,7 +246,7 @@ export async function createFlowLink(input: {
     const row: FlowLink = {
       id: makeId(),
       ownerUserId,
-      flowKind: input.flowKind,
+      flowKind: input.flowKind || "verification",
       flowId,
       publicToken,
       label,

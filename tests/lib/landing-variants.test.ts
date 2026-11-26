@@ -44,29 +44,20 @@ describe("live landing hero", () => {
 
   it("ships medium-length copy and a combined editorial hero", () => {
     expect(LANDING_HERO_COPY.h1).toBe(PLATFORM_HERO.h1);
-    expect(LANDING_USES.map((item) => item.name)).toEqual([
-      "Solve / Practice",
-      "Verify",
-      "Map",
-    ]);
+    expect(LANDING_USES.map((item) => item.name)).toEqual(["Protocols"]);
     for (const use of LANDING_USES) {
       expect(use.body).toBe("");
       expect(use.dek.split(" ").length).toBeGreaterThanOrEqual(6);
     }
-    expect(LANDING_USES[0].dek).toMatch(/think-aloud protocols/);
-    expect(LANDING_USES[1].dek).toMatch(/knowledge embeddings model/);
-    expect(LANDING_USES[2].eyebrow).toBe("TARGET MAP");
-    expect(LANDING_USES[2].name).toBe("Map");
-    expect(LANDING_USES[2].cta).toBe("Explore mapping");
-    expect(LANDING_USES[2].dek).toBe(
-      "Build a concrete knowledge embeddings model of how a team, a fleet of agents, a mix of both, or just you thinks and works through problems. Then set it against a target region to see where you stand and what to work on next.",
-    );
+    expect(LANDING_USES[0].dek).toMatch(/Embeddable Knowledge Verification Protocols/);
+    expect(LANDING_USES[0].cta).toBe("Explore the Protocols");
+    expect(LANDING_USES[0].href).toBe("/verify-protocols");
     expect(wordCount(LANDING_HERO_COPY.p1)).toBeGreaterThanOrEqual(20);
     expect(wordCount(LANDING_HERO_COPY.p2)).toBeGreaterThanOrEqual(20);
 
     const heroes = read("components/marketing/landing-heroes.tsx");
     expect(heroes).toContain("data-home-layers");
-    expect(heroes).toContain("md:grid-cols-3");
+    expect(heroes).toContain("md:grid-cols-1");
     expect(heroes).toContain("lg:grid-cols-12");
     expect(heroes).toContain("xl:grid-cols-3");
     expect(heroes).toContain("data-home-hero-editorial");
@@ -87,9 +78,9 @@ describe("live landing hero", () => {
     expect(heroes).not.toContain("brightness-[1.18]");
 
     const copy = landingHeroCopyText();
-    expect(copy).toMatch(/think-aloud protocols/);
-    expect(copy).toMatch(/Explore understanding/);
-    expect(copy).toMatch(/target region to see where you stand/);
+    expect(copy).toMatch(/Embeddable Knowledge Verification Protocols/);
+    expect(copy).toMatch(/Explore the Protocols/);
+    expect(copy).toMatch(/The Protocol Challenge/);
     expect(copy).not.toMatch(/\u2014/);
     expect(copy).not.toMatch(/hard-domain learning experiences/i);
   });

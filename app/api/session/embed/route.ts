@@ -1,10 +1,9 @@
 /**
- * Persist a completed Solve / Calibrate / Verify / Learn embedding for a live session.
+ * Persist a completed Verify / leftover Learn embedding for a live session.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { persistCompletedFlowEmbedding } from "@/lib/flow-embedding-store";
-import { persistSolveCompletedEmbedding } from "@/lib/solve-flow-embedding";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   parseMapPlayDataAccessFlags,
@@ -21,7 +20,7 @@ import { isProofWorkspaceId } from "@/lib/pow-api/billing-workspace";
 
 export const runtime = "nodejs";
 
-const FLOW_KINDS = new Set<FlowKind>(["calibrate", "learn", "verify", "solve"]);
+const FLOW_KINDS = new Set<string>(["verify"]);
 
 function parsePow(raw: unknown): FlowPowRow[] {
   if (!Array.isArray(raw)) return [];
@@ -34,11 +33,13 @@ export async function POST(req: NextRequest) {
     const access = await requireSessionProofAccess(sessionProofAccessFromBody(body));
     if (access instanceof NextResponse) return access;
 
-    const requestedKind = FLOW_KINDS.has(body.flowKind as FlowKind)
-      ? (body.flowKind as FlowKind)
+    const requestedKind = FLOW_KINDS.has(String(body.flowKind || ""))
+      ? String(body.flowKind)
       : access.flowKind;
     const flowKind = requestedKind;
-    if (!flowKind) return jsonError(400, "flowKind must be calibrate, learn, verify, or solve");
+    if (!flowKind || !FLOW_KINDS.has(flowKind)) {
+      return jsonError(400, "flowKind must be verify");
+    }
 
     const sequence = Array.isArray(body.sequence)
       ? body.sequence.filter((id): id is string => typeof id === "string")
@@ -60,34 +61,20 @@ export async function POST(req: NextRequest) {
       access.linkLabel ||
       null;
 
-    const stored =
-      flowKind === "solve" && flowId && runId
-        ? await persistSolveCompletedEmbedding({
-            ownerUserId,
-            workspaceId,
-            flowId,
-            runId,
-            identity,
-            source,
-            linkLabel,
-            model: sessionBranchModelFromUnknown(body.model),
-            sequence,
-            pow: parsePow(body.pow),
-          })
-        : await persistCompletedFlowEmbedding({
-            workspaceId: workspaceId || undefined,
-            ownerUserId,
-            flowKind,
-            flowId,
-            runId,
-            identity,
-            source,
-            linkLabel,
-            model: sessionBranchModelFromUnknown(body.model),
-            sequence: flowKind === "calibrate" ? null : sequence,
-            pow: parsePow(body.pow),
-            raw: body.raw,
-          });
+    const stored = await persistCompletedFlowEmbedding({
+      workspaceId: workspaceId || undefined,
+      ownerUserId,
+      flowKind,
+      flowId,
+      runId,
+      identity,
+      source,
+      linkLabel,
+      model: sessionBranchModelFromUnknown(body.model),
+      sequence,
+      pow: parsePow(body.pow),
+      raw: body.raw,
+    });
 
     if (workspaceId && stored.flow_id && stored.run_id) {
       const admin = createAdminClient();
@@ -108,7 +95,7 @@ export async function POST(req: NextRequest) {
             flags: parseMapPlayDataAccessFlags(sourceMap),
             playerUserId: String(copy?.user_id || stored.owner_user_id || ownerUserId),
             authorUserId: String(sourceMap?.user_id || ""),
-            flowKind,
+            flowKind: flowKind as FlowKind | "learn",
             flowId: stored.flow_id,
             runId: stored.run_id,
             identity: stored.identity,

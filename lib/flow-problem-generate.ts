@@ -13,11 +13,7 @@ import {
   parseFlowArtifacts,
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
-import {
-  DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH,
-  parseProductFlowKind,
-  type ProductFlowKind,
-} from "@/lib/product-flow";
+import { DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH } from "@/lib/product-flow";
 
 export { DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH };
 import { composePrompt } from "@/lib/prompt-kernel/compose";
@@ -35,16 +31,13 @@ export function flowCanGenerateProblemFromArtifacts(artifacts: unknown): boolean
 }
 
 export type FlowProblemGenerateInput = {
-  kind: ProductFlowKind;
   name: string;
   problem: string;
   artifacts: FlowArtifact[];
 };
 
 export function flowProblemGenerateInput(body: Record<string, unknown>): FlowProblemGenerateInput {
-  const kind = parseProductFlowKind(body.kind) ?? "solve";
   return {
-    kind,
     name: String(body.name || "").trim(),
     problem: flowProblemFromUnknown(body),
     artifacts: parseFlowArtifacts(body.artifacts),
@@ -140,20 +133,14 @@ export async function openingWorkFromArtifactProblem(
     artifacts?: FlowArtifact[] | null;
     name?: string | null;
     problem?: string | null;
-    kind?: ProductFlowKind | "learn" | null;
   },
   deps: FlowProblemGenerateDeps = {},
 ): Promise<{ openingWork: string; openingWorkExact: boolean } | null> {
   if (!input.generateProblemOnOpen) return null;
   const artifacts = parseFlowArtifacts(input.artifacts);
   if (!artifacts.length) return null;
-  const kind: ProductFlowKind =
-    input.kind === "verification" || input.kind === "calibration" || input.kind === "solve"
-      ? input.kind
-      : "solve";
   const generated = await generateFlowProblemFromArtifacts(
     {
-      kind,
       name: String(input.name || "").trim(),
       problem: String(input.problem || "").trim(),
       artifacts,

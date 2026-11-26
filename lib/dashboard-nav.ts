@@ -3,15 +3,11 @@
  * and product create deep-links.
  */
 
-import {
-  productFlowNewPath,
-  productRegionNewPath,
-  type ProductFlowKind,
-} from "@/lib/product-flow";
+import { productFlowNewPath, productRegionNewPath } from "@/lib/product-flow";
 
 export const DASHBOARD_TABS = [
   "home",
-  "flows",
+  "protocols",
   "regions",
   "usage",
   "upgrade",
@@ -23,7 +19,7 @@ export const DASHBOARD_TABS = [
 
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 
-export type DashboardProductTab = ProductFlowKind;
+export type DashboardProductTab = "protocol";
 
 export type DashboardRegionsTab = "regions";
 
@@ -51,7 +47,7 @@ export const DASHBOARD_HOME_NAV_ITEM: DashboardNavItem = {
 
 export const DASHBOARD_TOP_NAV_ITEMS: readonly DashboardNavItem[] = [
   DASHBOARD_HOME_NAV_ITEM,
-  { id: "flows", label: "Flows" },
+  { id: "protocols", label: "Protocols" },
   { id: "regions", label: "Knowledge regions" },
 ];
 
@@ -85,7 +81,7 @@ export function isDashboardTab(value: unknown): value is DashboardTab {
 }
 
 export function isDashboardProductTab(value: unknown): value is DashboardProductTab {
-  return value === "verification" || value === "calibration" || value === "solve";
+  return value === "protocol";
 }
 
 export function isDashboardShopTab(value: unknown): value is never {
@@ -157,9 +153,10 @@ export function parseDashboardTab(value: unknown): DashboardTab {
     value === "practice_performance" ||
     value === "solve" ||
     value === "verification" ||
-    value === "calibration"
+    value === "calibration" ||
+    value === "flows"
   ) {
-    return "flows";
+    return "protocols";
   }
   if (
     value === "practice_studio" ||
@@ -192,42 +189,36 @@ export function dashboardHrefForTab(tab: DashboardTab): string {
 }
 
 export function dashboardTabForProductSurface(
-  _kind: ProductFlowKind,
-  area: "flow" | "region" = "flow",
+  _kind?: unknown,
+  area: "flow" | "region" | "protocol" = "flow",
 ): DashboardTab {
-  return area === "region" ? "regions" : "flows";
+  return area === "region" ? "regions" : "protocols";
 }
 
-export function dashboardCreateHref(kind?: DashboardProductTab | null): string {
-  return productFlowNewPath(kind);
+export function dashboardCreateHref(_kind?: DashboardProductTab | null): string {
+  return productFlowNewPath();
 }
 
 export function dashboardRegionCreateHref(
-  kind?: DashboardProductTab | DashboardRegionsTab | null,
+  _kind?: DashboardProductTab | DashboardRegionsTab | null,
 ): string {
-  if (kind === "calibration") return productRegionNewPath("calibration");
-  if (kind === "verification") return productRegionNewPath("verification");
-  if (kind === "solve") return productRegionNewPath("solve");
-  return "/regions/new";
+  return productRegionNewPath();
 }
 
 export function dashboardCreateMode(_tab: DashboardProductTab): null {
   return null;
 }
 
-export function dashboardProductLabel(tab: DashboardProductTab): string {
-  if (tab === "verification") return "Verification";
-  if (tab === "calibration") return "Calibration";
-  return "Solve";
+export function dashboardProductLabel(_tab?: DashboardProductTab): string {
+  return "Protocol";
 }
 
-export function dashboardCreateLabel(kind?: DashboardProductTab | null): string {
-  if (!kind) return "Create flow →";
-  return `Create ${dashboardProductLabel(kind)} flow →`;
+export function dashboardCreateLabel(_kind?: DashboardProductTab | null): string {
+  return "Create protocol →";
 }
 
 export function dashboardFrameLabel(tab: DashboardTab): string {
-  if (tab === "flows") return "Flows";
+  if (tab === "protocols") return "Protocols";
   if (tab === "regions") return "Knowledge regions";
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";

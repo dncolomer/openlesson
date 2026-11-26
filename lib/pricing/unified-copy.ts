@@ -11,14 +11,14 @@ import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/co
 export const UNIFIED_PRICING_COPY = {
   eyebrow: "PRICING",
   title: "Pay for usage.",
-  lead: "Sign up free, get starter credits, and buy more when you run Calibrate, Learn, Verify, and Solve sessions. Credits power tools for knowledge building on autopilot: the system helps choose what to explore next, and the thinking stays yours.",
-  needsPlan: "Buy a credit pack to keep running sessions.",
+  lead: "Sign up free, get starter credits, and buy more when you run Embeddable Knowledge Verification Protocols. Credits power protocol runs: the system scores the work, and the thinking stays yours.",
+  needsPlan: "Buy a credit pack to keep running protocols.",
   free: {
     id: "free",
     name: "Free",
     priceLabel: "$0",
     cadence: `${STARTER_CREDIT_GRANT} starter credits`,
-    body: `Create Knowledge Regions and flow sessions for free. Each flow session costs ${FLOW_SESSION_CREDIT_COST} credits.`,
+    body: `Create Knowledge Regions and Protocols for free. Each protocol run costs ${FLOW_SESSION_CREDIT_COST} credits.`,
     cta: "Create Free account",
     href: "/register",
   },

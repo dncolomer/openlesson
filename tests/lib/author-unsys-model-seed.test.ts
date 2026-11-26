@@ -133,7 +133,7 @@ describe("author unsys model seed", () => {
     expect(route).toContain("definitionUnsysSeedFromBlocks");
     expect(route).toContain("definitionFlowTokenFromPreparePlan");
     expect(route).toContain("flow.answersModelSeed");
-    expect(route).toContain("getCalibrationFlowById");
+    expect(route).toContain("getVerificationFlowById");
     expect(route).not.toContain("flowId && !generateContext.exactProblemOnCanvas");
     expect(route).not.toContain("continuation: null,\n              done: true");
     const field = readFileSync(

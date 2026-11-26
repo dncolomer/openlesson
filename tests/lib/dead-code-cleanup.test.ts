@@ -56,8 +56,7 @@ describe("guest TAP mounts Calibrate and Verify", () => {
     expect(resolveTapShellFromSession({ interaction_kind: "exercise" })).toBe("exercise");
 
     const guest = read("components/guest-session/private-tap-session-page.tsx");
-    expect(guest).toContain("<ScoutTapClient");
-    expect(guest).toContain('shell === "scout"');
+    expect(guest).not.toContain("<ScoutTapClient");
     expect(guest).toContain("<TapScoreClient");
     expect(guest).toContain('sidebarMode="verification-tap"');
     expect(guest).not.toMatch(/redirect\(`\/workspace\/\$\{String\(session\.workspace_id\)\}`\)/);
@@ -65,8 +64,7 @@ describe("guest TAP mounts Calibrate and Verify", () => {
 
     const verifyRoute = read("app/verify/session/[token]/page.tsx");
     expect(verifyRoute).toContain("private-tap-session-page");
-    const calibrateRoute = read("app/calibrate/session/[token]/page.tsx");
-    expect(calibrateRoute).toContain("private-tap-session-page");
+    expect(existsSync(join(ROOT, "app/calibrate/session/[token]/page.tsx"))).toBe(false);
   });
 });
 

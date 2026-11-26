@@ -43,7 +43,7 @@ const TEXT_FILE_MIME = new Set([
   "text/csv",
 ]);
 
-const SYNTHETIC_REGION_PROFILE_SYSTEM = `You design synthetic knowledge regions for the flowcfg-v1-d96 embedding space used by Calibrate, Learn, and Verify.
+const SYNTHETIC_REGION_PROFILE_SYSTEM = `You design synthetic knowledge regions for the flowcfg-v1-d96 embedding space used by knowledge verification protocols.
 Return JSON only describing an idealized competency region. Scores are 0-100.
 pow_types should be a subset of: tool, screen, speech, video, eeg.
 preferred_modalities examples: tool, speech, canvas, notebook.

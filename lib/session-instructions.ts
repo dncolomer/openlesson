@@ -9,7 +9,7 @@ export type SessionGuideId = (typeof SESSION_GUIDES)[number];
  */
 export const SESSION_INSTRUCTIONS: Record<SessionGuideId, string> = {
   learn:
-    "Speak, write, and draw on the work canvas. That is your work.\n\nPress commit (insight), write the takeaway in your own words, and submit it for evaluation. A kept takeaway stays with this chapter.",
+    "Speak, write, and draw on the work canvas. That is your work.\n\nUse Commands on a selection. Switch chapters from the dock.",
   calibrate:
     "Tap every question you would not trust yourself to answer. The screens get finer or stop on their own.\n\nYou might get an additional question to work through at the end, or the session may stop there.",
   verification:

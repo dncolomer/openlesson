@@ -314,7 +314,7 @@ export async function POST(request: NextRequest) {
             await getStripe().invoiceItems.create({
               customer: customerId,
               invoice: invoice.id,
-              description: `${ileSessions.toLocaleString()} Learning session${ileSessions === 1 ? "" : "s"} on Calibrate, Learn, and Verify @ ${formatIleSessionPrice()}`,
+              description: `${ileSessions.toLocaleString()} Learning session${ileSessions === 1 ? "" : "s"} on knowledge verification protocols @ ${formatIleSessionPrice()}`,
               amount: ileRounded,
               currency: "usd",
             });

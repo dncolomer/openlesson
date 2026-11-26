@@ -1,7 +1,8 @@
 /**
- * First-class Verification, Calibration, and Solve Flows and Knowledge regions.
+ * Embeddable Knowledge Verification Protocols and Knowledge Regions.
  * Dashboard lists these objects; a workspace is Learning only.
- * Flow rows store owner_user_id. workspace_id is optional.
+ * Protocol rows store owner_user_id. workspace_id is optional.
+ * Stored topic column is The Protocol Challenge.
  */
 
 import { parseLearningModelSize } from "@/lib/learning-model";
@@ -15,77 +16,68 @@ import {
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import {
-  OPTIONAL_FLOW_ENFORCED_CHANNELS,
   parseFlowEnforcedChannels,
   serializeFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import {
   DEFAULT_FLOW_CANVAS_CAPTURE,
-  flowAuthorShowsCanvasCapture,
   serializeFlowCanvasCapture,
   type FlowCanvasCapture,
 } from "@/lib/flow-canvas-capture";
 import {
   flowOpeningCanvasHasContent,
-  flowShowsOpeningCanvas,
   parseFlowOpeningCanvasScene,
-  parseFlowOpeningCanvasSceneForKind,
   productFlowPublishTopicFromOpeningCanvas,
 } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 
-export type ProductFlowKind = "verification" | "calibration" | "solve";
+export const PROTOCOL_PRODUCT_NAME = "Embeddable Knowledge Verification Protocols" as const;
+export const PROTOCOL_CHALLENGE_LABEL = "The Protocol Challenge" as const;
+export const PROTOCOL_LABEL = "Protocol" as const;
 
-export const PRODUCT_FLOW_KINDS = ["solve", "verification", "calibration"] as const;
-
-export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
-export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
-export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/flows/files";
+export const DASHBOARD_PROTOCOLS_PATH = "/api/dashboard/protocols";
+export const DASHBOARD_FLOWS_PATH = DASHBOARD_PROTOCOLS_PATH;
+export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/protocols/generate-questions";
+export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/protocols/files";
 /** Client-safe path. Do not import `@/lib/flow-problem-generate` from client components. */
-export const DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH = "/api/dashboard/flows/generate-problem";
+export const DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH =
+  "/api/dashboard/protocols/generate-problem";
 
 export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "model", "channels", "publish"] as const;
 
 export type ProductFlowWizardStep = (typeof PRODUCT_FLOW_WIZARD_STEPS)[number];
 
-export type ProductFlowDraft = {
-  kind: ProductFlowKind;
+export type ProtocolDraft = {
   name: string;
-  /** Problem text. Stored as topic. Calibration `goal` is the same string. */
-  topic: string;
-  goal: string;
-  questions: string[];
+  /** The Protocol Challenge. Stored as topic. */
+  challenge: string;
   artifacts: FlowArtifact[];
   actionCatalog: number;
   durationMinutes: number;
-  /** Solve / Verification: seed the Work canvas with this Problem as written. */
   exactProblemOnCanvas: boolean;
-  /** Solve / Verification: author-prepared opening Work canvas. */
   openingCanvasScene: IleWorkCanvasScene | null;
-  /** Generate the Problem from artifacts when a learner opens. */
   generateProblemOnOpen: boolean;
-  /** Author unsys seed used when a learner runs this flow. */
   answersModelSeed: AuthorUnsysModelSeed | null;
-  /** Channels the run requires. Audio off leaves the microphone optional. */
   enforcedChannels: FlowEnforcedChannels;
-  /** Solve / Verification: mermaid documents of the Work canvas every N actions. Default off. */
   canvasCapture: FlowCanvasCapture;
 };
 
-/** Solve and Verification author enforced sensors. Calibration sounding does not. */
-export function flowAuthorShowsEnforcedChannels(kind: ProductFlowKind): boolean {
-  return kind === "solve" || kind === "verification";
+/** @deprecated Use ProtocolDraft. */
+export type ProductFlowDraft = ProtocolDraft & {
+  topic: string;
+  goal: string;
+  questions: string[];
+};
+
+export function flowAuthorShowsEnforcedChannels(_kind?: unknown): boolean {
+  return true;
 }
 
-export function productFlowWizardSteps(
-  kind: ProductFlowKind,
-): readonly ProductFlowWizardStep[] {
-  if (kind === "calibration") return ["name", "author", "model", "publish"];
+export function productFlowWizardSteps(_kind?: unknown): readonly ProductFlowWizardStep[] {
   return PRODUCT_FLOW_WIZARD_STEPS;
 }
 
-/** Author option on Solve and Verification flows. Calibration has no canvas. */
 export function parseExactProblemOnCanvas(value: unknown): boolean {
   if (value === true || value === 1) return true;
   if (typeof value === "string") {
@@ -95,11 +87,10 @@ export function parseExactProblemOnCanvas(value: unknown): boolean {
   return false;
 }
 
-export function flowShowsExactProblemOnCanvas(kind: ProductFlowKind): boolean {
-  return kind === "solve" || kind === "verification";
+export function flowShowsExactProblemOnCanvas(_kind?: unknown): boolean {
+  return true;
 }
 
-/** Author option: write the Problem from attached files when a learner opens. */
 export function parseGenerateProblemOnOpen(value: unknown): boolean {
   return parseExactProblemOnCanvas(value);
 }
@@ -107,19 +98,27 @@ export function parseGenerateProblemOnOpen(value: unknown): boolean {
 /** Exclusive Author source. Exact problem on canvas is only valid on `problem`. */
 export type FlowAuthoringSource = "problem" | "artifacts" | "canvas";
 
+export function protocolChallengeFromUnknown(input: {
+  challenge?: unknown;
+  topic?: unknown;
+  problem?: unknown;
+  goal?: unknown;
+}): string {
+  const challenge = String(input.challenge ?? "").trim();
+  if (challenge) return challenge;
+  return flowProblemFromUnknown(input);
+}
+
 export function flowAuthoringSource(input: {
-  kind?: ProductFlowKind | string | null;
+  kind?: unknown;
+  challenge?: string | null;
   topic?: string | null;
   problem?: string | null;
   generateProblemOnOpen?: unknown;
   artifacts?: unknown;
   openingCanvasScene?: unknown;
 }): FlowAuthoringSource {
-  const kind = parseProductFlowKind(input.kind) ?? input.kind;
-  if (
-    kind !== "calibration" &&
-    flowOpeningCanvasHasContent(parseFlowOpeningCanvasScene(input.openingCanvasScene))
-  ) {
+  if (flowOpeningCanvasHasContent(parseFlowOpeningCanvasScene(input.openingCanvasScene))) {
     return "canvas";
   }
   if (
@@ -132,22 +131,20 @@ export function flowAuthoringSource(input: {
 }
 
 export function flowAuthoringAllowsExactProblem(input: {
-  kind?: ProductFlowKind | string | null;
+  kind?: unknown;
+  challenge?: string | null;
   topic?: string | null;
   problem?: string | null;
   generateProblemOnOpen?: unknown;
   artifacts?: unknown;
   openingCanvasScene?: unknown;
 }): boolean {
-  const kind = parseProductFlowKind(input.kind);
-  if (!kind || !flowShowsExactProblemOnCanvas(kind)) return false;
   if (flowAuthoringSource(input) !== "problem") return false;
-  return Boolean(String(input.problem || input.topic || "").trim());
+  return Boolean(protocolChallengeFromUnknown(input));
 }
 
-/** Verification and Calibration lock the run clock at authoring. Solve has no run countdown. */
-export function flowAuthorShowsCountdown(kind: ProductFlowKind): boolean {
-  return kind === "verification" || kind === "calibration";
+export function flowAuthorShowsCountdown(_kind?: unknown): boolean {
+  return true;
 }
 
 export function sessionWantsExactProblemOnCanvas(metadata: unknown): boolean {
@@ -157,39 +154,38 @@ export function sessionWantsExactProblemOnCanvas(metadata: unknown): boolean {
   );
 }
 
-export function parseProductFlowKind(value: unknown): ProductFlowKind | null {
-  if (value === "verification" || value === "verify") return "verification";
-  if (value === "calibration" || value === "calibrate") return "calibration";
-  if (value === "solve") return "solve";
+/** Other protocol types are gone. Callers must not send a kind. */
+/** Residual. Protocol is the only product; callers must not send a kind. */
+export type ProductFlowKind = "verification";
+
+export function parseProductFlowKind(value: unknown): null {
+  void value;
   return null;
 }
 
-export type ProductFlowKindFilter = ProductFlowKind | "all";
-
-export function parseProductFlowKindFilter(value: unknown): ProductFlowKindFilter {
-  return parseProductFlowKind(value) ?? "all";
+export function rejectedProtocolKind(value: unknown): boolean {
+  const raw = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return (
+    raw === "solve" ||
+    raw === "calibration" ||
+    raw === "calibrate" ||
+    raw === "learn" ||
+    raw === "mapping" ||
+    raw === "map"
+  );
 }
 
-export function productFlowKindFromDashboardKind(
-  kind: "verify" | "calibrate" | "solve" | ProductFlowKind,
-): ProductFlowKind {
-  if (kind === "calibrate" || kind === "calibration") return "calibration";
-  if (kind === "solve") return "solve";
-  return "verification";
+export function productFlowNewPath(_kind?: unknown): string {
+  return "/protocols/new";
 }
 
-export function productFlowNewPath(kind?: ProductFlowKind | null): string {
-  if (kind === "calibration") return "/calibration/flows/new";
-  if (kind === "solve") return "/solve/flows/new";
-  if (kind === "verification") return "/verification/flows/new";
-  return "/flows/new";
+export function productFlowDashboardPath(_kind?: unknown): string {
+  return "/dashboard?tab=protocols";
 }
 
-export function productFlowDashboardPath(_kind?: ProductFlowKind | null): string {
-  return "/dashboard?tab=flows";
-}
-
-export function productRegionDashboardPath(_kind?: ProductFlowKind | null): string {
+export function productRegionDashboardPath(_kind?: unknown): string {
   return "/dashboard?tab=regions";
 }
 
@@ -203,7 +199,7 @@ export function absoluteFlowPublicUrl(pathOrUrl: string, origin: string): string
   return `${base}${path}`;
 }
 
-/** Same-origin path for opening a public flow (identification still runs). */
+/** Same-origin path for opening a public protocol (identification still runs). */
 export function flowPublicHref(pathOrUrl: string): string {
   const value = String(pathOrUrl || "").trim();
   if (!value) return "";
@@ -218,49 +214,40 @@ export function flowPublicHref(pathOrUrl: string): string {
   return value.startsWith("/") ? value : `/${value}`;
 }
 
-export function productFlowPagePath(kind: ProductFlowKind, flowId: string): string {
-  const id = String(flowId || "").trim();
-  if (!id) return productFlowNewPath(kind);
-  if (kind === "calibration") return `/calibration/flows/${id}`;
-  if (kind === "solve") return `/solve/flows/${id}`;
-  return `/verification/flows/${id}`;
+export function productFlowPagePath(_kind: unknown, flowId?: string): string {
+  const id = String(flowId || _kind || "").trim();
+  if (!id || id === "verification" || id === "solve" || id === "calibration") {
+    return productFlowNewPath();
+  }
+  return `/protocols/${id}`;
 }
 
-export function productRegionNewPath(kind?: ProductFlowKind | null): string {
-  if (kind === "calibration") return "/calibration/regions/new";
-  if (kind === "solve") return "/solve/regions/new";
-  if (kind === "verification") return "/verification/regions/new";
+export function productRegionNewPath(_kind?: unknown): string {
   return "/regions/new";
 }
 
-export function productRegionPagePath(kind: ProductFlowKind, regionId: string): string {
-  const id = String(regionId || "").trim();
-  if (!id) return productRegionNewPath(kind);
-  if (kind === "calibration") return `/calibration/regions/${id}`;
-  if (kind === "solve") return `/solve/regions/${id}`;
-  return `/verification/regions/${id}`;
+export function productRegionPagePath(_kind: unknown, regionId?: string): string {
+  const id = String(regionId || _kind || "").trim();
+  if (!id || id === "verification" || id === "solve" || id === "calibration") {
+    return productRegionNewPath();
+  }
+  return `/regions/${id}`;
 }
 
-export function productRegionEditPath(kind: ProductFlowKind, regionId: string): string {
-  const page = productRegionPagePath(kind, regionId);
+export function productRegionEditPath(kindOrId: unknown, regionId?: string): string {
+  const page = productRegionPagePath(kindOrId, regionId);
   return page.endsWith("/new") ? page : `${page}/edit`;
 }
 
-export function productFlowKindLabel(kind: ProductFlowKind): string {
-  if (kind === "calibration") return "Calibration";
-  if (kind === "solve") return "Solve";
-  return "Verification";
+export function productFlowKindLabel(_kind?: unknown): string {
+  return PROTOCOL_LABEL;
 }
 
-export function productFlowOwnerTitle(kind: ProductFlowKind): string {
-  return `${productFlowKindLabel(kind)} flows`;
+export function productFlowOwnerTitle(_kind?: unknown): string {
+  return "Protocols";
 }
 
-export function productFlowEmbeddingKind(
-  kind: ProductFlowKind,
-): "verify" | "calibrate" | "solve" {
-  if (kind === "calibration") return "calibrate";
-  if (kind === "solve") return "solve";
+export function productFlowEmbeddingKind(_kind?: unknown): "verify" {
   return "verify";
 }
 
@@ -273,13 +260,10 @@ export function flowOwnedByUser(
   return Boolean(owner && user && owner === user);
 }
 
-export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
+export function emptyProtocolDraft(): ProtocolDraft {
   return {
-    kind,
     name: "",
-    topic: "",
-    goal: "",
-    questions: [],
+    challenge: "",
     artifacts: [],
     actionCatalog: 4,
     durationMinutes: 15,
@@ -287,15 +271,25 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     openingCanvasScene: null,
     generateProblemOnOpen: false,
     answersModelSeed: null,
-    enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
-      ? parseFlowEnforcedChannels(null)
-      : { ...OPTIONAL_FLOW_ENFORCED_CHANNELS },
+    enforcedChannels: parseFlowEnforcedChannels(null),
     canvasCapture: { ...DEFAULT_FLOW_CANVAS_CAPTURE },
   };
 }
 
-export function productFlowProblem(draft: Pick<ProductFlowDraft, "topic" | "goal">): string {
-  return flowProblemFromUnknown(draft);
+export function emptyProductFlowDraft(_kind?: unknown): ProductFlowDraft {
+  const draft = emptyProtocolDraft();
+  return {
+    ...draft,
+    topic: draft.challenge,
+    goal: draft.challenge,
+    questions: [],
+  };
+}
+
+export function productFlowProblem(
+  draft: Pick<ProtocolDraft, "challenge"> | { topic?: string; goal?: string; challenge?: string },
+): string {
+  return protocolChallengeFromUnknown(draft);
 }
 
 export function normalizeFlowName(raw: unknown, fallback?: unknown): string {
@@ -307,6 +301,7 @@ export function normalizeFlowName(raw: unknown, fallback?: unknown): string {
 
 export function flowDisplayName(flow: {
   name?: unknown;
+  challenge?: unknown;
   topic?: unknown;
   goal?: unknown;
   title?: unknown;
@@ -314,9 +309,10 @@ export function flowDisplayName(flow: {
   return (
     normalizeFlowName(flow.name) ||
     normalizeFlowName(flow.title) ||
+    normalizeFlowName(flow.challenge) ||
     normalizeFlowName(flow.topic) ||
     normalizeFlowName(flow.goal) ||
-    "Untitled flow"
+    "Untitled protocol"
   );
 }
 
@@ -325,23 +321,19 @@ export function productFlowQuestionsFromDraft(questions: unknown): string[] {
   return questions.map((item) => String(item ?? "").trim()).filter(Boolean);
 }
 
-export function productFlowAuthorHasMaterial(draft: ProductFlowDraft): boolean {
+export function productFlowAuthorHasMaterial(
+  draft: ProtocolDraft | ProductFlowDraft,
+): boolean {
   if (productFlowProblem(draft)) return true;
-  if (
-    flowShowsOpeningCanvas(draft.kind) &&
-    flowOpeningCanvasHasContent(draft.openingCanvasScene)
-  ) {
-    return true;
-  }
+  if (flowOpeningCanvasHasContent(draft.openingCanvasScene)) return true;
   return (
-    parseGenerateProblemOnOpen(draft.generateProblemOnOpen) &&
-    draft.artifacts.length > 0
+    parseGenerateProblemOnOpen(draft.generateProblemOnOpen) && draft.artifacts.length > 0
   );
 }
 
 export function productFlowWizardCanAdvance(
   step: ProductFlowWizardStep,
-  draft: ProductFlowDraft,
+  draft: ProtocolDraft | ProductFlowDraft,
 ): boolean {
   if (step === "name") return Boolean(normalizeFlowName(draft.name));
   if (step === "author") return productFlowAuthorHasMaterial(draft);
@@ -352,31 +344,29 @@ export function productFlowWizardCanAdvance(
 
 export function nextProductFlowWizardStep(
   step: ProductFlowWizardStep,
-  kind?: ProductFlowKind,
+  _kind?: unknown,
 ): ProductFlowWizardStep {
   if (step === "name") return "author";
   if (step === "author") return "model";
-  if (step === "model") return kind === "calibration" ? "publish" : "channels";
+  if (step === "model") return "channels";
   return "publish";
 }
 
 export function previousProductFlowWizardStep(
   step: ProductFlowWizardStep,
-  kind?: ProductFlowKind,
+  _kind?: unknown,
 ): ProductFlowWizardStep {
-  if (step === "publish") return kind === "calibration" ? "model" : "channels";
+  if (step === "publish") return "channels";
   if (step === "channels") return "model";
   if (step === "model") return "author";
   return "name";
 }
 
-export type AcceptedProductFlowPublish =
+export type AcceptedProtocolPublish =
   | {
       ok: true;
-      kind: ProductFlowKind;
       name: string;
-      topic: string;
-      goal: string;
+      challenge: string;
       questions: string[];
       artifacts: FlowArtifact[];
       actionCatalog: ReturnType<typeof parseLearningModelSize>;
@@ -390,30 +380,37 @@ export type AcceptedProductFlowPublish =
     }
   | { ok: false; reason: string };
 
-export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProductFlowPublish {
+/** @deprecated Use AcceptedProtocolPublish. */
+export type AcceptedProductFlowPublish =
+  | (Extract<AcceptedProtocolPublish, { ok: true }> & {
+      topic: string;
+      goal: string;
+    })
+  | { ok: false; reason: string };
+
+export function acceptProtocolPublish(
+  draft: ProtocolDraft | ProductFlowDraft,
+): AcceptedProtocolPublish {
   const name = normalizeFlowName(draft.name);
   if (!name) return { ok: false, reason: "name_required" };
-  const openingCanvasScene = parseFlowOpeningCanvasSceneForKind(
-    draft.kind,
-    draft.openingCanvasScene,
-  );
+  const openingCanvasScene = parseFlowOpeningCanvasScene(draft.openingCanvasScene);
   const artifacts = parseFlowArtifacts(draft.artifacts);
   const generateProblemOnOpen =
     artifacts.length > 0 &&
     (parseGenerateProblemOnOpen(draft.generateProblemOnOpen) ||
       (!productFlowProblem(draft) && !flowOpeningCanvasHasContent(openingCanvasScene)));
-  const problem =
+  const challenge =
     productFlowPublishTopicFromOpeningCanvas({
       problem: productFlowProblem(draft),
       name,
       scene: openingCanvasScene,
     }) || (generateProblemOnOpen ? name : "");
-  if (!problem) return { ok: false, reason: "topic_required" };
+  if (!challenge) return { ok: false, reason: "challenge_required" };
   const actionCatalog = parseLearningModelSize(draft.actionCatalog);
   const durationMinutes = flowCountdownMinutes(draft.durationMinutes);
-  const pool = flowProblemQuestionPool(problem).map((item) => item.text);
+  const pool = flowProblemQuestionPool(challenge).map((item) => item.text);
   const source = flowAuthoringSource({
-    kind: draft.kind,
+    challenge,
     topic: productFlowProblem(draft),
     problem: productFlowProblem(draft),
     generateProblemOnOpen,
@@ -425,7 +422,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
   const exactProblemOnCanvas =
     source === "problem" &&
     flowAuthoringAllowsExactProblem({
-      kind: draft.kind,
+      challenge,
       topic: productFlowProblem(draft),
       problem: productFlowProblem(draft),
       generateProblemOnOpen: false,
@@ -434,56 +431,12 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     }) &&
     parseExactProblemOnCanvas(draft.exactProblemOnCanvas);
   const answersModelSeed = parseFlowUnsysSeed(draft.answersModelSeed);
-  const enforcedChannels = flowAuthorShowsEnforcedChannels(draft.kind)
-    ? serializeFlowEnforcedChannels(draft.enforcedChannels)
-    : { ...OPTIONAL_FLOW_ENFORCED_CHANNELS };
-  const canvasCapture = flowAuthorShowsCanvasCapture(draft.kind)
-    ? serializeFlowCanvasCapture(draft.canvasCapture)
-    : { ...DEFAULT_FLOW_CANVAS_CAPTURE };
-  if (draft.kind === "calibration") {
-    return {
-      ok: true,
-      kind: "calibration",
-      name,
-      topic: problem,
-      goal: problem,
-      questions: pool,
-      artifacts,
-      actionCatalog,
-      durationMinutes,
-      exactProblemOnCanvas: false,
-      openingCanvasScene: null,
-      generateProblemOnOpen: persistGenerate,
-      answersModelSeed,
-      enforcedChannels,
-      canvasCapture: { ...DEFAULT_FLOW_CANVAS_CAPTURE },
-    };
-  }
-  if (draft.kind === "solve") {
-    return {
-      ok: true,
-      kind: "solve",
-      name,
-      topic: problem,
-      goal: "",
-      questions: [],
-      artifacts,
-      actionCatalog,
-      durationMinutes,
-      exactProblemOnCanvas,
-      openingCanvasScene: persistScene,
-      generateProblemOnOpen: persistGenerate,
-      answersModelSeed,
-      enforcedChannels,
-      canvasCapture,
-    };
-  }
+  const enforcedChannels = serializeFlowEnforcedChannels(draft.enforcedChannels);
+  const canvasCapture = serializeFlowCanvasCapture(draft.canvasCapture);
   return {
     ok: true,
-    kind: "verification",
     name,
-    topic: problem,
-    goal: "",
+    challenge,
     questions: pool,
     artifacts,
     actionCatalog,
@@ -494,6 +447,21 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     answersModelSeed,
     enforcedChannels,
     canvasCapture,
+  };
+}
+
+export function acceptProductFlowPublish(
+  draft: ProtocolDraft | ProductFlowDraft,
+): AcceptedProductFlowPublish {
+  const accepted = acceptProtocolPublish(draft);
+  if (!accepted.ok) {
+    if (accepted.reason === "challenge_required") return { ok: false, reason: "topic_required" };
+    return accepted;
+  }
+  return {
+    ...accepted,
+    topic: accepted.challenge,
+    goal: accepted.challenge,
   };
 }
 

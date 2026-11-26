@@ -2,14 +2,11 @@
 
 import type { Dispatch, JSX, RefObject, SetStateAction } from "react";
 import type { Tool } from "@/components/ToolsPanel";
-import type { InsightSummary } from "@/lib/insights";
 import type { AestheticPackage } from "@/lib/aesthetics";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 import type { Session, SessionPlanStep } from "@/lib/storage";
-import { IleInsightKeptScreen } from "@/components/session-view/learn-insight-kept-screen";
-import { IleMapInsightsWidget } from "@/components/session-view/learn-insight-trophies";
 import { IleSessionImpureScreen, mountIleSilenceScreen } from "@/components/session-view/learn-silence-lock-screen";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/learn-voice-bar";
 import { SessionChrome } from "@/components/session-view/session-chrome";
@@ -78,8 +75,6 @@ export type SessionLiveStageProps = {
   selectedAesthetic: AestheticPackage;
   session: Session;
   sessionBlockId: string | undefined;
-  sessionInsights: InsightSummary[];
-  keptInsight: InsightSummary | null;
   sessionPowArtifacts: IlePowCounterArtifact[];
   sessionPowThoughts: number;
   sessionResourcesOpen: boolean;
@@ -151,8 +146,6 @@ export function SessionLiveStage({
     selectedAesthetic,
     session,
     sessionBlockId,
-    sessionInsights,
-    keptInsight,
     sessionPowArtifacts,
     sessionPowThoughts,
     sessionResourcesOpen,
@@ -256,13 +249,7 @@ export function SessionLiveStage({
         onResourcesOpenChange={setSessionResourcesOpen}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         workCanvasHeaderLeading={workCanvasInsightSlots}
-        mapInsightsWidget={
-          <IleMapInsightsWidget
-            insights={sessionInsights}
-            slotCount={minInsightsPerChapter}
-            visible
-          />
-        }
+        mapInsightsWidget={null}
         introOpen={showWelcomePanel}
         onCloseSessionModal={() => {
           setShowWelcomePanel(false);
@@ -320,14 +307,6 @@ export function SessionLiveStage({
           />
         }
       />
-      {keptInsight ? (
-        <IleInsightKeptScreen
-          insight={keptInsight}
-          onBackToWorkspace={() => {
-            void handleConfirmEnd();
-          }}
-        />
-      ) : null}
     </div>
   );
 }

@@ -25,7 +25,7 @@ import {
   uploadIleProofOfWork,
 } from "@/lib/learn-proof-of-work-client";
 import { withImpurePoWData } from "@/lib/tap-session-purity";
-import { postSolveFlowEmbedding, postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
+import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import { sessionEndEmbeddingTarget } from "@/lib/session-end-embedding";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
@@ -171,12 +171,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
           ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
           : guestAccessKind === "ile" && ileToken
             ? await (await import("@/lib/learn-link-storage")).getIleLinkSession(ileToken, sessionId)
-            : guestAccessKind === "solve" && solveToken
-              ? await (await import("@/lib/solve-session-storage")).getSolveLinkSession(
-                  solveToken,
-                  sessionId,
-                )
-              : await getSession(sessionId);
+            : await getSession(sessionId);
       if (cancelled) return;
       if (s) {
         setSession(s);
@@ -373,30 +368,19 @@ export function useSessionPhase(input: SessionPhaseInput) {
           tool_action: action,
           timestamp_ms: index + 1,
         }));
-        if (embeddingTarget?.kind === "solve") {
-          if (solveToken) {
-            void postSolveFlowEmbedding({
-              solveToken,
-              sessionId: session.id,
-              flowId: embeddingTarget.flowId,
-              identity: embeddingTarget.identity,
-              model: snapshot.model,
-              sequence,
-              pow,
-            });
-          } else {
-            void postWorkspaceFlowEmbedding({
-              flowKind: "solve",
-              flowId: embeddingTarget.flowId,
-              runId: session.id,
-              identity: embeddingTarget.identity,
-              source: "solve",
-              model: snapshot.model,
-              sequence,
-              pow,
-              sessionId: session.id,
-            });
-          }
+        if (embeddingTarget?.kind === "verify") {
+          void postWorkspaceFlowEmbedding({
+            flowKind: "verify",
+            flowId: embeddingTarget.flowId,
+            runId: session.id,
+            identity: embeddingTarget.identity,
+            source: "verify",
+            model: snapshot.model,
+            sequence,
+            pow,
+            sessionId: session.id,
+            ileToken,
+          });
         } else if (embeddingTarget?.kind === "learn") {
           void postWorkspaceFlowEmbedding({
             workspaceId: embeddingTarget.workspaceId,

@@ -7,7 +7,18 @@
  * Pure helpers — unit-tested without React/DB.
  */
 
-import type { SimulateInsightsJob } from "@/lib/simulate-insights";
+export type SimulateInsightsJob = {
+  id: string;
+  status: "running" | "completed" | "error";
+  completedSteps: number;
+  insights: Array<{ id: string; title: string; body: string }>;
+  error: string | null;
+  scope: "block" | "workspace" | "multi_block";
+  blockId: string | null;
+  blockIds: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type SimulationCollectionItemKind = "insight";
 

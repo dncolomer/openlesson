@@ -1,6 +1,5 @@
 /**
- * Author-prepared Work canvas stored on Solve / Verification flows.
- * Calibration has no Work canvas.
+ * Author-prepared Work canvas stored on a knowledge verification protocol.
  */
 
 import {
@@ -13,8 +12,8 @@ import {
 
 export const FLOW_OPENING_CANVAS_LABEL = "Manually prepare the canvas";
 
-export function flowShowsOpeningCanvas(kind: string | null | undefined): boolean {
-  return kind === "solve" || kind === "verification";
+export function flowShowsOpeningCanvas(_kind?: string | null): boolean {
+  return true;
 }
 
 export function parseFlowOpeningCanvasScene(
@@ -37,10 +36,9 @@ export function parseFlowOpeningCanvasScene(
 }
 
 export function parseFlowOpeningCanvasSceneForKind(
-  kind: string | null | undefined,
+  _kind: string | null | undefined,
   value: unknown,
 ): IleWorkCanvasScene | null {
-  if (!flowShowsOpeningCanvas(kind)) return null;
   return parseFlowOpeningCanvasScene(value);
 }
 

@@ -268,22 +268,15 @@ describe("session branch prepare", () => {
   });
 
   it("prepares the field for Calibrate and Verification, and leaves conversational TAP alone", () => {
-    const calibrate = read("components/scout-tap/ScoutTapClient.tsx");
-    const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
     const verification = read("components/tap-score/tap-score-phases.tsx");
     const learn = read("components/session-view/session-chapter-canvas.tsx");
     const route = read("app/api/learn/session-branch-model/route.ts");
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
-    expect(calibrate).toContain("calibrateFieldPrepareInput");
-    expect(calibrate).toContain("loadSessionBranchField");
-    expect(publicCalibrate).toContain("calibrateFieldPrepareInput");
-    expect(publicCalibrate).toContain("calibrationToken");
     expect(verification).toContain('enabled={kind === "verify"}');
     expect(verification).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(verification).not.toContain("policyTab");
     expect(verification).toContain("verificationToken");
     expect(learn).toContain("useSessionBranchField");
-    expect(route).toContain("getCalibrationFlowByToken");
     expect(route).toContain("getVerificationFlowByToken");
     expect(route).toContain("resolveTapSessionAccess");
     expect(route).toContain("guardSessionRoute");

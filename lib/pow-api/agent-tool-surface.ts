@@ -1,15 +1,15 @@
 /**
  * Single inventory of public agent tools (MCP tools/list + REST twins).
- * Families: independent Solve / Calibration / Verification flow management
- * and knowledge-region candidate render. Learning Maps, workspaces, Helios
+ * Families: Embeddable Knowledge Verification Protocols and
+ * knowledge-region candidate render. Learning Maps, workspaces, Helios
  * map tools, headless proof-of-work, Snapshot, and Stash are not public.
  */
 
 import {
-  FLOW_API_BASE,
   FLOW_FILES_API_PATH,
   FLOW_UNSYS_SEED_API_PATH,
   KNOWLEDGE_REGION_API_BASE,
+  PROTOCOL_API_BASE,
   type PublicAgentApiFamily,
 } from "@/lib/api/agent-api-paths";
 import {
@@ -23,82 +23,82 @@ export type AgentToolSurfaceEntry = {
   family: PublicAgentApiFamily;
   scope: ApiKeyScope;
   summary: string;
-  /** REST twin — method + path pattern with {flow_id} placeholder */
+  /** REST twin — method + path pattern with {protocol_id} placeholder */
   rest: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string };
 };
 
-/** Canonical agent flow ops — every entry has REST + MCP parity. */
+/** Canonical agent protocol ops — every entry has REST + MCP parity. */
 export const AGENT_TOOL_SURFACE = [
   {
-    name: "list_flows",
-    family: "flow",
+    name: "list_protocols",
+    family: "protocol",
     scope: "workspaces:read",
-    summary: "List Solve, Calibration, and Verification flows owned by this key.",
+    summary: "List knowledge verification protocols owned by this key.",
     rest: {
       method: "GET",
-      path: FLOW_API_BASE,
+      path: PROTOCOL_API_BASE,
     },
   },
   {
-    name: "create_flow",
-    family: "flow",
+    name: "create_protocol",
+    family: "protocol",
     scope: "workspaces:write",
-    summary: "Create a Solve, Calibration, or Verification flow.",
+    summary: "Create a knowledge verification protocol.",
     rest: {
       method: "POST",
-      path: FLOW_API_BASE,
+      path: PROTOCOL_API_BASE,
     },
   },
   {
-    name: "upload_flow_file",
-    family: "flow",
+    name: "upload_protocol_file",
+    family: "protocol",
     scope: "workspaces:write",
     summary:
-      "Upload a Problem-context file (PDF, text, image) and get an artifact pointer for create_flow / update_flow.",
+      "Upload a Protocol Challenge context file (PDF, text, image) and get an artifact pointer for create_protocol / update_protocol.",
     rest: {
       method: "POST",
       path: FLOW_FILES_API_PATH,
     },
   },
   {
-    name: "generate_flow_unsys_seed",
-    family: "flow",
+    name: "generate_protocol_unsys_seed",
+    family: "protocol",
     scope: "workspaces:write",
     summary:
-      "Generate the Unsys model for a flow from the Problem, artifacts, and optional guidance (wizard model step).",
+      "Generate the Unsys model for a protocol from The Protocol Challenge, artifacts, and optional guidance.",
     rest: {
       method: "POST",
       path: FLOW_UNSYS_SEED_API_PATH,
     },
   },
   {
-    name: "get_flow",
-    family: "flow",
+    name: "get_protocol",
+    family: "protocol",
     scope: "workspaces:read",
-    summary: "Read one Solve, Calibration, or Verification flow.",
+    summary: "Read one knowledge verification protocol.",
     rest: {
       method: "GET",
-      path: `${FLOW_API_BASE}/{flow_id}`,
+      path: `${PROTOCOL_API_BASE}/{protocol_id}`,
     },
   },
   {
-    name: "update_flow",
-    family: "flow",
+    name: "update_protocol",
+    family: "protocol",
     scope: "workspaces:write",
-    summary: "Update a Solve, Calibration, or Verification flow.",
+    summary: "Update a knowledge verification protocol.",
     rest: {
       method: "PATCH",
-      path: `${FLOW_API_BASE}/{flow_id}`,
+      path: `${PROTOCOL_API_BASE}/{protocol_id}`,
     },
   },
   {
-    name: "delete_flow",
-    family: "flow",
+    name: "delete_protocol",
+    family: "protocol",
     scope: "workspaces:write",
-    summary: "Delete a Solve, Calibration, or Verification flow.",
+    summary: "Delete a knowledge verification protocol.",
     rest: {
       method: "DELETE",
-      path: `${FLOW_API_BASE}/{flow_id}`,
+      path: `${PROTOCOL_API_BASE}/{protocol_id}`,
     },
   },
   {

@@ -66,17 +66,14 @@ describe("session guide panel", () => {
     expect(learn).toContain("data-session-commands");
     expect(learn).not.toContain("data-session-board-tools");
     expect(learn).not.toContain(">board<");
-    expect(learn).toContain('data-session-command="commit"');
+    expect(learn).not.toContain('data-session-command="commit"');
     expect(learn).toContain('data-session-command="dictate"');
-    expect(learn).toContain("data-ile-craft-insight");
-    const commitTag = learn.slice(learn.indexOf('data-session-command="commit"'));
-    expect(commitTag.slice(0, commitTag.indexOf(">"))).not.toContain(" disabled=");
+    expect(learn).not.toContain("data-ile-craft-insight");
     expect(learn).toContain("data-ile-canvas-dictate");
-    expect(learn).toContain("data-session-commit");
+    expect(learn).not.toContain("data-session-commit");
     expect(learn).toContain('data-ile-command-index="08"');
     expect(learn).toContain('data-ile-command-index="09"');
-    expect(learn).toContain('data-ile-command-index="10"');
-    expect(learn).not.toContain('data-ile-command-index="11"');
+    expect(learn).not.toContain('data-ile-command-index="10"');
     expect(learn).toContain('data-session-command="pointer"');
     expect(learn).toContain("data-ile-canvas-pointer");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
@@ -133,8 +130,10 @@ describe("session guide panel", () => {
     expect(SESSION_INSTRUCTIONS.calibrate).toMatch(/additional question to work through at the end/i);
     expect(SESSION_INSTRUCTIONS.calibrate).not.toMatch(/hidden state/i);
     expect(SESSION_INSTRUCTIONS.calibrate).not.toMatch(/out loud|later Learn/i);
-    expect(SESSION_INSTRUCTIONS.learn).toContain("commit (insight)");
-    expect(SESSION_INSTRUCTIONS.learn).toContain("takeaway");
+    expect(SESSION_INSTRUCTIONS.learn).toContain("work canvas");
+    expect(SESSION_INSTRUCTIONS.learn).toContain("Commands");
+    expect(SESSION_INSTRUCTIONS.learn).not.toContain("commit (insight)");
+    expect(SESSION_INSTRUCTIONS.learn).not.toContain("takeaway");
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden state|posterior/i);
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden cause/);
     expect(SESSION_INSTRUCTIONS.verification).not.toContain("Distance");
@@ -157,8 +156,8 @@ describe("session guide panel", () => {
     expect(source).not.toContain("onAsk=");
     expect(source).toContain("onRun=");
     expect(source).toContain("bridge?.dictate?.run(text)");
-    expect(source).toContain("IleCraftInsightButton");
-    expect(source).toContain("usable={ileCanvasCraftInsightUsable()}");
+    expect(source).not.toContain("IleCraftInsightButton");
+    expect(source).not.toContain("ileCanvasCraftInsightUsable");
     expect(source).not.toContain("Boolean(bridge?.craft)");
     expect(source).toContain("SessionHarnessPanel");
     expect(source).toContain("data-session-instructions");
@@ -194,7 +193,7 @@ describe("session guide panel", () => {
     expect(ileWorkCanvasCommandShortcutKeyFromEvent({ altKey: true, code: "KeyS", key: "ß" })).toBe("s");
     expect(ileWorkCanvasCommandShortcutKeyFromEvent({ altKey: true, code: "KeyF", key: "ƒ" })).toBe("f");
     expect(ileWorkCanvasCommandShortcutKeyFromEvent({ altKey: true, metaKey: true, code: "KeyS", key: "s" })).toBeNull();
-    expect(source).toContain("data-session-commit");
+    expect(source).not.toContain("data-session-commit");
     expect(source).not.toContain("grid-rows-4");
     expect(source).not.toContain("grid-rows-[minmax(0,3fr)_minmax(0,1fr)_auto]");
     expect(source).toContain("data-session-commands");

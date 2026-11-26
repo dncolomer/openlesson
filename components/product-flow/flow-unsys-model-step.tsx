@@ -26,7 +26,7 @@ import {
   FLOW_UNSYS_SEED_PATH,
   parseFlowUnsysSeed,
 } from "@/lib/flow-unsys-seed";
-import type { ProductFlowKind } from "@/lib/product-flow";
+
 import { flowOpeningCanvasHasContent } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
@@ -38,7 +38,6 @@ import {
 } from "@/components/product-flow/product-flow-form";
 
 export function FlowUnsysModelStep({
-  kind,
   name,
   problem,
   artifacts,
@@ -49,7 +48,6 @@ export function FlowUnsysModelStep({
   actions,
   fillViewport = false,
 }: {
-  kind: ProductFlowKind;
   name: string;
   problem: string;
   artifacts: FlowArtifact[];
@@ -118,7 +116,6 @@ export function FlowUnsysModelStep({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind,
           name,
           problem,
           artifacts: contextFiles,

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
@@ -16,11 +17,11 @@ describe("dashboard play sessions", () => {
   it("parses kinds and builds disposable session metadata", () => {
     expect(parseDashboardPlayKind("learn")).toBe("learn");
     expect(parseDashboardPlayKind("VERIFY")).toBe("verify");
-    expect(parseDashboardPlayKind("calibrate")).toBe("calibrate");
+    expect(parseDashboardPlayKind("calibrate")).toBeNull();
     expect(parseDashboardPlayKind("tap")).toBeNull();
     expect(dashboardPlayHref("learn", "abc")).toBe("/session?id=abc");
     expect(dashboardPlayHref("verify", "abc")).toBe("/play/verify?id=abc");
-    expect(dashboardPlayHref("calibrate", "abc")).toBe("/play/calibrate?id=abc");
+    expect(dashboardPlayHref("verify", "abc")).toBe("/play/verify?id=abc");
     const meta = dashboardPlaySessionMetadata("verify");
     expect(meta.unsaved_exit).toBe(true);
     expect(meta.disposable).toBe(true);
@@ -44,13 +45,13 @@ describe("dashboard play sessions", () => {
     expect(dash).not.toContain("data-dashboard-play-bar");
     expect(dash).not.toContain("data-dashboard-play-topics");
     expect(dash).not.toContain("pickDashboardPlayTopics");
-    expect(dash).toContain("PlayCalibrateSession");
+    expect(dash).not.toContain("PlayCalibrateSession");
     expect(readRepo("app/api/play/start/route.ts")).toContain("dashboardPlaySessionMetadata");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("parseCuriousPrompt");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfInsufficientSessionCredits");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("callXaiText");
     expect(readRepo("app/play/verify/page.tsx")).toContain("localOpening");
-    expect(readRepo("app/play/calibrate/page.tsx")).toContain("PlayCalibrateSession");
+    expect(existsSync("app/play/calibrate/page.tsx")).toBe(false);
     expect(readRepo("middleware.ts")).toContain('"/play"');
   });
 });

@@ -24,8 +24,7 @@ describe("session-scoped PoW and embeddings", () => {
     expect(pow).toContain("uploadWorkspaceProofOfWork");
     const embed = read("app/api/session/embed/route.ts");
     expect(embed).toContain("persistCompletedFlowEmbedding");
-    expect(embed).toContain("persistSolveCompletedEmbedding");
-    expect(embed).toContain('"solve"');
+    expect(embed).not.toContain("persistSolveCompletedEmbedding");
   });
 
   it("clients post to session routes without requiring a workspace id", () => {
@@ -41,24 +40,20 @@ describe("session-scoped PoW and embeddings", () => {
     expect(runtime).not.toContain("if (!workspaceId || !currentSession");
   });
 
-  it("Solve session end persists embeddings with a public token or cookie session", () => {
+  it("Protocol session end persists verify embeddings with a public token or cookie session", () => {
     const phase = read("components/session-view/use-session-phase.ts");
     const handle = phase.slice(phase.indexOf("const handleConfirmEnd"));
-    expect(handle).toContain('embeddingTarget?.kind === "solve"');
-    expect(handle).toContain("postSolveFlowEmbedding");
+    expect(handle).toContain('embeddingTarget?.kind === "verify"');
     expect(handle).toContain("postWorkspaceFlowEmbedding");
-    expect(handle).toContain('flowKind: "solve"');
+    expect(handle).toContain('flowKind: "verify"');
     expect(sessionEndEmbeddingTarget({ metadata: { solve_flow_id: "sf1" } })).toEqual({
-      kind: "solve",
+      kind: "verify",
       flowId: "sf1",
       identity: null,
     });
   });
 
-  it("Calibrate and Verify persist embeddings without a workspace gate", () => {
-    const scout = read("components/scout-tap/ScoutTapClient.tsx");
-    expect(scout).toContain("postWorkspaceFlowEmbedding");
-    expect(scout).not.toContain("if (workspaceId) {");
+  it("Verify persists embeddings without a workspace gate", () => {
     const verify = read("components/tap-score/use-tap-score-flow.ts");
     expect(verify).toContain('s.kind === "verify" && policy && !s.localOpening');
     expect(verify).not.toContain("s.workspaceId && !s.localOpening");

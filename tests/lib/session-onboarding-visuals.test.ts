@@ -155,7 +155,7 @@ describe("session intro visuals", () => {
     expect(ileLearningText).toMatch(/I will now speak my thinking out loud the whole time/i);
     expect(ileLearningText).toMatch(/raw thinking signal/i);
     expect(ileLearningText).toMatch(/baseline attention/i);
-    expect(ileLearningText).toMatch(/In this session I will work to craft insights/i);
+    expect(ileLearningText).toMatch(/In this session I will work on the canvas/i);
     expect(ileLearningHtml).not.toContain("data-ile-sample-insight-card");
     expect(ileLearningHtml).toContain('data-practice-voice-sentence="2"');
     expect(ileLearningHtml).not.toContain("data-onboarding-start");
@@ -163,8 +163,8 @@ describe("session intro visuals", () => {
     expect(ileLearningHtml).not.toContain("data-ile-intro-widget-close");
     expect(ileLearningText).not.toMatch(/Start block/i);
     expect(en.onboardingGuide.ile.step3.start).toBe("Start");
-    expect(ileLearningText).toMatch(/craft insights/i);
-    expect(ileLearningText).toMatch(/craft insights on the canvas/i);
+    expect(ileLearningText).not.toMatch(/craft insights/i);
+    expect(ileLearningText).toMatch(/work on the canvas/i);
     expect(ileLearningText).not.toMatch(/\bboard\b|end turn/i);
     expect(ileLearningText).not.toMatch(/Generate Work in a turn/i);
     expect(ileLearningText).not.toMatch(/next turn/i);
@@ -178,7 +178,7 @@ describe("session intro visuals", () => {
     expect(en.onboardingGuide.ile.step3.body).not.toMatch(/Commander/);
     expect(en.onboardingGuide.ile.step3.body).toMatch(/canvas/i);
     expect(en.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
-    expect(en.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
+    expect(en.onboardingGuide.ile.step3.body).not.toMatch(/craft insights/i);
     expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(120);
     expect(en.onboardingGuide.ile.step3.bodyProject).toBe(en.onboardingGuide.ile.step3.body);
     expect(en.onboardingGuide.ile.step3.highlight).toBe("");
@@ -198,7 +198,7 @@ describe("session intro visuals", () => {
     expect(ileProjectHtml).not.toContain("data-ile-sample-insight-card");
     expect(ileProjectHtml).not.toContain("data-onboarding-start");
     expect(ileProjectHtml).not.toContain("data-onboarding-highlight");
-    expect(ileProjectText).toMatch(/craft insights on the canvas/i);
+    expect(ileProjectText).toMatch(/work on the canvas/i);
     expect(ileProjectText).not.toMatch(/\bboard\b|end turn/i);
     expect(ileProjectHtml).not.toContain("data-ile-welcome-insight-slots");
 

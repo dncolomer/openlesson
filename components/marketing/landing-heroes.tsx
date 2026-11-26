@@ -103,7 +103,7 @@ export function LandingHeroEditorial({
             </div>
           </div>
         </div>
-        <ol className="grid border-t border-zinc-800/90 md:grid-cols-3">
+        <ol className="grid border-t border-zinc-800/90 md:grid-cols-1">
           {LANDING_USES.map((product, index) => (
             <li
               key={product.href}

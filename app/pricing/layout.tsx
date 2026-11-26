@@ -8,7 +8,7 @@ const standardSocial = standardShareSocialMetadata({
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Sign up free, get starter credits, and buy one-time credit packs to run Calibrate, Learn, Verify, and Solve sessions.",
+    "Sign up free, get starter credits, and buy one-time credit packs to run Embeddable Knowledge Verification Protocols.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",

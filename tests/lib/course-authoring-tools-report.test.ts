@@ -12,8 +12,8 @@ import {
 } from "@/lib/workspace-sections";
 
 const SCRATCH =
-  process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-affd94f6d050/implementer";
+  process.env.GROK_GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-e21de05c1b34/implementer";
 
 const REPORT_REL = "docs/course-authoring-tools-report.md";
 
@@ -69,6 +69,12 @@ describe("course authoring tools report", () => {
     expect(report).toContain("`move`");
     expect(report).toMatch(/lasso_circle|lasso_freehand/);
     expect(report).toContain("generate_shape");
+    expect(report).toContain("Embeddable Knowledge Verification Protocols");
+    expect(report).toContain("The Protocol Challenge");
+    expect(report).not.toContain("mountsCalibrationFlowsPanel");
+    expect(report).not.toContain("Create and manage calibration flows");
+    expect(report).not.toContain("Create and manage verification flows");
+    expect(report).not.toContain("generated from Work/PoW");
   });
 
   it("writes verification evidence to scratch", () => {

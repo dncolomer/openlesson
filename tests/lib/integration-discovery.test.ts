@@ -11,7 +11,8 @@ describe("integration-discovery", () => {
     const surfaces = buildIntegrationSurfaces("https://uncertain.systems");
     expect(surfaces).toHaveLength(2);
     expect(surfaces.map((s) => s.transport)).toEqual(["rest", "mcp"]);
-    expect(surfaces[0]?.entrypoint).toContain("/api/v3/workspaces");
+    expect(surfaces[0]?.entrypoint).toContain("/api/v3/protocols");
+    expect(surfaces[0]?.entrypoint).not.toContain("/api/v3/flows");
     expect(surfaces[1]?.entrypoint).toContain("/api/mcp");
     expect(surfaces[1]?.auth).toContain("Bearer");
   });
@@ -21,12 +22,12 @@ describe("integration-discovery", () => {
       proof_of_work_artifacts: 0,
       blocks: 3,
     });
-    expect(policy.proof_of_work_spec.mcp_tool).toBe("create_flow");
-    expect(policy.proof_of_work_spec.rest_equivalent).toContain("/flows");
-    expect(policy.upload_proof_of_work.rest_equivalent).toContain("/flows/{flow_id}/link");
-    expect(policy.upload_proof_of_work?.mcp_tool).toBe("link_flow");
-    expect(policy.performance.mcp_tool).toBe("apply_map_tool");
-    expect(policy.progress_snapshot.mcp_tool).toBe("get_workspace");
+    expect(policy.proof_of_work_spec.mcp_tool).toBe("create_protocol");
+    expect(policy.proof_of_work_spec.rest_equivalent).toContain("/protocols");
+    expect(policy.upload_proof_of_work.rest_equivalent).toContain("/protocols/{protocol_id}");
+    expect(policy.upload_proof_of_work?.mcp_tool).toBe("update_protocol");
+    expect(policy.performance.mcp_tool).toBe("list_protocols");
+    expect(policy.progress_snapshot.mcp_tool).toBe("get_protocol");
   });
 
   it("recommends schema before first upload and performance after proof of work exists", () => {
@@ -36,7 +37,7 @@ describe("integration-discovery", () => {
       has_workspace_goal: true,
       workspace_kind: "knowledge_region",
     });
-    expect(cold.some((a) => a.mcp_tool === "create_flow")).toBe(true);
+    expect(cold.some((a) => a.mcp_tool === "create_protocol")).toBe(true);
 
     const warm = recommendIntegrationActions({
       proof_of_work_artifacts: 6,
@@ -44,8 +45,8 @@ describe("integration-discovery", () => {
       has_workspace_goal: true,
       workspace_kind: "knowledge_region",
     });
-    expect(warm.some((a) => a.mcp_tool === "apply_map_tool")).toBe(true);
-    expect(warm.some((a) => a.mcp_tool === "link_flow")).toBe(true);
+    expect(warm.some((a) => a.mcp_tool === "update_protocol")).toBe(true);
+    expect(warm.some((a) => a.mcp_tool === "get_protocol")).toBe(true);
   });
 
   it("serves MCP resource markdown for scope and proof-of-work loop", () => {
@@ -54,10 +55,13 @@ describe("integration-discovery", () => {
     expect(scope).toContain("REST");
 
     const loop = buildMcpResourceContent("uncertain-systems://proof-of-work-loop", "https://uncertain.systems");
-    expect(loop).toContain("get_workspace");
-    expect(loop).toContain("create_flow");
-    expect(loop).toContain("link_flow");
-    expect(loop).toContain("apply_map_tool");
+    expect(loop).toContain("create_protocol");
+    expect(loop).toContain("list_protocols");
+    expect(loop).toContain("get_protocol");
+    expect(loop).toContain("update_protocol");
+    expect(loop).not.toContain("create_flow");
+    expect(loop).not.toContain("link_flow");
+    expect(loop).not.toContain("apply_map_tool");
     expect(loop).not.toContain("get_learning_progress");
     expect(loop).not.toContain("lwm_snapshot");
     expect(loop).toContain("continuous_evaluation_mcp");

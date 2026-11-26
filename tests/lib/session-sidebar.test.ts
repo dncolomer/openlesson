@@ -4,12 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/learn-voice-bar";
-import {
-  IleMapInsightsWidget,
-  IleWorkCanvasTimer,
-} from "@/components/session-view/learn-insight-trophies";
-import type { InsightSummary } from "@/lib/insights";
-import { SessionSidebar } from "@/components/session-view/session-sidebar";
+import { IleWorkCanvasTimer, SessionSidebar } from "@/components/session-view/session-sidebar";
 import { applySessionPress, emptySessionMarkState, freezeMistakeList } from "@/lib/session-marks";
 import { SessionDataCard } from "@/components/session-view/session-data-card";
 import {
@@ -69,13 +64,6 @@ function voiceActions(mode: SessionSidebarMode) {
   });
 }
 
-const insightRow: InsightSummary = {
-  id: "ins-rail",
-  title: "Rail insight",
-  summary: "Fits the column",
-  created_at: "2026-01-01T00:00:00.000Z",
-};
-
 const TOPIC_TITLE = "Just war";
 const TOPIC_STILL = "/aesthetics/lunar/HE2xzURWUAAd6N2.jpeg";
 
@@ -96,11 +84,7 @@ function renderSidebar(mode: SessionSidebarMode, remainingSeconds: number) {
       clock: createElement(IleWorkCanvasTimer, { remainingSeconds }),
       focus:
         mode === "ile"
-          ? createElement(IleMapInsightsWidget, {
-              insights: [insightRow],
-              visible: true,
-              slotCount: 1,
-            })
+          ? createElement("div", { "data-slot": "focus" }, "Focus body")
           : createElement("div", { "data-slot": "stash" }, "Stash body"),
       chapters: topicCard(),
       signals: createElement("div", { "data-slot": "signals" }, "Signals body"),
@@ -224,16 +208,9 @@ describe("session sidebar mode configuration", () => {
     const asideClass = html.slice(html.indexOf('class="'), html.indexOf(">", html.indexOf('class="')));
     expect(asideClass).toContain("overflow-hidden");
     expect(asideClass).not.toContain("overflow-y-auto");
-    expect(sidebarSource).not.toMatch(/text-(red|green|amber|emerald|yellow|blue|orange|rose|lime)-/);
-    expect(sidebarSource).not.toMatch(/bg-(red|green|amber|emerald|yellow|blue|orange)-/);
-    const widgetAt = html.indexOf("data-ile-map-insights-widget");
-    expect(widgetAt).toBeGreaterThan(focusAt);
-    expect(html.slice(widgetAt, html.indexOf("data-ile-map-insights-slots"))).toContain(
-      "w-full min-w-0 max-w-full",
-    );
     expect(html).not.toContain("w-[min(20rem,calc(100vw-2rem))]");
-    expect(html).toContain("data-ile-map-insights-count");
-    expect(html).toContain("Rail insight");
+    expect(html).not.toContain("data-ile-map-insights-widget");
+    expect(html).toContain("Focus body");
     expect(html).toContain(TOPIC_TITLE);
     expect(html).toContain("data-session-sidebar-signals-frame");
     expect(html).toContain("data-session-sidebar-signals-label");
@@ -281,7 +258,8 @@ describe("session sidebar mode configuration", () => {
     expect(html).not.toContain("data-session-sidebar-count");
     expect(html).not.toContain("data-ile-work-canvas-timer");
     expect(html).not.toContain("data-session-sidebar-clock");
-    expect(html).toContain("data-ile-map-insights-widget");
+    expect(html).not.toContain("data-ile-map-insights-widget");
+    expect(html).toContain("Focus body");
     expect(html).not.toContain("live speech line");
     expect(html).toContain("data-session-sidebar-actions");
     expect(html).toContain("data-ile-bar-save");
@@ -571,8 +549,7 @@ describe("session sidebar mode configuration", () => {
     expect(above).not.toContain('data-ile-work-canvas-timer-urgent="true"');
   });
 
-  it("mounts the shared sidebar for Prepare, Drill, conversational TAP, and verification TAP", () => {
-    const prepare = readFileSync(join(ROOT, "components/scout-tap/scout-tap-phases.tsx"), "utf8");
+  it("mounts the shared sidebar for conversational TAP and verification TAP", () => {
     expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
     const tap = readFileSync(join(ROOT, "components/tap-score/tap-score-phases.tsx"), "utf8");
@@ -590,27 +567,6 @@ describe("session sidebar mode configuration", () => {
     expect(host).toContain("data-ile-canvas-stage");
     expect(client).toContain("kind={kind}");
     expect(verify).toContain('sidebarMode="verification-tap"');
-    expect(prepare).toContain("<CalibrateSoundingSurface");
-    expect(prepare).toContain("<SessionWorkSurface");
-    expect(prepare).toContain('mode="calibrate"');
-    expect(prepare).not.toContain('focusLabel="actions"');
-    expect(prepare).not.toContain("SessionActionsPanel");
-    const calibrateSurface = readFileSync(
-      join(ROOT, "components/calibrate/calibrate-sounding-surface.tsx"),
-      "utf8",
-    );
-    expect(calibrateSurface).not.toContain("policyTab");
-    expect(calibrateSurface).not.toContain("data-calibrate-done-classifying");
-    expect(calibrateSurface).not.toContain("<TapSessionSignals");
-    expect(prepare).toContain("<TapSessionSignals");
-    expect(prepare).not.toContain("captureAudio={enforcedChannels.audio}");
-    const calibrateRunner = readFileSync(
-      join(ROOT, "components/CalibrationFlowRunner.tsx"),
-      "utf8",
-    );
-    expect(calibrateRunner).toContain("<TapSessionSignals />");
-    expect(calibrateRunner).not.toContain("enforcedChannels={enforcedChannels}");
-    expect(calibrateSurface).toContain("data-calibrate-sounding");
     expect(tap).toContain('? null : "Stash"');
     expect(tap).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(tap).not.toContain("SessionActionsPanel");
@@ -653,10 +609,8 @@ describe("session sidebar mode configuration", () => {
     expect(chrome).toContain("sessionSidebarTopic");
     expect(chrome).not.toContain("<IleWorkDockBar");
     expect(chrome).not.toContain("onFocusOpenWork");
-    expect(calibrateSurface).not.toContain("<SessionTopicChapter");
-    expect(prepare).toContain("<SessionTopicChapter");
     expect(tap.match(/<SessionTopicChapter/g)).toHaveLength(1);
-    for (const src of [prepare, tap, chrome]) {
+    for (const src of [tap, chrome]) {
       expect(src).not.toContain("data-ile-chapter-dock-chapters");
       expect(src).not.toContain(">Chapters<");
     }

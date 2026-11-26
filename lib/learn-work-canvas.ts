@@ -206,7 +206,6 @@ export {
   ileCanvasPromptMode,
   ileCanvasSlashBarOpen,
   ileCanvasSlashKeyOpensBar,
-  ileCanvasCraftInsightOpenAfterSelection,
   ileLearnMoreVisiblePlacement,
   ileLearnMoreFollowOffset,
   ileLearnMoreFollowPosition,

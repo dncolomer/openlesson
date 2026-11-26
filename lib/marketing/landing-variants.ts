@@ -10,37 +10,17 @@ export const LANDING_HERO_STILL_ALT =
   "Full session Work canvas with proof-of-work annotations on spoken questions, canvas revisions, and verification checks" as const;
 
 export const LANDING_USE_COPY = {
-  harness: {
-    dek: "Develop understanding through work on difficult problems, through an interface that implements behavioral cognitive enhancements like think-aloud protocols.",
-    body: "",
-  },
   verification: {
-    dek: "Examine understanding through the work itself, and compare verification results on a custom knowledge embeddings model.",
-    body: "",
-  },
-  mapping: {
-    dek: "Build a concrete knowledge embeddings model of how a team, a fleet of agents, a mix of both, or just you thinks and works through problems. Then set it against a target region to see where you stand and what to work on next.",
+    dek: "Embeddable Knowledge Verification Protocols examine understanding through the work itself, set against a knowledge region and The Protocol Challenge.",
     body: "",
   },
 } as const;
 
 export const LANDING_USES = [
   {
-    ...PLATFORM_PRODUCTS.harness,
-    name: "Solve / Practice",
-    dek: LANDING_USE_COPY.harness.dek,
-    body: LANDING_USE_COPY.harness.body,
-  },
-  {
     ...PLATFORM_PRODUCTS.verification,
     dek: LANDING_USE_COPY.verification.dek,
     body: LANDING_USE_COPY.verification.body,
-  },
-  {
-    ...PLATFORM_PRODUCTS.mapping,
-    eyebrow: "TARGET MAP",
-    dek: LANDING_USE_COPY.mapping.dek,
-    body: LANDING_USE_COPY.mapping.body,
   },
 ] as const;
 

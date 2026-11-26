@@ -28,7 +28,7 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Knowledge Verification",
+  title: "Embeddable Knowledge Verification Protocols",
   description: VERIFICATION_PRODUCT_COPY.lead,
   alternates: { canonical: `https://uncertain.systems${KNOWLEDGE_VERIFICATION_PATH}` },
   openGraph: standardSocial.openGraph,

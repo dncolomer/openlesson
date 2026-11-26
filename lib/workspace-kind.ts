@@ -11,7 +11,7 @@ export const WORKSPACE_KIND_KNOWLEDGE_REGION = "knowledge_region";
 export const WORKSPACE_KIND_CALIBRATION = "calibration";
 
 export const AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE =
-  "Workspace create is Learning Map only. Use POST /api/v3/flows (MCP create_flow) or POST /api/dashboard/flows for Solve, Calibration, or Verification.";
+  "Workspace create is Learning Map only. Use POST /api/v3/protocols (MCP create_protocol) or POST /api/dashboard/protocols for knowledge verification protocols.";
 
 export type WorkspaceKind = typeof WORKSPACE_KIND_STANDARD;
 

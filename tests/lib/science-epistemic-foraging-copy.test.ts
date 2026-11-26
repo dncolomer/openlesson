@@ -133,11 +133,6 @@ describe("landing approach names foraging without rewriting the hero", () => {
     expect(page).toContain("foragingHref");
     expect(page).toContain('marker="verification"');
     expect(page).not.toContain("Epistemic Foraging Platform");
-    const mapping = read("app/mapping-protocols/page.tsx");
-    expect(mapping).not.toContain('id="approach"');
-    expect(mapping).not.toContain("data-landing-epistemic-foraging");
-    expect(mapping).not.toContain("foragingHref");
-    expect(mapping).toContain('marker="mapping"');
     const landing = `${read("app/page.tsx")}\n${read("components/marketing/landing-heroes.tsx")}`;
     expect(landing).toContain("LandingHeroEditorial");
     expect(landing).toContain("{copy.h1}");

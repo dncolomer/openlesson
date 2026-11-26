@@ -22,7 +22,7 @@ export const FEP_FOUNDATION = {
   summary:
     "The shared influence behind every product. Learning is reducing uncertainty: the harness forages for information that shrinks what is unknown, rather than waiting for the next chat reply.",
   bullets: [
-    "Same epistemic foraging policy across Proof-of-Work API and session (Calibrate, Learn, and Verify)",
+    "Same epistemic foraging policy across Proof-of-Work API and session (knowledge verification protocols)",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -66,9 +66,9 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Think Aloud Protocol",
     forHuman: {
       summary:
-        "One interface for Calibrate, Learn, and Verify. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
+        "One interface for knowledge verification protocols. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
       bullets: [
-        "Calibrate, Learn, and Verify on the same session surface",
+        "knowledge verification protocols on the same session surface",
         "Shareable links per workspace or practice block",
       ],
     },

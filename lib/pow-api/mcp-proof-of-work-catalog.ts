@@ -2,8 +2,8 @@
  * Client-safe catalog for workspace integration UI (no server imports).
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
- * Public families: independent Solve / Calibration / Verification flow
- * management (/api/v3/flows) and knowledge-region candidate render.
+ * Public families: knowledge verification protocols (/api/v3/protocols)
+ * and knowledge-region candidate render.
  * Learning Maps, workspaces, headless proof-of-work, Snapshot, and Stash
  * are not public agent APIs.
  */

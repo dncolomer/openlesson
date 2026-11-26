@@ -15,13 +15,12 @@ import {
 } from "@/lib/lti/nrps";
 
 describe("lti deep linking", () => {
-  it("returns flow, region, and create-region content items", () => {
+  it("returns protocol, region, and create-region content items", () => {
     expect(
       deepLinkContentItem("https://uncertain.systems", {
-        type: "flow",
+        type: "protocol",
         id: "f1",
         name: "Ohm",
-        kind: "solve",
         publicToken: "tok",
       }),
     ).toMatchObject({
@@ -33,7 +32,6 @@ describe("lti deep linking", () => {
         type: "region",
         id: "kr-1",
         name: "Class region",
-        kind: "solve",
       }),
     ).toMatchObject({ custom: { region_id: "kr-1" } });
     expect(

@@ -44,15 +44,12 @@ function promptBar(mode: SessionMarkMode) {
       setCommandText: () => {},
       handleQuickAction: () => {},
       commandInputRef: { current: null },
-      setCraftInsightOpen: () => {},
       writeDictatedText: () => [],
-      craftInsightOpen: false,
       selectedCanvasElements: () => [],
       selectedMarkTexts: [],
       markSpeech: "",
       sessionMarkMode: mode,
       dictateTranscript: "",
-      craftInsight: { chapterId: "chapter-1", sessionId: "session-1", onCrafted: () => {} },
     }),
   );
 }
@@ -185,7 +182,7 @@ describe("learn suggestion toast", () => {
 
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
     expect(prompt).toContain("ileCanvasCommandDockVisible");
-    expect(prompt).toContain("IleCanvasCraftInsightForm");
+    expect(prompt).not.toContain("IleCanvasCraftInsightForm");
     expect(prompt).not.toContain("data-ile-canvas-side-note");
     expect(prompt).not.toContain("learnSuggestionToastText");
     expect(prompt).not.toContain("LearnSuggestionToast");

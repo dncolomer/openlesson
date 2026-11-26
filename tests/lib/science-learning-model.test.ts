@@ -25,7 +25,7 @@ function read(rel: string): string {
 }
 
 describe("science learning model page", () => {
-  it("explains the generative model, priced edges, projection, and three sessions", () => {
+  it("explains the generative model, priced edges, projection, and Learn vs Verify", () => {
     const full = getScienceLearningModelFullText();
     for (const term of SCIENCE_LEARNING_MODEL_TERMS) {
       expect(full.toLowerCase(), term).toContain(term.toLowerCase());
@@ -74,12 +74,13 @@ describe("science learning model page", () => {
     }
     expect(full.toLowerCase()).toMatch(/free energy principle/);
     expect(full.toLowerCase()).toMatch(/priced edge/);
-    expect(full.toLowerCase()).toMatch(/calibrate/);
+    expect(full.toLowerCase()).toMatch(/verify/);
+    expect(full.toLowerCase()).not.toMatch(/calibrate, learn, verify/);
     expect(full.toLowerCase()).toMatch(/projection/);
     expect(SCIENCE_LEARNING_MODEL_COPY.caveat.toLowerCase()).toMatch(/influence/);
     expect(SCIENCE_LEARNING_MODEL_COPY.lead).toMatch(/trying to learn or verify/);
     expect(SCIENCE_LEARNING_MODEL_COPY.how).toMatch(/projected onto a policy/);
-    expect(SCIENCE_LEARNING_MODEL_COPY.calibrate).toMatch(/prior over hidden states/);
+    expect(SCIENCE_LEARNING_MODEL_COPY.pipelinesTitle).toBe("Learn and Verify");
     expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/cost/);
     expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/visible/);
     expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/priced edges/);

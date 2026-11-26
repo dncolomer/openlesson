@@ -151,28 +151,19 @@ describe("workspace Simulation section helpers + UI structure", () => {
     );
   });
 
-  it("workspace section, block drawer, and multi-block drawer are Simulate Insights", () => {
-    const surface = read("components/SimulateInsightsSurface.tsx");
+  it("workspace section, block drawer, and multi-block drawer have no Simulate Insights runner", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     const combine = readCombineBlocksSurface();
-    const route = read("app/api/workspace/simulate-insights/route.ts");
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
 
+    expect(existsSync(join(process.cwd(), "components/SimulateInsightsSurface.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "app/api/workspace/simulate-insights/route.ts"))).toBe(
+      false,
+    );
     expect(hosts).not.toContain("WorkspaceSimulationPanel");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("simulation");
     expect(detail).not.toContain('title="Simulate Insights"');
     expect(combine).not.toContain('title="Simulate Insights"');
-    expect(route).toContain("Simulate Insights runs on a block");
-    expect(surface).toContain("data-simulate-insights-keep");
-    expect(surface).toContain("data-simulate-insights-start");
-    expect(surface).toContain("/api/workspace/simulate-insights");
-    expect(surface).not.toContain("data-simulation-questions");
-    expect(surface).not.toContain("data-simulation-exercises");
-    const post = route.slice(route.indexOf("export async function POST"), route.indexOf("export async function GET"));
-    expect(post).toContain("runSimulateInsightsJob");
-    expect(post).toContain("after(");
-    expect(post).not.toContain("callXaiJSON");
-    expect(route).toContain("readableSimulateInsights");
 
     mkdirSync(SCRATCH, { recursive: true });
     const uiLog = join(SCRATCH, "simulate-insights-ui.log");
@@ -181,13 +172,9 @@ describe("workspace Simulation section helpers + UI structure", () => {
       uiLog,
       uiPrev +
         [
-          "section=Simulate Insights",
+          "section=Simulate Insights unmounted",
           "block_drawer=" + detail.includes('title="Simulate Insights"'),
           "multi_drawer=" + combine.includes('title="Simulate Insights"'),
-          "keep=" + surface.includes("data-simulate-insights-keep"),
-          "job_runner=" + route.includes("runSimulateInsightsJob"),
-          "question_list=" + surface.includes("data-simulation-questions"),
-          "exercise_list=" + surface.includes("data-simulation-exercises"),
         ].join("\n") +
         "\n",
       "utf8",

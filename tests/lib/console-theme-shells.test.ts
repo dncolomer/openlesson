@@ -319,7 +319,8 @@ describe("console theme shells", () => {
   });
 
   it("leaves insight flags, the listening dot, and stored canvas ink alone", () => {
-    expect(read("components/session-view/learn-insight-trophies.tsx")).toContain("bg-amber-300");
+    expect(existsSync(join(ROOT, "components/session-view/learn-insight-trophies.tsx"))).toBe(false);
+    expect(read("components/session-view/session-sidebar.tsx")).toContain("text-amber-300");
     expect(read("components/tap-score/tap-live-clock.tsx")).toContain("bg-red-500");
     expect(ILE_WORK_CANVAS_STROKE_COLOR).toBe("#1e1e1e");
     expect(read("components/session-view/session-sidebar.tsx")).toContain("overflow-hidden");

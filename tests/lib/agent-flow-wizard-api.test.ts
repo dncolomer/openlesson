@@ -28,14 +28,14 @@ const ARTIFACT = {
 };
 
 describe("public flow create/update matches the dashboard wizard", () => {
-  it("MCP create_flow and update_flow accept wizard fields", () => {
-    const create = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "create_flow");
-    const update = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "update_flow");
+  it("MCP create_protocol and update_protocol accept wizard fields", () => {
+    const create = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "create_protocol");
+    const update = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "update_protocol");
     expect(create).toBeTruthy();
     expect(update).toBeTruthy();
     for (const tool of [create, update]) {
       const properties = tool?.inputSchema.properties ?? {};
-      expect(properties).toHaveProperty("topic");
+      expect(properties).toHaveProperty("challenge");
       expect(properties).toHaveProperty("artifacts");
       expect(properties).toHaveProperty("files");
       expect(properties).toHaveProperty("exact_problem_on_canvas");
@@ -47,9 +47,10 @@ describe("public flow create/update matches the dashboard wizard", () => {
       expect(properties).toHaveProperty("enforced_channels");
       expect(properties).toHaveProperty("canvas_capture");
       expect(properties).toHaveProperty("duration_minutes");
+      expect(properties).not.toHaveProperty("kind");
     }
-    expect(create?.inputSchema.required).toEqual(["kind"]);
-    expect(update?.inputSchema.required).toEqual(["flow_id"]);
+    expect(create?.inputSchema.required).toBeUndefined();
+    expect(update?.inputSchema.required).toEqual(["protocol_id"]);
     expect(create?.description).toContain(FLOW_AUTHORING_CREATE_SPEC);
     expect(update?.description).toContain(FLOW_AUTHORING_CREATE_SPEC);
     const exactDoc = JSON.stringify(create?.inputSchema.properties.exact_problem_on_canvas || {});
@@ -62,20 +63,20 @@ describe("public flow create/update matches the dashboard wizard", () => {
 
   it("MCP and REST expose file upload and Unsys generate twins", () => {
     const names = AGENT_TOOL_SURFACE.map((tool) => tool.name);
-    expect(names).toContain("upload_flow_file");
-    expect(names).toContain("generate_flow_unsys_seed");
-    expect(FLOW_FILES_API_PATH).toBe("/api/v3/flows/files");
-    expect(FLOW_UNSYS_SEED_API_PATH).toBe("/api/v3/flows/unsys-seed");
-    expect(existsSync(join(ROOT, "app/api/v3/flows/files/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/v3/flows/unsys-seed/route.ts"))).toBe(true);
+    expect(names).toContain("upload_protocol_file");
+    expect(names).toContain("generate_protocol_unsys_seed");
+    expect(FLOW_FILES_API_PATH).toBe("/api/v3/protocols/files");
+    expect(FLOW_UNSYS_SEED_API_PATH).toBe("/api/v3/protocols/unsys-seed");
+    expect(existsSync(join(ROOT, "app/api/v3/protocols/files/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/protocols/unsys-seed/route.ts"))).toBe(true);
     const dispatch = read("lib/pow-api/mcp-tools/dispatch.ts");
-    expect(dispatch).toContain('name === "upload_flow_file"');
-    expect(dispatch).toContain('name === "generate_flow_unsys_seed"');
+    expect(dispatch).toContain('name === "upload_protocol_file"');
+    expect(dispatch).toContain('name === "generate_protocol_unsys_seed"');
   });
 
   it("createAgentFlow passes wizard fields into command apply", () => {
     const src = read("lib/pow-api/agent-flow-management.ts");
-    expect(src).toContain("acceptProductFlowPublish");
+    expect(src).toContain("acceptProtocolPublish");
     expect(src).toContain("exactProblemOnCanvas: accepted.exactProblemOnCanvas");
     expect(src).toContain("generateProblemOnOpen: accepted.generateProblemOnOpen");
     expect(src).toContain("answersModelSeed: accepted.answersModelSeed");

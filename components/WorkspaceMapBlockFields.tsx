@@ -62,12 +62,12 @@ export function WorkspaceMapBlockKindPicker({
 }
 
 export function WorkspaceOwnerFlowPicker({
-  kind,
+  kind: _kind,
   selectedId,
   onChange,
   disabled = false,
 }: {
-  kind: "calibration" | "verification" | "solve";
+  kind?: "verification" | "protocol";
   selectedId: string | null;
   onChange: (flow: DashboardRecentFlow | null) => void;
   disabled?: boolean;
@@ -82,21 +82,19 @@ export function WorkspaceOwnerFlowPicker({
     setError(null);
     void (async () => {
       try {
-        const res = await fetch(
-          `${DASHBOARD_FLOWS_PATH}?kind=${encodeURIComponent(kind)}`,
-        );
+        const res = await fetch(DASHBOARD_FLOWS_PATH);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(
-            typeof data.error === "string" ? data.error : "Could not load flows",
+            typeof data.error === "string" ? data.error : "Could not load protocols",
           );
         }
-        const list = Array.isArray(data.flows) ? data.flows : [];
+        const list = Array.isArray(data.protocols) ? data.protocols : [];
         if (!cancelled) setFlows(list as DashboardRecentFlow[]);
       } catch (err) {
         if (!cancelled) {
           setFlows([]);
-          setError(err instanceof Error ? err.message : "Could not load flows");
+          setError(err instanceof Error ? err.message : "Could not load protocols");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -105,28 +103,22 @@ export function WorkspaceOwnerFlowPicker({
     return () => {
       cancelled = true;
     };
-  }, [kind]);
+  }, []);
 
   return (
-    <div className="space-y-1.5" data-map-block-flow-picker data-flow-kind={kind}>
+    <div className="space-y-1.5" data-map-block-flow-picker>
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-        Existing{" "}
-        {kind === "calibration"
-          ? "calibration"
-          : kind === "solve"
-            ? "solve"
-            : "verification"}{" "}
-        flow
+        Existing protocol
       </p>
       {loading ? (
-        <p className="text-[11px] text-neutral-600">Loading flows…</p>
+        <p className="text-[11px] text-neutral-600">Loading protocols…</p>
       ) : error ? (
         <p className="text-[11px] text-red-400/90" data-map-block-flow-error>
           {error}
         </p>
       ) : flows.length === 0 ? (
         <p className="text-[11px] text-neutral-500" data-map-block-flow-empty>
-          No existing {kind} flows yet. Create one, then link it here.
+          No existing protocols yet. Create one, then link it here.
         </p>
       ) : (
         <select
@@ -148,7 +140,7 @@ export function WorkspaceOwnerFlowPicker({
         </select>
       )}
       <a
-        href={productFlowNewPath(kind)}
+        href={productFlowNewPath()}
         target="_blank"
         rel="noopener noreferrer"
         data-map-block-create-flow
@@ -332,7 +324,6 @@ export function WorkspaceMapBlockLaunchCard({
   ayclToken?: string | null;
 }) {
   const block = normalizeMapBlock(mapBlock);
-  if (block.kind === "learn") return null;
   if (block.kind === "content") {
     return (
       <div className="space-y-2" data-map-block-content-view>
@@ -372,12 +363,7 @@ export function WorkspaceMapBlockLaunchCard({
   return (
     <div className="space-y-2" data-map-block-launch>
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-        {block.kind === "calibration"
-          ? "Calibration"
-          : block.kind === "solve"
-            ? "Solve"
-            : "Verification"}{" "}
-        flow
+        Protocol
       </p>
       {href ? (
         <button
@@ -386,15 +372,11 @@ export function WorkspaceMapBlockLaunchCard({
           onClick={() => onOpen(href)}
           className="inline-flex h-10 w-full items-center justify-center rounded-none bg-white text-sm font-medium text-black hover:bg-neutral-200"
         >
-          {block.kind === "calibration"
-            ? "Open calibration flow"
-            : block.kind === "solve"
-              ? "Open solve flow"
-              : "Open verification flow"}
+          Open protocol
         </button>
       ) : (
         <p className="text-[11px] text-neutral-500">
-          Link an existing {block.kind} flow to open it from this block.
+          Link an existing protocol to open it from this block.
         </p>
       )}
     </div>

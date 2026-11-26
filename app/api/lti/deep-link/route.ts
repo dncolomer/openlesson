@@ -7,7 +7,6 @@ import { readLtiFormBody } from "@/lib/lti/form-body";
 import { readLtiLaunchSession } from "@/lib/lti/request-session";
 import { getOrCreateToolKeys } from "@/lib/lti/store";
 import type { LtiDeepLinkCatalogItem } from "@/lib/lti/deep-link";
-import type { ProductFlowKind } from "@/lib/product-flow";
 
 export const runtime = "nodejs";
 
@@ -21,17 +20,15 @@ function catalogItemFromBody(body: Record<string, string>): LtiDeepLinkCatalogIt
       type: "region",
       id,
       name: String(body.name || "Knowledge region"),
-      kind: (String(body.kind || "solve") as ProductFlowKind) || "solve",
     };
   }
-  if (type === "flow") {
+  if (type === "protocol") {
     const publicToken = String(body.publicToken || body.flow_token || "").trim();
     if (!publicToken) return null;
     return {
-      type: "flow",
+      type: "protocol",
       id: String(body.id || publicToken),
-      name: String(body.name || "Flow"),
-      kind: (String(body.kind || "solve") as ProductFlowKind) || "solve",
+      name: String(body.name || "Protocol"),
       publicToken,
     };
   }
@@ -47,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
     const body = await readLtiFormBody(req);
     const item = catalogItemFromBody(body);
-    if (!item) return jsonError(400, "Select a flow or knowledge region");
+    if (!item) return jsonError(400, "Select a protocol or knowledge region");
     const keys = await getOrCreateToolKeys();
     const key = keys[0];
     if (!key) return jsonError(500, "Tool key is missing");

@@ -465,10 +465,7 @@ describe("custom aesthetic surfaces", () => {
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {
     const hook = read("components/session-view/use-aesthetic-packages.ts");
     expect(hook).toContain("fetchAestheticPackages");
-    for (const rel of [
-      "components/TapScoreClient.tsx",
-      "components/scout-tap/ScoutTapClient.tsx",
-    ]) {
+    for (const rel of ["components/TapScoreClient.tsx"]) {
       const source = read(rel);
       expect(source).toContain("useAestheticPackages");
       expect(source).toContain("selectedAesthetic?.previewImage");
@@ -491,12 +488,12 @@ describe("custom aesthetic surfaces", () => {
 
     const dock = read("components/session-view/learn-work-dock-bar.tsx");
     const map = read("components/block-skill-grid/map-world-layer.tsx");
-    const craft = read("components/session-view/learn-turn-insight-craft.tsx");
+    expect(existsSync(join(ROOT, "components/session-view/learn-turn-insight-craft.tsx"))).toBe(
+      false,
+    );
     expect(workspace).toContain("selectSurfaceAestheticImages");
     expect(workspace).toContain("aestheticImageForId(workspaceId, selection.images)");
     expect(workspace).not.toMatch(/aestheticImageForId\(workspaceId\)/);
-    expect(craft).toContain("bg-black");
-    expect(craft).not.toContain("useSurfaceAestheticImages");
     expect(dock).toContain("useSurfaceAestheticImages");
     expect(dock).toContain('surface.source === "fallback"');
     expect(dock).toContain("FALLBACK_AESTHETIC_IMAGES");

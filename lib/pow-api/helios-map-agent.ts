@@ -387,10 +387,9 @@ export async function applyHeliosMapToolsForAgent(input: {
     host: {
       createFlow: async (flowInput: HeliosFlowCreateInput): Promise<HeliosCreatedFlow> => {
         const ensured = await ensureAuthoringMapBlock({
-          raw: { kind: flowInput.kind },
+          raw: { kind: "verification" },
           title: flowInput.name,
-          topic: flowInput.topic,
-          goal: flowInput.goal,
+          challenge: flowInput.challenge,
           artifacts: flowInput.artifacts,
           exactProblemOnCanvas: flowInput.exactProblemOnCanvas,
           generateProblemOnOpen: flowInput.generateProblemOnOpen,
@@ -398,11 +397,10 @@ export async function applyHeliosMapToolsForAgent(input: {
           workspaceId: input.workspaceId,
         });
         if (!ensured.ok || !ensured.mapBlock.flowId) {
-          throw new Error(ensured.ok ? "create_flow_failed" : ensured.error);
+          throw new Error(ensured.ok ? "create_protocol_failed" : ensured.error);
         }
         return {
           id: ensured.mapBlock.flowId,
-          kind: flowInput.kind,
           name: flowInput.name,
           publicToken: ensured.mapBlock.flowPublicToken,
           publicPath: ensured.mapBlock.flowHref,

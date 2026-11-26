@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -184,9 +184,7 @@ describe("Simulation validation module remains pure (tab UI no longer primary ho
 
     expect(mod).toContain("export function validateWorkspaceSimulation");
 
-    const surface = read("components/SimulateInsightsSurface.tsx");
-    expect(surface).toContain("data-simulation-generate");
-    expect(surface).toContain("data-simulate-insights-keep");
+    expect(existsSync(join(process.cwd(), "components/SimulateInsightsSurface.tsx"))).toBe(false);
     expect(view).not.toContain("WorkspaceSimulationPanel");
     expect(view).not.toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
 

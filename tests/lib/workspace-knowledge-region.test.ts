@@ -554,8 +554,7 @@ describe("Knowledge Region wiring", () => {
     expect(page).not.toContain("handleCreateKnowledgeRegion");
     expect(page).toContain("errorMessageFromBody");
     expect(page).not.toContain("payload.error ||");
-    expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
-    expect(read("app/calibration/flows/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(read("app/protocols/new/page.tsx")).toContain("ProductFlowWizard");
     expect(read("components/product-flow/knowledge-region-create.tsx")).toContain(
       "RegionSimulationSetup",
     );

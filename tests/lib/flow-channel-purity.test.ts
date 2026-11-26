@@ -63,17 +63,12 @@ describe("enforced channel purity", () => {
   it("wires sensor idle into Learn, Verify, and Calibration", () => {
     const learn = read("components/SessionView.tsx");
     const tap = read("components/TapScoreClient.tsx");
-    const calibrate = read("components/CalibrationFlowRunner.tsx");
     const hook = read("components/session-view/use-learn-session-purity.ts");
     const signals = read("components/session-view/session-signals.tsx");
     expect(learn).toContain("sessionPurityArmed(enforcedChannels)");
     expect(learn).toContain("getSensorLive");
     expect(tap).toContain("sessionPurityArmed(enforcedChannelsRef.current)");
     expect(tap).toContain("enforcedSensorChannelsMissing");
-    expect(calibrate).not.toContain("useIleSessionPurity");
-    expect(calibrate).not.toContain("sessionPurityArmed");
-    expect(calibrate).not.toContain("IleSessionImpureScreen");
-    expect(calibrate).toContain("<TapSessionSignals />");
     expect(hook).toContain("shouldPenalizeEnforcedChannelIdle");
     expect(hook).toContain("if (!channels.audio) return");
     expect(signals).toContain("channels.muse");

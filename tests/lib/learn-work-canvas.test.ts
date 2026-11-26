@@ -780,7 +780,7 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("onLaserPointerUpdate");
     expect(canvas).toContain("finishLaserStroke");
     expect(canvas).not.toContain("data-ile-compress-work");
-    expect(canvas).toContain("IleCraftInsightButton");
+    expect(canvas).not.toContain("IleCraftInsightButton");
     expect(canvas).not.toContain("selectedElements: []");
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
     const view = read("components/SessionView.tsx");
@@ -1838,12 +1838,11 @@ describe("TAP Learning Work canvas chunking + Expand More quick actions (shipped
     expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
     expect(canvas).toContain("handleQuickAction(command.id)");
     expect(canvas).toContain("{command.label}");
-    expect(canvas).toContain("IleCraftInsightButton");
-    expect(canvas).toContain("ileCanvasCraftInsightUsable");
+    expect(canvas).not.toContain("IleCraftInsightButton");
+    expect(canvas).not.toContain("IleCanvasCraftInsightForm");
+    expect(canvas).not.toContain("function ileCanvasCraftInsightUsable");
+    expect(canvas).not.toContain("function ileCanvasShowsCraftInsight");
     expect(canvas).not.toContain("data-ile-compress-work");
-    const craftBtn = read("components/session-view/learn-canvas-craft-insight.tsx");
-    expect(craftBtn).toContain("data-ile-craft-insight");
-    expect(craftBtn).toContain("ILE_CRAFT_INSIGHT_LABEL");
     expect(canvas).toContain("runIleWorkCanvasCommand");
     expect(canvas).toContain("handleQuickAction(command.id)");
     expect(canvas).toContain("selectedElementIds");
@@ -2128,7 +2127,7 @@ describe("TAP Learning Work canvas compress work (shipped)", () => {
     expect(canvas).toContain("emitCommand");
     expect(canvas).toContain("runIleWorkCanvasCommand");
     expect(canvas).toContain("applyIleWorkCanvasAskReply");
-    expect(canvas).toContain("<IleCraftInsightButton");
+    expect(canvas).not.toContain("<IleCraftInsightButton");
     const view = read("components/SessionView.tsx");
     expect(view).toContain("buildIleWorkCanvasCommandUserMessage");
     expect(view).not.toContain("buildIleWorkCanvasCompressUserMessage");
@@ -2948,7 +2947,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(canvas).not.toContain("data-ile-learn-more-collapsed");
     expect(canvas).not.toContain("data-ile-learn-more-handle");
     expect(canvas).not.toContain("data-ile-compress-work");
-    expect(canvas).toContain("IleCraftInsightButton");
+    expect(canvas).not.toContain("IleCraftInsightButton");
     expect(canvas).toContain("Type / for a command");
     expect(canvas).not.toContain("Any questions?");
     expect(canvas).not.toContain("Prompt a question about this selection");

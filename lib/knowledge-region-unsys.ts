@@ -19,10 +19,6 @@ import {
   type LoadKnowledgeRegionCandidateResult,
 } from "@/lib/knowledge-region-candidate";
 import type { KnowledgeRegionDetailsRow } from "@/lib/knowledge-region-details";
-import {
-  parseDashboardKnowledgeRegionKind,
-  type DashboardKnowledgeRegionKind,
-} from "@/lib/dashboard-knowledge-regions";
 import { productFlowEmbeddingKind } from "@/lib/product-flow";
 import {
   hydrateSessionBranchModel,
@@ -34,13 +30,9 @@ export const DASHBOARD_KNOWLEDGE_REGION_UNSYS_PATH =
   "/api/dashboard/knowledge-regions";
 
 const REGION_SELECT =
-  "id, workspace_id, owner_user_id, product, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id, calibrate_flow_id, solve_flow_id";
+  "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id";
 
-const FLOW_TABLE: Record<DashboardKnowledgeRegionKind, string> = {
-  verification: "verify_flows",
-  calibration: "calibrate_flows",
-  solve: "solve_flows",
-};
+const FLOW_TABLE = "verify_flows";
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -282,9 +274,7 @@ function parseSubjects(value: unknown): Array<{
   return out;
 }
 
-function parentFlowId(row: KnowledgeRegionDetailsRow, kind: DashboardKnowledgeRegionKind): string {
-  if (kind === "calibration") return text(row.calibrate_flow_id);
-  if (kind === "solve") return text(row.solve_flow_id);
+function parentFlowId(row: KnowledgeRegionDetailsRow): string {
   return text(row.verify_flow_id);
 }
 
@@ -343,7 +333,6 @@ export function presentKnowledgeRegionUncertaintyModel(input: {
   runId?: string | null;
   parent: KnowledgeRegionDetailsRow;
   embeddings?: readonly StoredFlowEmbedding[];
-  kind: DashboardKnowledgeRegionKind;
   referenceModel?: SessionBranchModel | FlowGenModelRaw | null;
 }): KnowledgeRegionUncertaintyModelRender {
   const subjects = parseSubjects(input.parent.subjects);
@@ -393,12 +382,11 @@ export type LoadKnowledgeRegionUncertaintyModelResult =
 
 async function loadFlowUnsysSeed(
   supabase: ReturnType<typeof createAdminClient>,
-  kind: DashboardKnowledgeRegionKind,
   flowId: string,
 ): Promise<SessionBranchModel | null> {
   if (!flowId) return null;
   const { data } = await supabase
-    .from(FLOW_TABLE[kind])
+    .from(FLOW_TABLE)
     .select("answers_model_seed")
     .eq("id", flowId)
     .maybeSingle();
@@ -439,17 +427,12 @@ export async function loadKnowledgeRegionUncertaintyModel(input: {
   if (text(row.embedding_model_id) === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) {
     return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
   }
-  const kind = parseDashboardKnowledgeRegionKind(row.product);
-  if (!kind) {
-    return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
-  }
-
   const embeddings = await listFlowEmbeddingsForOwner({
     ownerUserId,
-    flowKind: productFlowEmbeddingKind(kind),
+    flowKind: productFlowEmbeddingKind(),
   });
   const parent = row as KnowledgeRegionDetailsRow;
-  const referenceModel = await loadFlowUnsysSeed(supabase, kind, parentFlowId(parent, kind));
+  const referenceModel = await loadFlowUnsysSeed(supabase, parentFlowId(parent));
 
   return {
     ok: true,
@@ -459,7 +442,6 @@ export async function loadKnowledgeRegionUncertaintyModel(input: {
       runId: input.runId,
       parent,
       embeddings,
-      kind,
       referenceModel,
     }),
   };

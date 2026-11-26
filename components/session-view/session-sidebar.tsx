@@ -17,6 +17,29 @@ const SECTION_LABEL = {
 const FOCUS_TAB_CLASS =
   "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono font-semibold uppercase tracking-[0.1em]";
 
+export function IleWorkCanvasTimer({
+  remainingSeconds,
+}: {
+  remainingSeconds: number;
+}) {
+  const m = Math.floor(Math.max(0, remainingSeconds) / 60);
+  const s = Math.max(0, remainingSeconds) % 60;
+  const label = `${m}:${String(s).padStart(2, "0")}`;
+  const urgent = remainingSeconds <= 15;
+  return (
+    <span
+      data-ile-work-canvas-timer
+      data-ile-work-canvas-timer-urgent={urgent ? "true" : undefined}
+      className={`font-mono text-lg font-semibold uppercase tracking-wider tabular-nums ${
+        urgent ? "text-amber-300" : "text-neutral-200"
+      }`}
+      title="Work canvas timer"
+    >
+      {label}
+    </span>
+  );
+}
+
 
 
 /**

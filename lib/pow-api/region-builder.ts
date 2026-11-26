@@ -34,7 +34,7 @@ export interface RegionBuilderFilters {
   /** all | human — tapbench is not a live option */
   source: RegionBuilderSourceFilter;
   /**
-   * Filter by Calibrate, Learn, or Verify link id or full share URL.
+   * Filter by knowledge verification protocols link id or full share URL.
    * Empty string = no link filter.
    */
   linkQuery?: string | null;

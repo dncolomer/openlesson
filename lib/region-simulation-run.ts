@@ -177,9 +177,7 @@ function knowledgeRegionWriteRow(input: {
     subjects: input.spec.subjects,
     updated_at: new Date().toISOString(),
     ...(input.createdBy ? { created_by: input.createdBy } : {}),
-    ...(input.kind === "verification" ? { verify_flow_id: input.flowId } : {}),
-    ...(input.kind === "calibration" ? { calibrate_flow_id: input.flowId } : {}),
-    ...(input.kind === "solve" ? { solve_flow_id: input.flowId } : {}),
+    verify_flow_id: input.flowId,
   };
 }
 
@@ -548,7 +546,6 @@ function detailsRowFromSpec(input: {
     id: input.id,
     name: input.name,
     description: input.description,
-    product: input.kind,
     owner_user_id: input.ownerUserId,
     workspace_id: input.workspaceId,
     subject_count: input.spec.subject_count,
@@ -558,9 +555,7 @@ function detailsRowFromSpec(input: {
     centroid: input.spec.centroid,
     cosine_threshold: input.spec.cosine_threshold,
     mean_radius: input.spec.mean_radius,
-    verify_flow_id: input.kind === "verification" ? input.flowId : undefined,
-    calibrate_flow_id: input.kind === "calibration" ? input.flowId : undefined,
-    solve_flow_id: input.kind === "solve" ? input.flowId : undefined,
+    verify_flow_id: input.flowId,
   };
 }
 
@@ -592,23 +587,15 @@ async function loadOwnedSimulationParent(input: {
   const { data, error } = await supabase
     .from("knowledge_regions")
     .select(
-      "id, name, product, workspace_id, owner_user_id, verify_flow_id, calibrate_flow_id, solve_flow_id, created_at",
+      "id, name, workspace_id, owner_user_id, verify_flow_id, created_at",
     )
     .eq("id", input.regionId)
     .eq("owner_user_id", input.ownerUserId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
-  const kind: ProductFlowKind =
-    data.product === "calibration" || data.product === "solve" || data.product === "verification"
-      ? data.product
-      : "verification";
-  const flowId =
-    kind === "calibration"
-      ? String(data.calibrate_flow_id || "").trim()
-      : kind === "solve"
-        ? String(data.solve_flow_id || "").trim()
-        : String(data.verify_flow_id || "").trim();
+  const kind: ProductFlowKind = "verification";
+  const flowId = String(data.verify_flow_id || "").trim();
   return {
     id: String(data.id),
     name: String(data.name || "").trim(),
@@ -628,9 +615,8 @@ async function loadOwnedSimulationClusters(input: {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("knowledge_regions")
-    .select("id, name, description, embedding_model_id, product")
-    .eq("owner_user_id", input.ownerUserId)
-    .eq("product", input.kind);
+    .select("id, name, description, embedding_model_id")
+    .eq("owner_user_id", input.ownerUserId);
   if (error) throw new Error(error.message);
   const out: LoadedSimulationCluster[] = [];
   for (const row of data || []) {
@@ -655,9 +641,8 @@ async function loadOwnedAiUseClusters(input: {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("knowledge_regions")
-    .select("id, name, description, embedding_model_id, product")
-    .eq("owner_user_id", input.ownerUserId)
-    .eq("product", input.kind);
+    .select("id, name, description, embedding_model_id")
+    .eq("owner_user_id", input.ownerUserId);
   if (error) throw new Error(error.message);
   const out: LoadedSimulationCluster[] = [];
   for (const row of data || []) {

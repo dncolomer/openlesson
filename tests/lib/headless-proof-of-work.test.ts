@@ -27,7 +27,8 @@ describe("deleted public headless proof-of-work", () => {
     expect(names).not.toContain("start_session");
     expect(names).not.toContain("upload_proof_of_work");
     expect(names).not.toContain("end_session");
-    expect(names).toContain("create_flow");
-    expect(names).toContain("link_flow");
+    expect(names).toContain("create_protocol");
+    expect(names).not.toContain("create_flow");
+    expect(names).not.toContain("link_flow");
   });
 });

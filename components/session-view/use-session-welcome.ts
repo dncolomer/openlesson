@@ -7,11 +7,13 @@ import {
   ILE_POW_EXPENSE_DEFAULT,
 } from "@/lib/learn-pow-spend";
 import {
-  clampIleMinInsightsPerChapter,
-  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  ILE_SESSION_INSIGHT_GOAL_DEFAULT,
+  clampIleSessionInsightGoal,
+} from "@/lib/learn-canvas-session";
+import {
   ILE_TURN_INSIGHT_SLOT_MAX,
   clampIleTurnInsightSlotMax,
-} from "@/lib/learn-turn-insights";
+} from "@/lib/learn-pregame-settings";
 import {
   ILE_GATHER_MAX_PER_SESSION,
   clampIleGatherMaxPerSession,
@@ -50,7 +52,7 @@ export function useSessionWelcomeState(sessionId: string) {
   const [allowParallelWork, setAllowParallelWork] = useState(true);
   const [allowGatherResources, setAllowGatherResources] = useState(true);
   const [minInsightsPerChapter, setMinInsightsPerChapter] = useState(
-    ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+    ILE_SESSION_INSIGHT_GOAL_DEFAULT,
   );
   const [autoAdvance, setAutoAdvance] = useState(false);
 
@@ -85,7 +87,7 @@ export function useSessionWelcomeState(sessionId: string) {
     setAllowGatherResources,
     minInsightsPerChapter,
     setMinInsightsPerChapter: (value: number) =>
-      setMinInsightsPerChapter(clampIleMinInsightsPerChapter(value)),
+      setMinInsightsPerChapter(clampIleSessionInsightGoal(value)),
     autoAdvance,
     setAutoAdvance,
   };

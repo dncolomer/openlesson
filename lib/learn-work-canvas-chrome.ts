@@ -800,18 +800,6 @@ export function ileCanvasSlashKeyOpensBar(input: {
 }
 
 /**
- * A selected element must not dismiss the craft insight form.
- * The learner closes it, or the save finishes.
- */
-export function ileCanvasCraftInsightOpenAfterSelection(input: {
-  open: boolean;
-  selectionActive: boolean;
-}): boolean {
-  void input.selectionActive;
-  return input.open;
-}
-
-/**
  * Commands is visible only while a selection exists. Empty ids hide it
  * even when the pointer is down (click-away must not leave it pinned).
  */

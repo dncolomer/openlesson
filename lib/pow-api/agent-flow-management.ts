@@ -1,34 +1,21 @@
 /**
- * Public agent flow CRUD — same Solve / Calibration / Verification stores
- * as cookie `/api/dashboard/flows`.
+ * Public agent protocol CRUD — same knowledge-verification store
+ * as cookie `/api/dashboard/protocols`.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MAP_BLOCK_COLUMN, normalizeMapBlock, serializeMapBlock } from "@/lib/block-kind";
 import {
-  MAP_BLOCK_COLUMN,
-  isFlowMapBlockKind,
-  serializeMapBlock,
-  type AuthoringMapBlockKind,
-} from "@/lib/block-kind";
-import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
-import {
-  getCalibrationFlowById,
-  listCalibrationFlows,
-  listCalibrationFlowsForOwnerUserId,
-  runCalibrationCommand,
-} from "@/lib/calibration-flow-repository";
-import {
-  acceptProductFlowPublish,
-  emptyProductFlowDraft,
+  acceptProtocolPublish,
+  emptyProtocolDraft,
   flowAuthoringSource,
   parseExactProblemOnCanvas,
-  parseProductFlowKind,
+  protocolChallengeFromUnknown,
+  rejectedProtocolKind,
   type FlowAuthoringSource,
-  type ProductFlowKind,
 } from "@/lib/product-flow";
 import {
   parseFlowArtifacts,
-  flowProblemFromUnknown,
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
 import {
@@ -36,16 +23,14 @@ import {
   uploadFlowArtifactBytes,
 } from "@/lib/flow-artifact-upload";
 import {
-  OPTIONAL_FLOW_ENFORCED_CHANNELS,
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import {
-  DEFAULT_FLOW_CANVAS_CAPTURE,
   parseFlowCanvasCapture,
   type FlowCanvasCapture,
 } from "@/lib/flow-canvas-capture";
-import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
+import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import {
   flowUnsysSeedFromModel,
@@ -56,13 +41,6 @@ import {
   runProductFlowUnsysGenerate,
 } from "@/lib/flow-unsys-generate";
 import { requestHasUnsysSeed } from "@/lib/unsys-tree-spec";
-import { solveFlowPublicPath } from "@/lib/solve-flow";
-import {
-  getSolveFlowById,
-  listSolveFlows,
-  listSolveFlowsForOwnerUserId,
-  runSolveCommand,
-} from "@/lib/solve-flow-repository";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
   getVerificationFlowById,
@@ -73,31 +51,20 @@ import {
 import type { AuthContext } from "./types";
 import { listWorkspaceBlocks, loadManagedWorkspace } from "./workspace-management";
 
-export type AgentFlowKind = ProductFlowKind;
-
-export type PresentedAgentFlow = {
+export type PresentedAgentProtocol = {
   id: string;
-  kind: AgentFlowKind;
   name: string;
-  topic: string | null;
-  goal: string | null;
+  challenge: string;
   questions: string[];
   artifacts: FlowArtifact[];
   duration_minutes: number | null;
   action_catalog: number | null;
-  /** Exclusive Author source after create/update coercion. */
   authoring_source: FlowAuthoringSource;
-  /** Solve / Verification: seed the Work canvas with the Problem as written. */
   exact_problem_on_canvas: boolean;
-  /** Generate the Problem from artifacts when a learner opens. */
   generate_problem_on_open: boolean;
-  /** Solve / Verification: author-prepared opening Work canvas. */
   opening_canvas_scene: IleWorkCanvasScene | null;
-  /** Author Unsys seed used when a learner runs this flow. */
   answers_model_seed: Record<string, unknown> | null;
-  /** Channels the run requires. Calibration is always all-off. */
   enforced_channels: FlowEnforcedChannels;
-  /** Solve / Verification: mermaid documents of the Work canvas. Default off. */
   canvas_capture: FlowCanvasCapture;
   public_token: string;
   workspace_id: string | null;
@@ -106,9 +73,12 @@ export type PresentedAgentFlow = {
   updated_at: string;
 };
 
+/** @deprecated Use PresentedAgentProtocol. */
+export type PresentedAgentFlow = PresentedAgentProtocol;
+
 function ownerUserId(auth: AuthContext): string {
   const id = String(auth.user_id || "").trim();
-  if (!id) throw new Error("No user available to own this flow");
+  if (!id) throw new Error("No user available to own this protocol");
   return id;
 }
 
@@ -136,7 +106,7 @@ function questionsFrom(value: unknown): string[] {
 }
 
 function presentWizardFields(flow: {
-  kind: AgentFlowKind;
+  challenge?: string | null;
   topic?: string | null;
   artifacts?: unknown;
   exactProblemOnCanvas?: boolean;
@@ -146,7 +116,7 @@ function presentWizardFields(flow: {
   enforcedChannels?: unknown;
   canvasCapture?: unknown;
 }): Pick<
-  PresentedAgentFlow,
+  PresentedAgentProtocol,
   | "authoring_source"
   | "exact_problem_on_canvas"
   | "generate_problem_on_open"
@@ -156,13 +126,10 @@ function presentWizardFields(flow: {
   | "canvas_capture"
 > {
   const artifacts = parseFlowArtifacts(flow.artifacts);
-  const openingCanvasScene = parseFlowOpeningCanvasSceneForKind(
-    flow.kind,
-    flow.openingCanvasScene,
-  );
+  const openingCanvasScene = parseFlowOpeningCanvasScene(flow.openingCanvasScene);
   const generateProblemOnOpen = parseExactProblemOnCanvas(flow.generateProblemOnOpen);
   const authoring_source = flowAuthoringSource({
-    kind: flow.kind,
+    challenge: flow.challenge,
     topic: flow.topic,
     generateProblemOnOpen,
     artifacts,
@@ -170,103 +137,16 @@ function presentWizardFields(flow: {
   });
   return {
     authoring_source,
-    exact_problem_on_canvas:
-      flow.kind === "calibration"
-        ? false
-        : parseExactProblemOnCanvas(flow.exactProblemOnCanvas),
+    exact_problem_on_canvas: parseExactProblemOnCanvas(flow.exactProblemOnCanvas),
     generate_problem_on_open: generateProblemOnOpen,
-    opening_canvas_scene: flow.kind === "calibration" ? null : openingCanvasScene,
+    opening_canvas_scene: openingCanvasScene,
     answers_model_seed: serializeFlowUnsysSeed(flow.answersModelSeed),
-    enforced_channels:
-      flow.kind === "calibration"
-        ? { ...OPTIONAL_FLOW_ENFORCED_CHANNELS }
-        : parseFlowEnforcedChannels(flow.enforcedChannels),
-    canvas_capture:
-      flow.kind === "calibration"
-        ? { ...DEFAULT_FLOW_CANVAS_CAPTURE }
-        : parseFlowCanvasCapture(flow.canvasCapture),
+    enforced_channels: parseFlowEnforcedChannels(flow.enforcedChannels),
+    canvas_capture: parseFlowCanvasCapture(flow.canvasCapture),
   };
 }
 
-function presentSolve(flow: {
-  id: string;
-  name: string;
-  topic: string;
-  artifacts?: FlowArtifact[];
-  durationMinutes: number;
-  actionCatalog: number;
-  exactProblemOnCanvas?: boolean;
-  generateProblemOnOpen?: boolean;
-  answersModelSeed?: unknown;
-  enforcedChannels?: unknown;
-  canvasCapture?: unknown;
-  publicToken: string;
-  workspaceId: string;
-  ownerUserId?: string;
-  createdAt: string;
-  updatedAt: string;
-}): PresentedAgentFlow {
-  return {
-    id: flow.id,
-    kind: "solve",
-    name: flow.name,
-    topic: flow.topic,
-    goal: null,
-    questions: [],
-    artifacts: parseFlowArtifacts(flow.artifacts),
-    duration_minutes: flow.durationMinutes,
-    action_catalog: flow.actionCatalog,
-    ...presentWizardFields({ kind: "solve", ...flow }),
-    public_token: flow.publicToken,
-    workspace_id: presentWorkspaceId(flow.workspaceId),
-    owner_user_id: flow.ownerUserId || null,
-    created_at: flow.createdAt,
-    updated_at: flow.updatedAt,
-  };
-}
-
-function presentCalibration(flow: {
-  id: string;
-  name: string;
-  goal: string;
-  topic?: string;
-  questions: unknown;
-  artifacts?: FlowArtifact[];
-  durationMinutes: number;
-  actionCatalog: number;
-  generateProblemOnOpen?: boolean;
-  answersModelSeed?: unknown;
-  enforcedChannels?: unknown;
-  publicToken: string;
-  workspaceId: string;
-  ownerUserId?: string;
-  createdAt: string;
-  updatedAt: string;
-}): PresentedAgentFlow {
-  return {
-    id: flow.id,
-    kind: "calibration",
-    name: flow.name,
-    topic: flow.topic || flow.goal,
-    goal: flow.goal,
-    questions: questionsFrom(flow.questions),
-    artifacts: parseFlowArtifacts(flow.artifacts),
-    duration_minutes: flow.durationMinutes,
-    action_catalog: flow.actionCatalog,
-    ...presentWizardFields({
-      kind: "calibration",
-      ...flow,
-      topic: flow.topic || flow.goal,
-    }),
-    public_token: flow.publicToken,
-    workspace_id: presentWorkspaceId(flow.workspaceId),
-    owner_user_id: flow.ownerUserId || null,
-    created_at: flow.createdAt,
-    updated_at: flow.updatedAt,
-  };
-}
-
-function presentVerification(flow: {
+export function presentAgentProtocol(flow: {
   id: string;
   name: string;
   topic: string;
@@ -279,23 +159,23 @@ function presentVerification(flow: {
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
   canvasCapture?: unknown;
+  openingCanvasScene?: unknown;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
   createdAt: string;
   updatedAt: string;
-}): PresentedAgentFlow {
+}): PresentedAgentProtocol {
+  const challenge = String(flow.topic || "").trim();
   return {
     id: flow.id,
-    kind: "verification",
     name: flow.name,
-    topic: flow.topic,
-    goal: null,
+    challenge,
     questions: questionsFrom(flow.questions),
     artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes ?? null,
     action_catalog: flow.actionCatalog,
-    ...presentWizardFields({ kind: "verification", ...flow }),
+    ...presentWizardFields({ ...flow, challenge, topic: challenge }),
     public_token: flow.publicToken,
     workspace_id: presentWorkspaceId(flow.workspaceId),
     owner_user_id: flow.ownerUserId || null,
@@ -306,7 +186,9 @@ function presentVerification(flow: {
 
 function publishReason(reason: string): string {
   if (reason === "name_required") return "name is required";
-  if (reason === "topic_required") return "topic is required";
+  if (reason === "challenge_required" || reason === "topic_required") {
+    return "challenge is required";
+  }
   return reason;
 }
 
@@ -328,73 +210,70 @@ function wantsGenerateUnsys(body: Record<string, unknown>): boolean {
   return false;
 }
 
-export function parseAgentFlowKind(value: unknown): AgentFlowKind | null {
-  return parseProductFlowKind(value);
+export function parseAgentFlowKind(value: unknown): null {
+  void value;
+  return null;
 }
 
-export type ListAgentFlowsInput = {
+function assertNoRetiredKind(body: Record<string, unknown>): void {
+  const kind = body.kind ?? body.type ?? body.product;
+  if (rejectedProtocolKind(kind)) {
+    throw new Error("Only knowledge verification protocols are supported");
+  }
+}
+
+export type ListAgentProtocolsInput = {
   ownerUserId: string;
   workspaceId?: string;
-  kind?: AgentFlowKind;
 };
+
+export type ListAgentFlowsInput = ListAgentProtocolsInput & { kind?: unknown };
+
+export async function listAgentProtocols(
+  input: ListAgentProtocolsInput | string,
+): Promise<PresentedAgentProtocol[]> {
+  const filter: ListAgentProtocolsInput =
+    typeof input === "string" ? { ownerUserId: "", workspaceId: input } : input;
+  const workspaceId = optionalWorkspaceId(filter.workspaceId);
+  const ownerUserId = String(filter.ownerUserId || "").trim();
+  const verification = workspaceId
+    ? await listVerificationFlows(workspaceId)
+    : await listVerificationFlowsForOwnerUserId(ownerUserId);
+  const presented = verification.map(presentAgentProtocol);
+  if (!ownerUserId) return presented;
+  return presented.filter((flow) => flow.owner_user_id === ownerUserId);
+}
 
 export async function listAgentFlows(
   input: ListAgentFlowsInput | string,
-): Promise<PresentedAgentFlow[]> {
-  const filter: ListAgentFlowsInput =
-    typeof input === "string"
-      ? { ownerUserId: "", workspaceId: input }
-      : input;
-  const workspaceId = optionalWorkspaceId(filter.workspaceId);
-  const ownerUserId = String(filter.ownerUserId || "").trim();
-  const kind = filter.kind;
-  const [solve, calibration, verification] = await Promise.all([
-    !kind || kind === "solve"
-      ? workspaceId
-        ? listSolveFlows(workspaceId)
-        : listSolveFlowsForOwnerUserId(ownerUserId)
-      : [],
-    !kind || kind === "calibration"
-      ? workspaceId
-        ? listCalibrationFlows(workspaceId)
-        : listCalibrationFlowsForOwnerUserId(ownerUserId)
-      : [],
-    !kind || kind === "verification"
-      ? workspaceId
-        ? listVerificationFlows(workspaceId)
-        : listVerificationFlowsForOwnerUserId(ownerUserId)
-      : [],
-  ]);
-  const presented = [
-    ...solve.map(presentSolve),
-    ...calibration.map(presentCalibration),
-    ...verification.map(presentVerification),
-  ];
-  if (!ownerUserId) return presented;
-  return presented.filter((flow) => flow.owner_user_id === ownerUserId);
+): Promise<PresentedAgentProtocol[]> {
+  if (typeof input !== "string" && rejectedProtocolKind(input.kind)) {
+    throw new Error("Only knowledge verification protocols are supported");
+  }
+  return listAgentProtocols(input);
+}
+
+export async function getAgentProtocol(
+  workspaceId: string | null | undefined,
+  protocolId: string,
+  ownerUserId?: string,
+): Promise<PresentedAgentProtocol | null> {
+  const mapId = optionalWorkspaceId(workspaceId);
+  const owner = String(ownerUserId || "").trim();
+  const verification = await getVerificationFlowById(protocolId);
+  const presented = verification ? presentAgentProtocol(verification) : null;
+  if (!presented) return null;
+  if (mapId && presented.workspace_id && presented.workspace_id !== mapId) return null;
+  if (owner && presented.owner_user_id !== owner) return null;
+  return presented;
 }
 
 export async function getAgentFlow(
   workspaceId: string | null | undefined,
   flowId: string,
   ownerUserId?: string,
-): Promise<PresentedAgentFlow | null> {
-  const mapId = optionalWorkspaceId(workspaceId);
-  const owner = String(ownerUserId || "").trim();
-  const solve = await getSolveFlowById(flowId);
-  const calibration = await getCalibrationFlowById(flowId);
-  const verification = await getVerificationFlowById(flowId);
-  const presented = solve
-    ? presentSolve(solve)
-    : calibration
-      ? presentCalibration(calibration)
-      : verification
-        ? presentVerification(verification)
-        : null;
-  if (!presented) return null;
-  if (mapId && presented.workspace_id && presented.workspace_id !== mapId) return null;
-  if (owner && presented.owner_user_id !== owner) return null;
-  return presented;
+): Promise<PresentedAgentProtocol | null> {
+  return getAgentProtocol(workspaceId, flowId, ownerUserId);
 }
 
 export async function uploadAgentFlowFile(
@@ -423,21 +302,18 @@ export async function generateAgentFlowUnsysSeed(
   };
 }
 
-export async function createAgentFlow(
+export async function createAgentProtocol(
   auth: AuthContext,
   workspaceId: string | null | undefined,
   body: Record<string, unknown>,
-): Promise<PresentedAgentFlow> {
-  const kind = parseAgentFlowKind(body.kind);
-  if (!kind) {
-    throw new Error("kind must be solve, calibration, or verification");
-  }
+): Promise<PresentedAgentProtocol> {
+  assertNoRetiredKind(body);
   const owner = ownerUserId(auth);
   const mapId =
     optionalWorkspaceId(workspaceId) ||
     optionalWorkspaceId(body.workspace_id || body.workspaceId);
   const name = String(body.name || "").trim();
-  const problem = flowProblemFromUnknown(body);
+  const challenge = protocolChallengeFromUnknown(body);
   const artifacts = await resolveFlowArtifactsFromBody({
     artifacts: body.artifacts,
     files: body.files,
@@ -446,26 +322,23 @@ export async function createAgentFlow(
   });
   const answersModelSeed = await generateFlowUnsysSeedFromBody({
     ...body,
-    kind,
     artifacts,
-    problem: problem || name,
-    topic: problem || name,
-    goal: problem || name,
+    problem: challenge || name,
+    topic: challenge || name,
+    challenge: challenge || name,
     name,
   });
   const draft = {
-    ...emptyProductFlowDraft(kind),
+    ...emptyProtocolDraft(),
     name,
-    topic: problem,
-    goal: problem,
+    challenge,
     artifacts,
     actionCatalog: optionalNumber(body.action_catalog, body.actionCatalog) ?? 4,
     durationMinutes: optionalNumber(body.duration_minutes, body.durationMinutes) ?? 15,
     exactProblemOnCanvas: parseExactProblemOnCanvas(
       body.exact_problem_on_canvas ?? body.exactProblemOnCanvas,
     ),
-    openingCanvasScene: parseFlowOpeningCanvasSceneForKind(
-      kind,
+    openingCanvasScene: parseFlowOpeningCanvasScene(
       body.opening_canvas_scene ?? body.openingCanvasScene,
     ),
     generateProblemOnOpen: parseExactProblemOnCanvas(
@@ -477,59 +350,15 @@ export async function createAgentFlow(
     ),
     canvasCapture: parseFlowCanvasCapture(body.canvas_capture ?? body.canvasCapture),
   };
-  const accepted = acceptProductFlowPublish(draft);
+  const accepted = acceptProtocolPublish(draft);
   if (!accepted.ok) throw new Error(publishReason(accepted.reason));
-
-  if (kind === "solve") {
-    const created = await runSolveCommand({
-      type: "create",
-      ownerUserId: owner,
-      workspaceId: mapId,
-      name: accepted.name,
-      topic: accepted.topic,
-      artifacts: accepted.artifacts,
-      exactProblemOnCanvas: accepted.exactProblemOnCanvas,
-      openingCanvasScene: accepted.openingCanvasScene,
-      generateProblemOnOpen: accepted.generateProblemOnOpen,
-      durationMinutes: accepted.durationMinutes,
-      actionCatalog: accepted.actionCatalog,
-      answersModelSeed: accepted.answersModelSeed,
-      enforcedChannels: accepted.enforcedChannels,
-      canvasCapture: accepted.canvasCapture,
-    });
-    if (!created.ok || !created.flow) {
-      throw new Error(created.ok ? "create_failed" : created.reason);
-    }
-    return presentSolve(created.flow);
-  }
-
-  if (kind === "calibration") {
-    const created = await runCalibrationCommand({
-      type: "create",
-      ownerUserId: owner,
-      workspaceId: mapId,
-      name: accepted.name,
-      goal: accepted.goal,
-      topic: accepted.topic,
-      artifacts: accepted.artifacts,
-      generateProblemOnOpen: accepted.generateProblemOnOpen,
-      durationMinutes: accepted.durationMinutes,
-      actionCatalog: accepted.actionCatalog,
-      answersModelSeed: accepted.answersModelSeed,
-      enforcedChannels: accepted.enforcedChannels,
-    });
-    if (!created.ok || !created.flow) {
-      throw new Error(created.ok ? "create_failed" : created.reason);
-    }
-    return presentCalibration(created.flow);
-  }
 
   const created = await runVerificationCommand({
     type: "create",
     ownerUserId: owner,
     workspaceId: mapId,
     name: accepted.name,
-    topic: accepted.topic,
+    topic: accepted.challenge,
     artifacts: accepted.artifacts,
     exactProblemOnCanvas: accepted.exactProblemOnCanvas,
     openingCanvasScene: accepted.openingCanvasScene,
@@ -543,23 +372,35 @@ export async function createAgentFlow(
   if (!created.ok || !created.flow) {
     throw new Error(created.ok ? "create_failed" : created.reason);
   }
-  return presentVerification(created.flow);
+  return presentAgentProtocol(created.flow);
 }
 
-export async function updateAgentFlow(
+export async function createAgentFlow(
   auth: AuthContext,
   workspaceId: string | null | undefined,
-  flowId: string,
   body: Record<string, unknown>,
-): Promise<PresentedAgentFlow> {
+): Promise<PresentedAgentProtocol> {
+  return createAgentProtocol(auth, workspaceId, body);
+}
+
+export async function updateAgentProtocol(
+  auth: AuthContext,
+  workspaceId: string | null | undefined,
+  protocolId: string,
+  body: Record<string, unknown>,
+): Promise<PresentedAgentProtocol> {
+  assertNoRetiredKind(body);
   const owner = ownerUserId(auth);
-  const existing = await getAgentFlow(workspaceId, flowId, owner);
-  if (!existing) throw new Error("Flow not found.");
+  const existing = await getAgentProtocol(workspaceId, protocolId, owner);
+  if (!existing) throw new Error("Protocol not found.");
   const name = body.name === undefined ? undefined : String(body.name || "").trim();
-  const problem =
-    body.problem === undefined && body.topic === undefined && body.goal === undefined
+  const challenge =
+    body.challenge === undefined &&
+    body.problem === undefined &&
+    body.topic === undefined &&
+    body.goal === undefined
       ? undefined
-      : flowProblemFromUnknown(body);
+      : protocolChallengeFromUnknown(body);
   const artifacts =
     body.artifacts === undefined && body.files === undefined
       ? undefined
@@ -582,8 +423,7 @@ export async function updateAgentFlow(
   const openingCanvasScene =
     body.opening_canvas_scene === undefined && body.openingCanvasScene === undefined
       ? undefined
-      : parseFlowOpeningCanvasSceneForKind(
-          existing.kind,
+      : parseFlowOpeningCanvasScene(
           body.opening_canvas_scene ?? body.openingCanvasScene,
         );
   const answersModelSeed =
@@ -591,11 +431,10 @@ export async function updateAgentFlow(
       ? undefined
       : await generateFlowUnsysSeedFromBody({
           ...body,
-          kind: existing.kind,
           artifacts: artifacts ?? existing.artifacts,
-          problem: problem || existing.topic || existing.goal || existing.name,
-          topic: problem || existing.topic || existing.name,
-          goal: problem || existing.goal || existing.topic || existing.name,
+          problem: challenge || existing.challenge || existing.name,
+          topic: challenge || existing.challenge || existing.name,
+          challenge: challenge || existing.challenge || existing.name,
           name: name || existing.name,
         });
   const enforcedChannels =
@@ -607,59 +446,13 @@ export async function updateAgentFlow(
       ? undefined
       : parseFlowCanvasCapture(body.canvas_capture ?? body.canvasCapture);
 
-  if (existing.kind === "solve") {
-    const updated = await runSolveCommand({
-      type: "update",
-      ownerUserId: owner,
-      workspaceId: existing.workspace_id || undefined,
-      flowId,
-      name,
-      topic: problem,
-      artifacts,
-      exactProblemOnCanvas,
-      openingCanvasScene,
-      generateProblemOnOpen,
-      durationMinutes,
-      actionCatalog,
-      answersModelSeed,
-      enforcedChannels,
-      canvasCapture,
-    });
-    if (!updated.ok || !updated.flow) {
-      throw new Error(updated.ok ? "update_failed" : updated.reason);
-    }
-    return presentSolve(updated.flow);
-  }
-
-  if (existing.kind === "calibration") {
-    const updated = await runCalibrationCommand({
-      type: "update",
-      ownerUserId: owner,
-      workspaceId: existing.workspace_id || undefined,
-      flowId,
-      name,
-      goal: problem,
-      topic: problem,
-      artifacts,
-      generateProblemOnOpen,
-      durationMinutes,
-      actionCatalog,
-      answersModelSeed,
-      enforcedChannels,
-    });
-    if (!updated.ok || !updated.flow) {
-      throw new Error(updated.ok ? "update_failed" : updated.reason);
-    }
-    return presentCalibration(updated.flow);
-  }
-
   const updated = await runVerificationCommand({
     type: "update",
     ownerUserId: owner,
     workspaceId: existing.workspace_id || undefined,
-    flowId,
+    flowId: protocolId,
     name,
-    topic: problem,
+    topic: challenge,
     artifacts,
     exactProblemOnCanvas,
     openingCanvasScene,
@@ -673,46 +466,41 @@ export async function updateAgentFlow(
   if (!updated.ok || !updated.flow) {
     throw new Error(updated.ok ? "update_failed" : updated.reason);
   }
-  return presentVerification(updated.flow);
+  return presentAgentProtocol(updated.flow);
 }
 
-function flowTileKind(kind: AgentFlowKind): AuthoringMapBlockKind {
-  return kind;
+export async function updateAgentFlow(
+  auth: AuthContext,
+  workspaceId: string | null | undefined,
+  flowId: string,
+  body: Record<string, unknown>,
+): Promise<PresentedAgentProtocol> {
+  return updateAgentProtocol(auth, workspaceId, flowId, body);
+}
+
+export async function deleteAgentProtocol(
+  auth: AuthContext,
+  protocolId: string,
+): Promise<{ deleted: true; protocol_id: string }> {
+  const owner = ownerUserId(auth);
+  const existing = await getAgentProtocol(undefined, protocolId, owner);
+  if (!existing) throw new Error("Protocol not found.");
+  const removed = await runVerificationCommand({
+    type: "remove",
+    ownerUserId: owner,
+    workspaceId: existing.workspace_id || undefined,
+    flowId: protocolId,
+  });
+  if (!removed.ok) throw new Error(removed.reason);
+  return { deleted: true, protocol_id: protocolId };
 }
 
 export async function deleteAgentFlow(
   auth: AuthContext,
   flowId: string,
-): Promise<{ deleted: true; flow_id: string; kind: AgentFlowKind }> {
-  const owner = ownerUserId(auth);
-  const existing = await getAgentFlow(undefined, flowId, owner);
-  if (!existing) throw new Error("Flow not found.");
-  if (existing.kind === "solve") {
-    const removed = await runSolveCommand({
-      type: "remove",
-      ownerUserId: owner,
-      workspaceId: existing.workspace_id || undefined,
-      flowId,
-    });
-    if (!removed.ok) throw new Error(removed.reason);
-  } else if (existing.kind === "calibration") {
-    const removed = await runCalibrationCommand({
-      type: "remove",
-      ownerUserId: owner,
-      workspaceId: existing.workspace_id || undefined,
-      flowId,
-    });
-    if (!removed.ok) throw new Error(removed.reason);
-  } else {
-    const removed = await runVerificationCommand({
-      type: "remove",
-      ownerUserId: owner,
-      workspaceId: existing.workspace_id || undefined,
-      flowId,
-    });
-    if (!removed.ok) throw new Error(removed.reason);
-  }
-  return { deleted: true, flow_id: flowId, kind: existing.kind };
+): Promise<{ deleted: true; protocol_id: string; flow_id: string }> {
+  const result = await deleteAgentProtocol(auth, flowId);
+  return { ...result, flow_id: result.protocol_id };
 }
 
 export async function linkAgentFlowToBlock(
@@ -721,31 +509,29 @@ export async function linkAgentFlowToBlock(
   workspaceId: string,
   flowId: string,
   blockId: string,
-): Promise<{ flow: PresentedAgentFlow; block_id: string; map_block: Record<string, unknown> }> {
+): Promise<{
+  protocol: PresentedAgentProtocol;
+  flow: PresentedAgentProtocol;
+  block_id: string;
+  map_block: Record<string, unknown>;
+}> {
   const workspace = await loadManagedWorkspace(supabase, auth, workspaceId);
   if (!workspace) throw new Error("Workspace not found.");
-  const flow = await getAgentFlow(undefined, flowId, ownerUserId(auth));
-  if (!flow) throw new Error("Flow not found.");
+  const flow = await getAgentProtocol(undefined, flowId, ownerUserId(auth));
+  if (!flow) throw new Error("Protocol not found.");
   const blockIdTrim = String(blockId || "").trim();
   if (!blockIdTrim) throw new Error("block_id is required.");
   const blocks = await listWorkspaceBlocks(supabase, workspaceId);
   const block = blocks.find((row) => String(row.id) === blockIdTrim);
   if (!block) throw new Error("Block not found in this workspace.");
-  const kind = flowTileKind(flow.kind);
-  if (!isFlowMapBlockKind(kind)) throw new Error("Flow kind cannot be placed on a map tile.");
-  const href =
-    kind === "calibration"
-      ? calibrationFlowPublicPath(flow.public_token)
-      : kind === "verification"
-        ? verificationFlowPublicPath(flow.public_token)
-        : solveFlowPublicPath(flow.public_token);
-  const mapBlock = {
-    kind,
+  const href = verificationFlowPublicPath(flow.public_token);
+  const mapBlock = normalizeMapBlock({
+    kind: "verification",
     flowId: flow.id,
     flowPublicToken: flow.public_token,
     flowHref: href,
     attachments: [],
-  };
+  });
   const serialized = serializeMapBlock(mapBlock);
   if (!serialized) throw new Error("Failed to serialize map block.");
   const { error } = await supabase
@@ -754,5 +540,5 @@ export async function linkAgentFlowToBlock(
     .eq("id", blockIdTrim)
     .eq("workspace_id", workspaceId);
   if (error) throw new Error(error.message);
-  return { flow, block_id: blockIdTrim, map_block: serialized };
+  return { protocol: flow, flow, block_id: blockIdTrim, map_block: serialized };
 }

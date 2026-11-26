@@ -1,10 +1,10 @@
 /**
- * Canonical types for Learning Maps, Calibrate/Verify/Solve flows, sessions,
- * proof of work, embeddings, and knowledge regions.
+ * Canonical types for Learning Maps, knowledge verification protocols,
+ * sessions, proof of work, embeddings, and knowledge regions.
  * Storage adapters and UI may use older names; this module is the contract.
  */
 
-export const SESSION_KINDS = ["learn", "calibrate", "verify", "solve"] as const;
+export const SESSION_KINDS = ["learn", "verify"] as const;
 export type SessionKind = (typeof SESSION_KINDS)[number];
 
 export const SESSION_STATUSES = ["pending", "in_progress", "completed", "revoked"] as const;
@@ -13,7 +13,7 @@ export type SessionStatus = (typeof SESSION_STATUSES)[number];
 export const PROOF_OF_WORK_TYPES = ["tool", "screen", "video", "eeg"] as const;
 export type ProofOfWorkType = (typeof PROOF_OF_WORK_TYPES)[number];
 
-export const EMBEDDING_FAMILIES = ["learn", "calibrate", "verify", "solve"] as const;
+export const EMBEDDING_FAMILIES = ["verify"] as const;
 export type EmbeddingFamily = (typeof EMBEDDING_FAMILIES)[number];
 
 export const SOUNDING_BANDS = ["unranked", "lost", "localized", "coverage"] as const;
@@ -28,17 +28,9 @@ export type ExpertProofChoice = (typeof EXPERT_PROOF_CHOICES)[number];
 export const FLOW_EMBEDDING_ALGORITHM_V1 = "flowcfg-v1-d96" as const;
 export const FLOW_EMBEDDING_DIM_V1 = 96 as const;
 
-export const LEARN_EMBEDDING_MODEL_ID = "learn-flowcfg-v1-d96" as const;
-export const CALIBRATE_EMBEDDING_MODEL_ID = "calibrate-flowcfg-v1-d96" as const;
 export const VERIFY_EMBEDDING_MODEL_ID = "verify-flowcfg-v1-d96" as const;
-export const SOLVE_EMBEDDING_MODEL_ID = "solve-flowcfg-v1-d96" as const;
 
-export const EMBEDDING_MODEL_IDS = [
-  LEARN_EMBEDDING_MODEL_ID,
-  CALIBRATE_EMBEDDING_MODEL_ID,
-  VERIFY_EMBEDDING_MODEL_ID,
-  SOLVE_EMBEDDING_MODEL_ID,
-] as const;
+export const EMBEDDING_MODEL_IDS = [VERIFY_EMBEDDING_MODEL_ID] as const;
 export type EmbeddingModelId = (typeof EMBEDDING_MODEL_IDS)[number];
 
 export const POW_MODEL_VERSION = "pow-model-v1" as const;
@@ -116,49 +108,25 @@ export type EmbeddingModel = {
 
 export const EMBEDDING_MODELS_V1: readonly EmbeddingModel[] = [
   {
-    id: LEARN_EMBEDDING_MODEL_ID,
-    family: "learn",
-    version: "v1",
-    algorithmId: FLOW_EMBEDDING_ALGORITHM_V1,
-    dim: FLOW_EMBEDDING_DIM_V1,
-  },
-  {
-    id: CALIBRATE_EMBEDDING_MODEL_ID,
-    family: "calibrate",
-    version: "v1",
-    algorithmId: FLOW_EMBEDDING_ALGORITHM_V1,
-    dim: FLOW_EMBEDDING_DIM_V1,
-  },
-  {
     id: VERIFY_EMBEDDING_MODEL_ID,
     family: "verify",
     version: "v1",
     algorithmId: FLOW_EMBEDDING_ALGORITHM_V1,
     dim: FLOW_EMBEDDING_DIM_V1,
   },
-  {
-    id: SOLVE_EMBEDDING_MODEL_ID,
-    family: "solve",
-    version: "v1",
-    algorithmId: FLOW_EMBEDDING_ALGORITHM_V1,
-    dim: FLOW_EMBEDDING_DIM_V1,
-  },
 ];
 
-export function embeddingModelIdForFamily(family: EmbeddingFamily): EmbeddingModelId {
-  if (family === "calibrate") return CALIBRATE_EMBEDDING_MODEL_ID;
-  if (family === "verify") return VERIFY_EMBEDDING_MODEL_ID;
-  if (family === "solve") return SOLVE_EMBEDDING_MODEL_ID;
-  return LEARN_EMBEDDING_MODEL_ID;
+export function embeddingModelIdForFamily(_family?: EmbeddingFamily): EmbeddingModelId {
+  return VERIFY_EMBEDDING_MODEL_ID;
 }
 
-/** True when this session belongs to a Solve flow, not a map Learn tile. */
+/** Always false as a product. Leftover metadata may still carry a solve_flow_id. */
 export function isSolveSession(row: {
   kind?: unknown;
   solve_flow_id?: unknown;
   solveFlowId?: unknown;
 }): boolean {
-  if (parseSessionKind(row.kind) === "solve") return true;
+  void row.kind;
   return Boolean(String(row.solve_flow_id ?? row.solveFlowId ?? "").trim());
 }
 
@@ -244,12 +212,6 @@ export function parseSessionResult(value: unknown): SessionResult | null {
       projectedPolicy: parseProjectedPolicy(record.projectedPolicy),
     };
   }
-  if (kind === "solve") {
-    return {
-      kind: "solve",
-      projectedPolicy: parseProjectedPolicy(record.projectedPolicy),
-    };
-  }
   if (kind === "verify") {
     const answers = Array.isArray(record.answers)
       ? record.answers.flatMap((item): VerifyAnswer[] => {
@@ -282,34 +244,6 @@ export function parseSessionResult(value: unknown): SessionResult | null {
           ? record.knowledgeRegionId
           : null,
       answers,
-    };
-  }
-  if (kind === "calibrate") {
-    const classification = parseSoundingClassification(record.classification);
-    if (!classification) return null;
-    let expertProof: CalibrateExpertProof | null = null;
-    const rawProof = record.expertProof;
-    if (rawProof && typeof rawProof === "object" && !Array.isArray(rawProof)) {
-      const proof = rawProof as Record<string, unknown>;
-      const questionId = typeof proof.questionId === "string" ? proof.questionId.trim() : "";
-      if (questionId) {
-        const choice = EXPERT_PROOF_CHOICES.includes(proof.choice as ExpertProofChoice)
-          ? (proof.choice as ExpertProofChoice)
-          : null;
-        expertProof = {
-          questionId,
-          source: proof.source === "trusted" ? "trusted" : "gap",
-          choice,
-          transcript: typeof proof.transcript === "string" ? proof.transcript : null,
-        };
-      }
-    }
-    return {
-      kind: "calibrate",
-      uncertainQuestionIds: asStringArray(record.uncertainQuestionIds),
-      trustedQuestionIds: asStringArray(record.trustedQuestionIds),
-      classification,
-      expertProof,
     };
   }
   return null;

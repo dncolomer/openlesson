@@ -232,13 +232,7 @@ export function WorkspaceBlockDetailPane({
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId="open_flow"
-          title={
-            parsedMapBlock.kind === "calibration"
-              ? "Calibration"
-              : parsedMapBlock.kind === "solve"
-                ? "Solve"
-                : "Verification"
-          }
+          title="Protocol"
           defaultExpanded
           bodyClassName="space-y-3"
         >
@@ -512,17 +506,13 @@ function TypedBlockTargetEditor({
       </div>
     );
   }
-  if (
-    mapBlock.kind !== "calibration" &&
-    mapBlock.kind !== "verification" &&
-    mapBlock.kind !== "solve"
-  ) {
+  if (mapBlock.kind !== "verification" && mapBlock.kind !== "protocol") {
     return null;
   }
   return (
     <div className="pt-3" data-typed-block-flow-edit>
       <WorkspaceOwnerFlowPicker
-        kind={mapBlock.kind}
+        kind="verification"
         selectedId={mapBlock.flowId}
         disabled={busy || saving}
         onChange={(flow: DashboardRecentFlow | null) => {

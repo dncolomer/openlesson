@@ -1,10 +1,10 @@
 /**
- * Deterministic embeddings for a completed Calibrate, Learn, or Verify run.
+ * Deterministic embeddings for a completed knowledge verification protocol run.
  * Path (`flowcfg-v1-d96` stored `vector`) is the hidden-state tree and priced
  * walk. Extra basis channels (audio, eeg, video, screen) store independently
  * and mix into named spaces at read time. `path_text` is the legacy name for
  * space `path+audio`. Identity, event logs, and UI tool counts stay off-vector
- * in recoverable raw. Calibrate sounding omits projected policy.
+ * in recoverable raw.
  */
 
 import {
@@ -40,7 +40,7 @@ export const FLOW_EMBEDDING_CHANNEL_LABELS: Record<FlowEmbeddingChannel, string>
   path_text: "Path + Text",
 };
 
-export type FlowKind = "calibrate" | "learn" | "verify" | "solve";
+export type FlowKind = "verify";
 
 export type FlowPowRow = {
   type?: string | null;
@@ -100,7 +100,7 @@ const SEM_BAG_DIM = 96;
 const WALK_PROJECTION = seededRandomProjection(32, 10, `${FLOW_EMBEDDING_MODEL_ID}:hidden-walk`);
 const TREE_BAG_PROJECTION = seededRandomProjection(32, 8, `${FLOW_EMBEDDING_MODEL_ID}:hidden-tree`);
 
-const FLOW_KINDS = new Set<FlowKind>(["calibrate", "learn", "verify", "solve"]);
+const FLOW_KINDS = new Set<FlowKind>(["verify"]);
 
 function textOf(value: unknown): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
@@ -112,7 +112,7 @@ function numberOf(value: unknown, fallback = 0): number {
 }
 
 function parseFlowKind(value: unknown): FlowKind {
-  return FLOW_KINDS.has(value as FlowKind) ? (value as FlowKind) : "learn";
+  return FLOW_KINDS.has(value as FlowKind) ? (value as FlowKind) : "verify";
 }
 
 function clip01(n: number): number {
@@ -207,11 +207,10 @@ function compactPow(rows: readonly FlowPowRow[] | null | undefined): FlowPowRow[
 }
 
 function compactPolicy(
-  flowKind: FlowKind,
+  _flowKind: FlowKind,
   model: SessionBranchModel | null | undefined,
   sequence: readonly string[] | null | undefined,
 ): FlowProjectedPolicyRaw | null {
-  if (flowKind === "calibrate") return null;
   if (!model || !Array.isArray(sequence) || sequence.length === 0) return null;
   const scored = scorePolicySequence(model, sequence);
   return {
@@ -275,7 +274,7 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
   const flowKind = parseFlowKind(source.flowKind);
   const policyRaw = source.projectedPolicy;
   let projectedPolicy: FlowProjectedPolicyRaw | null = null;
-  if (flowKind !== "calibrate" && policyRaw && typeof policyRaw === "object" && !Array.isArray(policyRaw)) {
+  if (policyRaw && typeof policyRaw === "object" && !Array.isArray(policyRaw)) {
     const policy = policyRaw as Record<string, unknown>;
     const sequence = Array.isArray(policy.sequence)
       ? policy.sequence.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
@@ -371,7 +370,7 @@ function treeSketch(raw: FlowEmbeddingRaw): number[] {
   const prices = branches.flatMap((branch) => branch.edges.map((edge) => edge.price));
   const depths = branches.map((branch) => branch.depth);
   const scalars = new Array(32).fill(0);
-  scalars[0] = raw.flowKind === "calibrate" ? 0 : raw.flowKind === "learn" ? 0.5 : 1;
+  scalars[0] = 1;
   scalars[1] = clip01(branches.length / 200);
   scalars[2] = clip01(prices.length / 64);
   scalars[3] = clip01(mean(prices) / 100);

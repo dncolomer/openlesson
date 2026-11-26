@@ -169,7 +169,7 @@ describe("OG aesthetic resolution", () => {
 describe("Unsys standard share (LP-derived)", () => {
   it("exports LP hero title, description, aesthetics image, and root image path", async () => {
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Verify understanding through proof of work/);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Embeddable Knowledge Verification Protocols/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/thinking stays yours/);
@@ -188,7 +188,7 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(UNSYS_STANDARD_SHARE.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
     expect(UNSYS_STANDARD_SHARE.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(UNSYS_STANDARD_SHARE.eyebrow).toBe("From genuine work");
-    expect(UNSYS_STANDARD_SHARE.footerLabel).toMatch(/UNDERSTAND VERIFY MAP/);
+    expect(UNSYS_STANDARD_SHARE.footerLabel).toMatch(/PROTOCOLS/);
     expect(UNSYS_STANDARD_SHARE.aestheticImage).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
     expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/learning efficiency for humans & agents/i);
     expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/Beyond benchmarks for AI/i);
@@ -261,7 +261,7 @@ describe("Unsys standard share (LP-derived)", () => {
   it("standardShareSocialMetadata always points at root opengraph-image with LP copy", () => {
     const social = standardShareSocialMetadata({ url: "https://uncertain.systems/pricing" });
     expect(social.openGraph?.title).toBe(PLATFORM_HERO.h1);
-    expect(social.openGraph?.title).toMatch(/Verify understanding through proof of work/);
+    expect(social.openGraph?.title).toMatch(/Embeddable Knowledge Verification Protocols/);
     expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(social.openGraph?.description).not.toBe(PLATFORM_HERO.p1);
     expect(social.twitter?.title).toBe(PLATFORM_HERO.h1);
@@ -286,7 +286,7 @@ describe("Unsys standard share (LP-derived)", () => {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: expect.stringContaining("Verify understanding through proof of work"),
+        alt: expect.stringContaining("Embeddable Knowledge Verification Protocols"),
       },
     ]);
     expect(standardOpenGraph().images).toEqual(images);
@@ -358,14 +358,11 @@ describe("OG entrypoint wiring (static audit)", () => {
   const expectedEntrypoints = [
     "app/opengraph-image.tsx",
     "app/twitter-image.tsx",
-    "app/insights/[id]/opengraph-image.tsx",
-    "app/insights/[id]/twitter-image.tsx",
     "app/p/[id]/[slug]/opengraph-image.tsx",
     "app/pricing/opengraph-image.tsx",
     "app/vision/opengraph-image.tsx",
     "app/science/opengraph-image.tsx",
     "app/docs/proof-of-work-api/opengraph-image.tsx",
-    "app/all-you-can-learn/[workspaceId]/opengraph-image.tsx",
   ];
 
   it("ships opengraph-image entrypoints that use the shared compositor / standard", () => {
@@ -387,12 +384,7 @@ describe("OG entrypoint wiring (static audit)", () => {
       // No primary gradient-only ImageResponse trees left in entrypoints
       expect(source.includes("radial-gradient(circle at"), rel).toBe(false);
       expect(source.includes("linear-gradient(135deg, #0f172a"), rel).toBe(false);
-      // Insights compose per-entity title via buildInsightOgShareInput; others stay standard
-      if (rel === "app/insights/[id]/opengraph-image.tsx") {
-        expect(source.includes("buildInsightOgShareInput"), rel).toBe(true);
-      } else {
-        expect(source.includes("insight?.title"), rel).toBe(false);
-      }
+      expect(source.includes("insight?.title"), rel).toBe(false);
       expect(source.includes("planData?.title"), rel).toBe(false);
       expect(source.includes("assembleAyclLandingSummary"), rel).toBe(false);
     }

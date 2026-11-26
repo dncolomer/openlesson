@@ -9,7 +9,6 @@ import {
   ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
   ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
-import { IleCraftInsightButton } from "@/components/session-view/learn-canvas-craft-insight";
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import { IleCanvasPointerButton } from "@/components/session-view/learn-canvas-pointer-button";
 import { SessionCommandCheatsheet } from "@/components/session-view/session-command-cheatsheet";
@@ -21,7 +20,6 @@ import {
   ileWorkCanvasCommandShortcutLabel,
   ileWorkCanvasCommandsFor,
 } from "@/lib/learn-work-canvas-commands";
-import { ileCanvasCraftInsightUsable } from "@/lib/learn-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
 import { recordChrome } from "@/lib/behavior-capture-house";
 
@@ -55,7 +53,6 @@ export function SessionGuidePanel({
   const catalog = ileWorkCanvasCommandsFor(guide);
   const dictateIndex = String(catalog.length + 1).padStart(2, "0");
   const pointerIndex = String(catalog.length + 2).padStart(2, "0");
-  const commitIndex = String(catalog.length + 3).padStart(2, "0");
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">
@@ -164,15 +161,6 @@ export function SessionGuidePanel({
               enabled={Boolean(bridge?.autoLayout?.enabled)}
               disabled={!bridge?.autoLayout}
               onToggle={() => bridge?.autoLayout?.toggle()}
-            />
-          </div>
-          <div data-session-commit className="shrink-0 px-1.5 pb-1.5 pt-1">
-            <IleCraftInsightButton
-              plate
-              bar
-              index={commitIndex}
-              usable={ileCanvasCraftInsightUsable()}
-              onClick={() => bridge?.craft?.open()}
             />
           </div>
           {commandsHint ? (

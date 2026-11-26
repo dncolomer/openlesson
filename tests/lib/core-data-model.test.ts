@@ -2,19 +2,16 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  CALIBRATE_EMBEDDING_MODEL_ID,
   calibrateResultFromLegacyEvents,
   EMBEDDING_MODELS_V1,
   embeddingModelIdForFamily,
   FLOW_EMBEDDING_ALGORITHM_V1,
   isMapLearnSession,
   isSolveSession,
-  LEARN_EMBEDDING_MODEL_ID,
   parseSessionKind,
   parseSessionResult,
   parseSoundingClassification,
   SESSION_KINDS,
-  SOLVE_EMBEDDING_MODEL_ID,
   solveFlowIdFromSession,
   VERIFY_EMBEDDING_MODEL_ID,
 } from "@/lib/core-data-model";
@@ -22,24 +19,17 @@ import {
 const ROOT = join(__dirname, "../..");
 
 describe("core data model contract", () => {
-  it("registers four v1 embedding families on the shared algorithm", () => {
-    expect(EMBEDDING_MODELS_V1.map((row) => row.family)).toEqual([
-      "learn",
-      "calibrate",
-      "verify",
-      "solve",
-    ]);
+  it("registers the verification embedding family on the shared algorithm", () => {
+    expect(EMBEDDING_MODELS_V1.map((row) => row.family)).toEqual(["verify"]);
     expect(EMBEDDING_MODELS_V1.every((row) => row.algorithmId === FLOW_EMBEDDING_ALGORITHM_V1)).toBe(
       true,
     );
-    expect(embeddingModelIdForFamily("learn")).toBe(LEARN_EMBEDDING_MODEL_ID);
-    expect(embeddingModelIdForFamily("calibrate")).toBe(CALIBRATE_EMBEDDING_MODEL_ID);
     expect(embeddingModelIdForFamily("verify")).toBe(VERIFY_EMBEDDING_MODEL_ID);
-    expect(embeddingModelIdForFamily("solve")).toBe(SOLVE_EMBEDDING_MODEL_ID);
-    expect(SESSION_KINDS).toEqual(["learn", "calibrate", "verify", "solve"]);
+    expect(VERIFY_EMBEDDING_MODEL_ID).toBe("verify-flowcfg-v1-d96");
+    expect(SESSION_KINDS).toEqual(["learn", "verify"]);
   });
 
-  it("parses Learn, Verify, Calibrate, and Solve session results", () => {
+  it("parses Learn and Verify session results", () => {
     expect(
       parseSessionResult({
         kind: "learn",
@@ -56,44 +46,18 @@ describe("core data model contract", () => {
         knowledgeRegionId: "region-1",
       })?.kind,
     ).toBe("verify");
-    const calibrate = parseSessionResult({
-      kind: "calibrate",
-      uncertainQuestionIds: ["q1"],
-      trustedQuestionIds: ["q2"],
-      classification: {
-        band: "localized",
-        coverageDepth: 2,
-        reliability: "high",
-        persistentTerritories: ["algebra"],
-        falseCoverage: false,
-      },
-      expertProof: {
-        questionId: "q2",
-        source: "trusted",
-        choice: "hit",
-        transcript: "I would expand the definition.",
-      },
-    });
-    expect(calibrate?.kind).toBe("calibrate");
-    if (calibrate?.kind === "calibrate") {
-      expect(calibrate.classification.band).toBe("localized");
-      expect(calibrate.expertProof?.choice).toBe("hit");
-    }
     expect(
       parseSessionResult({
-        kind: "solve",
-        projectedPolicy: { sequence: ["r1", "root"], steps: 2, excess: 0, distance: 0 },
+        kind: "calibrate",
+        uncertainQuestionIds: ["q1"],
       }),
-    ).toEqual({
-      kind: "solve",
-      projectedPolicy: { sequence: ["r1", "root"], steps: 2, excess: 0, distance: 0 },
-    });
-    expect(parseSessionKind("solve")).toBe("solve");
-    expect(
-      isSolveSession({ kind: "solve", solve_flow_id: "sf1" }),
-    ).toBe(true);
+    ).toBeNull();
+    expect(parseSessionResult({ kind: "solve" })).toBeNull();
+    expect(parseSessionKind("solve")).toBeNull();
+    expect(parseSessionKind("verify")).toBe("verify");
+    expect(isSolveSession({ kind: "solve", solve_flow_id: "sf1" })).toBe(true);
     expect(isMapLearnSession({ kind: "learn" })).toBe(true);
-    expect(isMapLearnSession({ kind: "solve", solve_flow_id: "sf1" })).toBe(false);
+    expect(isMapLearnSession({ kind: "verify" })).toBe(false);
     expect(isSolveSession({ kind: "learn" })).toBe(false);
     expect(solveFlowIdFromSession({ solve_flow_id: "sf1" })).toBe("sf1");
     expect(solveFlowIdFromSession({ kind: "learn" })).toBeNull();
@@ -137,9 +101,10 @@ describe("core data model contract", () => {
     const path = join(ROOT, "docs/core-data-model.md");
     expect(existsSync(path)).toBe(true);
     const doc = readFileSync(path, "utf8");
-    expect(doc).toContain("## PR Plan");
-    expect(doc).toContain("### PR 1:");
+    expect(doc).toContain("Embeddable Knowledge Verification Protocols");
+    expect(doc).toContain("The Protocol Challenge");
     expect(doc).toContain("raw corpus");
+    expect(doc).not.toContain("two product flows");
   });
 
   it("foundation migration registers models, session result columns, and drops empty leftover tables", () => {

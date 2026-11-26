@@ -5,22 +5,18 @@ import { useRouter } from "next/navigation";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
-  acceptProductFlowPublish,
+  acceptProtocolPublish,
   DASHBOARD_FLOWS_PATH,
-  emptyProductFlowDraft,
-  flowAuthorShowsCountdown,
-  flowAuthorShowsEnforcedChannels,
+  emptyProtocolDraft,
   nextProductFlowWizardStep,
-  parseProductFlowKind,
   previousProductFlowWizardStep,
-  PRODUCT_FLOW_KINDS,
+  PROTOCOL_CHALLENGE_LABEL,
+  PROTOCOL_LABEL,
   productFlowDashboardPath,
-  productFlowKindLabel,
   productFlowProblem,
   productFlowWizardCanAdvance,
   productFlowWizardSteps,
-  type ProductFlowDraft,
-  type ProductFlowKind,
+  type ProtocolDraft,
   type ProductFlowWizardStep,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
@@ -50,10 +46,10 @@ import { FLOW_CHANNEL_IDS, FLOW_CHANNEL_LABELS } from "@/lib/flow-channels";
 import { flowAuthorShowsCanvasCapture } from "@/lib/flow-canvas-capture";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
-function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): string {
+function wizardDescription(step: ProductFlowWizardStep): string {
   if (step === "name") return "A short name for the dashboard list and the public run.";
   if (step === "model") {
-    return "Hidden states and priced edges for this flow. Prompt, attach files, or add a branch by hand.";
+    return "Hidden states and priced edges for this protocol. Prompt, attach files, or add a branch by hand.";
   }
   if (step === "channels") {
     return "Audio, Muse (EEG), video, and screenshots this run requires. A required channel with no data flowing invalidates the session.";
@@ -61,48 +57,34 @@ function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): 
   if (step === "publish") {
     return "Review, then publish. The public run asks for identification first.";
   }
-  if (kind === "calibration") {
-    return "Choose one: write the problem or attach files (a problem is written when a learner opens), and set the countdown.";
-  }
-  if (flowAuthorShowsCountdown(kind)) {
-    return "Choose one: write the problem, attach files (a problem is written when a learner opens), or prepare the board, and set the countdown.";
-  }
-  return "Choose one: write the problem, attach files (a problem is written when a learner opens), or prepare the board.";
+  return `Choose one: write ${PROTOCOL_CHALLENGE_LABEL.toLowerCase()}, attach files (a problem is written when a learner opens), or prepare the board, and set the countdown.`;
 }
 
-export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind }) {
+export function ProductFlowWizard() {
   const router = useRouter();
   const [step, setStep] = useState<ProductFlowWizardStep>("name");
-  const [draft, setDraft] = useState<ProductFlowDraft>(() =>
-    emptyProductFlowDraft(lockedKind ?? "solve"),
-  );
+  const [draft, setDraft] = useState<ProtocolDraft>(() => emptyProtocolDraft());
   const [busy, setBusy] = useState(false);
   const [modelBusy, setModelBusy] = useState(false);
   const [authoringCanvas, setAuthoringCanvas] = useState(false);
   const [error, setError] = useState("");
-  const kind = draft.kind;
-  const productLabel = productFlowKindLabel(kind);
   const canAdvance = productFlowWizardCanAdvance(step, draft);
   const problem = productFlowProblem(draft);
 
   const heading = useMemo(() => {
-    if (step === "name") return `Name this ${productLabel.toLowerCase()} flow`;
-    if (step === "author") return `Author the ${productLabel.toLowerCase()} flow`;
+    if (step === "name") return `Name this ${PROTOCOL_LABEL.toLowerCase()}`;
+    if (step === "author") return `Author the ${PROTOCOL_LABEL.toLowerCase()}`;
     if (step === "model") return "Adapt the unsys model";
     if (step === "channels") return "Choose enforced channels";
-    return `Publish ${draft.name.trim() || "this flow"}`;
-  }, [draft.name, productLabel, step]);
+    return `Publish ${draft.name.trim() || "this protocol"}`;
+  }, [draft.name, step]);
 
-  function patch(next: Partial<ProductFlowDraft>) {
+  function patch(next: Partial<ProtocolDraft>) {
     setDraft((current) => ({ ...current, ...next }));
   }
 
-  function setProblem(value: string) {
-    patch({ topic: value, goal: value });
-  }
-
   async function publish() {
-    const accepted = acceptProductFlowPublish(draft);
+    const accepted = acceptProtocolPublish(draft);
     if (!accepted.ok) {
       setError(accepted.reason);
       return;
@@ -114,11 +96,8 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind,
           name: accepted.name,
-          topic: accepted.topic,
-          goal: accepted.goal,
-          problem: accepted.topic,
+          challenge: accepted.challenge,
           artifacts: accepted.artifacts,
           exactProblemOnCanvas: accepted.exactProblemOnCanvas,
           openingCanvasScene: accepted.openingCanvasScene,
@@ -132,11 +111,11 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(errorMessageFromBody(payload, "Could not publish flow"));
+        throw new Error(errorMessageFromBody(payload, "Could not publish protocol"));
       }
-      router.push(productFlowDashboardPath(kind));
+      router.push(productFlowDashboardPath());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not publish flow");
+      setError(err instanceof Error ? err.message : "Could not publish protocol");
     } finally {
       setBusy(false);
     }
@@ -153,7 +132,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           type="button"
           className={backBtnClass}
           disabled={modelBusy}
-          onClick={() => setStep(previousProductFlowWizardStep(step, kind))}
+          onClick={() => setStep(previousProductFlowWizardStep(step))}
         >
           Back
         </button>
@@ -161,7 +140,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         <button
           type="button"
           className={backBtnClass}
-          onClick={() => router.push(productFlowDashboardPath(kind))}
+          onClick={() => router.push(productFlowDashboardPath())}
         >
           Cancel
         </button>
@@ -180,7 +159,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         <button
           type="button"
           disabled={busy || modelBusy || !canAdvance}
-          onClick={() => setStep(nextProductFlowWizardStep(step, kind))}
+          onClick={() => setStep(nextProductFlowWizardStep(step))}
           className={nextBtnClass}
         >
           Continue
@@ -190,21 +169,17 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
   );
 
   return (
-    <ProductSurface
-      label={`${productLabel} flow`}
-      activeTab={dashboardTabForProductSurface(kind)}
-    >
+    <ProductSurface label={PROTOCOL_LABEL} activeTab={dashboardTabForProductSurface()}>
       <div
         className={fillViewport ? PRODUCT_CREATE_SHELL_FILL : PRODUCT_CREATE_SHELL}
         data-flow-wizard=""
-        data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}
       >
         {authoringCanvas ? null : (
           <FlowFormHeader
-            kicker={<FlowWizardSteps steps={productFlowWizardSteps(kind)} current={step} />}
+            kicker={<FlowWizardSteps steps={productFlowWizardSteps()} current={step} />}
             title={heading}
-            description={step === "model" ? undefined : wizardDescription(kind, step)}
+            description={step === "model" ? undefined : wizardDescription(step)}
             compact={step === "model"}
           />
         )}
@@ -224,53 +199,27 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
 
         {!authoringCanvas && step === "name" ? (
           <FlowFormCard>
-            <div className="grid gap-6 md:grid-cols-2">
-              <FlowField label="Type">
-                <select
-                  className={FLOW_FORM_INPUT}
-                  value={draft.kind}
-                  disabled={Boolean(lockedKind)}
-                  data-flow-kind=""
-                  onChange={(event) => {
-                    const next = parseProductFlowKind(event.target.value);
-                    if (next) patch({ kind: next });
-                  }}
-                >
-                  {PRODUCT_FLOW_KINDS.map((item) => (
-                    <option key={item} value={item}>
-                      {productFlowKindLabel(item)}
-                    </option>
-                  ))}
-                </select>
-              </FlowField>
-              <FlowField label="Flow name">
-                <input
-                  value={draft.name}
-                  onChange={(event) => patch({ name: event.target.value })}
-                  placeholder="Flow name"
-                  data-flow-name=""
-                  className={FLOW_FORM_INPUT}
-                />
-              </FlowField>
-            </div>
+            <FlowField label="Protocol name">
+              <input
+                value={draft.name}
+                onChange={(event) => patch({ name: event.target.value })}
+                placeholder="Protocol name"
+                data-flow-name=""
+                className={FLOW_FORM_INPUT}
+              />
+            </FlowField>
             {actions}
           </FlowFormCard>
         ) : null}
 
         {!authoringCanvas && step === "author" ? (
-          <FlowFormCard
-            data-flow-problem=""
-            data-solve-flow-editor={kind === "solve" ? "" : undefined}
-            data-verification-flow-editor={kind === "verification" ? "" : undefined}
-            data-calibration-flow-editor={kind === "calibration" ? "" : undefined}
-          >
+          <FlowFormCard data-flow-problem="">
             <FlowProblemFields
               layout="split"
               problem={problem}
-              onProblemChange={setProblem}
+              onProblemChange={(challenge) => patch({ challenge })}
               artifacts={draft.artifacts}
               onArtifactsChange={(artifacts) => patch({ artifacts })}
-              topicHook={kind}
               exactProblemOnCanvas={draft.exactProblemOnCanvas}
               onExactProblemOnCanvasChange={(exactProblemOnCanvas) =>
                 patch({ exactProblemOnCanvas })
@@ -278,9 +227,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               openingCanvasPrepared={flowOpeningCanvasHasContent(draft.openingCanvasScene)}
               openingCanvasScene={draft.openingCanvasScene}
               onPrepareOpeningCanvas={
-                flowShowsOpeningCanvas(kind)
-                  ? () => setAuthoringCanvas(true)
-                  : undefined
+                flowShowsOpeningCanvas() ? () => setAuthoringCanvas(true) : undefined
               }
               onClearOpeningCanvas={() => patch({ openingCanvasScene: null })}
               generateProblemOnOpen={draft.generateProblemOnOpen}
@@ -289,26 +236,22 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               }
               flowName={draft.name}
               aside={
-                flowAuthorShowsCountdown(kind) ? (
-                  <FlowField label="Countdown">
-                    <select
-                      value={draft.durationMinutes}
-                      data-flow-countdown=""
-                      data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
-                      data-verification-flow-minutes={kind === "verification" ? "" : undefined}
-                      onChange={(event) =>
-                        patch({ durationMinutes: flowCountdownMinutes(event.target.value) })
-                      }
-                      className={FLOW_FORM_INPUT}
-                    >
-                      {FLOW_COUNTDOWN_MINUTES.map((value) => (
-                        <option key={value} value={value}>
-                          {value} min
-                        </option>
-                      ))}
-                    </select>
-                  </FlowField>
-                ) : null
+                <FlowField label="Countdown">
+                  <select
+                    value={draft.durationMinutes}
+                    data-flow-countdown=""
+                    onChange={(event) =>
+                      patch({ durationMinutes: flowCountdownMinutes(event.target.value) })
+                    }
+                    className={FLOW_FORM_INPUT}
+                  >
+                    {FLOW_COUNTDOWN_MINUTES.map((value) => (
+                      <option key={value} value={value}>
+                        {value} min
+                      </option>
+                    ))}
+                  </select>
+                </FlowField>
               }
             />
             {actions}
@@ -321,7 +264,6 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
             className="flex min-h-0 flex-1 flex-col space-y-0 overflow-hidden px-0 py-0 sm:px-0 sm:py-0"
           >
             <FlowUnsysModelStep
-              kind={kind}
               name={draft.name}
               problem={problem}
               artifacts={draft.artifacts}
@@ -335,7 +277,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           </FlowFormCard>
         ) : null}
 
-        {!authoringCanvas && step === "channels" && flowAuthorShowsEnforcedChannels(kind) ? (
+        {!authoringCanvas && step === "channels" ? (
           <FlowFormCard data-flow-channels-step="">
             <FlowChannelsFields
               value={draft.enforcedChannels}
@@ -361,7 +303,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
                   {draft.artifacts.length} artifact{draft.artifacts.length === 1 ? "" : "s"}
                 </p>
               ) : null}
-              {draft.exactProblemOnCanvas && kind !== "calibration" ? (
+              {draft.exactProblemOnCanvas ? (
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                   Exact problem on canvas
                 </p>
@@ -382,11 +324,9 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
                   {FLOW_OPENING_CANVAS_LABEL}
                 </p>
               ) : null}
-              {flowAuthorShowsCountdown(kind) ? (
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                  {draft.durationMinutes} min countdown
-                </p>
-              ) : null}
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                {draft.durationMinutes} min countdown
+              </p>
               {draft.answersModelSeed ? (
                 <p
                   className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
@@ -395,17 +335,15 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
                   Unsys model
                 </p>
               ) : null}
-              {flowAuthorShowsEnforcedChannels(kind) ? (
-                <p
-                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                  data-flow-publish-channels=""
-                >
-                  {FLOW_CHANNEL_IDS.filter((id) => draft.enforcedChannels[id])
-                    .map((id) => FLOW_CHANNEL_LABELS[id])
-                    .join(" · ") || "Canvas only"}
-                </p>
-              ) : null}
-              {flowAuthorShowsCanvasCapture(kind) && draft.canvasCapture.enabled ? (
+              <p
+                className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                data-flow-publish-channels=""
+              >
+                {FLOW_CHANNEL_IDS.filter((id) => draft.enforcedChannels[id])
+                  .map((id) => FLOW_CHANNEL_LABELS[id])
+                  .join(" · ") || "Canvas only"}
+              </p>
+              {flowAuthorShowsCanvasCapture() && draft.canvasCapture.enabled ? (
                 <p
                   className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
                   data-flow-publish-canvas-capture=""

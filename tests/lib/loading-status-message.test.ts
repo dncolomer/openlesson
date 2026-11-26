@@ -27,8 +27,6 @@ const GATE_FILES = [
   "app/workspace/new/page.tsx",
   "components/SessionView.tsx",
   "components/workspace-view/workspace-chrome.tsx",
-  "components/InsightsDashboardTab.tsx",
-  "components/InsightDetailClient.tsx",
 ] as const;
 
 describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {

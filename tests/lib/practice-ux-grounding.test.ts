@@ -450,10 +450,8 @@ describe("Simulation shares live practice builders", () => {
   });
 
   it("drawer + overview UI wire workspaceGoal into deriveBlockSimulation", () => {
-    const route = read("app/api/workspace/simulate-insights/route.ts");
-    expect(route).toContain("workspace_goal");
-    expect(route).toContain("notes");
-    expect(route).toContain("runSimulateInsightsJob");
+    expect(existsSync(join(ROOT, "app/api/workspace/simulate-insights/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/SimulateInsightsSurface.tsx"))).toBe(false);
 
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     expect(detail).not.toContain('title="Simulate Insights"');
@@ -479,14 +477,8 @@ describe("Simulation shares live practice builders", () => {
     );
     expect(Array.isArray(overview.sampleProbes)).toBe(true);
 
-    const surface = read("components/SimulateInsightsSurface.tsx");
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).not.toContain("WorkspaceSimulationPanel");
-    expect(surface).toContain("data-simulation-generate");
-    expect(surface).toContain("data-simulation-collection");
-    expect(surface).toContain("/api/workspace/simulate-insights");
-    expect(surface).not.toContain('scope="workspace"');
-    expect(surface).not.toContain("data-simulation-questions");
   });
 
   it("simulation LLM system/user reuse TAP opening + domain exercise builders", () => {

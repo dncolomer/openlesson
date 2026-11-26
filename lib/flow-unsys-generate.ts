@@ -11,7 +11,7 @@ import { normalizeAuthorUnsysModel } from "@/lib/author-unsys-model";
 import { parseFlowArtifacts } from "@/lib/flow-artifacts";
 import { flowUnsysSeedFromModel, parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { unsysSeedFromRequestBody } from "@/lib/unsys-tree-spec";
-import { parseProductFlowKind } from "@/lib/product-flow";
+import { protocolChallengeFromUnknown } from "@/lib/product-flow";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
@@ -22,7 +22,6 @@ import {
 import type { AuthorUnsysGenerateDeps } from "@/lib/author-unsys-generate";
 
 export function productFlowUnsysGenerateInput(body: Record<string, unknown>): {
-  kind: NonNullable<ReturnType<typeof parseProductFlowKind>> | "solve";
   name: string;
   problem: string;
   artifacts: ReturnType<typeof parseFlowArtifacts>;
@@ -30,12 +29,11 @@ export function productFlowUnsysGenerateInput(body: Record<string, unknown>): {
   openingCanvasScene: ReturnType<typeof parseFlowOpeningCanvasScene>;
   fromPreparedCanvas: boolean;
 } {
-  const kind = parseProductFlowKind(body.kind) ?? "solve";
   const openingCanvasScene = parseFlowOpeningCanvasScene(
     body.openingCanvasScene ?? body.opening_canvas_scene,
   );
   const fromPreparedCanvas = flowOpeningCanvasHasContent(openingCanvasScene);
-  const leftoverProblem = String(body.problem || body.topic || body.goal || "").trim();
+  const leftoverProblem = protocolChallengeFromUnknown(body);
   const name = String(body.name || "").trim();
   const problem = fromPreparedCanvas
     ? flowOpeningCanvasGenerateProblem(openingCanvasScene) || leftoverProblem || name
@@ -43,7 +41,6 @@ export function productFlowUnsysGenerateInput(body: Record<string, unknown>): {
   const artifacts = fromPreparedCanvas ? [] : parseFlowArtifacts(body.artifacts);
   const guidance = String(body.guidance || body.prompt || body.unsys_guidance || "").trim();
   return {
-    kind,
     name,
     problem,
     artifacts,
@@ -65,7 +62,7 @@ export async function runProductFlowUnsysGenerate(
   const parentId = String(body.parentId || body.parent_id || "").trim();
   const seedModel = normalizeAuthorUnsysModel(body.seedModel ?? body.seed_model ?? body.model);
   const input = {
-    kind: parsed.kind,
+    kind: "verification" as const,
     chapterTitle: parsed.name || parsed.problem,
     chapterBrief: parsed.problem,
     problem: parsed.problem,

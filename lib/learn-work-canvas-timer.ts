@@ -1,7 +1,7 @@
 /**
  * Work-canvas countdown. Pure timer math. Resetting the scene stays in the scene module.
  */
-/** Difficulty: Work-canvas countdown before the board resets (insights stay). */
+/** Difficulty: Work-canvas countdown before the board resets. */
 export const ILE_CANVAS_TIMER_SECONDS_MIN = 10 * 60;
 export const ILE_CANVAS_TIMER_SECONDS_DEFAULT = 15 * 60;
 export const ILE_CANVAS_TIMER_SECONDS_CEILING = 60 * 60;

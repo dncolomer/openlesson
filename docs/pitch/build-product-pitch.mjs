@@ -515,7 +515,7 @@ function addLayerCard(slide, layer, { y, h }) {
     margin: 0,
   });
   slide.addText(
-    "Capture method is the product. Thought UI lives inside Think Aloud Protocol — one interface for Calibrate, Learn, and Verify — not a bolt-on form.",
+    "Capture method is the product. Thought UI lives inside Think Aloud Protocol — one interface for knowledge verification protocols — not a bolt-on form.",
     {
       x: LEFT_X + 0.22,
       y: 4.32,

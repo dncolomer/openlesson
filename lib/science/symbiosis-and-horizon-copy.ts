@@ -23,7 +23,7 @@ export const SCIENCE_HORIZON_COPY = {
   title: "Software now, and the research horizon",
   currentEyebrow: "Current software",
   current:
-    "Authors define a knowledge region as a shared target of problems and concepts. A solve flow guides someone through a problem and stores work traces. Calibrate, Learn, and Verify use a generative model of hidden states, state factors, observations, priced edges, and policies. Think-aloud probes and Proof of Work traces make parts of exploration reviewable. Workspace agents can help prepare maps and flows for authors to review. The model is not a readout of a mind. Distance from a cheapest policy is not a certificate of understanding.",
+    "Authors define a knowledge region as a shared target of problems and concepts. A solve flow guides someone through a problem and stores work traces. knowledge verification protocols use a generative model of hidden states, state factors, observations, priced edges, and policies. Think-aloud probes and Proof of Work traces make parts of exploration reviewable. Workspace agents can help prepare maps and flows for authors to review. The model is not a readout of a mind. Distance from a cheapest policy is not a certificate of understanding.",
   horizonEyebrow: "Research horizon",
   horizon:
     "The larger aim is an autopilot for knowledge building: adaptation around the person so that acquiring difficult knowledge costs less attention and less conscious management of the path, and so that people can inspect, question, and use work that machines can already produce. Biochemical and neural routes, if ever explored, would be research under the constraints below, not a present offering.",

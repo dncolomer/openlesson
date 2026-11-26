@@ -134,7 +134,6 @@ describe("knowledge region candidate render", () => {
       parent: { ...parent, centroid: sim.vector, cosine_threshold: 0 },
       clusters: [{ ...clusters[0]!, centroid: sim.vector }],
       embeddings: [second, first, sim, other],
-      kind: "verification",
     });
     expect(payload.space).toBe("path");
     expect(payload.dim).toBe(FLOW_EMBEDDING_DIM);
@@ -172,7 +171,6 @@ describe("knowledge region candidate render", () => {
       parent,
       clusters,
       embeddings: [],
-      kind: "verification",
     });
     expect(empty.observations).toEqual([]);
     expect(empty.unsys.average).toBeNull();
@@ -198,7 +196,6 @@ describe("knowledge region candidate render", () => {
       space: "path",
       parent: { ...parent, centroid: a.vector, cosine_threshold: 0 },
       embeddings: [a, b],
-      kind: "verification",
     });
     const audioPayload = presentKnowledgeRegionCandidate({
       knowledgeRegionId: "parent",
@@ -206,7 +203,6 @@ describe("knowledge region candidate render", () => {
       space: "path_text",
       parent: { ...parent, centroid: a.vector, cosine_threshold: 0 },
       embeddings: [a, b],
-      kind: "verification",
     });
     expect(audioPayload.space).toBe("path+audio");
     expect(pathPayload.pairwise.matrix[0]?.[1]).toBe(0);
@@ -249,7 +245,6 @@ describe("knowledge region candidate render", () => {
         },
       ],
       embeddings: [human, exploit, { ...aiCentroid, link_label: "ai-use" }],
-      kind: "verification",
     });
     expect(payload.observations[0]?.cluster_distances.map((row) => row.cluster_id)).toEqual([
       "c-exploit",

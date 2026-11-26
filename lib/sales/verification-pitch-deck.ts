@@ -26,7 +26,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "2 · Learning for senior depth",
-          body: "For staff and technical tracks, run the Learning use case instead of one-shot take-homes. Same interface for Calibrate, Learn, and Verify; deeper multi-step judgment, debugging, or design tradeoffs.",
+          body: "For staff and technical tracks, run the Learning use case instead of one-shot take-homes. Same interface for knowledge verification protocols; deeper multi-step judgment, debugging, or design tradeoffs.",
         },
         {
           label: "3 · PoW API in their stack",
@@ -167,7 +167,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       title: "Verify skills before hire or certify.",
       backgroundImage: PITCH_ASSETS.aesthetics.close,
       bullets: [
-        "Map session — Calibrate, Learn, and Verify — and Proof-of-Work API tiers to your HR or recruitment product",
+        "Map session — knowledge verification protocols — and Proof-of-Work API tiers to your HR or recruitment product",
         "Pilot one gate: screening, human, or promotion",
         "Create a Workspace and score the first real scenario this week",
       ],

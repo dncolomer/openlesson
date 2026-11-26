@@ -1,7 +1,7 @@
 import type { ProofOfWorkEvalSchemaResult, ProofOfWorkSchemaIntegrationHints } from "./proof-of-work-schema";
 import type { PerformanceContextPayload } from "./performance-context";
 import { buildIntegrationSkillApiPath } from "./proof-of-work-integration";
-import { FLOW_API_BASE } from "@/lib/api/agent-api-paths";
+import { PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
 
@@ -187,16 +187,16 @@ ${blockLines || "  none"}`;
 ${blockTable || "  No blocks yet."}`;
 }
 
-/** Integration UI copy for a Verification flow. */
+/** Integration UI copy for knowledge verification protocols. */
 export function knowledgeRegionIntegrationCopy(): {
   skillDescription: string;
   mcpNote: string;
 } {
   return {
     skillDescription:
-      "Download a skill.md for flow management. Agents create, list, update, and delete Solve, Calibration, and Verification flows through /api/v3/flows and MCP.",
+      "Download a skill.md for protocol management. Agents create, list, update, and delete knowledge verification protocols through /api/v3/protocols and MCP.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage Solve, Calibration, and Verification flows.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage knowledge verification protocols.",
   };
 }
 
@@ -206,9 +206,9 @@ export function learningWorkspaceIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for flow management. Agents create, list, update, and delete Solve, Calibration, and Verification flows.",
+      "Download a skill.md for protocol management. Agents create, list, update, and delete knowledge verification protocols.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage Solve, Calibration, and Verification flows.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage knowledge verification protocols.",
   };
 }
 
@@ -223,7 +223,7 @@ export function workspaceSettingsIntegrationCopy(kind: unknown): {
 }
 
 export function formatSkillRestEndpointsLine(_kind: unknown): string {
-  return `REST: GET/POST ${FLOW_API_BASE}, GET/PATCH/DELETE ${FLOW_API_BASE}/{flow_id}. Proof of work is recorded in the product UI.`;
+  return `REST: GET/POST ${PROTOCOL_API_BASE}, GET/PATCH/DELETE ${PROTOCOL_API_BASE}/{protocol_id}. Proof of work is recorded in the product UI.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -252,8 +252,8 @@ export function buildIntegrationSkillInstructions(
   const sections = request.include_sections?.length ? request.include_sections : [...DEFAULT_SECTIONS];
   const skillName = deriveSkillName(request.integration_name);
   const scope = blockId
-    ? "Focus the skill on one flow."
-    : "Cover independent Solve, Calibration, and Verification flows.";
+    ? "Focus the skill on one protocol."
+    : "Cover knowledge verification protocols.";
   const baseUrl = request.base_url || "https://uncertain.systems";
   const integrationSkillPath = buildIntegrationSkillApiPath(workspace.id, baseUrl);
   const statusSection = formatSkillWorkspaceStatus(status, blocks);
@@ -261,16 +261,16 @@ export function buildIntegrationSkillInstructions(
   const mcpToolList = formatSkillMcpToolList(workspaceKind);
   const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
 
-  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems flows.
+  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems protocols.
 
 ${scope}
 
-Agents manage independent Solve, Calibration, and Verification flows. Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent APIs.
+Agents manage knowledge verification protocols. Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent APIs.
 
 YAML frontmatter (required):
 ---
 name: ${skillName}
-description: ${request.integration_name} integration skill for managing Solve, Calibration, and Verification flows.
+description: ${request.integration_name} integration skill for managing knowledge verification protocols.
 ---
 
 Workspace:
@@ -283,13 +283,13 @@ Base URL for examples: ${baseUrl}
 Integration skill regeneration API: POST ${integrationSkillPath}
 
 Required content:
-1. Purpose — create, list, update, and delete independent Solve, Calibration, and Verification flows. ChatGPT or Claude authorizes with a Bearer key.
+1. Purpose — create, list, update, and delete knowledge verification protocols. ChatGPT or Claude authorizes with a Bearer key.
 2. Authentication table (Bearer sk_ keys, scopes workspaces:read and workspaces:write).
 3. Endpoints table:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
-4. Current flow list from the current status.
-5. Quick checklist: list_flows → upload_flow_file (optional) → generate_flow_unsys_seed (optional) → create_flow → get_flow → update_flow.
+4. Current protocol list from the current status.
+5. Quick checklist: list_protocols → upload_protocol_file (optional) → generate_protocol_unsys_seed (optional) → create_protocol → get_protocol → update_protocol.
 
 ${statusSection}
 
@@ -297,5 +297,5 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" tailored to "${workspaceTitle}". Cover Solve, Calibration, and Verification flow create/list/update/delete. Do not document a public proof-of-work session loop.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" tailored to "${workspaceTitle}". Cover knowledge verification protocol create/list/update/delete. Payload field is challenge (The Protocol Challenge). Do not send kind. Do not document a public proof-of-work session loop.`;
 }

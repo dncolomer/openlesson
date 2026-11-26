@@ -75,8 +75,7 @@ describe("learning model vocabulary and catalogs", () => {
       false,
     );
     expect(read("components/WorkspaceIdentitySettings.tsx")).not.toContain("LearningModelSizePicker");
-    expect(read("components/CalibrationFlowsPanel.tsx")).not.toContain("LearningModelSizePicker");
-    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("LearningModelSizePicker");
+    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
     expect(read("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "LearningModelSizePicker",
     );

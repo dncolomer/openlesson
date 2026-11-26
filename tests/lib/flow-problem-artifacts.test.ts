@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -6,17 +6,9 @@ import {
   emptyProductFlowDraft,
 } from "@/lib/product-flow";
 import {
-  applySolveCommand,
-  emptySolveState,
-} from "@/lib/solve-flow";
-import {
   applyVerificationCommand,
   emptyVerificationState,
 } from "@/lib/verification-flow";
-import {
-  applyCalibrationCommand,
-  emptyCalibrationState,
-} from "@/lib/calibration-flow";
 import {
   parseFlowArtifacts,
   isFlowArtifactFileId,
@@ -52,40 +44,34 @@ const ARTIFACT = {
 };
 
 describe("flow authoring: name + Problem + artifacts", () => {
-  it("accepts name+problem for all three kinds and ignores a questions array", () => {
+  it("accepts name+The Protocol Challenge and ignores a questions array", () => {
     expect(isFlowArtifactFileId(ARTIFACT.xaiFileId)).toBe(true);
 
-    for (const kind of ["solve", "verification", "calibration"] as const) {
-      const empty = acceptProductFlowPublish({
-        ...emptyProductFlowDraft(kind),
-        name: "Named",
-      });
-      expect(empty).toEqual({ ok: false, reason: "topic_required" });
+    const empty = acceptProductFlowPublish({
+      ...emptyProductFlowDraft(),
+      name: "Named",
+    });
+    expect(empty).toEqual({ ok: false, reason: "topic_required" });
 
-      const accepted = acceptProductFlowPublish({
-        ...emptyProductFlowDraft(kind),
-        name: "Named",
-        topic: "Break down the surface-code decoder",
-        questions: ["ignored extra", "also ignored"],
-        artifacts: [ARTIFACT],
-      });
-      expect(accepted.ok).toBe(true);
-      if (!accepted.ok) return;
-      expect(accepted.name).toBe("Named");
-      expect(accepted.topic).toBe("Break down the surface-code decoder");
-      expect(accepted.artifacts).toEqual([ARTIFACT]);
-      if (kind === "solve") {
-        expect(accepted.questions).toEqual([]);
-      } else {
-        expect(accepted.questions).toEqual(["Break down the surface-code decoder"]);
-      }
-      if (kind === "calibration") {
-        expect(accepted.goal).toBe("Break down the surface-code decoder");
-      }
-    }
+    const accepted = acceptProductFlowPublish({
+      ...emptyProductFlowDraft(),
+      name: "Named",
+      challenge: "Break down the surface-code decoder",
+      topic: "Break down the surface-code decoder",
+      questions: ["ignored extra", "also ignored"],
+      artifacts: [ARTIFACT],
+    });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted).not.toHaveProperty("kind");
+    expect(accepted.name).toBe("Named");
+    expect(accepted.topic).toBe("Break down the surface-code decoder");
+    expect(accepted.challenge).toBe("Break down the surface-code decoder");
+    expect(accepted.artifacts).toEqual([ARTIFACT]);
+    expect(accepted.questions).toEqual(["Break down the surface-code decoder"]);
 
     const viaGoal = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("calibration"),
+      ...emptyProductFlowDraft(),
       name: "Priors",
       goal: "State the noise model",
     });
@@ -95,35 +81,12 @@ describe("flow authoring: name + Problem + artifacts", () => {
     expect(viaGoal.goal).toBe("State the noise model");
   });
 
-  it("persists artifact pointers on create and update for all three kinds", () => {
+  it("persists artifact pointers on verification create and update", () => {
     const extra = {
       name: "notes.txt",
       mimeType: "text/plain",
       xaiFileId: "file_11111111-2222-4333-8444-555555555555",
     };
-
-    const solve = applySolveCommand(emptySolveState(), {
-      type: "create",
-      ownerUserId: "owner-1",
-      name: "Decoder",
-      topic: "Decode a distance-5 chain",
-      artifacts: [ARTIFACT],
-      id: "sf1",
-      publicToken: "stok",
-    });
-    expect(solve.ok).toBe(true);
-    if (!solve.ok) return;
-    expect(solve.flow?.topic).toBe("Decode a distance-5 chain");
-    expect(solve.flow?.artifacts).toEqual([ARTIFACT]);
-    const solveUpdated = applySolveCommand(solve.state, {
-      type: "update",
-      ownerUserId: "owner-1",
-      flowId: "sf1",
-      artifacts: [ARTIFACT, extra],
-    });
-    expect(solveUpdated.ok).toBe(true);
-    if (!solveUpdated.ok) return;
-    expect(solveUpdated.flow?.artifacts).toEqual([ARTIFACT, extra]);
 
     const verify = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
@@ -142,30 +105,19 @@ describe("flow authoring: name + Problem + artifacts", () => {
       { id: "q-1", text: "When does a learned decoder beat MWPM?" },
     ]);
     expect(verify.flow?.artifacts).toEqual([ARTIFACT]);
-
-    const calibrate = applyCalibrationCommand(emptyCalibrationState(), {
-      type: "create",
+    const updated = applyVerificationCommand(verify.state, {
+      type: "update",
       ownerUserId: "owner-1",
-      name: "Priors",
-      goal: "",
-      topic: "State the noise model before decoding",
-      questions: ["ignored"],
-      artifacts: [ARTIFACT],
-      id: "cf1",
-      publicToken: "ctok",
+      flowId: "vf1",
+      artifacts: [ARTIFACT, extra],
     });
-    expect(calibrate.ok).toBe(true);
-    if (!calibrate.ok) return;
-    expect(calibrate.flow?.topic).toBe("State the noise model before decoding");
-    expect(calibrate.flow?.goal).toBe("State the noise model before decoding");
-    expect(calibrate.flow?.questions).toEqual([
-      { id: "q-1", text: "State the noise model before decoding" },
-    ]);
-    expect(calibrate.flow?.artifacts).toEqual([ARTIFACT]);
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) return;
+    expect(updated.flow?.artifacts).toEqual([ARTIFACT, extra]);
   });
 
   it("uploads flow artifacts through org-scoped xAI Files", () => {
-    const route = read("app/api/dashboard/flows/files/route.ts");
+    const route = read("app/api/dashboard/protocols/files/route.ts");
     const helper = read("lib/flow-artifact-upload.ts");
     expect(route).toContain("uploadFlowArtifactBytes");
     expect(route).not.toMatch(/uploadFileToXAI\(/);
@@ -178,18 +130,14 @@ describe("flow authoring: name + Problem + artifacts", () => {
 describe("unsys generate material from Problem + files", () => {
   it("includes the problem and file ids; Solve frames breakdown not knowledge/insights", () => {
     const solve = buildSessionBranchGenerateMaterial({
-      kind: "solve",
+      kind: "learn",
       problem: "Decode a distance-5 rotated surface-code chain",
       artifacts: [ARTIFACT],
     });
-    expect(solve.system).toContain("breaking down and solving the problem");
-    expect(solve.system.toLowerCase()).not.toContain("acquiring knowledge");
-    expect(solve.system.toLowerCase()).not.toContain("crafting insights");
     expect(solve.user).toContain("Decode a distance-5 rotated surface-code chain");
     expect(solve.user).toContain(ARTIFACT.xaiFileId);
     expect(solve.user).toContain("brief.pdf");
     expect(solve.fileIds).toEqual([ARTIFACT.xaiFileId]);
-    expect(solve.user.toLowerCase()).not.toContain("acquiring knowledge");
     expect(solve.user.toLowerCase()).not.toContain("crafting insights");
 
     const verify = buildSessionBranchGenerateMaterial(
@@ -203,19 +151,8 @@ describe("unsys generate material from Problem + files", () => {
     expect(verify.user).toContain("When does a learned decoder beat MWPM?");
     expect(verify.fileIds).toEqual([ARTIFACT.xaiFileId]);
 
-    const calibrate = buildSessionBranchGenerateMaterial(
-      sessionBranchContextFromFlow({
-        kind: "calibration",
-        name: "Priors",
-        goal: "State the noise model",
-        artifacts: [ARTIFACT],
-      }),
-    );
-    expect(calibrate.user).toContain("State the noise model");
-    expect(calibrate.fileIds).toEqual([ARTIFACT.xaiFileId]);
-
     const guided = buildSessionBranchGenerateMaterial({
-      kind: "solve",
+      kind: "learn",
       problem: "Decode a distance-5 rotated surface-code chain",
       guidance: "Keep the first ring on decoder failure modes.",
     });
@@ -242,7 +179,7 @@ describe("unsys generate material from Problem + files", () => {
       files: {},
     });
     const fromBoard = buildSessionBranchGenerateMaterial({
-      kind: "solve",
+      kind: "learn",
       problem: "Leftover problem textarea",
       artifacts: [ARTIFACT],
       openingCanvasScene: scene,
@@ -265,11 +202,11 @@ describe("Helios and Manual map authoring", () => {
     expect(catalog.toLowerCase()).not.toContain("goal+questions");
 
     const prompt = buildHeliosMapBuilderSystemPrompt();
-    expect(prompt).toContain("name plus topic (the Problem)");
     expect(prompt).toContain("Do not pass a question pool");
-    expect(prompt).toContain('"kind": "solve", "topic":');
-    expect(prompt).toContain('"kind": "verification", "topic":');
-    expect(prompt).toContain('"kind": "calibration", "topic":');
+    expect(prompt).toContain('"kind": "verification"');
+    expect(prompt).toContain('"kind": "content"');
+    expect(prompt).not.toContain('"kind": "solve"');
+    expect(prompt).not.toContain('"kind": "calibration"');
 
     const created = heliosFlowCreateInput({
       kind: "solve",
@@ -278,13 +215,12 @@ describe("Helios and Manual map authoring", () => {
       artifacts: [ARTIFACT],
     });
     expect(created).toMatchObject({
-      kind: "solve",
       name: "Decoder",
-      topic: "Decode a distance-5 chain",
-      questions: ["Decode a distance-5 chain"],
+      challenge: "Decode a distance-5 chain",
       artifacts: [ARTIFACT],
       exactProblemOnCanvas: false,
     });
+    expect(created).not.toHaveProperty("kind");
     expect(
       heliosFlowCreateInput({
         kind: "solve",
@@ -309,9 +245,9 @@ describe("Helios and Manual map authoring", () => {
 });
 
 describe("flow exact problem on canvas", () => {
-  it("stores the author option on Solve and Verification, not Calibration", () => {
+  it("stores the author option on a Protocol", () => {
     const on = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       topic: "Decode a distance-5 chain",
       exactProblemOnCanvas: true,
@@ -321,36 +257,13 @@ describe("flow exact problem on canvas", () => {
     expect(on.exactProblemOnCanvas).toBe(true);
 
     const off = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("verification"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       topic: "Decode a distance-5 chain",
     });
     expect(off.ok).toBe(true);
     if (!off.ok) return;
     expect(off.exactProblemOnCanvas).toBe(false);
-
-    const calibrate = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("calibration"),
-      name: "Priors",
-      topic: "State the noise model",
-      exactProblemOnCanvas: true,
-    });
-    expect(calibrate.ok).toBe(true);
-    if (!calibrate.ok) return;
-    expect(calibrate.exactProblemOnCanvas).toBe(false);
-
-    const solve = applySolveCommand(emptySolveState(), {
-      type: "create",
-      ownerUserId: "owner-1",
-      name: "Decoder",
-      topic: "Decode a distance-5 chain",
-      exactProblemOnCanvas: true,
-      id: "sf-exact",
-      publicToken: "stok-exact",
-    });
-    expect(solve.ok).toBe(true);
-    if (!solve.ok) return;
-    expect(solve.flow?.exactProblemOnCanvas).toBe(true);
 
     const verify = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
@@ -367,16 +280,14 @@ describe("flow exact problem on canvas", () => {
 
     const sql = read("supabase/migrations/20261115120000_flow_exact_problem_on_canvas.sql");
     expect(sql).toContain("exact_problem_on_canvas");
-    expect(sql).toContain("solve_flows");
     expect(sql).toContain("verify_flows");
-    expect(sql).not.toMatch(/calibrate_flows[\s\S]*exact_problem_on_canvas/);
 
     const wizard = read("components/product-flow/product-flow-wizard.tsx");
     const page = read("components/product-flow/product-flow-page.tsx");
     expect(wizard).toContain("onExactProblemOnCanvasChange");
     expect(page).toContain("onExactProblemOnCanvasChange");
     expect(page).toContain("problemReadOnly");
-    expect(read("app/api/dashboard/flows/route.ts")).toContain("exactProblemOnCanvas");
+    expect(read("app/api/dashboard/protocols/route.ts")).toContain("exactProblemOnCanvas");
     expect(read("lib/learn-opening-work-generate.ts")).toContain("exactProblem");
   });
 });
@@ -427,11 +338,13 @@ describe("flow opening canvas", () => {
     expect(JSON.stringify(stored?.files["file-1"] ?? {})).toContain("image/png");
     const restored = parseFlowOpeningCanvasScene(JSON.parse(JSON.stringify(stored)));
     expect(restored?.elements.some((el) => el.id === "el-img" && el.fileId === "file-1")).toBe(true);
-    expect(parseFlowOpeningCanvasSceneForKind("calibration", stored)).toBeNull();
-    expect(parseFlowOpeningCanvasSceneForKind("solve", stored)?.elements.length).toBeGreaterThan(0);
+    expect(parseFlowOpeningCanvasSceneForKind("calibration", stored)?.elements.length).toBeGreaterThan(
+      0,
+    );
+    expect(parseFlowOpeningCanvasSceneForKind("verify", stored)?.elements.length).toBeGreaterThan(0);
 
     const emptyDraft = {
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Kernel",
     };
     expect(acceptProductFlowPublish(emptyDraft).ok).toBe(false);
@@ -443,29 +356,6 @@ describe("flow opening canvas", () => {
     if (!withBoard.ok) return;
     expect(withBoard.openingCanvasScene).toBeTruthy();
     expect(withBoard.topic).toContain("kernel of T");
-
-    const calibrate = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("calibration"),
-      name: "Priors",
-      topic: "State the noise model",
-      openingCanvasScene: stored,
-    });
-    expect(calibrate.ok).toBe(true);
-    if (!calibrate.ok) return;
-    expect(calibrate.openingCanvasScene).toBeNull();
-
-    const solve = applySolveCommand(emptySolveState(), {
-      type: "create",
-      ownerUserId: "owner-1",
-      name: "Kernel",
-      topic: "Find the kernel of T",
-      openingCanvasScene: stored,
-      id: "sf-canvas",
-      publicToken: "stok-canvas",
-    });
-    expect(solve.ok).toBe(true);
-    if (!solve.ok) return;
-    expect(flowOpeningCanvasHasContent(solve.flow?.openingCanvasScene)).toBe(true);
 
     const verify = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
@@ -522,17 +412,14 @@ describe("flow opening canvas", () => {
     expect(host).not.toContain("SessionGuidePanel");
     expect(surface).not.toContain("data-flow-opening-canvas-sidebar");
     expect(surface).not.toContain("data-flow-opening-canvas-authoring-surface");
-    expect(read("app/api/dashboard/flows/route.ts")).toContain("openingCanvasScene");
-    expect(read("lib/solve-flow-repository.ts")).toContain("opening_canvas_scene");
+    expect(read("app/api/dashboard/protocols/route.ts")).toContain("openingCanvasScene");
     expect(read("lib/verification-flow-repository.ts")).toContain("opening_canvas_scene");
 
     writeFileSync(
       join(scratch, "author-canvas-tests.log"),
       [
         `label=${FLOW_OPENING_CANVAS_LABEL}`,
-        `solveStored=${flowOpeningCanvasHasContent(solve.flow?.openingCanvasScene)}`,
         `verifyStored=${flowOpeningCanvasHasContent(verify.flow?.openingCanvasScene)}`,
-        `calibrateNull=${calibrate.openingCanvasScene === null}`,
         `roundTripFiles=${Boolean(restored?.files["file-1"])}`,
         `wizardHost=${wizard.includes("FlowOpeningCanvasHost")}`,
       ].join("\n"),
@@ -572,7 +459,7 @@ describe("flow create/edit UI", () => {
     expect(fields).toContain("Exact problem on canvas");
     expect(fields).toContain("data-flow-artifact-file");
     expect(fields).toContain("data-flow-generate-from-artifacts");
-    expect(fields).toContain("Define the problem");
+    expect(fields).toContain("PROTOCOL_CHALLENGE_LABEL");
     expect(fields).toContain('type="file"');
     expect(fields).toContain("multiple");
     expect(wizard).toContain("FlowProblemFields");
@@ -580,17 +467,9 @@ describe("flow create/edit UI", () => {
     expect(page).toContain("problemReadOnly");
     expect(fields).toContain("data-flow-problem-locked");
     expect(page).toContain("FlowPublicLinks");
-    const verificationPanel = read("components/VerificationFlowsPanel.tsx");
-    const calibrationPanel = read("components/CalibrationFlowsPanel.tsx");
-    expect(verificationPanel).toContain("FlowProblemFields");
-    expect(verificationPanel).toContain("artifacts,");
-    expect(verificationPanel).toContain("/api/workspace/verification-flows");
-    expect(calibrationPanel).toContain("FlowProblemFields");
-    expect(calibrationPanel).toContain("artifacts,");
-    expect(calibrationPanel).toContain("/api/workspace/calibration-flows");
+    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
     expect(read("app/api/workspace/verification-flows/route.ts")).toContain("artifacts: body.artifacts");
-    expect(read("app/api/workspace/calibration-flows/route.ts")).toContain("artifacts: body.artifacts");
-    for (const src of [wizard, page, fields, verificationPanel, calibrationPanel]) {
+    for (const src of [wizard, page, fields]) {
       expect(src).not.toContain("data-verification-flow-add-question");
       expect(src).not.toContain("data-calibration-flow-add-question");
       expect(src).not.toContain("data-verification-generate-from-topic");

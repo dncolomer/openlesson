@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
-import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
 import {
   inferSessionGapReply,
   inferSessionPolicyReply,
@@ -52,10 +51,7 @@ export async function POST(request: NextRequest) {
     if (plan.kind === "missing-material") return jsonError(400, "A chapter is required.");
     if (plan.kind === "none") return jsonError(400, "A session is required.");
 
-    if (plan.kind === "calibration") {
-      const flow = await getCalibrationFlowByToken(plan.token);
-      if (!flow) return jsonError(404, "Calibration flow not found");
-    } else if (plan.kind === "verification") {
+    if (plan.kind === "verification") {
       const flow = await getVerificationFlowByToken(plan.token);
       if (!flow) return jsonError(404, "Verification flow not found");
     } else if (plan.kind === "workspace") {

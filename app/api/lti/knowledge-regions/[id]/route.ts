@@ -4,10 +4,7 @@ import { readLtiLaunchSession } from "@/lib/lti/request-session";
 import { organizationMemberIds } from "@/lib/lti/store";
 import { ownerInOrganization } from "@/lib/lti/resource-link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  parseDashboardKnowledgeRegionKind,
-  presentDashboardKnowledgeRegions,
-} from "@/lib/dashboard-knowledge-regions";
+import { presentDashboardKnowledgeRegions } from "@/lib/dashboard-knowledge-regions";
 import { presentKnowledgeRegionDetails } from "@/lib/knowledge-region-details";
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import { productFlowEmbeddingKind } from "@/lib/product-flow";
@@ -17,16 +14,11 @@ import { ltiRosterNamesForIdentities } from "@/lib/lti/nrps-fetch";
 
 export const runtime = "nodejs";
 
-const FLOW_TABLE: Record<"verification" | "calibration" | "solve", string> = {
-  verification: "verify_flows",
-  calibration: "calibrate_flows",
-  solve: "solve_flows",
-};
-
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  void req;
   try {
     const session = await readLtiLaunchSession();
     if (!session) return jsonError(401, "No LTI launch");
@@ -35,7 +27,7 @@ export async function GET(
     const { data: row, error } = await admin
       .from("knowledge_regions")
       .select(
-        "id, workspace_id, owner_user_id, product, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id, calibrate_flow_id, solve_flow_id",
+        "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id",
       )
       .eq("id", id)
       .maybeSingle();
@@ -47,23 +39,18 @@ export async function GET(
     if (!ownerInOrganization(String(row.owner_user_id || ""), members)) {
       return jsonError(403, "Region is not in this organization");
     }
-    const kind =
-      parseDashboardKnowledgeRegionKind(req.nextUrl.searchParams.get("kind")) ||
-      parseDashboardKnowledgeRegionKind(row.product) ||
-      "verification";
     const ownerId = String(row.owner_user_id || "");
-    const presented = presentDashboardKnowledgeRegions([row], kind, ownerId)[0];
+    const presented = presentDashboardKnowledgeRegions([row], ownerId)[0];
     if (!presented) return jsonError(404, "Region not found");
     const { data: siblings } = await admin
       .from("knowledge_regions")
       .select(
-        "id, name, description, product, owner_user_id, embedding_model_id, centroid, cosine_threshold, mean_radius, subject_count",
+        "id, name, description, owner_user_id, embedding_model_id, centroid, cosine_threshold, mean_radius, subject_count",
       )
-      .eq("owner_user_id", ownerId)
-      .eq("product", kind);
+      .eq("owner_user_id", ownerId);
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: ownerId,
-      flowKind: productFlowEmbeddingKind(kind),
+      flowKind: productFlowEmbeddingKind(),
     });
     const embeddings: DataStudioEmbeddingRow[] = stored.map((item) => ({
       id: item.id,
@@ -79,19 +66,14 @@ export async function GET(
       created_at: item.created_at,
       source: item.source,
     }));
-    const seedFlowId =
-      kind === "calibration"
-        ? String(row.calibrate_flow_id || "").trim()
-        : kind === "solve"
-          ? String(row.solve_flow_id || "").trim()
-          : String(row.verify_flow_id || "").trim();
+    const seedFlowId = String(row.verify_flow_id || "").trim();
     const ids = [
       seedFlowId,
       ...embeddings.map((item) => String(item.flow_id || "").trim()),
     ].filter(Boolean);
     const unique = [...new Set(ids)];
     const { data: flowRows } = unique.length
-      ? await admin.from(FLOW_TABLE[kind]).select("id, name").in("id", unique)
+      ? await admin.from("verify_flows").select("id, name").in("id", unique)
       : { data: [] as Array<{ id: string; name: string }> };
     const flowNames: Record<string, string> = {};
     for (const flow of flowRows || []) {
@@ -102,7 +84,6 @@ export async function GET(
       clusters: siblings || [],
       embeddings,
       flowNames,
-      kind,
     });
     const identities = [
       session.identity,
@@ -110,7 +91,6 @@ export async function GET(
     ].filter(Boolean);
     const rosterNames = await ltiRosterNamesForIdentities({ session, identities });
     return NextResponse.json({
-      kind,
       region: presented,
       details,
       rosterNames,

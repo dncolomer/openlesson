@@ -115,11 +115,6 @@ describe("releaseSessionLocalMemory", () => {
     expect(phase).toContain("releaseSessionLocalMemory(sessionRef.current?.id)");
     expect(phase).toContain("releaseSessionLocalMemory(next?.id ?? current?.id)");
 
-    const calibrate = read("components/CalibrationFlowRunner.tsx");
-    expect(calibrate).toContain("releaseSessionLocalMemory()");
-    const store = calibrate.slice(calibrate.indexOf("const storeProof"));
-    expect(store.indexOf("setStored(true)")).toBeLessThan(store.indexOf("releaseSessionLocalMemory()"));
-
     const scout = read("components/scout-tap/ScoutTapClient.tsx");
     expect(scout).toContain("releaseSessionLocalMemory(sessionId)");
 

@@ -62,7 +62,7 @@ export type WorkspaceAddBlockSubmitOpts = {
    * API maps these into generation prompt + saved local_context.
    */
   contextSourceKeys?: string[];
-  /** Solve / verification / calibration / content payload. */
+  /** Protocol / verification / content payload. */
   mapBlock?: MapBlock;
   title?: string;
   /** Problem text for a newly minted flow (ignored when linking an existing flow). */
@@ -140,7 +140,7 @@ export function WorkspaceAddBlockPane({
   );
   const [contextSelected, setContextSelected] = useState<string[]>([]);
   const [contextLoading, setContextLoading] = useState(false);
-  const [blockKind, setBlockKind] = useState<MapBlockKind>("solve");
+  const [blockKind, setBlockKind] = useState<MapBlockKind>("verification");
   const [selectedFlow, setSelectedFlow] = useState<DashboardRecentFlow | null>(
     null,
   );
@@ -160,7 +160,7 @@ export function WorkspaceAddBlockPane({
     setDensity(ADD_DENSITY_MAX);
     setSampleSeed(1);
     setContextSelected([]);
-    setBlockKind("solve");
+    setBlockKind("verification");
     setSelectedFlow(null);
     setContentAttachments([]);
     setProblem("");
@@ -401,11 +401,9 @@ export function WorkspaceAddBlockPane({
           disabled={busy || submitting}
         />
 
-        {blockKind === "calibration" ||
-        blockKind === "verification" ||
-        blockKind === "solve" ? (
+        {blockKind !== "content" ? (
           <WorkspaceOwnerFlowPicker
-            kind={blockKind}
+            kind="verification"
             selectedId={selectedFlow?.id || null}
             onChange={setSelectedFlow}
             disabled={busy || submitting}
@@ -420,7 +418,6 @@ export function WorkspaceAddBlockPane({
               artifacts={artifacts}
               onArtifactsChange={setArtifacts}
               workspaceId={workspaceId}
-              topicHook={blockKind}
               exactProblemOnCanvas={exactProblemOnCanvas}
               onExactProblemOnCanvasChange={setExactProblemOnCanvas}
               generateProblemOnOpen={generateProblemOnOpen}

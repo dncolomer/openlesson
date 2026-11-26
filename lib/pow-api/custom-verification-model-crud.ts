@@ -92,7 +92,7 @@ export async function listCustomVerificationModels(
   const { data, error } = await supabase
     .from("knowledge_regions")
     .select(
-      "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, family_embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at, calibrate_flow_id, verify_flow_id",
+      "id, workspace_id, owner_user_id, name, description, embedding_model_id, family_embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at, verify_flow_id",
     )
     .eq("workspace_id", workspaceId)
     .neq("dim", 64)
@@ -107,7 +107,7 @@ export async function listCustomVerificationModels(
 }
 
 const CUSTOM_MODEL_SELECT =
-  "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, family_embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at, calibrate_flow_id, verify_flow_id";
+  "id, workspace_id, owner_user_id, name, description, embedding_model_id, family_embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at, verify_flow_id";
 
 /** Regions from other workspaces the caller owns — for embeddings import overlay. */
 export async function listImportableKnowledgeRegionsForOwner(
@@ -161,7 +161,7 @@ export async function getCustomVerificationModel(
   const { data, error } = await supabase
     .from("knowledge_regions")
     .select(
-      "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
+      "id, workspace_id, owner_user_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
     )
     .eq("workspace_id", workspaceId)
     .eq("id", modelId)
@@ -352,7 +352,7 @@ export async function insertCustomVerificationSpec(
     family_embedding_model_id:
       options.spec.dim === 64 || options.spec.embedding_model_id === "knowledgecfg-v1-d64"
         ? null
-        : "learn-flowcfg-v1-d96",
+        : FLOW_EMBEDDING_MODEL_ID,
     dim: options.spec.dim,
     centroid: options.spec.centroid,
     cohort_cohesion: options.spec.cohort_cohesion,

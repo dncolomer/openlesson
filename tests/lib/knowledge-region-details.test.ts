@@ -123,13 +123,11 @@ describe("knowledge region details", () => {
     });
     const candidateInRegion = { ...candidate, vector: simulated.vector };
     const details = presentKnowledgeRegionDetails({
-      kind: "verification",
       flowNames: { "flow-a": "Limits" },
       parent: {
         id: "parent",
         name: "Limits styles",
         description: "region-simulation: 1 flows · Exploit-heavy, Balanced · 3/strategy · 1 real",
-        product: "verification",
         owner_user_id: "me",
         workspace_id: "ws-1",
         subject_count: 7,
@@ -144,7 +142,6 @@ describe("knowledge region details", () => {
           id: "c-exploit",
           name: "Limits styles · Exploit-heavy",
           description: "region-simulation-cluster:exploit-heavy",
-          product: "verification",
           owner_user_id: "me",
           subject_count: 3,
           centroid: simulated.vector,
@@ -154,7 +151,6 @@ describe("knowledge region details", () => {
           id: "c-balanced",
           name: "Limits styles · Balanced",
           description: "region-simulation-cluster:balanced",
-          product: "verification",
           owner_user_id: "me",
           subject_count: 3,
           centroid: balanced.vector,
@@ -164,7 +160,6 @@ describe("knowledge region details", () => {
           id: "c-voice",
           name: "Limits styles · Exploit-heavy · Path + Text",
           description: "region-simulation-cluster:exploit-heavy",
-          product: "verification",
           embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
           subject_count: 3,
         },
@@ -249,7 +244,6 @@ describe("knowledge region details", () => {
       id: "parent",
       name: "Limits styles",
       description: "region-simulation: 1 flows · Exploit-heavy · 3/strategy · 0 real",
-      product: "verification",
       owner_user_id: "me",
       workspace_id: "ws-1",
       verify_flow_id: "flow-a",
@@ -260,7 +254,6 @@ describe("knowledge region details", () => {
       id: "c-exploit",
       name: "Limits styles · Exploit-heavy",
       description: "region-simulation-cluster:exploit-heavy",
-      product: "verification",
       subject_count: 1,
       centroid: simulated.vector,
       cosine_threshold: 0.5,
@@ -269,13 +262,11 @@ describe("knowledge region details", () => {
       id: "c-ai",
       name: "Limits styles · Claude Sonnet · high",
       description: "region-simulation-cluster:ai-use:claude-sonnet-high",
-      product: "verification",
       subject_count: 1,
       centroid: aiUse.vector,
       cosine_threshold: 0.5,
     };
     const withoutAiCluster = presentKnowledgeRegionDetails({
-      kind: "verification",
       flowNames: { "flow-a": "Limits" },
       parent,
       clusters: [explorationCluster],
@@ -286,7 +277,6 @@ describe("knowledge region details", () => {
     expect(withoutAiCluster?.clusters.map((row) => row.id)).toEqual(["c-exploit"]);
 
     const withAiCluster = presentKnowledgeRegionDetails({
-      kind: "verification",
       flowNames: { "flow-a": "Limits" },
       parent,
       clusters: [explorationCluster, aiUseCluster],
@@ -308,20 +298,17 @@ describe("knowledge region details", () => {
       id: "sim-s",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",
-      flowKind: "solve",
+      flowKind: "verify",
       flowId: "flow-s",
       runId: "sim_exploit-heavy_0_seed",
       prompt: "solve walk",
     });
     const details = presentKnowledgeRegionDetails({
-      kind: "solve",
       flowNames: { "flow-s": "Normalize" },
       parent: {
         id: "solve-parent",
         name: "Gaussian packet",
         description: "region-simulation: 1 flows · Exploit-heavy · 3/strategy · 0 real",
-        product: "solve",
-        solve_flow_id: "flow-s",
         subject_count: 3,
       },
       clusters: [
@@ -329,14 +316,12 @@ describe("knowledge region details", () => {
           id: "c-s",
           name: "Gaussian packet · Exploit-heavy",
           description: "region-simulation-cluster:exploit-heavy",
-          product: "solve",
           subject_count: 3,
         },
       ],
       embeddings: [simulated],
     });
-    expect(details?.kind).toBe("solve");
-    expect(details?.regionPath).toBe("/solve/regions/solve-parent");
+    expect(details?.regionPath).toContain("/regions/solve-parent");
     expect(details?.flows[0]?.name).toBe("Normalize");
     expect(details?.samples).toHaveLength(1);
   });

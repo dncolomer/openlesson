@@ -22,14 +22,8 @@ import {
   type IleWorkCanvasCommandId,
 } from "@/lib/learn-work-canvas-commands";
 import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas";
-import { ileCanvasCraftInsightUsable, ileCanvasShowsCraftInsight } from "@/lib/learn-turn-insights";
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import { IleCanvasPointerButton } from "@/components/session-view/learn-canvas-pointer-button";
-import {
-  IleCanvasCraftInsightForm,
-  IleCraftInsightButton,
-  type IleCanvasCraftInsightConfig,
-} from "@/components/session-view/learn-canvas-craft-insight";
 import { usePublishSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
 import { usePublishSessionMarkDraft } from "@/components/session-view/session-policy-context";
 import type { SessionMarkMode } from "@/lib/session-marks";
@@ -41,6 +35,14 @@ import {
   ILE_CANVAS_COMMAND_RAIL_CLASS,
   ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
+
+function ileCanvasShowsCraftInsight(_mode?: unknown): boolean {
+  return false;
+}
+
+function ileCanvasCraftInsightUsable(): boolean {
+  return false;
+}
 
 const DOCK_ANCHORS: readonly { mode: IleCommandDockMode; title: string }[] = [
   { mode: "bottom-left", title: "Anchor at the bottom left" },
@@ -78,14 +80,11 @@ export function CanvasPromptBar({
   setCommandText,
   handleQuickAction,
   commandInputRef,
-  craftInsight,
-  setCraftInsightOpen,
   dictateTranscript,
   getLiveTranscript,
   viewModeEnabled,
   writeDictatedText,
   onDictateActive,
-  craftInsightOpen,
   selectedCanvasElements,
   autoLayoutEnabled = false,
   onToggleAutoLayout,
@@ -108,14 +107,11 @@ export function CanvasPromptBar({
   setCommandText: (value: string) => void;
   handleQuickAction: (id: IleWorkCanvasCommandId, selected?: IleWorkCanvasElement[]) => void;
   commandInputRef: RefObject<HTMLInputElement | null>;
-  craftInsight?: IleCanvasCraftInsightConfig | null;
-  setCraftInsightOpen: (open: boolean) => void;
   dictateTranscript?: string;
   getLiveTranscript?: () => string;
   viewModeEnabled?: boolean;
   writeDictatedText: (text: string, commit: boolean) => IleWorkCanvasElement[];
   onDictateActive?: (active: boolean) => void;
-  craftInsightOpen: boolean;
   selectedCanvasElements: () => IleWorkCanvasElement[];
   autoLayoutEnabled?: boolean;
   onToggleAutoLayout?: () => void;
@@ -137,12 +133,10 @@ export function CanvasPromptBar({
   const clearCommandRef = useRef(setCommandText);
   const writeDictatedRef = useRef(writeDictatedText);
   const dictateActiveRef = useRef(onDictateActive);
-  const openCraftRef = useRef(setCraftInsightOpen);
   runCommandRef.current = handleQuickAction;
   clearCommandRef.current = setCommandText;
   writeDictatedRef.current = writeDictatedText;
   dictateActiveRef.current = onDictateActive;
-  openCraftRef.current = setCraftInsightOpen;
   const questionKey = (sessionMarkQuestions ?? [])
     .map((question) => `${question.id || ""}:${question.text || ""}`)
     .join("|");
@@ -183,7 +177,8 @@ export function CanvasPromptBar({
     sessionMarkMode,
   );
   const catalog = ileWorkCanvasCommandsFor(sessionMarkMode);
-  const showCraftInsight = Boolean(craftInsight) && ileCanvasShowsCraftInsight(sessionMarkMode);
+  void ileCanvasShowsCraftInsight(sessionMarkMode);
+  void ileCanvasCraftInsightUsable();
   const dictateOn = dictateTranscript !== undefined && !viewModeEnabled;
   const toggleAutoLayoutRef = useRef(onToggleAutoLayout);
   toggleAutoLayoutRef.current = onToggleAutoLayout;
@@ -217,7 +212,7 @@ export function CanvasPromptBar({
             toggle: () => togglePointerRef.current?.(),
           }
         : null,
-      craft: showCraftInsight ? { open: () => openCraftRef.current(true) } : null,
+      craft: null,
       autoLayout: toggleAutoLayoutRef.current
         ? {
             enabled: autoLayoutEnabled,
@@ -233,7 +228,6 @@ export function CanvasPromptBar({
     getLiveTranscript,
     pointerActive,
     publishCommands,
-    showCraftInsight,
   ]);
   useEffect(() => () => publishCommands(null), [publishCommands]);
   const floatWidth = ileCommandDockFloatWidth(
@@ -433,7 +427,7 @@ export function CanvasPromptBar({
                   </button>
                 </div>
                 ) : null}
-                {showCraftInsight || (dictateTranscript !== undefined && !viewModeEnabled) ? (
+                {(dictateTranscript !== undefined && !viewModeEnabled) || onTogglePointer ? (
                 <div
                   data-ile-board-tools
                   className={
@@ -444,13 +438,6 @@ export function CanvasPromptBar({
                 >
                   <p className="px-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-white/45">board</p>
                   <div className={rail ? "grid w-full grid-cols-1 gap-1" : "flex w-full items-stretch gap-1"}>
-                  {showCraftInsight ? (
-                    <IleCraftInsightButton
-                      square={rail}
-                      usable={ileCanvasCraftInsightUsable()}
-                      onClick={() => setCraftInsightOpen(true)}
-                    />
-                  ) : null}
                   {dictateTranscript !== undefined && !viewModeEnabled ? (
                     <IleCanvasDictateButton
                       square={rail}
@@ -477,24 +464,7 @@ export function CanvasPromptBar({
                 </div>
                 ) : null}
               </div>
-              {showCraftInsight && craftInsight ? (
-                <IleCanvasCraftInsightForm
-                  open={craftInsightOpen}
-                  enabled={ileCanvasCraftInsightUsable()}
-                  selectedElements={selectedCanvasElements()}
-                  config={craftInsight}
-                  onClose={() => setCraftInsightOpen(false)}
-                />
-              ) : null}
             </div>
           </form>
-  ) : showCraftInsight && craftInsight && craftInsightOpen ? (
-    <IleCanvasCraftInsightForm
-      open={craftInsightOpen}
-      enabled={ileCanvasCraftInsightUsable()}
-      selectedElements={selectedCanvasElements()}
-      config={craftInsight}
-      onClose={() => setCraftInsightOpen(false)}
-    />
   ) : null;
 }

@@ -783,7 +783,7 @@ export function buildPromptImpactLayers(input: {
       id: "surfaces",
       label: "Where this shows up",
       summary:
-        "Calibrate, Learn, and Verify, plus exercise builders, all read this same context.",
+        "Knowledge verification protocols, plus exercise builders, all read this same context.",
       feeds: ["session", "exercise"],
       present: true,
     },

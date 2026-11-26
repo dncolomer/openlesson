@@ -13,18 +13,7 @@ import {
   canonicalizeProductIntentId,
 } from "@/lib/product-intent";
 import {
-  readableSimulateInsights,
-  runSimulateInsights,
-  runSimulateInsightsJob,
-  createSimulateInsightsJob,
-  simulateInsightsClickStartsNewJob,
-  simulateInsightsPollBudgetMs,
-  SIMULATE_INSIGHTS_FETCH_TIMEOUT_MS,
-  SIMULATE_INSIGHTS_STEP_COUNT,
-} from "@/lib/simulate-insights";
-import {
   applySimulationModifierToPrompt,
-  commitSimulationJob,
   depositSimulationGeneration,
   emptySimulationCollection,
   keepSimulatedInsights,
@@ -32,7 +21,6 @@ import {
   normalizeSimulationCollection,
   removeSimulationCollectionItem,
   updateSimulationCollectionItem,
-  upsertSimulationJob,
 } from "@/lib/workspace-simulation-collection";
 import {
   assembleSuggestFromKnowledgeXaiMessages,
@@ -195,204 +183,23 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
 });
 
 describe("Simulate Insights runner", () => {
-  it("runs two sequential model steps and returns insight candidates", async () => {
-    const calls: number[] = [];
-    let secondPrompt = "";
-    const insights = await runSimulateInsights({
-      context: {
-        scope: "block",
-        title: "Ownership",
-        description: "Move versus borrow. Partial moves leave the rest valid.",
-      },
-      callStep: async ({ step, userPrompt }) => {
-        calls.push(step);
-        if (step === 1) {
-          return {
-            observations: ["Partial moves leave the rest of the struct valid."],
-          };
-        }
-        secondPrompt = userPrompt;
-        return {
-          insights: [
-            {
-              title: "Partial moves",
-              body: "A learner can craft that a partial move keeps the rest of a struct usable.",
-            },
-          ],
-        };
-      },
-    });
-    expect(calls).toEqual([1, 2]);
-    expect(secondPrompt).toContain("Partial moves leave the rest of the struct valid.");
-    expect(insights).toHaveLength(1);
-    expect(insights[0]!.title).toBe("Partial moves");
-    expect(insights[0]!.body).toMatch(/partial move/i);
-    expect(insights[0]).not.toHaveProperty("kind");
-
-    const job = createSimulateInsightsJob({ scope: "block", blockId: "b1" });
-    expect(readableSimulateInsights(job)).toEqual([]);
-    const persisted: Array<{ completedSteps: number; status: string; insightCount: number }> = [];
-    const finished = await runSimulateInsightsJob({
-      job,
-      context: { scope: "block", title: "Ownership", description: "Moves and borrows." },
-      callStep: async ({ step }) => {
-        if (step === 1) return { observations: ["Borrowing does not take ownership."] };
-        return {
-          insights: [
-            {
-              title: "Borrow versus move",
-              body: "A learner can craft that a borrow uses a value without taking ownership.",
-            },
-          ],
-        };
-      },
-      persist: async (next) => {
-        persisted.push({
-          completedSteps: next.completedSteps,
-          status: next.status,
-          insightCount: readableSimulateInsights(next).length,
-        });
-      },
-    });
-    expect(persisted.some((row) => row.completedSteps === 1 && row.insightCount === 0)).toBe(true);
-    expect(persisted.filter((row) => row.status === "completed")).toHaveLength(1);
-    expect(readableSimulateInsights(finished)).toHaveLength(1);
-    expect(finished.completedSteps).toBeGreaterThanOrEqual(2);
-
-    let stored = keepSimulatedInsights(emptySimulationCollection(), {
-      insights: [
-        {
-          title: "Already kept",
-          body: "A learner can craft the idea that was saved before this step finished.",
-        },
-      ],
-      origin: { kind: "block", blockId: "b1" },
-    });
-    stored = upsertSimulationJob(
-      stored,
-      createSimulateInsightsJob({ scope: "block", blockId: "b1", id: "job-race" }),
-    );
-    let raced = false;
-    const completed = {
-      ...createSimulateInsightsJob({ scope: "block", blockId: "b1", id: "job-race" }),
-      status: "completed" as const,
-      completedSteps: 2,
-      insights: [
-        {
-          id: "fresh",
-          title: "Fresh insight",
-          body: "A learner can craft the idea produced by the second simulation step.",
-        },
-      ],
-    };
-    const committed = await commitSimulationJob({
-      job: completed,
-      load: async () => stored,
-      saveIfVersion: async (next, expectedVersion) => {
-        if (!raced) {
-          raced = true;
-          stored = keepSimulatedInsights(stored, {
-            insights: [
-              {
-                title: "Kept during the run",
-                body: "A learner can craft the idea the author kept while the job was saving.",
-              },
-            ],
-            origin: { kind: "block", blockId: "b1" },
-          });
-          return false;
-        }
-        if (stored.updatedAt !== expectedVersion) return false;
-        stored = next;
-        return true;
-      },
-    });
-    const keptTitles = listSimulationCollectionItems(committed).map((item) => item.title);
-    expect(keptTitles).toContain("Kept during the run");
-    expect(keptTitles).toContain("Already kept");
-    expect(committed.jobs.find((job) => job.id === "job-race")?.status).toBe("completed");
-
-    expect(simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "waiting" })).toBe(false);
-    expect(simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "failed" })).toBe(true);
-    expect(simulateInsightsClickStartsNewJob({ jobId: null, phase: "idle" })).toBe(true);
-    expect(simulateInsightsPollBudgetMs()).toBeGreaterThanOrEqual(
-      SIMULATE_INSIGHTS_STEP_COUNT * 2 * SIMULATE_INSIGHTS_FETCH_TIMEOUT_MS,
-    );
-
-    const legacy = normalizeSimulationCollection({
-      items: [
-        { id: "q1", kind: "question", text: "What is entropy?" },
-        { id: "e1", kind: "exercise", text: "Compute entropy of a fair coin." },
-      ],
-    });
-    expect(listSimulationCollectionItems(legacy)).toEqual([]);
-
+  it("unmounts the runner, model, job route, and surface", () => {
+    expect(existsSync(join(ROOT, "lib/simulate-insights.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/simulate-insights-model.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/workspace/simulate-insights/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/SimulateInsightsSurface.tsx"))).toBe(false);
+    const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
+    expect(panel).not.toContain("depositToCollection");
+    expect(panel).not.toContain("autoRanForBlock");
+    expect(panel).not.toContain("SimulateInsightsSurface");
     writeLog(
       "simulate-insights-runner.log",
       [
-        `call_count=${calls.length}`,
-        `step_order=${calls.join(",")}`,
-        `insight_title=${insights[0]!.title}`,
-        `insight_body=${insights[0]!.body}`,
-        `second_prompt_has_observation=${secondPrompt.includes("Partial moves leave the rest")}`,
-        `mid_job_insights_hidden=${persisted.some((row) => row.completedSteps === 1 && row.insightCount === 0)}`,
-        `finished_insights=${readableSimulateInsights(finished).length}`,
-        `legacy_kept=${listSimulationCollectionItems(legacy).length}`,
-        `kept_during_job=${keptTitles.includes("Kept during the run")}`,
-        `completed_persists=${persisted.filter((row) => row.status === "completed").length}`,
-        `poll_budget_ms=${simulateInsightsPollBudgetMs()}`,
-        `resume_waiting=${simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "waiting" })}`,
-        `retry_after_failure=${simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "failed" })}`,
+        "runner=unmounted",
+        "route=gone",
+        "surface=gone",
       ].join("\n") + "\n",
     );
-  });
-
-  it("job route starts in the background and reads insights later", () => {
-    const route = read("app/api/workspace/simulate-insights/route.ts");
-    const start = route.indexOf("export async function POST");
-    const readJob = route.indexOf("export async function GET");
-    const postBody = route.slice(start, readJob);
-    expect(postBody).toContain("after(");
-    expect(postBody).toContain("runSimulateInsightsJob");
-    expect(postBody).toContain("commitSimulationJob");
-    expect(postBody).toContain('status: "running"');
-    expect(postBody).not.toContain("callXaiJSON");
-    const collectionRoute = read("app/api/workspace/simulation-collection/route.ts");
-    const collectionGet = collectionRoute.slice(
-      collectionRoute.indexOf("export async function GET"),
-      collectionRoute.indexOf("export async function POST"),
-    );
-    expect(collectionGet).toContain('searchParams.get("ayclToken")');
-    const model = read("lib/simulate-insights-model.ts");
-    expect(model).toContain("fetchTimeout: 45_000");
-    const surface = read("components/SimulateInsightsSurface.tsx");
-    expect(surface).toContain("ayclToken");
-    expect(surface).toContain("simulation-collection?");
-    expect(surface).toContain("simulateInsightsPollBudgetMs");
-    expect(surface).toContain("simulateInsightsClickStartsNewJob");
-    expect(surface).toContain('setPhase("failed")');
-    expect(surface).not.toContain('setPhase(activeJobId ? "waiting" : "idle")');
-    expect(surface).not.toContain("attempt < 40");
-    expect(readJob).toBeGreaterThan(start);
-    expect(route).toContain("readableSimulateInsights");
-  });
-
-  it("block panel does not auto-generate or auto-deposit to collection", () => {
-    const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    const surface = read("components/SimulateInsightsSurface.tsx");
-    expect(surface).toContain('data-simulation-auto-generate="false"');
-    expect(surface).toContain('data-simulation-auto-deposit={autoDeposit ? "true" : "false"}');
-    expect(panel).not.toContain("depositToCollection");
-    expect(panel).not.toContain("autoRanForBlock");
-    expect(surface).toContain("simulation-collection");
-    expect(surface).toContain("data-simulate-insights-keep");
-    expect(surface).not.toContain("addMany");
-    const startFn = surface.slice(
-      surface.indexOf("const start = async"),
-      surface.indexOf("const keep = async"),
-    );
-    expect(startFn).not.toContain("action: \"keep\"");
-    expect(surface).toContain("modifierPrompt");
   });
 });
 
@@ -496,36 +303,15 @@ describe("simulation collection CRUD + modifier", () => {
   });
 
   it("sim tab is workspace-only; multi-block lives on map drawer", () => {
-    const surface = read("components/SimulateInsightsSurface.tsx");
+    expect(existsSync(join(ROOT, "components/SimulateInsightsSurface.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/workspace/simulate-insights/route.ts"))).toBe(false);
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).not.toContain("WorkspaceSimulationPanel");
-    expect(surface).toContain("data-simulation-collection");
-    expect(surface).not.toContain('scope="workspace"');
-    expect(surface).not.toContain("data-simulation-questions");
-    expect(surface).not.toContain("data-simulation-exercises");
-
-    expect(surface).toContain("data-simulate-insights-keep");
-    expect(surface).toContain("data-simulation-collection-delete");
-    expect(surface).toContain('action: "keep"');
-    expect(surface).toContain('action: "delete"');
-    expect(surface).toContain("/api/workspace/simulate-insights");
-    expect(surface).toContain("data-simulate-insights-start");
-    expect(surface).not.toContain("data-simulation-questions");
-    expect(surface).not.toContain("data-simulation-exercises");
-    const startFn = surface.slice(
-      surface.indexOf("const readJob = async"),
-      surface.indexOf("const keep = async"),
-    );
-    expect(startFn).toContain('method: "POST"');
-    expect(startFn).toContain('job.status === "completed"');
-    expect(startFn).not.toContain("setInsights(started");
-    expect(startFn).toContain("simulateInsightsClickStartsNewJob");
 
     const multi = read("components/WorkspaceMultiBlockSimulationPanel.tsx");
     expect(multi).toContain("data-multi-block-simulation");
     expect(multi).toContain("data-simulation-multi-block");
-    expect(multi).toContain("SimulateInsightsSurface");
-    expect(multi).toContain("multi_block");
+    expect(multi).not.toContain("SimulateInsightsSurface");
 
     const combine = readCombineBlocksSurface();
     expect(combine).not.toContain("WorkspaceMultiBlockSimulationPanel");
@@ -537,10 +323,6 @@ describe("simulation collection CRUD + modifier", () => {
     expect(detail).not.toContain('drawerId="simulation"');
     expect(detail).not.toContain('title="Simulate Insights"');
     expect(combine).not.toContain('title="Simulate Insights"');
-    const jobRoute = read("app/api/workspace/simulate-insights/route.ts");
-    expect(jobRoute).toContain("Simulate Insights runs on a block");
-    expect(jobRoute).toContain("runSimulateInsightsJob");
-    expect(jobRoute).not.toContain("callXaiJSON");
 
     const uiLog = join(SCRATCH, "simulate-insights-ui.log");
     mkdirSync(SCRATCH, { recursive: true });
@@ -549,15 +331,9 @@ describe("simulation collection CRUD + modifier", () => {
       uiLog,
       uiPrev +
         [
-          "section=Simulate Insights",
+          "section=Simulate Insights unmounted",
           "block_drawer=unmounted",
           "multi_drawer=unmounted",
-          "keep=data-simulate-insights-keep",
-          "job_start=POST /api/workspace/simulate-insights",
-          "job_read=GET after status completed",
-          "runner=runSimulateInsightsJob",
-          "one_shot_callXaiJSON_in_job_route=false",
-          "question_exercise_list=absent",
         ].join("\n") +
         "\n",
       "utf8",

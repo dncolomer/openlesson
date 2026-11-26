@@ -81,10 +81,16 @@ export function blockMapGridIcon(
 export function mapBlockKindIconName(
   kind: string | null | undefined,
 ): TypedMapBlockKindIcon | null {
-  if (kind === "calibration") return CALIBRATION_MAP_ICON;
-  if (kind === "verification") return VERIFICATION_MAP_ICON;
-  if (kind === "solve") return SOLVE_MAP_ICON;
   if (kind === "content") return CONTENT_MAP_ICON;
+  if (
+    kind === "verification" ||
+    kind === "protocol" ||
+    kind === "calibration" ||
+    kind === "solve" ||
+    kind === "learn"
+  ) {
+    return VERIFICATION_MAP_ICON;
+  }
   return null;
 }
 

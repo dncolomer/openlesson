@@ -14,7 +14,7 @@ import {
   parseGenerateProblemOnOpen,
   productFlowWizardCanAdvance,
 } from "@/lib/product-flow";
-import { applySolveCommand, emptySolveState } from "@/lib/solve-flow";
+import { applyVerificationCommand, emptyVerificationState } from "@/lib/verification-flow";
 
 const ROOT = join(__dirname, "../..");
 
@@ -30,25 +30,22 @@ const ARTIFACT = {
 
 describe("generate problem from artifacts", () => {
   it("parses author input and refuses empty artifacts", async () => {
-    expect(DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH).toBe("/api/dashboard/flows/generate-problem");
+    expect(DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH).toBe("/api/dashboard/protocols/generate-problem");
     expect(flowCanGenerateProblemFromArtifacts([])).toBe(false);
     expect(flowCanGenerateProblemFromArtifacts([ARTIFACT])).toBe(true);
     expect(parseGenerateProblemOnOpen("true")).toBe(true);
     expect(parseGenerateProblemOnOpen(false)).toBe(false);
     const parsed = flowProblemGenerateInput({
-      kind: "solve",
       name: "Decoder",
       problem: "Keep this note",
       artifacts: [ARTIFACT],
     });
     expect(parsed).toEqual({
-      kind: "solve",
       name: "Decoder",
       problem: "Keep this note",
       artifacts: [ARTIFACT],
     });
     const empty = await generateFlowProblemFromArtifacts({
-      kind: "solve",
       name: "",
       problem: "",
       artifacts: [],
@@ -63,7 +60,7 @@ describe("generate problem from artifacts", () => {
     }));
     const forTurn = vi.fn(async () => ({ extraPrompt: "FILE EXCERPT" }));
     const result = await generateFlowProblemFromArtifacts(
-      { kind: "solve", name: "Decoder", artifacts: [ARTIFACT] },
+      { name: "Decoder", artifacts: [ARTIFACT] },
       { call: call as never, forTurn },
     );
     expect(result).toEqual({
@@ -81,7 +78,7 @@ describe("generate problem from artifacts", () => {
 
   it("lets Author continue with artifacts and generate-on-open", () => {
     const draft = {
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       artifacts: [ARTIFACT],
       generateProblemOnOpen: true,
@@ -94,21 +91,21 @@ describe("generate problem from artifacts", () => {
     expect(accepted.generateProblemOnOpen).toBe(true);
 
     const missingFiles = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       generateProblemOnOpen: true,
     });
     expect(missingFiles).toEqual({ ok: false, reason: "topic_required" });
 
-    const created = applySolveCommand(emptySolveState(), {
+    const created = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
       ownerUserId: "owner-1",
       name: accepted.name,
       topic: accepted.topic,
       artifacts: accepted.artifacts,
       generateProblemOnOpen: true,
-      id: "sf-gen",
-      publicToken: "stok-gen",
+      id: "vf-gen",
+      publicToken: "vtok-gen",
     });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -126,7 +123,6 @@ describe("generate problem from artifacts", () => {
         exactProblemOnCanvas: true,
         artifacts: [ARTIFACT],
         name: "Decoder",
-        kind: "solve",
       },
       { call: call as never, forTurn: async () => ({ extraPrompt: "" }) },
     );
@@ -160,14 +156,12 @@ describe("generate problem from artifacts", () => {
     const page = read("components/product-flow/product-flow-page.tsx");
     expect(page).toContain("onGenerateProblemOnOpenChange");
     expect(page).toContain("generateProblemOnOpen");
-    expect(read("app/api/dashboard/flows/generate-problem/route.ts")).toContain(
+    expect(read("app/api/dashboard/protocols/generate-problem/route.ts")).toContain(
       "generateFlowProblemFromArtifacts",
     );
-    expect(read("app/api/dashboard/flows/route.ts")).toContain("generateProblemOnOpen");
-    expect(read("app/api/dashboard/flows/[id]/route.ts")).toContain("generateProblemOnOpen");
-    expect(read("lib/solve-flow-repository.ts")).toContain("generate_problem_on_open");
+    expect(read("app/api/dashboard/protocols/route.ts")).toContain("generateProblemOnOpen");
+    expect(read("app/api/dashboard/protocols/[id]/route.ts")).toContain("generateProblemOnOpen");
     expect(read("lib/verification-flow-repository.ts")).toContain("generate_problem_on_open");
-    expect(read("lib/calibration-flow-repository.ts")).toContain("generate_problem_on_open");
     const session = read("app/api/learn/session-branch-model/route.ts");
     expect(session).toContain("openingWorkFromArtifactProblem");
     expect(session).toContain("generateProblemOnOpen");

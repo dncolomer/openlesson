@@ -37,7 +37,6 @@ import {
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ileCanvasPromptBarWidth,
-  ileCanvasCraftInsightOpenAfterSelection,
   ileCanvasPromptMode,
   ileCanvasSlashBarOpen,
   ileCanvasSlashKeyOpensBar,
@@ -61,7 +60,6 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/learn-work-canvas";
-import { type IleCanvasCraftInsightConfig } from "@/components/session-view/learn-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
   ileWorkCanvasGestureBusy,
@@ -129,8 +127,6 @@ export interface ExcalidrawCanvasProps {
    * not learner silence. Omitted on surfaces that do not score silence.
    */
   onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
-  /** Learn: craft an insight linked to this chapter. */
-  craftInsight?: IleCanvasCraftInsightConfig | null;
   /**
    * Live speech-bar text. Pass it (even when empty) to show Dictate.
    * Omit it on boards with no microphone. Speech after the click is written
@@ -183,7 +179,6 @@ export function ExcalidrawCanvas({
   boardId = null,
   heliosBusy = false,
   onLearnerWaitChange,
-  craftInsight = null,
   dictateTranscript,
   getLiveTranscript,
   onDictateActive,
@@ -207,7 +202,6 @@ export function ExcalidrawCanvas({
 
   const selectionWasActiveRef = useRef(false);
   const [askInFlight, setAskInFlight] = useState(0);
-  const [craftInsightOpen, setCraftInsightOpen] = useState(false);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [canvasSelectionActive, setCanvasSelectionActive] = useState(false);
   const [autoLayoutEnabled, setAutoLayoutEnabled] = useState(false);
@@ -540,12 +534,6 @@ export function ExcalidrawCanvas({
     }
     selectionWasActiveRef.current = active;
     setCanvasSelectionActive((prev) => (prev === active ? prev : active));
-    setCraftInsightOpen((open) =>
-      ileCanvasCraftInsightOpenAfterSelection({
-        open,
-        selectionActive: active,
-      }),
-    );
   }, []);
 
   const commands = useWorkCanvasCommands({
@@ -1022,8 +1010,6 @@ export function ExcalidrawCanvas({
             setCommandText={setCommandText}
             handleQuickAction={handleQuickAction}
             commandInputRef={commandInputRef}
-            craftInsight={craftInsight}
-            setCraftInsightOpen={setCraftInsightOpen}
             dictateTranscript={dictateTranscript}
             getLiveTranscript={getLiveTranscript}
             viewModeEnabled={viewModeEnabled}
@@ -1033,7 +1019,6 @@ export function ExcalidrawCanvas({
             pointerActive={laserToolActive}
             onTogglePointer={toggleLaserTool}
             onDictateActive={onDictateActive}
-            craftInsightOpen={craftInsightOpen}
             selectedCanvasElements={selectedCanvasElements}
             sessionMarkMode={sessionMarkMode}
             sessionMarkQuestions={sessionMarkQuestionsForBar}

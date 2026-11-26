@@ -18,7 +18,7 @@ import { serializeIleWorkCanvasScene } from "@/lib/learn-work-canvas-scene";
 import { completeFlowEmbedding } from "@/lib/flow-embedding";
 import { storedRecordFileKind } from "@/lib/behavior-record";
 import { acceptProductFlowPublish, emptyProductFlowDraft } from "@/lib/product-flow";
-import { applySolveCommand, emptySolveState } from "@/lib/solve-flow";
+import { applyVerificationCommand, emptyVerificationState } from "@/lib/verification-flow";
 import { regionSimulationProgressOverall } from "@/lib/region-simulation";
 
 const root = join(__dirname, "../..");
@@ -107,7 +107,7 @@ describe("flow canvas capture", () => {
     expect(isCanvasContentPowRow({ tool_action: CANVAS_DOCUMENT_TOOL_ACTION })).toBe(true);
     expect(isCanvasContentPowRow({ tool_action: "draw_text" })).toBe(false);
     const withDoc = completeFlowEmbedding({
-      flowKind: "solve",
+      flowKind: "verify",
       pow: [
         {
           type: "tool",
@@ -117,22 +117,22 @@ describe("flow canvas capture", () => {
         },
       ],
     });
-    const empty = completeFlowEmbedding({ flowKind: "solve", pow: [] });
+    const empty = completeFlowEmbedding({ flowKind: "verify", pow: [] });
     expect(withDoc.vector).toEqual(empty.vector);
     expect(withDoc.vector_path_text).toEqual(empty.vector_path_text);
     expect(JSON.stringify(withDoc.raw.pow)).not.toContain("secret lemma");
   });
 
-  it("publishes default-off and persists on Solve create", () => {
+  it("publishes default-off and persists on Protocol create", () => {
     const accepted = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Limits",
       topic: "epsilon-delta",
     });
     expect(accepted.ok).toBe(true);
     if (!accepted.ok) return;
     expect(accepted.canvasCapture).toEqual(DEFAULT_FLOW_CANVAS_CAPTURE);
-    const created = applySolveCommand(emptySolveState(), {
+    const created = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
       ownerUserId: "u1",
       name: "Limits",
@@ -152,7 +152,7 @@ describe("flow canvas capture", () => {
     expect(read("components/product-flow/flow-channels-fields.tsx")).toContain(">Capture Canvas<");
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("canvasCapture");
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("Capture Canvas every");
-    expect(read("lib/solve-flow-repository.ts")).toContain("canvas_capture");
+    expect(read("lib/verification-flow-repository.ts")).toContain("canvas_capture");
     expect(read("lib/verification-flow-repository.ts")).toContain("withCanvasCaptureMetadata");
     expect(read("components/session-view/use-session-field.ts")).toContain(
       "buildCanvasMermaidDocumentUploadItem",

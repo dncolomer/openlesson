@@ -45,7 +45,7 @@ import {
   callXaiWithSchema,
   userMessage,
 } from "@/lib/xai-client";
-import { FLOW_API_BASE, powWorkspaceResource, workspaceResource } from "@/lib/api/agent-api-paths";
+import { PROTOCOL_API_BASE, powWorkspaceResource, workspaceResource } from "@/lib/api/agent-api-paths";
 
 export const EVIDENCE_SPEC_VERSION = "1.3";
 
@@ -80,59 +80,59 @@ export function buildContinuousEvaluationPolicy(
   } | null
 ): ContinuousEvaluationPolicy {
   const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
-  const flowsPath = `${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}`;
+  const protocolsPath = `${baseUrl.replace(/\/$/, "")}${PROTOCOL_API_BASE}`;
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
 
   const evidenceTriggers = [
-    "When adding a Solve, Calibration, or Verification flow",
-    "After authoring needs a flow before a session",
-    "When flow questions or topic change",
+    "When adding a knowledge verification protocol",
+    "After authoring needs a protocol before a session",
+    "When The Protocol Challenge or questions change",
   ];
 
   if (proofOfWorkCount === 0) {
-    evidenceTriggers.unshift("Immediately now: little or no proof of work yet; spec will sharpen as flows grow");
+    evidenceTriggers.unshift("Immediately now: little or no proof of work yet; spec will sharpen as protocols grow");
   } else if (proofOfWorkCount < 10) {
     evidenceTriggers.unshift(
-      `Now recommended: ${proofOfWorkCount} proof-of-work artifact(s) recorded in the product UI; keep flows aligned`
+      `Now recommended: ${proofOfWorkCount} proof-of-work artifact(s) recorded in the product UI; keep protocols aligned`
     );
   } else {
     evidenceTriggers.unshift(
-      `Re-fetch recommended: already ${proofOfWorkCount} proof-of-work artifacts; spec should reflect the current flows`
+      `Re-fetch recommended: already ${proofOfWorkCount} proof-of-work artifacts; spec should reflect the current protocols`
     );
   }
 
   return {
     principle:
-      "Uncertain Systems public agents manage Solve, Calibration, and Verification flows. Proof of work is recorded in the product UI.",
+      "Uncertain Systems public agents manage knowledge verification protocols. Proof of work is recorded in the product UI.",
     more_evidence_improves:
-      "More Solve, Calibration, and Verification flows give partners a complete evaluation path.",
+      "More knowledge verification protocols give partners a complete evaluation path.",
     regeneration_required: true,
     proof_of_work_spec: {
-      api_path: flowsPath,
+      api_path: protocolsPath,
       method: "POST",
-      purpose: "Create a Solve, Calibration, or Verification flow",
+      purpose: "Create a knowledge verification protocol",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
       api_path: skillPath,
       method: "POST",
-      purpose: "Regenerate skill.md so partner agents stay aligned with the latest flows",
+      purpose: "Regenerate skill.md so partner agents stay aligned with the latest protocols",
       when_to_call: [
-        "After the flow set changes",
+        "After the protocol set changes",
         "When onboarding a new partner agent version",
         "Never treat the initial skill.md as permanent; regeneration is part of the operating model",
       ],
     },
     performance: {
-      api_path: flowsPath,
+      api_path: protocolsPath,
       method: "POST",
-      purpose: "List and update Solve, Calibration, and Verification flows",
+      purpose: "List and update knowledge verification protocols",
       when_to_call: [
-        "When reviewing the current flow set",
-        "When a flow should be created or updated",
+        "When reviewing the current protocol set",
+        "When a protocol should be created or updated",
       ],
     },
-    recommended_cadence: `Flow loop: list_flows → create_flow (${flowsPath}) → get_flow → update_flow.`,
+    recommended_cadence: `Protocol loop: list_protocols → create_protocol (${protocolsPath}) → get_protocol → update_protocol.`,
   };
 }
 
@@ -155,13 +155,13 @@ export function enrichProofOfWorkSpecResult(
   const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
 
-  const flowRequiredFields = ["kind", "name"] as const;
+  const protocolRequiredFields = ["name", "challenge"] as const;
   const performanceContract: PerformanceReportContract = {
     ...(result.performance_report_contract ??
       buildVerticalScoreReportContract("verification", baseUrl)),
-    endpoint_pattern: `POST ${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}`,
-    mcp_tool: "create_flow",
-    required_fields: [...flowRequiredFields],
+    endpoint_pattern: `POST ${baseUrl.replace(/\/$/, "")}${PROTOCOL_API_BASE}`,
+    mcp_tool: "create_protocol",
+    required_fields: [...protocolRequiredFields],
   };
 
   const continuousEvaluation = buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts);
@@ -170,7 +170,7 @@ export function enrichProofOfWorkSpecResult(
   const blockCount = contextCounts?.blocks ?? 0;
   const llmInterruption = normalizePredictedInterruption(
     result.predicted_interruption,
-    "create_flow",
+    "create_protocol",
     workspaceId
   );
 
@@ -207,7 +207,7 @@ export function enrichProofOfWorkSpecResult(
       result.collection_guidance,
       result.continuous_evaluation_summary,
       formatDualSurfaceGuidance(continuousEvaluation, continuousEvaluationMcp),
-      `Self-update: list_flows then create_flow then get_flow then update_flow; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
+      `Self-update: list_protocols then create_protocol then get_protocol then update_protocol; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
     ]
       .filter(Boolean)
       .join(" "),
@@ -241,21 +241,21 @@ Dynamic integration skill API (MUST appear in skill.md):
 POST ${spec.continuous_evaluation?.integration_skill.api_path || spec.proof_of_work_spec_api_path || "(workspace)/integration-skill"}
 
 Continuous evaluation — REST (MUST appear in skill.md):
-${spec.continuous_evaluation?.principle || "Public agents manage Solve, Calibration, and Verification flows."}
+${spec.continuous_evaluation?.principle || "Public agents manage knowledge verification protocols."}
 ${spec.continuous_evaluation?.more_evidence_improves || ""}
-Create flow: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "/api/v3/flows"}
+Create protocol: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "/api/v3/protocols"}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
-List flows: ${spec.continuous_evaluation?.performance.api_path || "/api/v3/flows"}
-REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "list_flows → create_flow → get_flow → update_flow"}
+List protocols: ${spec.continuous_evaluation?.performance.api_path || "/api/v3/protocols"}
+REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "list_protocols → create_protocol → get_protocol → update_protocol"}
 
 Continuous evaluation — MCP (same loop, tool names):
 ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.principle || ""}
 MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
-create_flow ↔ REST POST .../flows
-get_flow ↔ REST GET .../flows/{flow_id}
-update_flow ↔ REST PATCH .../flows/{flow_id}
-list_flows ↔ REST GET .../flows
-MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "list_flows → create_flow → get_flow → update_flow"}
+create_protocol ↔ REST POST .../protocols
+get_protocol ↔ REST GET .../protocols/{protocol_id}
+update_protocol ↔ REST PATCH .../protocols/{protocol_id}
+list_protocols ↔ REST GET .../protocols
+MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "list_protocols → create_protocol → get_protocol → update_protocol"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 
@@ -270,7 +270,7 @@ export function resolveProofOfWorkSchemaInterruption(
 ): ProofOfWorkApiInterruption {
   return normalizePredictedInterruption(
     spec.predicted_interruption,
-    "create_flow",
+    "create_protocol",
     workspaceId,
   );
 }

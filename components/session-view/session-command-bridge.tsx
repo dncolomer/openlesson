@@ -18,7 +18,7 @@ export type SessionCanvasCommands = {
   dictate: SessionCanvasDictate | null;
   /** Laser pointer mode. Click on, click again off. */
   pointer: { active: boolean; toggle: () => void } | null;
-  /** Learn opens the insight form. Other modes leave this empty. */
+  /** Craft insight is unmounted. Always empty. */
   craft: { open: () => void } | null;
   autoLayout: { enabled: boolean; toggle: () => void } | null;
 };

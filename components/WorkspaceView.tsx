@@ -696,13 +696,9 @@ export function WorkspaceView({
               title={playCopyBlockSidebar(detailBlock)!.title}
               description={playCopyBlockSidebar(detailBlock)!.description}
               startLabel={
-                mapBlockLaunch(detailBlock?.map_block).action === "calibrate"
-                  ? "Open calibration flow"
-                  : mapBlockLaunch(detailBlock?.map_block).action === "verify"
-                    ? "Open verification flow"
-                    : mapBlockLaunch(detailBlock?.map_block).action === "solve"
-                      ? "Open solve flow"
-                      : playCopyStartSessionLabel()
+                mapBlockLaunch(detailBlock?.map_block).action === "verify"
+                  ? "Open protocol"
+                  : playCopyStartSessionLabel()
               }
               showStart={mapBlockLaunch(detailBlock?.map_block).action !== "none"}
               attachments={normalizeMapBlock(detailBlock?.map_block).attachments.map(

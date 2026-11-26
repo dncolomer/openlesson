@@ -5,7 +5,6 @@ import {
   DEFAULT_FLOW_ENFORCED_CHANNELS,
   FLOW_CHANNEL_IDS,
   FLOW_CHANNEL_LABELS,
-  OPTIONAL_FLOW_ENFORCED_CHANNELS,
   nextFlowEnforcedChannels,
   parseFlowEnforcedChannels,
   sessionEnforcedChannels,
@@ -96,28 +95,24 @@ describe("flow enforced channels", () => {
     ).toBe(true);
   });
 
-  it("skips enforced channels for Calibration", () => {
-    expect(flowAuthorShowsEnforcedChannels("calibration")).toBe(false);
-    expect(flowAuthorShowsEnforcedChannels("solve")).toBe(true);
-    expect(flowAuthorShowsEnforcedChannels("verification")).toBe(true);
-    expect(productFlowWizardSteps("calibration")).toEqual([
+  it("shows enforced channels on Protocol authoring", () => {
+    expect(flowAuthorShowsEnforcedChannels()).toBe(true);
+    expect(flowAuthorShowsEnforcedChannels("calibration")).toBe(true);
+    expect(productFlowWizardSteps()).toEqual([
       "name",
       "author",
       "model",
+      "channels",
       "publish",
     ]);
-    expect(nextProductFlowWizardStep("model", "calibration")).toBe("publish");
-    expect(previousProductFlowWizardStep("publish", "calibration")).toBe("model");
-    expect(emptyProductFlowDraft("calibration").enforcedChannels).toEqual(
-      OPTIONAL_FLOW_ENFORCED_CHANNELS,
+    expect(nextProductFlowWizardStep("model")).toBe("channels");
+    expect(previousProductFlowWizardStep("publish")).toBe("channels");
+    expect(emptyProductFlowDraft().enforcedChannels).toEqual(
+      DEFAULT_FLOW_ENFORCED_CHANNELS,
     );
-    const wizard = read("components/product-flow/product-flow-wizard.tsx");
-    expect(wizard).toContain("flowAuthorShowsEnforcedChannels(kind)");
-    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
-      "flowAuthorShowsEnforcedChannels(kind)",
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "data-flow-channels-step",
     );
-    expect(read("components/CalibrationFlowRunner.tsx")).not.toContain("useIleSessionPurity");
-    expect(read("lib/calibration-flow.ts")).toContain("OPTIONAL_FLOW_ENFORCED_CHANNELS");
   });
 
   it("skips the voice challenge when audio is not enforced", () => {

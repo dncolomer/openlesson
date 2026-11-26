@@ -39,7 +39,7 @@ export const EMBEDDING_MODEL_CATALOG: readonly EmbeddingModelInfo[] = [
     struct_dim: FLOW_EMBEDDING_STRUCT_DIM,
     sem_dim: FLOW_EMBEDDING_SEM_DIM,
     description:
-      "Completed Calibrate, Learn, and Verify embeddings: tree + priced edges + policy Distance + proof of work, L2-normalized in a fixed 96-D space.",
+      "Completed knowledge verification protocols embeddings: tree + priced edges + policy Distance + proof of work, L2-normalized in a fixed 96-D space.",
     notes: [
       "Axes are shared globally for this model id.",
       "Regions (custom verification models) live in the same frame when built from this model.",

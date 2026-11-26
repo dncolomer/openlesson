@@ -69,13 +69,7 @@ const SYSTEM = [
   "No headings, no bullets, no product names.",
 ].join(" ");
 
-const SOLVE_SYSTEM = [
-  SYSTEM,
-  "The ultimate goal is to assist the user in breaking down and solving the problem.",
-  "Use the Problem text and attached files together as the full context for the unsys model.",
-].join(" ");
-
-export type SessionBranchGenerateKind = "solve" | "verification" | "calibration" | "learn";
+export type SessionBranchGenerateKind = "verification" | "learn";
 
 export type SessionBranchGenerateContext = {
   kind?: SessionBranchGenerateKind | null;
@@ -121,9 +115,7 @@ export function buildSessionBranchGenerateMaterial(
   input: SessionBranchGenerateContext,
 ): SessionBranchGenerateMaterial {
   const kind: SessionBranchGenerateKind =
-    input.kind === "solve" || input.kind === "verification" || input.kind === "calibration"
-      ? input.kind
-      : "learn";
+    input.kind === "verification" ? input.kind : "learn";
   const openingCanvas = parseFlowOpeningCanvasScene(input.openingCanvasScene);
   const fromPreparedCanvas = flowOpeningCanvasHasContent(openingCanvas);
   const canvasProblem = fromPreparedCanvas
@@ -157,26 +149,20 @@ export function buildSessionBranchGenerateMaterial(
       : "";
   const guidance = textOf(input.guidance);
   const user = [
-    kind === "solve"
-      ? fromPreparedCanvas
-        ? "Assist the user in breaking down and solving the problem. Use the prepared Work canvas as the field to decompose."
-        : "Assist the user in breaking down and solving the problem. Use the Problem and attached files as the field to decompose."
-      : "",
+    "",
     problemBlock,
     chapterTitle && chapterTitle !== problem ? `Chapter: ${chapterTitle}.` : "",
     chapterBrief && chapterBrief !== problem ? `Material:\n${chapterBrief}` : "",
     fileBlock,
     guidance ? `Author guidance:\n${guidance}` : "",
-    kind === "solve"
-      ? "This slice belongs to a breakdown of the problem, not a short quiz."
-      : "This slice belongs to a wide field of inquiry, not a short quiz and not a three-step maze.",
+    "This slice belongs to a wide field of inquiry, not a short quiz and not a three-step maze.",
     "Write in complete sentences. Each question is an original interrogative sentence, not a wrap of the title. No headings, no bullets, no product names.",
   ]
     .filter(Boolean)
     .join("\n\n");
   return {
     kind,
-    system: kind === "solve" ? SOLVE_SYSTEM : SYSTEM,
+    system: SYSTEM,
     user,
     chapterTitle: chapterTitle || chapterBrief,
     chapterBrief,

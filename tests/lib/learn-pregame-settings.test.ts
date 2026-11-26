@@ -28,14 +28,10 @@ import {
   ILE_START_TIP_IDS,
   ILE_START_TIP_INTERVAL_MS,
   ILE_START_TIP_LABEL_KEYS,
+  ILE_TURN_INSIGHT_SLOT_MAX,
   nextIleStartTipIndex,
   shuffleIleStartTipIds,
 } from "@/lib/learn-pregame-settings";
-import {
-  ileTurnInsightSlotCount,
-  remainingIleTurnInsightSlots,
-  ILE_TURN_INSIGHT_SLOT_MAX,
-} from "@/lib/learn-turn-insights";
 import {
   decideIleGatherResources,
   ILE_GATHER_MAX_PER_SESSION,
@@ -97,7 +93,6 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
         chapterCount: 1,
       }),
     ).toBe("skirmish");
-    expect(ileTurnInsightSlotCount(8, skirmish.insightSlotMax)).toBe(3);
     expect(ilePowWorkStartCost(skirmish.powExpense)).toBe(3);
 
     const campaign = applyIlePregamePreset("campaign");
@@ -106,15 +101,7 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     expect(campaign.gatherMaxPerSession).toBe(2);
     expect(campaign.chapterCount).toBe(3);
     expect(campaign).not.toHaveProperty("mapType");
-    expect(ileTurnInsightSlotCount(8, campaign.insightSlotMax)).toBe(5);
     expect(ilePowWorkStartCost(campaign.powExpense)).toBe(8);
-    expect(
-      remainingIleTurnInsightSlots({
-        unusedPow: 8,
-        craftedCount: 1,
-        slotMax: campaign.insightSlotMax,
-      }),
-    ).toBe(4);
     expect(
       decideIleGatherResources({
         artifacts: toolArtifacts(8),
@@ -140,7 +127,6 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     expect(blitz.gatherMaxPerSession).toBe(8);
     expect(blitz.chapterCount).toBe(5);
     expect(blitz).not.toHaveProperty("mapType");
-    expect(ileTurnInsightSlotCount(8, blitz.insightSlotMax)).toBe(1);
     expect(ilePowWorkStartCost(blitz.powExpense)).toBe(1);
     expect(
       decideIleGatherResources({
@@ -190,9 +176,6 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
       insightSlotMax: 5,
     });
     expect(ilePregameMatchingPresetId(tweaked)).toBeNull();
-    expect(ileTurnInsightSlotCount(4, tweaked.insightSlotMax)).toBe(4);
-    expect(ileTurnInsightSlotCount(8, tweaked.insightSlotMax)).toBe(5);
-
     const easy = clampIlePregameDifficulty();
     expect(easy.allowThoughtsPoolInsights).toBe(true);
     expect(easy.allowParallelWork).toBe(true);
@@ -408,9 +391,6 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(view).toContain("allowThoughtsPoolInsights={allowThoughtsPoolInsights}");
     expect(view).toContain("allowParallelWork");
     expect(view).toContain("allowGatherResources");
-    const craft = read("components/session-view/learn-turn-insight-craft.tsx");
-    expect(craft).toContain("data-ile-end-turn-screen");
-    expect(craft).not.toContain("allowThoughtsPoolInsights");
     expect(welcome).toContain("overflow-hidden");
     const footerAt = welcome.indexOf("data-ile-confirm-settings-footer");
     const confirmAt = welcome.indexOf("data-ile-confirm-settings", footerAt + 10);

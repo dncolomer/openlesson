@@ -1,20 +1,27 @@
 import {
-  createAgentFlow,
-  deleteAgentFlow,
+  createAgentProtocol,
+  deleteAgentProtocol,
   generateAgentFlowUnsysSeed,
-  getAgentFlow,
-  listAgentFlows,
-  parseAgentFlowKind,
-  updateAgentFlow,
+  getAgentProtocol,
+  listAgentProtocols,
+  updateAgentProtocol,
   uploadAgentFlowFile,
 } from "../agent-flow-management";
 import { loadKnowledgeRegionCandidate } from "@/lib/knowledge-region-candidate";
+import { rejectedProtocolKind } from "@/lib/product-flow";
 import {
   McpProofOfWorkToolContext,
   evidenceToolResult,
   requireScope,
   stringArg,
 } from "./helpers";
+
+function assertNoRetiredKind(args: Record<string, unknown>) {
+  const kind = args.kind ?? args.type ?? args.product;
+  if (rejectedProtocolKind(kind)) {
+    throw new Error("Only knowledge verification protocols are supported");
+  }
+}
 
 export async function callMcpProofOfWorkTool(
   name: string,
@@ -23,24 +30,25 @@ export async function callMcpProofOfWorkTool(
 ) {
   const { auth } = ctx;
 
-  if (name === "list_flows") {
+  if (name === "list_protocols") {
     requireScope(auth.scopes, "workspaces:read");
+    assertNoRetiredKind(args);
     const ownerUserId = String(auth.user_id || "").trim();
-    if (!ownerUserId) throw new Error("No user available to list flows");
-    const flows = await listAgentFlows({
+    if (!ownerUserId) throw new Error("No user available to list protocols");
+    const protocols = await listAgentProtocols({
       ownerUserId,
-      kind: parseAgentFlowKind(args.kind) || undefined,
     });
-    return await evidenceToolResult({ flows }, { endpoint: "list_flows" });
+    return await evidenceToolResult({ protocols }, { endpoint: "list_protocols" });
   }
 
-  if (name === "create_flow") {
+  if (name === "create_protocol") {
     requireScope(auth.scopes, "workspaces:write");
-    const flow = await createAgentFlow(auth, undefined, args);
-    return await evidenceToolResult({ flow }, { endpoint: "create_flow" });
+    assertNoRetiredKind(args);
+    const protocol = await createAgentProtocol(auth, undefined, args);
+    return await evidenceToolResult({ protocol }, { endpoint: "create_protocol" });
   }
 
-  if (name === "upload_flow_file") {
+  if (name === "upload_protocol_file") {
     requireScope(auth.scopes, "workspaces:write");
     const artifact = await uploadAgentFlowFile(auth, args);
     return await evidenceToolResult(
@@ -50,39 +58,40 @@ export async function callMcpProofOfWorkTool(
         name: artifact.name,
         mime_type: artifact.mimeType ?? null,
       },
-      { endpoint: "upload_flow_file" },
+      { endpoint: "upload_protocol_file" },
     );
   }
 
-  if (name === "generate_flow_unsys_seed") {
+  if (name === "generate_protocol_unsys_seed") {
     requireScope(auth.scopes, "workspaces:write");
     const generated = await generateAgentFlowUnsysSeed(args);
-    return await evidenceToolResult(generated, { endpoint: "generate_flow_unsys_seed" });
+    return await evidenceToolResult(generated, { endpoint: "generate_protocol_unsys_seed" });
   }
 
-  if (name === "get_flow") {
+  if (name === "get_protocol") {
     requireScope(auth.scopes, "workspaces:read");
-    const flowId = stringArg(args, "flow_id");
-    if (!flowId) throw new Error("flow_id is required.");
-    const flow = await getAgentFlow(undefined, flowId, String(auth.user_id || ""));
-    if (!flow) throw new Error("Flow not found.");
-    return await evidenceToolResult({ flow }, { endpoint: "get_flow" });
+    const protocolId = stringArg(args, "protocol_id");
+    if (!protocolId) throw new Error("protocol_id is required.");
+    const protocol = await getAgentProtocol(undefined, protocolId, String(auth.user_id || ""));
+    if (!protocol) throw new Error("Protocol not found.");
+    return await evidenceToolResult({ protocol }, { endpoint: "get_protocol" });
   }
 
-  if (name === "update_flow") {
+  if (name === "update_protocol") {
     requireScope(auth.scopes, "workspaces:write");
-    const flowId = stringArg(args, "flow_id");
-    if (!flowId) throw new Error("flow_id is required.");
-    const flow = await updateAgentFlow(auth, undefined, flowId, args);
-    return await evidenceToolResult({ flow }, { endpoint: "update_flow" });
+    assertNoRetiredKind(args);
+    const protocolId = stringArg(args, "protocol_id");
+    if (!protocolId) throw new Error("protocol_id is required.");
+    const protocol = await updateAgentProtocol(auth, undefined, protocolId, args);
+    return await evidenceToolResult({ protocol }, { endpoint: "update_protocol" });
   }
 
-  if (name === "delete_flow") {
+  if (name === "delete_protocol") {
     requireScope(auth.scopes, "workspaces:write");
-    const flowId = stringArg(args, "flow_id");
-    if (!flowId) throw new Error("flow_id is required.");
-    const deleted = await deleteAgentFlow(auth, flowId);
-    return await evidenceToolResult(deleted, { endpoint: "delete_flow" });
+    const protocolId = stringArg(args, "protocol_id");
+    if (!protocolId) throw new Error("protocol_id is required.");
+    const deleted = await deleteAgentProtocol(auth, protocolId);
+    return await evidenceToolResult(deleted, { endpoint: "delete_protocol" });
   }
 
   if (name === "get_knowledge_region_candidate") {

@@ -1,14 +1,12 @@
 import { SignJWT } from "jose";
 import type { LtiSigningKey } from "@/lib/lti/keys";
 import { LTI_VERSION, type LtiDeepLinkingSettings } from "@/lib/lti/claims";
-import type { ProductFlowKind } from "@/lib/product-flow";
 import { LTI_LAUNCH_PATH } from "@/lib/lti/tool-urls";
 
-export type LtiDeepLinkCatalogFlow = {
-  type: "flow";
+export type LtiDeepLinkCatalogProtocol = {
+  type: "protocol";
   id: string;
   name: string;
-  kind: ProductFlowKind;
   publicToken: string;
 };
 
@@ -16,13 +14,12 @@ export type LtiDeepLinkCatalogRegion = {
   type: "region";
   id: string;
   name: string;
-  kind: ProductFlowKind;
 };
 
 export type LtiDeepLinkCatalogItem =
-  | LtiDeepLinkCatalogFlow
+  | LtiDeepLinkCatalogProtocol
   | LtiDeepLinkCatalogRegion
-  | { type: "create_region"; kind?: ProductFlowKind };
+  | { type: "create_region" };
 
 export function deepLinkContentItem(
   origin: string,
@@ -30,7 +27,7 @@ export function deepLinkContentItem(
 ): Record<string, unknown> {
   const base = String(origin || "").replace(/\/$/, "");
   const launch = `${base}${LTI_LAUNCH_PATH}`;
-  if (item.type === "flow") {
+  if (item.type === "protocol") {
     return {
       type: "ltiResourceLink",
       title: item.name,

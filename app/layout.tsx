@@ -91,7 +91,7 @@ const softwareSchema = {
   featureList: [
     "Workspaces",
     "Proof-of-Work API — headless efficiency scoring",
-    "Calibrate, Learn, and Verify — three hosted flows",
+    "Embeddable Knowledge Verification Protocols",
     "Continuous scoring and gap analysis",
     "Proof-of-Work API for LMS integration",
   ],

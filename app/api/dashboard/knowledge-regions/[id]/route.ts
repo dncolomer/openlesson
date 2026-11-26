@@ -6,7 +6,6 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   dashboardKnowledgeRegionHref,
-  parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
 import { presentKnowledgeRegionDetails } from "@/lib/knowledge-region-details";
@@ -18,20 +17,15 @@ import type { DataStudioEmbeddingRow } from "@/lib/data-studio-view";
 
 export const runtime = "nodejs";
 
-const FLOW_TABLE: Record<"verification" | "calibration" | "solve", string> = {
-  verification: "verify_flows",
-  calibration: "calibrate_flows",
-  solve: "solve_flows",
-};
+const FLOW_TABLE = "verify_flows";
 
 async function flowNamesForIds(
   supabase: { from: (table: string) => any },
-  kind: "verification" | "calibration" | "solve",
   ids: string[],
 ): Promise<Record<string, string>> {
   const unique = [...new Set(ids.map((id) => String(id || "").trim()).filter(Boolean))];
   if (!unique.length) return {};
-  const { data } = await supabase.from(FLOW_TABLE[kind]).select("id, name").in("id", unique);
+  const { data } = await supabase.from(FLOW_TABLE).select("id, name").in("id", unique);
   const names: Record<string, string> = {};
   for (const row of data || []) {
     const id = String(row.id || "").trim();
@@ -49,14 +43,11 @@ export async function GET(
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
     const { id } = await context.params;
-    const requested = parseDashboardKnowledgeRegionKind(
-      req.nextUrl.searchParams.get("kind"),
-    );
 
     const { data: row, error } = await auth.supabase
       .from("knowledge_regions")
       .select(
-        "id, workspace_id, owner_user_id, product, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id, calibrate_flow_id, solve_flow_id",
+        "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id",
       )
       .eq("id", id)
       .eq("owner_user_id", auth.user.id)
@@ -66,24 +57,19 @@ export async function GET(
       return jsonError(404, "Region not found");
     }
 
-    const kind =
-      requested ||
-      parseDashboardKnowledgeRegionKind(row.product) ||
-      "verification";
-    const presented = presentDashboardKnowledgeRegions([row], kind, auth.user.id)[0];
+    const presented = presentDashboardKnowledgeRegions([row], auth.user.id)[0];
     if (!presented) return jsonError(404, "Region not found");
 
     const { data: siblings } = await auth.supabase
       .from("knowledge_regions")
       .select(
-        "id, name, description, product, owner_user_id, embedding_model_id, centroid, cosine_threshold, mean_radius, subject_count",
+        "id, name, description, owner_user_id, embedding_model_id, centroid, cosine_threshold, mean_radius, subject_count",
       )
-      .eq("owner_user_id", auth.user.id)
-      .eq("product", kind);
+      .eq("owner_user_id", auth.user.id);
 
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: auth.user.id,
-      flowKind: productFlowEmbeddingKind(kind),
+      flowKind: productFlowEmbeddingKind(),
     });
     const embeddings: DataStudioEmbeddingRow[] = stored.map((item) => ({
       id: item.id,
@@ -100,31 +86,24 @@ export async function GET(
       source: item.source,
     }));
 
-    const seedFlowId =
-      kind === "calibration"
-        ? String(row.calibrate_flow_id || "").trim()
-        : kind === "solve"
-          ? String(row.solve_flow_id || "").trim()
-          : String(row.verify_flow_id || "").trim();
+    const seedFlowId = String(row.verify_flow_id || "").trim();
     const flowIds = [
       seedFlowId,
       ...embeddings.map((item) => String(item.flow_id || "").trim()),
     ].filter(Boolean);
-    const flowNames = await flowNamesForIds(auth.supabase, kind, flowIds);
+    const flowNames = await flowNamesForIds(auth.supabase, flowIds);
 
     const details = presentKnowledgeRegionDetails({
       parent: row,
       clusters: siblings || [],
       embeddings,
       flowNames,
-      kind,
     });
 
     return NextResponse.json({
-      kind,
       region: presented,
       details,
-      regionPath: dashboardKnowledgeRegionHref(kind, presented.id),
+      regionPath: dashboardKnowledgeRegionHref(presented.id),
       workspaceId: presented.workspaceId,
     });
   } catch (error) {

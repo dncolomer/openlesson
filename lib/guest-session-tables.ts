@@ -46,13 +46,13 @@ export function sessionShellForVerifyKind(kind: unknown): "dialog" | "solo" {
   return "dialog";
 }
 
-function kindForLogicalTable(table: string): "learn" | "calibrate" | "verify" {
+function kindForLogicalTable(table: string): "learn" | "verify" {
   return kindFromGuestLogicalTable(table);
 }
 
 async function findOnUnifiedSessions(
   supabase: GuestSessionClient,
-  kind: "learn" | "calibrate" | "verify",
+  kind: "learn" | "verify",
   input: {
     tokenHash?: string | null;
     publicToken?: string | null;
@@ -165,12 +165,11 @@ export async function insertGuestSession(
       id: typeof row.id === "string" ? row.id : undefined,
       kind,
       user_id: userId,
-      problem: kind === "calibrate" ? "Calibrate" : "Verify",
+      problem: "Verify",
       status: typeof row.status === "string" ? row.status : "pending",
       workspace_id: String(row.workspace_id || "").trim() || null,
       block_id: (row.block_id as string | null) ?? null,
-      calibrate_flow_id: kind === "calibrate" ? ((row.flow_id as string | null) ?? null) : null,
-      verify_flow_id: kind === "verify" ? ((row.flow_id as string | null) ?? null) : null,
+      verify_flow_id: (row.flow_id as string | null) ?? null,
       guest_user_id: (row.guest_user_id as string | null) ?? null,
       assigned_user_id: (row.assigned_user_id as string | null) ?? null,
       organization_id: (row.organization_id as string | null) ?? null,
@@ -205,9 +204,7 @@ const SESSION_UPDATE_KEYS = new Set([
   "metadata",
   "kind",
   "problem",
-  "calibrate_flow_id",
   "verify_flow_id",
-  "solve_flow_id",
 ]);
 
 /** Merge TAP fields onto `sessions.guest_link` and live session columns. */

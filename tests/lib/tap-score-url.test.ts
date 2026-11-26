@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildTapScoreSessionUrl } from "@/lib/tap-score";
 
 describe("buildTapScoreSessionUrl", () => {
-  it("builds a Calibrate session URL for scout without trailing slash on base", () => {
+  it("builds a Verify session URL for leftover scout kind without trailing slash on base", () => {
     expect(buildTapScoreSessionUrl("https://uncertain.systems", "token-abc", "scout")).toBe(
-      "https://uncertain.systems/calibrate/session/token-abc"
+      "https://uncertain.systems/verify/session/token-abc"
     );
   });
 

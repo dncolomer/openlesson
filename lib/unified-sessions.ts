@@ -1,5 +1,5 @@
 /**
- * Unified `sessions` writers. Calibrate, Learn, and Verify share one table.
+ * Unified `sessions` writers. Learn and Verify share one table.
  * Proof of work is never deleted from here.
  */
 
@@ -17,9 +17,7 @@ export type UnifiedSessionInsert = {
   status?: string;
   workspace_id?: string | null;
   block_id?: string | null;
-  calibrate_flow_id?: string | null;
   verify_flow_id?: string | null;
-  solve_flow_id?: string | null;
   guest_user_id?: string | null;
   assigned_user_id?: string | null;
   organization_id?: string | null;
@@ -34,12 +32,9 @@ export type UnifiedSessionInsert = {
   planning_prompt?: string | null;
 };
 
-export function kindFromGuestLogicalTable(
-  table: string,
-): "learn" | "calibrate" | "verify" {
-  if (table === "workspace_verify_sessions") return "verify";
+export function kindFromGuestLogicalTable(table: string): SessionKind {
   if (table === "workspace_learn_links") return "learn";
-  return "calibrate";
+  return "verify";
 }
 
 export function guestLinkFromRow(row: Record<string, unknown>): Record<string, unknown> {
@@ -70,7 +65,7 @@ export function hydrateUnifiedGuestRow(row: Record<string, unknown> | null): Rec
   return {
     ...link,
     ...row,
-    interaction_kind: row.kind === "verify" ? "verify" : row.kind === "calibrate" ? "calibrate" : link.interaction_kind,
+    interaction_kind: row.kind === "verify" ? "verify" : link.interaction_kind,
   };
 }
 
@@ -79,13 +74,9 @@ export function unifiedSessionInsertPayload(input: UnifiedSessionInsert): Record
   const problem =
     typeof input.problem === "string" && input.problem.trim()
       ? input.problem
-      : kind === "calibrate"
-        ? "Calibrate"
-        : kind === "verify"
-          ? "Verify"
-          : kind === "solve"
-            ? "Solve"
-            : "Learn";
+      : kind === "verify"
+        ? "Verify"
+        : "Learn";
   return {
     ...(input.id ? { id: input.id } : {}),
     kind,
@@ -94,9 +85,7 @@ export function unifiedSessionInsertPayload(input: UnifiedSessionInsert): Record
     status: input.status || "pending",
     workspace_id: input.workspace_id ?? null,
     block_id: input.block_id ?? null,
-    calibrate_flow_id: input.calibrate_flow_id ?? null,
     verify_flow_id: input.verify_flow_id ?? null,
-    solve_flow_id: input.solve_flow_id ?? null,
     guest_user_id: input.guest_user_id ?? null,
     assigned_user_id: input.assigned_user_id ?? null,
     organization_id: input.organization_id ?? null,

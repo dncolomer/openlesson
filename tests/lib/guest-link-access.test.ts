@@ -35,7 +35,7 @@ describe("private link token model", () => {
   it("session URL is built from the bearer token", () => {
     const token = createPrivateToken();
     expect(buildGuestLinkUrl("https://uncertain.systems/", "tap", token, "scout")).toBe(
-      `https://uncertain.systems/calibrate/session/${token}`,
+      `https://uncertain.systems/verify/session/${token}`,
     );
     expect(buildGuestLinkUrl("https://uncertain.systems/", "tap", token)).toBe(
       `https://uncertain.systems/verify/session/${token}`,

@@ -56,7 +56,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
     "Verify what candidates, employees, and agents can actually do — before you hire, promote, certify, or deploy. Built for HR tech, recruitment platforms, and talent marketplaces that need signal beyond polished deliverables and benchmark pass rates.",
   metaTitle: "Learning Verification | HR, Hiring & Agent Skill Validation",
   metaDescription:
-    "Human hard skill and agentic skill validation for HR and recruitment platforms. session is one interface for Calibrate, Learn, and Verify, or use full Proof-of-Work API integration.",
+    "Human hard skill and agentic skill validation for HR and recruitment platforms. session is one interface for knowledge verification protocols, or use full Proof-of-Work API integration.",
   keywords: [
     "learning verification",
     "skills validation",
@@ -119,7 +119,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
       product: "Learning",
       productHref: "/products/integrated-learning-environment",
       description:
-        "Run the Learning use case when the role demands complex cognition: multi-step judgment, debugging, design tradeoffs, or extended practice. It is the same session interface for Calibrate, Learn, and Verify, and it replaces one-shot take-homes with coached scenarios and proof-of-work artifacts you can score and compare.",
+        "Run the Learning use case when the role demands complex cognition: multi-step judgment, debugging, design tradeoffs, or extended practice. It is the same session interface for knowledge verification protocols, and it replaces one-shot take-homes with coached scenarios and proof-of-work artifacts you can score and compare.",
     },
     {
       level: "03",
@@ -149,7 +149,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
   ],
   closingTitle: "Verify skills before they cost you downstream.",
   closingBody:
-    "Book a demo to map session — Calibrate, Learn, and Verify — and Proof-of-Work API tiers to your HR or recruitment product.",
+    "Book a demo to map session — knowledge verification protocols — and Proof-of-Work API tiers to your HR or recruitment product.",
 };
 
 export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
@@ -250,7 +250,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     {
       title: "EdTech platforms & learning apps",
       description:
-        "Drop session blocks into lesson flows. session is one interface for Calibrate, Learn, and Verify. Surface hesitations, causal reasoning, and revision patterns that multiple-choice items miss.",
+        "Drop session blocks into lesson flows. session is one interface for knowledge verification protocols. Surface hesitations, causal reasoning, and revision patterns that multiple-choice items miss.",
     },
     {
       title: "Certification prep agencies",

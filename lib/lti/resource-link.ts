@@ -10,9 +10,7 @@ const FLOW_PATH = /^\/(s|v|c)\/([^/?#]+)/i;
 
 function kindFromPrefix(prefix: string): ProductFlowKind | undefined {
   const key = prefix.toLowerCase();
-  if (key === "s") return "solve";
-  if (key === "v") return "verification";
-  if (key === "c") return "calibration";
+  if (key === "v" || key === "s" || key === "c") return "verification";
   return undefined;
 }
 

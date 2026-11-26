@@ -33,7 +33,6 @@ import {
   type BlockCircularMenuActionId,
   type IleVoicePadSpec,
 } from "@/lib/block-circular-menu";
-import { ileInsightsForChapter } from "@/lib/learn-turn-insights";
 import { isIleSessionSettingsPath } from "@/lib/learn-session-routes";
 import { useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -58,7 +57,6 @@ import {
 } from "@/lib/learn-mode";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 import { useIleSessionPurity } from "@/components/session-view/use-learn-session-purity";
-import { IleInsightTrophyStrip } from "@/components/session-view/learn-insight-trophies";
 import { shouldLogIleSidebarToolSwitch } from "@/lib/learn-work-canvas-pow";
 import { ileTimProgressByTileId } from "@/lib/learn-tim-chapter-complete";
 import { sessionEnforcedChannels } from "@/lib/flow-channels";
@@ -398,7 +396,6 @@ export function SessionView({
   const [resourceScopeChapterId, setResourceScopeChapterId] = useState<string | null>(null);
   const [sessionResourcesOpen, setSessionResourcesOpen] = useState(false);
   const completeTargetStepIdRef = useRef<string | null>(null);
-  const insightWorkMarkRef = useRef(0);
   const {
     availableCounts,
     gatherWarning,
@@ -614,10 +611,6 @@ export function SessionView({
     canvasApplyElements,
     canvasApplyFiles,
     openWorkIds,
-    sessionInsights,
-    setSessionInsights,
-    keptInsight,
-    setKeptInsight,
     learnField,
     workspaceId,
     sessionBlockId,
@@ -728,16 +721,7 @@ export function SessionView({
     [activeTool, handleToolChange, setActiveTool, setShowWelcomePanel],
   );
 
-  const focusedChapterInsights = ileInsightsForChapter(
-    sessionInsights,
-    activeStep?.id,
-  );
-  const workCanvasInsightSlots = (
-    <IleInsightTrophyStrip
-      insights={focusedChapterInsights}
-      slotCount={minInsightsPerChapter}
-    />
-  );
+  const workCanvasInsightSlots = <></>;
 
   const renderWorkCanvas = () => (
     <SessionChapterWorkCanvas
@@ -770,11 +754,6 @@ export function SessionView({
       ileToken={ileToken}
       ayclToken={ayclToken}
       solveToken={solveToken}
-      recordSessionPowArtifact={recordSessionPowArtifact}
-      sessionPowArtifactsRef={sessionPowArtifactsRef}
-      insightWorkMarkRef={insightWorkMarkRef}
-      setSessionInsights={setSessionInsights}
-      onInsightKept={setKeptInsight}
       policyRef={policyRef}
       onLearnerWaitChange={onLearnerWaitChange}
     />
@@ -979,8 +958,6 @@ export function SessionView({
       selectedAesthetic={selectedAesthetic}
       session={session}
       sessionBlockId={sessionBlockId}
-      sessionInsights={sessionInsights}
-      keptInsight={keptInsight}
       sessionPowArtifacts={sessionPowArtifacts}
       sessionPowThoughts={sessionPowThoughts}
       sessionResourcesOpen={sessionResourcesOpen}

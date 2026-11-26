@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   acceptProductFlowPublish,
+  acceptProtocolPublish,
   emptyProductFlowDraft,
   flowAuthoringSource,
   flowAuthorShowsCountdown,
@@ -14,6 +15,7 @@ import {
   parseProductFlowKind,
   previousProductFlowWizardStep,
   PRODUCT_FLOW_WIZARD_STEPS,
+  PROTOCOL_CHALLENGE_LABEL,
   productFlowNewPath,
   productFlowEmbeddingKind,
   productFlowKindLabel,
@@ -23,9 +25,7 @@ import {
   productFlowWizardCanAdvance,
 } from "@/lib/product-flow";
 import { exampleAuthorUnsysModel, authorUnsysSeedForPersist } from "@/lib/author-unsys-model";
-import { applySolveCommand, emptySolveState } from "@/lib/solve-flow";
 import { applyVerificationCommand, emptyVerificationState } from "@/lib/verification-flow";
-import { applyCalibrationCommand, emptyCalibrationState } from "@/lib/calibration-flow";
 import {
   FLOW_UNSYS_EXPLAINER,
   FLOW_UNSYS_SCIENCE_HREF,
@@ -55,34 +55,30 @@ describe("product flow owner_user_id", () => {
   it("maps historical workspace kind aliases for reads", () => {
     expect(parseWorkspaceKind("knowledge_region")).toBe("standard");
     expect(parseWorkspaceKind("calibration")).toBe("standard");
-    expect(productFlowKindLabel("verification")).toBe("Verification");
-    expect(productFlowKindLabel("calibration")).toBe("Calibration");
-    expect(productFlowKindLabel("solve")).toBe("Solve");
-    expect(productFlowOwnerTitle("verification")).toBe("Verification flows");
-    expect(productFlowOwnerTitle("solve")).toBe("Solve flows");
-    expect(productFlowEmbeddingKind("verification")).toBe("verify");
-    expect(productFlowEmbeddingKind("calibration")).toBe("calibrate");
-    expect(productFlowEmbeddingKind("solve")).toBe("solve");
-    expect(parseProductFlowKind("solve")).toBe("solve");
+    expect(productFlowKindLabel()).toBe("Protocol");
+    expect(productFlowOwnerTitle()).toBe("Protocols");
+    expect(productFlowEmbeddingKind()).toBe("verify");
+    expect(parseProductFlowKind("solve")).toBeNull();
+    expect(parseProductFlowKind("calibration")).toBeNull();
+    expect(parseProductFlowKind("verification")).toBeNull();
+    expect(PROTOCOL_CHALLENGE_LABEL).toBe("The Protocol Challenge");
     expect(parseExactProblemOnCanvas(true)).toBe(true);
     expect(parseExactProblemOnCanvas("true")).toBe(true);
     expect(parseExactProblemOnCanvas("1")).toBe(true);
     expect(parseExactProblemOnCanvas(false)).toBe(false);
     expect(parseExactProblemOnCanvas(undefined)).toBe(false);
     expect(parseProductFlowKind("practice")).toBeNull();
-    expect(flowAuthorShowsCountdown("verification")).toBe(true);
-    expect(flowAuthorShowsCountdown("calibration")).toBe(true);
-    expect(flowAuthorShowsCountdown("solve")).toBe(false);
-    expect(productFlowNewPath("solve")).toBe("/solve/flows/new");
-    expect(productFlowNewPath()).toBe("/flows/new");
-    expect(productFlowPagePath("solve", "sf1")).toBe("/solve/flows/sf1");
-    expect(productRegionEditPath("verification", "r1")).toBe("/verification/regions/r1/edit");
+    expect(flowAuthorShowsCountdown()).toBe(true);
+    expect(productFlowNewPath()).toBe("/protocols/new");
+    expect(productFlowPagePath("sf1")).toBe("/protocols/sf1");
+    expect(productRegionEditPath("r1")).toBe("/regions/r1/edit");
   });
 
   it("accepts a publish draft without a workspace", () => {
     const draft = {
-      ...emptyProductFlowDraft("verification"),
+      ...emptyProductFlowDraft(),
       name: "Limits",
+      challenge: "Limits",
       topic: "Limits",
     };
     const accepted = acceptProductFlowPublish(draft);
@@ -91,9 +87,9 @@ describe("product flow owner_user_id", () => {
     expect(accepted.name).toBe("Limits");
   });
 
-  it("accepts a Solve publish with name and topic only", () => {
+  it("accepts a Protocol publish with name and The Protocol Challenge", () => {
     const missingTopic = {
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Limits practice",
     };
     expect(acceptProductFlowPublish(missingTopic)).toEqual({
@@ -102,8 +98,9 @@ describe("product flow owner_user_id", () => {
     });
     expect(productFlowWizardCanAdvance("author", missingTopic)).toBe(false);
     const draft = {
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Limits practice",
+      challenge: "epsilon-delta limits",
       topic: "epsilon-delta limits",
       questions: ["this question is ignored"],
     };
@@ -112,11 +109,17 @@ describe("product flow owner_user_id", () => {
     const accepted = acceptProductFlowPublish(draft);
     expect(accepted.ok).toBe(true);
     if (!accepted.ok) return;
-    expect(accepted.kind).toBe("solve");
+    expect(accepted).not.toHaveProperty("kind");
     expect(accepted.name).toBe("Limits practice");
     expect(accepted.topic).toBe("epsilon-delta limits");
-    expect(accepted.questions).toEqual([]);
-    expect(accepted.goal).toBe("");
+    expect(accepted.challenge).toBe("epsilon-delta limits");
+    const protocol = acceptProtocolPublish(draft);
+    expect(protocol.ok).toBe(true);
+    if (!protocol.ok) return;
+    expect(protocol).not.toHaveProperty("kind");
+    expect(protocol.challenge).toBe("epsilon-delta limits");
+    expect(accepted.questions).toEqual(["epsilon-delta limits"]);
+    expect(accepted.goal).toBe("epsilon-delta limits");
     expect(accepted.artifacts).toEqual([]);
     expect(accepted.exactProblemOnCanvas).toBe(false);
     expect(accepted.openingCanvasScene).toBeNull();
@@ -125,7 +128,7 @@ describe("product flow owner_user_id", () => {
 
   it("advances authoring when artifacts generate the problem on open", () => {
     const draft = {
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       artifacts: [
         {
@@ -145,7 +148,7 @@ describe("product flow owner_user_id", () => {
     expect(accepted.exactProblemOnCanvas).toBe(false);
 
     const implied = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       artifacts: [
         {
@@ -162,7 +165,7 @@ describe("product flow owner_user_id", () => {
 
   it("keeps Exact problem on canvas on written problem text only", () => {
     const written = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Limits practice",
       topic: "epsilon-delta limits",
       exactProblemOnCanvas: true,
@@ -173,7 +176,7 @@ describe("product flow owner_user_id", () => {
     expect(written.exactProblemOnCanvas).toBe(true);
 
     const fromFiles = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Decoder",
       artifacts: [
         {
@@ -210,7 +213,7 @@ describe("product flow owner_user_id", () => {
       files: {},
     });
     const draft = {
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Board flow",
       openingCanvasScene: scene,
       exactProblemOnCanvas: true,
@@ -231,7 +234,7 @@ describe("product flow owner_user_id", () => {
     expect(nextProductFlowWizardStep("model")).toBe("channels");
     expect(previousProductFlowWizardStep("publish")).toBe("channels");
     expect(previousProductFlowWizardStep("model")).toBe("author");
-    const empty = emptyProductFlowDraft("solve");
+    const empty = emptyProductFlowDraft();
     expect(productFlowWizardCanAdvance("model", empty)).toBe(false);
     expect(
       productFlowWizardCanAdvance("model", {
@@ -243,7 +246,7 @@ describe("product flow owner_user_id", () => {
 
     const seed = authorUnsysSeedForPersist(exampleAuthorUnsysModel("Limits"));
     const accepted = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("solve"),
+      ...emptyProductFlowDraft(),
       name: "Limits practice",
       topic: "epsilon-delta limits",
       answersModelSeed: seed,
@@ -264,23 +267,12 @@ describe("product flow owner_user_id", () => {
         {
           id: "copy-block",
           workspace_id: "ws-copy",
-          map_block: { kind: "solve", flow_id: "sf-live" },
+          map_block: { kind: "verification", flow_id: "sf-live" },
           answers_model_seed: authorUnsysSeedForPersist(exampleAuthorUnsysModel("Copy")),
         },
       ],
     });
     expect(studentModelFromFlowSeed(fromFlow)?.rootId).toBe(seed.model.rootId);
-
-    const solve = applySolveCommand(emptySolveState(), {
-      type: "create",
-      ownerUserId: "owner-1",
-      name: "Limits practice",
-      topic: "epsilon-delta limits",
-      answersModelSeed: seed,
-    });
-    expect(solve.ok).toBe(true);
-    if (!solve.ok) return;
-    expect(solve.flow?.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
     const verify = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
       ownerUserId: "owner-1",
@@ -292,24 +284,13 @@ describe("product flow owner_user_id", () => {
     expect(verify.ok).toBe(true);
     if (!verify.ok) return;
     expect(verify.flow?.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
-    const calibrate = applyCalibrationCommand(emptyCalibrationState(), {
-      type: "create",
-      ownerUserId: "owner-1",
-      name: "Priors",
-      topic: "State the noise model",
-      publicToken: "ctok-unsys",
-      answersModelSeed: seed,
-    });
-    expect(calibrate.ok).toBe(true);
-    if (!calibrate.ok) return;
-    expect(calibrate.flow?.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
 
     const wizard = read("components/product-flow/product-flow-wizard.tsx");
     const step = read("components/product-flow/flow-unsys-model-step.tsx");
     const page = read("components/product-flow/product-flow-page.tsx");
-    const create = read("app/api/dashboard/flows/route.ts");
-    const update = read("app/api/dashboard/flows/[id]/route.ts");
-    const generate = read("app/api/dashboard/flows/unsys-seed/route.ts");
+    const create = read("app/api/dashboard/protocols/route.ts");
+    const update = read("app/api/dashboard/protocols/[id]/route.ts");
+    const generate = read("app/api/dashboard/protocols/unsys-seed/route.ts");
     const session = read("app/api/learn/session-branch-model/route.ts");
     const sql = read("supabase/migrations/20261116140000_flow_answers_model_seed.sql");
     expect(wizard).toContain("FlowUnsysModelStep");
@@ -357,12 +338,10 @@ describe("product flow owner_user_id", () => {
     expect(generate).toContain("runProductFlowUnsysGenerate");
     expect(generate).toContain("requireAuthenticatedUser");
     expect(read("lib/flow-unsys-generate.ts")).toContain("generateAuthorUnsysSessionField");
-    expect(FLOW_UNSYS_SEED_PATH).toBe("/api/dashboard/flows/unsys-seed");
+    expect(FLOW_UNSYS_SEED_PATH).toBe("/api/dashboard/protocols/unsys-seed");
     expect(session).toContain("flow.answersModelSeed");
-    expect(session).toContain("getCalibrationFlowById");
-    expect(sql).toContain("solve_flows");
+    expect(session).toContain("getVerificationFlowById");
     expect(sql).toContain("verify_flows");
-    expect(sql).toContain("calibrate_flows");
     expect(sql).toContain("answers_model_seed");
   });
 
@@ -387,9 +366,9 @@ describe("product flow owner_user_id", () => {
     expect(page).toContain("FLOW_DANGER_BTN");
   });
 
-  it("accepts verification and calibration from name + problem without questions", () => {
+  it("accepts a protocol from name + The Protocol Challenge without extra questions", () => {
     const verification = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("verification"),
+      ...emptyProductFlowDraft(),
       name: "Limits",
       topic: "What is a limit in epsilon-delta form?",
       questions: ["ignored extra question"],
@@ -400,7 +379,7 @@ describe("product flow owner_user_id", () => {
     expect(verification.questions).toEqual(["What is a limit in epsilon-delta form?"]);
 
     const calibration = acceptProductFlowPublish({
-      ...emptyProductFlowDraft("calibration"),
+      ...emptyProductFlowDraft(),
       name: "Priors",
       goal: "",
       topic: "State the noise model before decoding",
@@ -414,7 +393,7 @@ describe("product flow owner_user_id", () => {
 
     expect(
       acceptProductFlowPublish({
-        ...emptyProductFlowDraft("calibration"),
+        ...emptyProductFlowDraft(),
         name: "Priors",
       }),
     ).toEqual({ ok: false, reason: "topic_required" });
@@ -427,11 +406,11 @@ describe("product flow owner_user_id", () => {
   });
 
   it("writes owner_user_id on create and does not insert an owner workspace", () => {
-    const route = read("app/api/dashboard/flows/route.ts");
+    const route = read("app/api/dashboard/protocols/route.ts");
     expect(route).toContain("ownerUserId: auth.user.id");
     expect(route).toContain("listVerificationFlowsForOwnerUserId");
-    expect(route).toContain("listCalibrationFlowsForOwnerUserId");
-    expect(route).toContain("listSolveFlowsForOwnerUserId");
+    expect(route).not.toContain("listCalibrationFlowsForOwnerUserId");
+    expect(route).not.toContain("listSolveFlowsForOwnerUserId");
     expect(route).toContain("sortDashboardFlowsByCreatedAt");
     expect(route).not.toContain("sortDashboardRecentFlows");
     expect(route).not.toContain("ensureProductFlowOwnerWorkspace");
@@ -444,7 +423,7 @@ describe("product flow owner_user_id", () => {
     expect(productFlow).not.toContain("ensureProductFlowOwnerWorkspace");
     expect(existsSync(join(root, "lib/product-flow-owner.ts"))).toBe(false);
 
-    const one = read("app/api/dashboard/flows/[id]/route.ts");
+    const one = read("app/api/dashboard/protocols/[id]/route.ts");
     expect(one).toContain("flowOwnedByUser");
     expect(one).toContain("ownerUserId: loaded.ownerUserId");
     expect(one).not.toContain("listProductFlowWorkspaceIds");
@@ -458,7 +437,6 @@ describe("product flow owner_user_id", () => {
         onProblemChange: () => {},
         artifacts: [],
         onArtifactsChange: () => {},
-        topicHook: "verification",
         onExactProblemOnCanvasChange: () => {},
         onPrepareOpeningCanvas: () => {},
         aside: createElement("p", { "data-flow-countdown": "" }, "15 min"),
@@ -468,7 +446,7 @@ describe("product flow owner_user_id", () => {
     expect(html).toContain("lg:grid-cols-2");
     expect(html).toContain('data-flow-author-source="problem"');
     expect(html).toContain('data-flow-author-panel="problem"');
-    expect(html).toContain("Write the problem");
+    expect(html).toContain("The Protocol Challenge");
     expect(html).toContain("From files");
     expect(html).toContain("Prepared board");
     expect(html).toContain("Exact problem on canvas");
@@ -490,7 +468,6 @@ describe("product flow owner_user_id", () => {
           },
         ],
         onArtifactsChange: () => {},
-        topicHook: "solve",
         generateProblemOnOpen: true,
         onGenerateProblemOnOpenChange: () => {},
         onExactProblemOnCanvasChange: () => {},
@@ -528,7 +505,6 @@ describe("product flow owner_user_id", () => {
         onProblemChange: () => {},
         artifacts: [],
         onArtifactsChange: () => {},
-        topicHook: "solve",
         openingCanvasScene: scene,
         openingCanvasPrepared: true,
         onPrepareOpeningCanvas: () => {},
@@ -551,13 +527,12 @@ describe("product flow owner_user_id", () => {
         onProblemChange: () => {},
         artifacts: [],
         onArtifactsChange: () => {},
-        topicHook: "solve",
         onExactProblemOnCanvasChange: () => {},
         onPrepareOpeningCanvas: () => {},
       }),
     );
     expect(stacked).toContain('data-flow-problem-layout="stack"');
-    expect(stacked).toContain("Write the problem");
+    expect(stacked).toContain("The Protocol Challenge");
     expect(stacked).toContain("Exact problem on canvas");
     expect(stacked).not.toContain("data-flow-author-panel");
 

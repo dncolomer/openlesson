@@ -5,16 +5,12 @@
 import {
   clampIleSessionChapterCount,
   clampIleSessionInsightGoal,
+  ILE_SESSION_INSIGHT_GOAL_DEFAULT,
 } from "@/lib/learn-canvas-session";
 import {
   ILE_GATHER_MAX_PER_SESSION,
   clampIleGatherMaxPerSession,
 } from "@/lib/learn-gather-resources";
-import {
-  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
-  ILE_TURN_INSIGHT_SLOT_MAX,
-  clampIleTurnInsightSlotMax,
-} from "@/lib/learn-turn-insights";
 import {
   ILE_CANVAS_TIMER_SECONDS_CEILING,
   ILE_CANVAS_TIMER_SECONDS_DEFAULT,
@@ -30,6 +26,18 @@ import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   clampIleSilenceLockMinutes,
 } from "@/lib/practice-voice-challenge";
+
+export const ILE_TURN_INSIGHT_SLOT_MIN = 1;
+export const ILE_TURN_INSIGHT_SLOT_CEILING = 5;
+export const ILE_TURN_INSIGHT_SLOT_MAX = 3;
+
+export function clampIleTurnInsightSlotMax(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_TURN_INSIGHT_SLOT_MAX;
+  if (n <= ILE_TURN_INSIGHT_SLOT_MIN) return ILE_TURN_INSIGHT_SLOT_MIN;
+  if (n >= ILE_TURN_INSIGHT_SLOT_CEILING) return ILE_TURN_INSIGHT_SLOT_CEILING;
+  return n;
+}
 
 export const ILE_PREGAME_PRESET_IDS = ["skirmish", "campaign", "blitz"] as const;
 export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
@@ -166,7 +174,7 @@ export function clampIlePregameDifficulty(
     allowParallelWork: input?.allowParallelWork !== false,
     allowGatherResources: input?.allowGatherResources !== false,
     minInsightsPerChapter: clampIleSessionInsightGoal(
-      input?.minInsightsPerChapter ?? ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+      input?.minInsightsPerChapter ?? ILE_SESSION_INSIGHT_GOAL_DEFAULT,
     ),
     canvasTimerSeconds: clampIleCanvasTimerSeconds(
       input?.canvasTimerSeconds ?? ILE_CANVAS_TIMER_SECONDS_DEFAULT,

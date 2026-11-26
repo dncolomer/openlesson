@@ -27,9 +27,7 @@ describe("use cases listing", () => {
     expect(USE_CASES_NAV_LINK.href).toBe("/use-cases");
     expect(USE_CASES_NAV_LINK.label).toBe("Use cases");
     expect(MAIN_NAV_PRODUCT_LINKS.map((link) => link.label)).toEqual([
-      "Verify Protocols",
-      "Mapping Protocols",
-      "Solve / Practice Protocols",
+      "Knowledge Verification Protocols",
     ]);
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("data-nav-products");
@@ -104,14 +102,17 @@ describe("use cases listing", () => {
     const text = useCasesCopyText();
     expect(text).not.toMatch(/thinking stays human/);
     expect(text).toMatch(/knowledge region/);
-    expect(text).toMatch(/solve flow/);
+    expect(text).toMatch(/The Protocol Challenge/);
+    expect(text).toMatch(/Embeddable Knowledge Verification Protocols/);
+    expect(text).not.toMatch(/solve flow/);
     expect(text).toMatch(/technical hiring/);
     expect(text).toMatch(/Turn work into actionable insight/);
     expect(text).not.toMatch(/TEAM EXPERTISE/);
     expect(text).not.toMatch(/company-expertise/);
     expect(text).not.toMatch(/team capability/);
     expect(text).toMatch(/AI-generated/);
-    expect(text).toMatch(/Calibrate, Learn, and Verify/);
+    expect(text).not.toMatch(/Solve Protocol/);
+    expect(text).not.toMatch(/Map Protocol/);
     expect(text).toMatch(/Institute and course-authoring/);
     expect(text).toMatch(/Agent-harness evaluation/);
     expect(text).toMatch(/Knowledge and neuroscience studies/);

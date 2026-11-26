@@ -52,7 +52,7 @@ export const FEP_PAGE: SeoProductPageConfig = {
     "The Free Energy Principle is the influence behind every Uncertain Systems surface. Learning is reducing uncertainty: epistemic foraging searches for information that shrinks what is unknown, then steers the thinking process toward the next genuine gap. That is how we break the linearity of classic analytics and turn-based chat.",
   metaTitle: "Free Energy Principle | Epistemic Foraging",
   metaDescription:
-    "A Free Energy Principle approach based on epistemic foraging across session — Calibrate, Learn, and Verify — and Proof-of-Work API. The shared influence behind verification, mapping, and the Problem Solving Harness.",
+    "A Free Energy Principle approach based on epistemic foraging across session — knowledge verification protocols — and Proof-of-Work API. The shared influence behind verification, mapping, and the Problem Solving Harness.",
   keywords: [
     "free energy principle",
     "epistemic foraging",
@@ -202,7 +202,7 @@ export const POW_API_PAGE: SeoProductPageConfig = {
     {
       question: "How does this relate to session?",
       answer:
-        "session is the hosted session for Calibrate, Learn, and Verify. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
+        "session is the hosted session for knowledge verification protocols. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
     },
     {
       question: "Why call it self-evolving?",
@@ -225,7 +225,7 @@ export const TAP_PAGE: SeoProductPageConfig = {
     "Send a link. Candidates or learners talk through their thinking while they work. You get scored evidence of what they understand — signal that polished deliverables and AI-assisted output cannot fake.",
   metaTitle: "Think Aloud Protocol | Hard Skill & Human Verification",
   metaDescription:
-    "One interface for Calibrate, Learn, and Verify. Live think-aloud sessions with Socratic probes for hard skill verification and human judgment checks inside your workspace.",
+    "One interface for knowledge verification protocols. Live think-aloud sessions with Socratic probes for hard skill verification and human judgment checks inside your workspace.",
   keywords: [
     "think aloud protocol",
     "hard skill verification",
@@ -284,7 +284,7 @@ export const ILE_PAGE: SeoProductPageConfig = {
   eyebrow: "Learning",
   h1: "Replace tests with cognitive analysis people actually learn from.",
   intro:
-    "Learning is a use case of session, one interface for Calibrate, Learn, and Verify. It is a drop-in alternative to multiple-choice tests and take-home assignments when you care about complex cognition — how someone reasons, adapts, and improves under realistic conditions.",
+    "Learning is a use case of session, one interface for knowledge verification protocols. It is a drop-in alternative to multiple-choice tests and take-home assignments when you care about complex cognition — how someone reasons, adapts, and improves under realistic conditions.",
   metaTitle: "Learning | Cognitive Analysis Beyond Tests",
   metaDescription:
     "The Learning use case of session: guided scenarios, coaching, and proof of progress — a replacement for tests and take-homes when depth matters.",
@@ -333,7 +333,7 @@ export const ILE_PAGE: SeoProductPageConfig = {
     {
       question: "Is Learning a separate product?",
       answer:
-        "No. Calibrate, Learn, and Verify are use cases of one session interface. Gaps from Proof-of-Work API or manual review can route into Learning.",
+        "No. knowledge verification protocols are use cases of one session interface. Gaps from Proof-of-Work API or manual review can route into Learning.",
     },
   ],
   closingTitle: "Measure depth, not just delivery.",

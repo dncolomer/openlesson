@@ -1,6 +1,6 @@
 /**
- * Helios create-then-link for calibration/verification flows, and
- * content-block attachment args (links vs file URLs to ingest).
+ * Helios create-then-link for protocols, and content-block attachment
+ * args (links vs file URLs to ingest).
  */
 
 import {
@@ -15,16 +15,13 @@ import {
 import {
   emptyProductFlowDraft,
   parseExactProblemOnCanvas,
-  type ProductFlowKind,
+  protocolChallengeFromUnknown,
 } from "@/lib/product-flow";
 import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 
 export type HeliosFlowCreateInput = {
-  kind: ProductFlowKind;
   name: string;
-  goal: string;
-  topic: string;
-  questions: string[];
+  challenge: string;
   artifacts: FlowArtifact[];
   exactProblemOnCanvas: boolean;
   generateProblemOnOpen: boolean;
@@ -35,7 +32,6 @@ export type HeliosFlowCreateInput = {
 
 export type HeliosCreatedFlow = {
   id: string;
-  kind: ProductFlowKind;
   name: string;
   publicToken?: string | null;
   publicPath?: string | null;
@@ -60,7 +56,7 @@ export function heliosFlowQuestionsFromArgs(
   return [];
 }
 
-/** True when Helios wants a new owner flow in the same add_block / generate_shape call. Omitted or Learn kind is Solve. */
+/** True when Helios wants a new owner protocol in the same add_block / generate_shape call. */
 export function heliosWillCreateFlow(args: Record<string, unknown>): boolean {
   const kind = parseAuthoringMapBlockKind(args.kind ?? args.blockKind);
   if (!isFlowMapBlockKind(kind)) return false;
@@ -70,34 +66,21 @@ export function heliosWillCreateFlow(args: Record<string, unknown>): boolean {
 export function heliosFlowCreateInput(
   args: Record<string, unknown>,
 ): HeliosFlowCreateInput {
-  const parsed = parseAuthoringMapBlockKind(args.kind ?? args.blockKind);
-  const kind: ProductFlowKind =
-    parsed === "calibration"
-      ? "calibration"
-      : parsed === "solve"
-        ? "solve"
-        : "verification";
-  const name =
-    text(args, "flowName", "flow_name", "name", "title", "prompt") ||
-    (kind === "calibration"
-      ? "Calibration flow"
-      : kind === "solve"
-        ? "Solve flow"
-        : "Verification flow");
-  const topic =
-    text(args, "problem", "topic", "goal") || name;
-  const goal = topic;
-  const questions = [topic];
-  const draft = emptyProductFlowDraft(kind);
+  const name = text(args, "flowName", "flow_name", "name", "title", "prompt") || "Protocol";
+  const challenge =
+    protocolChallengeFromUnknown({
+      challenge: args.challenge,
+      problem: args.problem,
+      topic: args.topic,
+      goal: args.goal,
+    }) || name;
+  const draft = emptyProductFlowDraft();
   const actionCatalog = Number(args.actionCatalog);
   const durationMinutes = Number(args.durationMinutes);
   const workspaceId = text(args, "workspaceId", "workspace_id");
   return {
-    kind,
     name: name.slice(0, 160),
-    goal,
-    topic,
-    questions,
+    challenge,
     artifacts: parseFlowArtifacts(args.artifacts),
     exactProblemOnCanvas: parseExactProblemOnCanvas(
       args.exactProblemOnCanvas ?? args.exact_problem_on_canvas,
@@ -115,10 +98,7 @@ export function heliosFlowCreateInput(
   };
 }
 
-export function heliosCreatedFlowFromUnknown(
-  raw: unknown,
-  fallbackKind: ProductFlowKind,
-): HeliosCreatedFlow | null {
+export function heliosCreatedFlowFromUnknown(raw: unknown): HeliosCreatedFlow | null {
   if (!raw || typeof raw !== "object") return null;
   const rec = raw as Record<string, unknown>;
   const flow =
@@ -127,16 +107,8 @@ export function heliosCreatedFlowFromUnknown(
       : rec;
   const id = String(flow.id ?? rec.id ?? "").trim();
   if (!id) return null;
-  const kindRaw = String(rec.kind ?? flow.kind ?? fallbackKind);
-  const kind: ProductFlowKind =
-    kindRaw === "calibration" || kindRaw === "calibrate"
-      ? "calibration"
-      : kindRaw === "solve"
-        ? "solve"
-        : "verification";
   return {
     id,
-    kind,
     name: String(flow.name ?? rec.name ?? id).trim() || id,
     publicToken: String(flow.publicToken ?? flow.public_token ?? "").trim() || null,
     publicPath:

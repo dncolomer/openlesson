@@ -1,9 +1,8 @@
 /**
  * TAP Learning canvas session: chapter count, presets without a map type, the
  * available-chapter cap, and one session-wide insight goal.
- * Pure — no React. Crafting is never blocked by the goal.
+ * Pure — no React. The goal does not block work.
  */
-import { clampIleMinInsightsPerChapter } from "@/lib/learn-turn-insights";
 import { stripSessionFormatWrapper } from "@/lib/session-format-wrapper";
 
 export const ILE_SESSION_CHAPTER_COUNT_MIN = 1;
@@ -23,9 +22,13 @@ export function clampIleSessionChapterCount(value: unknown): number {
   return n;
 }
 
-/** One session-wide accepted-insight goal, on the same 1–5 scale. */
+/** One session-wide insight goal, on the same 1–5 scale. */
 export function clampIleSessionInsightGoal(value: unknown): number {
-  return clampIleMinInsightsPerChapter(value);
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_SESSION_INSIGHT_GOAL_DEFAULT;
+  if (n <= ILE_SESSION_INSIGHT_GOAL_MIN) return ILE_SESSION_INSIGHT_GOAL_MIN;
+  if (n >= ILE_SESSION_INSIGHT_GOAL_MAX) return ILE_SESSION_INSIGHT_GOAL_MAX;
+  return n;
 }
 
 /**
@@ -118,7 +121,7 @@ export function ileBlockSessionFrame(
 }
 
 /**
- * The insight goal is a target. It does not block crafting or continued work,
+ * The insight goal is a target. It does not block continued work,
  * and it does not mark chapters done.
  */
 export function ileInsightGoalBlocksWork(

@@ -14,7 +14,7 @@ import {
 } from "@/lib/learn-canvas-session";
 import { ileWelcomeShowsContinuePreview } from "@/lib/learn-welcome-chapters";
 import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/learn-pow-spend";
-import { ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT } from "@/lib/learn-turn-insights";
+import { ILE_SESSION_INSIGHT_GOAL_DEFAULT } from "@/lib/learn-canvas-session";
 import { DEFAULT_DURATION_MINUTES } from "@/lib/tap-score-client-helpers";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 
@@ -40,7 +40,7 @@ export function SessionWelcomeModal({
   onAllowParallelWorkChange: _onAllowParallelWorkChange,
   allowGatherResources: _allowGatherResources,
   onAllowGatherResourcesChange: _onAllowGatherResourcesChange,
-  minInsightsPerChapter: _minInsightsPerChapter = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  minInsightsPerChapter: _minInsightsPerChapter = ILE_SESSION_INSIGHT_GOAL_DEFAULT,
   onMinInsightsPerChapterChange: _onMinInsightsPerChapterChange,
   canvasTimerSeconds: _canvasTimerSeconds,
   onCanvasTimerSecondsChange: _onCanvasTimerSecondsChange,

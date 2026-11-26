@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 /**
  * Owner-facing block update form for the block-detail Edit drawer.
  * Destructive delete is a sibling drawer, not part of this form.
- * Calibrate, Learn, and Verify are always available; they are not edited here.
+ * knowledge verification protocols are always available; they are not edited here.
  */
 export function WorkspaceBlockEditPanel({
   blockId,

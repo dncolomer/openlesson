@@ -452,10 +452,13 @@ function dispatchCreateFlow(
   args: Record<string, unknown>,
 ): HeliosMapToolResult {
   const kind = parseAuthoringMapBlockKind(args.kind ?? args.blockKind);
-  if (!isFlowMapBlockKind(kind)) {
-    return fail(snapshot, "kind must be calibration, verification, or solve");
+  if (args.kind != null && !isFlowMapBlockKind(kind) && kind !== "content") {
+    return fail(snapshot, "kind must be verification or content");
   }
-  return ok(snapshot, `create-flow:${kind}`);
+  if (kind === "content") {
+    return fail(snapshot, "create_protocol is for protocols, not content");
+  }
+  return ok(snapshot, "create-protocol");
 }
 
 function dispatchSearchWeb(
@@ -1095,7 +1098,7 @@ export function dispatchHeliosMapTool(
       return dispatchClone(snapshot, args);
     case "edit_block":
       return dispatchEdit(snapshot, args);
-    case "create_flow":
+    case "create_protocol":
       return dispatchCreateFlow(snapshot, args);
     case "search_web":
       return dispatchSearchWeb(snapshot, args);

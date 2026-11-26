@@ -161,7 +161,7 @@ describe("desktop layout + block detail chrome", () => {
     expect(detail).not.toContain("data-block-detail-close");
 
     const simPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    expect(simPanel).toContain("SimulateInsightsSurface");
+    expect(simPanel).not.toContain("SimulateInsightsSurface");
     expect(simPanel).not.toContain("data-simulation-questions");
     expect(simPanel).not.toContain("data-simulation-exercises");
     expect(simPanel).not.toContain("/api/workspace/block-content-samples");

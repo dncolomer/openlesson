@@ -20,6 +20,7 @@ import {
 } from "@/lib/flow-opening-canvas";
 import {
   flowAuthoringSource,
+  PROTOCOL_CHALLENGE_LABEL,
   type FlowAuthoringSource,
 } from "@/lib/product-flow";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
@@ -95,7 +96,6 @@ export function FlowProblemFields({
   artifacts,
   onArtifactsChange,
   workspaceId,
-  topicHook,
   exactProblemOnCanvas = false,
   onExactProblemOnCanvasChange,
   openingCanvasPrepared = false,
@@ -114,8 +114,6 @@ export function FlowProblemFields({
   artifacts: FlowArtifact[];
   onArtifactsChange: (next: FlowArtifact[]) => void;
   workspaceId?: string | null;
-  /** Extra data attribute on the Problem textarea (kind-specific tests). */
-  topicHook?: string;
   exactProblemOnCanvas?: boolean;
   onExactProblemOnCanvasChange?: (value: boolean) => void;
   openingCanvasPrepared?: boolean;
@@ -142,9 +140,8 @@ export function FlowProblemFields({
     openingCanvasScene && flowOpeningCanvasHasContent(openingCanvasScene)
       ? openingCanvasScene
       : null;
-  const showCanvasSource = Boolean(onPrepareOpeningCanvas) && topicHook !== "calibration";
+  const showCanvasSource = Boolean(onPrepareOpeningCanvas);
   const derived = flowAuthoringSource({
-    kind: topicHook,
     problem,
     generateProblemOnOpen,
     artifacts,
@@ -198,14 +195,12 @@ export function FlowProblemFields({
         if (problemReadOnly) return;
         onProblemChange(event.target.value);
       }}
-      placeholder="Define the problem"
+      placeholder={PROTOCOL_CHALLENGE_LABEL}
       rows={split ? 12 : 6}
       readOnly={problemReadOnly}
       data-flow-problem=""
       data-flow-problem-locked={problemReadOnly ? "" : undefined}
-      data-solve-flow-topic={topicHook === "solve" ? "" : undefined}
-      data-verification-flow-topic={topicHook === "verification" ? "" : undefined}
-      data-calibration-flow-goal={topicHook === "calibration" ? "" : undefined}
+      data-protocol-challenge=""
       className={`${FLOW_FORM_TEXTAREA}${split ? " min-h-[16rem]" : ""}${
         problemReadOnly ? " cursor-default text-neutral-300" : ""
       }`}
@@ -219,8 +214,8 @@ export function FlowProblemFields({
         value="problem"
         checked={source === "problem"}
         onChange={() => setSource("problem")}
-        title="Write the problem"
-        hint="Type the problem the learner works."
+        title={`Write ${PROTOCOL_CHALLENGE_LABEL.toLowerCase()}`}
+        hint="Type the challenge the learner works."
         hook="problem"
       />
       <Choice
@@ -247,14 +242,14 @@ export function FlowProblemFields({
   );
 
   const problemDetails = (
-    <AuthorSection label="Problem" hook="problem" split={split}>
+    <AuthorSection label={PROTOCOL_CHALLENGE_LABEL} hook="problem" split={split}>
       {problemTextarea}
       {problemReadOnly ? (
         <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-          The problem cannot be changed after the flow is created.
+          {PROTOCOL_CHALLENGE_LABEL} cannot be changed after the protocol is created.
         </p>
       ) : null}
-      {onExactProblemOnCanvasChange && topicHook !== "calibration" ? (
+      {onExactProblemOnCanvasChange ? (
         <label
           className="flex cursor-pointer items-start gap-3"
           data-flow-exact-problem-on-canvas=""
@@ -384,7 +379,9 @@ export function FlowProblemFields({
     >
       <div className="min-w-0 space-y-4">
         <p className={FLOW_FORM_LABEL}>Author</p>
-        <p className="text-xs leading-relaxed text-neutral-500">Choose one source for the problem.</p>
+        <p className="text-xs leading-relaxed text-neutral-500">
+          Choose one source for {PROTOCOL_CHALLENGE_LABEL.toLowerCase()}.
+        </p>
         {sourceList}
         {split ? null : details}
         {split ? null : aside}

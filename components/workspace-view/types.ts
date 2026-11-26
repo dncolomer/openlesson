@@ -88,7 +88,6 @@ export function parseSectionParam(value: string | null): WorkspaceSectionKey | n
     value === "unsys_models" ||
     value === "goals" ||
     value === "verification_flows" ||
-    value === "calibration_flows" ||
     value === "knowledge" ||
     value === "insights" ||
     value === "kpis" ||

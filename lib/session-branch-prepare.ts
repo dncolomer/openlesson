@@ -27,12 +27,6 @@ export type SessionBranchPreparePlan =
   | { kind: "none" }
   | { kind: "missing-material" }
   | {
-      kind: "calibration";
-      token: string;
-      chapterTitle: string;
-      chapterBrief: string;
-    }
-  | {
       kind: "verification";
       token: string;
       chapterTitle: string;
@@ -127,7 +121,6 @@ export function planSessionBranchPrepare(
   const tapSessionId = text(input.tapSessionId);
   const workspaceId = text(input.workspaceId) || sessionPrepareWorkspaceId(input);
   const privateToken = text(input.privateToken);
-  const calibrationToken = text(input.calibrationToken);
   const verificationToken = text(input.verificationToken);
   const material = { chapterTitle, chapterBrief };
   const blockId = sessionPrepareBlockId(input.blockId) || sessionPrepareBlockId(input);
@@ -150,7 +143,6 @@ export function planSessionBranchPrepare(
     };
   }
 
-  if (calibrationToken) return { kind: "calibration", token: calibrationToken, ...material };
   if (verificationToken) return { kind: "verification", token: verificationToken, ...material };
 
   if (sessionId) {
@@ -191,8 +183,7 @@ export function sessionBranchPrepareRequest(
     chapterTitle: plan.chapterTitle,
     chapterBrief: plan.chapterBrief,
   };
-  if (plan.kind === "calibration") body.calibrationToken = plan.token;
-  else if (plan.kind === "verification") body.verificationToken = plan.token;
+  if (plan.kind === "verification") body.verificationToken = plan.token;
   else if (plan.kind === "learn") {
     body.sessionId = plan.sessionId;
     if (plan.ileToken) body.ileToken = plan.ileToken;
@@ -222,12 +213,8 @@ export function authorSeedBlockIdFromPreparePlan(
 /** Public flow token on the prepare plan, when the run is definition-backed. */
 export function definitionFlowTokenFromPreparePlan(
   plan: SessionBranchPreparePlan,
-): { kind: "calibration" | "verification" | "solve"; token: string } | null {
-  if (plan.kind === "calibration") return { kind: "calibration", token: plan.token };
+): { kind: "verification"; token: string } | null {
   if (plan.kind === "verification") return { kind: "verification", token: plan.token };
-  if (plan.kind === "learn" && plan.solveToken) {
-    return { kind: "solve", token: plan.solveToken };
-  }
   return null;
 }
 

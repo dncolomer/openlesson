@@ -207,16 +207,16 @@ const PLATFORM_CLOSE: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "Our products",
-    title: "Three flows. One measurement stack.",
+    title: "Protocols. One measurement stack.",
     subtitle:
-      "session is one interface for Calibrate, Learn, and Verify. Proof-of-Work API and Stash API sit on the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
+      "Embeddable Knowledge Verification Protocols are the hosted product. Proof-of-Work API and Stash API sit on the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
     backgroundImage: PITCH_ASSETS.aesthetics.useCase,
     // Visual stack top→bottom: session → Stash → PoW foundation.
     cardLayout: "product-stack",
     cards: [
       {
         label: "session",
-        body: "Think Aloud Protocol — one interface for Calibrate, Learn, and Verify.",
+        body: "Think Aloud Protocol — one interface for knowledge verification protocols.",
       },
       {
         label: "Stash API",

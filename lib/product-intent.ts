@@ -1,6 +1,6 @@
 /**
  * Product intent framing for learner/owner surfaces.
- * Technical products remain Learn/Verify in code; UI speaks Learn / Verify / Calibrate.
+ * Technical products remain Learn/Verify in code; UI speaks Learn / Verify.
  *
  * resolveProductIntent keeps the Dialog / Solo matrix:
  * - Explore + Dialog → learning

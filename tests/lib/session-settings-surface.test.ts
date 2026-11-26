@@ -17,7 +17,6 @@ describe("shared TAP settings surface", () => {
   const briefing = read("components/TapBriefingConfig.tsx");
   const learn = read("components/session-view/session-welcome-modal.tsx");
   const setup = read("components/session-view/product-flow-setup-screen.tsx");
-  const prepare = read("components/scout-tap/scout-tap-phases.tsx");
   expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
   const verify = read("components/tap-score/tap-score-phases.tsx");
@@ -79,15 +78,11 @@ describe("shared TAP settings surface", () => {
   it("Prepare, Drill, and Verify settings still use the same briefing card and aesthetic column", () => {
     expect(setup).toContain("SessionWelcomeModal");
     expect(setup).toContain("data-product-flow-setup");
-    for (const src of [prepare, verify]) {
-      expect(src).toContain("<ProductFlowSetupScreen");
-      expect(src).not.toContain("data-ile-pregame-tabs");
-    }
-    expect(prepare).toContain("data-calibrate-start");
+    expect(verify).toContain("<ProductFlowSetupScreen");
+    expect(verify).not.toContain("data-ile-pregame-tabs");
     expect(learn).toContain("SessionStartShell");
     expect(learn).toContain("wideLanguage");
     expect(verify).toContain("FLOW_END_KICKERS.verify");
-    expect(read("components/CalibrationFlowRunner.tsx")).toContain("<ProductFlowSetupScreen");
     expect(read("components/VerificationFlowRunner.tsx")).toContain("initialMinutes={durationMinutes}");
     expect(read("components/VerificationFlowRunner.tsx")).toContain("lockDuration");
   });
@@ -99,14 +94,10 @@ describe("shared TAP settings surface", () => {
     expect(learn).toContain('t("session.backToDashboard")');
     expect(setup).toContain("onBackToWorkspace");
     expect(learn).toContain("data-ile-back-to-workspace");
-    expect(prepare).toContain("onSettingsBackToWorkspace");
     expect(verify).toContain("onBackToWorkspace");
-    const scoutClient = read("components/scout-tap/ScoutTapClient.tsx");
     const tapClient = read("components/TapScoreClient.tsx");
     expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
 
-    expect(scoutClient).toContain("onSettingsBackToWorkspace=");
-    expect(scoutClient).toContain("resolvedWorkspaceId && !privateToken");
     expect(tapClient).toContain("onBackToWorkspace=");
     expect(tapClient).toContain("resolvedWorkspaceId && !privateToken && !localOpening");
   });

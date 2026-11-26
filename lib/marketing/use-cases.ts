@@ -1,9 +1,7 @@
 import {
   DISCOVERY_CTA_LABEL,
   ENTERPRISE_SETUP_MAILTO,
-  KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
-  LEARNING_HARNESS_PATH,
   USE_CASES_PATH,
 } from "@/lib/marketing/paths";
 import type { ThesisDeepLink } from "@/lib/science/hub";
@@ -15,7 +13,7 @@ export const USE_CASES_COPY = {
   title: "Put knowledge building to work",
   lead: [
     "A candidate can reach the right answer without showing how they got there. A lead can collect work traces and still not see where people sit relative to the goals that matter. A researcher can hold an AI-generated argument no one on the team can yet question.",
-    "Verify Protocol, Map Protocol, and Solve Protocol can work together in each of these situations. The system organizes work around proof of work and evidence of understanding.",
+    "Embeddable Knowledge Verification Protocols organize that work around proof of work and evidence of understanding. You embed a protocol against a knowledge region and The Protocol Challenge.",
   ],
   directoryEyebrow: "ON THIS PAGE",
   directoryTitle: "The cases.",
@@ -29,8 +27,8 @@ export const USE_CASES_COPY = {
       body: "A knowledge region describes the expertise you want to explore, grounded in problems and work from that domain. It gives a team a shared reference that can develop with its needs.",
     },
     {
-      title: "Solve flow",
-      body: "A solve flow structures work on a problem, creating traces that can inform further investigation, verification, and mapping.",
+      title: "The Protocol Challenge",
+      body: "The Protocol Challenge is the topic or problem an Embeddable Knowledge Verification Protocol runs against. Work on that challenge is stored so reviewers can examine how someone explores a knowledge region.",
     },
   ],
   otherEyebrow: "OTHER DIRECTIONS",
@@ -50,11 +48,11 @@ export const USE_CASES_OTHER = [
   },
   {
     title: "Institute and course-authoring programs",
-    body: "Specialist course authoring is a distinct service: organize a demanding topic around problems and target understanding. Treat it separately from the self-serve harness. Completion of authored material is not mastery.",
+    body: "Specialist course authoring is a distinct service: organize a demanding topic around problems and target understanding. Treat it separately from a verification protocol. Completion of authored material is not mastery.",
   },
   {
     title: "Knowledge and neuroscience studies",
-    body: "Research collaborations can ask how knowledge regions relate to studies of the brain. That work lives on the science page. It is not a shipped mapping or assessment feature.",
+    body: "Research collaborations can ask how knowledge regions relate to studies of the brain. That work lives on the science page. It is not a shipped assessment feature.",
   },
 ] as const;
 
@@ -66,63 +64,51 @@ export const USE_CASES = [
     hint: "Verify",
     title: "Assess capability through proof of work",
     lead: "Examine how a candidate explores a demanding problem, including work with an allowed AI tool when the problem says so.",
-    body: "You define a knowledge region and a problem your experts consider meaningful, then run a Verify session under stated conditions. Reviewers open the stored work. Where Distance is shown, it is a model-relative relationship to that region, not a score of the whole person. The product does not enforce a tool policy, replace interviews, or claim the result predicts job performance. Agent-harness comparison is a related extension, not a validated benchmark that treats people and agents as equivalent.",
+    body: "You define a knowledge region and The Protocol Challenge your experts consider meaningful, then embed an Embeddable Knowledge Verification Protocol under stated conditions. Reviewers open the stored work. Where Distance is shown, it is a model-relative relationship to that region, not a score of the whole person. The product does not enforce a tool policy, replace interviews, or claim the result predicts job performance. Agent-harness comparison is a related extension, not a validated benchmark that treats people and agents as equivalent.",
     example:
       "A team doing technical hiring for a distributed-systems engineer writes a replication problem that includes a network partition, and states that an AI tool is allowed. The candidate proposes a design, then explores what happens when two nodes accept conflicting writes. They accept one model suggestion and reject another. The reviewer opens the stored session and looks at whether the candidate spotted the inconsistency, revised an assumption, and explained the trade-off.",
     imageSrc: "/unsysmodel.png",
     imageAlt:
       "Hidden-state diagram of Integrals: meaning, setup, and technique branches, with the cheapest edge marked as the policy",
     imageFit: "contain" as const,
-    links: [
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
-      { href: LEARNING_HARNESS_PATH, label: "Solve" },
-    ],
+    links: [{ href: KNOWLEDGE_VERIFICATION_PATH, label: "Protocols" }],
   },
   {
     id: "team-insight",
     eyebrow: "TEAM INSIGHT",
     directoryLabel: "Team insight",
-    hint: "Map · Solve · Verify",
+    hint: "Verify",
     title: "Turn work into actionable insight",
     lead: "Skills and expertise don't fit on a leaderboard or a two-axis chart. See your team, or yourself, across many dimensions at once, set against the goals that matter to you.",
-    body: "Calibrate, Learn, and Verify sessions store work, as do Solve runs. A knowledge region you define plots Calibrate, Verify, and Solve runs so you can see position and distance. Learn traces can be opened; they are not yet plotted there. You still read the stored work to decide what to do next. A packaged leaderboard that ranks people is not what this is. An automatic report that compares every person on every goal at once is still being built.",
+    body: "An Embeddable Knowledge Verification Protocol stores work against a knowledge region you define so you can see position and distance. You still read the stored work to decide what to do next. A packaged leaderboard that ranks people is not what this is. An automatic report that compares every person on every goal at once is still being built.",
     example:
-      "A technical lead defines a private knowledge region for a billing subsystem and a representative incident problem. Three colleagues each complete a Verify session on that problem. The lead opens the region, looks at the three runs against it, and opens the stored trace for the run farthest from it to see which assumptions still need work.",
+      "A technical lead defines a private knowledge region for a billing subsystem and a representative incident as The Protocol Challenge. Three colleagues each complete a verification protocol on that challenge. The lead opens the region, looks at the three runs against it, and opens the stored trace for the run farthest from it to see which assumptions still need work.",
     imageSrc: "/regions1.png",
     imageAlt:
       "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with positions and distances between them",
     imageFit: "contain" as const,
-    links: [
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
-      { href: LEARNING_HARNESS_PATH, label: "Solve" },
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
-    ],
+    links: [{ href: KNOWLEDGE_VERIFICATION_PATH, label: "Protocols" }],
   },
   {
     id: "research-ai",
     eyebrow: "FRONTIER WORK",
     directoryLabel: "Frontier work",
-    hint: "Solve · Map · Verify",
+    hint: "Verify",
     title: "Understand difficult work",
     lead: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
-    body: "You work the argument in a Solve or Learn session. Speech, writing, and drawing on the canvas are stored, and our uncertainty model can suggest a next place to look. Completing a session records what you examined. It does not certify that the argument is correct. The interface uses behavioral cognitive enhancements such as think-aloud work on the canvas so you can question the work yourself. Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
+    body: "You work the argument through an Embeddable Knowledge Verification Protocol. Speech, writing, and drawing on the canvas are stored, and our uncertainty model can suggest a next place to look. Completing a session records what you examined. It does not certify that the argument is correct. The interface uses behavioral cognitive enhancements such as think-aloud work on the canvas so you can question the work yourself. Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
     example:
-      "A researcher is given an AI-generated proof of a lemma the team has not checked. They start a Solve session, write the first claim on the canvas, and talk through why the second step follows. They cannot justify a substitution, so they mark that gap and stop. A colleague opens the stored session, reads those notes, and continues from the substitution instead of starting over.",
+      "A researcher is given an AI-generated proof of a lemma the team has not checked. They start a verification protocol, write the first claim on the canvas, and talk through why the second step follows. They cannot justify a substitution, so they mark that gap and stop. A colleague opens the stored session, reads those notes, and continues from the substitution instead of starting over.",
     imageSrc: "/lp-boxes/hero3.jpg",
     imageAlt:
       "Full session Work canvas with proof-of-work annotations on spoken questions, canvas revisions, and verification checks",
     imageFit: "cover" as const,
-    links: [
-      { href: LEARNING_HARNESS_PATH, label: "Solve" },
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
-    ],
+    links: [{ href: KNOWLEDGE_VERIFICATION_PATH, label: "Protocols" }],
   },
 ] as const;
 
 export const USE_CASES_DIRECTORY: readonly ThesisDeepLink[] = [
-  { href: "#ideas", label: "Two ideas", hint: "Region and solve flow" },
+  { href: "#ideas", label: "Two ideas", hint: "Region and protocol challenge" },
   ...USE_CASES.map((item) => ({
     href: `#${item.id}`,
     label: item.directoryLabel,

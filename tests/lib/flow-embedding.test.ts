@@ -25,7 +25,6 @@ import {
   getFlowEmbedding,
 } from "@/lib/flow-embedding-store";
 import {
-  playCopyCalibrateEmbeddingFromSounding,
   playCopyFlowSessionInsert,
   playCopyVerifyEmbeddingFromProof,
 } from "@/lib/map-play-data-access";
@@ -65,36 +64,32 @@ describe("flowcfg-v1-d96 embeddings", () => {
   const model = fixtureModel("Region");
   const eight = fixtureModel("Other region", [4, 40, 90]);
 
-  it("embeds Calibrate without a projected policy and Learn/Verify with one", () => {
-    const calibrate = completeFlowEmbedding({
-      flowKind: "calibrate",
-      model,
-      sequence: ["r1", "r2"],
-      pow: [{ type: "tool", tool_name: "probe", tool_action: "sounding", timestamp_ms: 1, payload: "band" }],
-    });
-    const learn = completeFlowEmbedding({
-      flowKind: "learn",
-      model,
-      sequence: ["r1"],
-      pow: [{ type: "tool", tool_name: "session_policy", tool_action: "r1", timestamp_ms: 1 }],
-    });
+  it("embeds verification walks with a projected policy", () => {
     const verify = completeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "proof" }],
     });
-    expect(calibrate.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
-    expect(calibrate.embedding_model_id).not.toBe("knowledgecfg-v1-d64");
-    expect(calibrate.vector).toHaveLength(FLOW_EMBEDDING_DIM);
-    expect(calibrate.raw.projectedPolicy).toBeNull();
-    expect(
-      calibrate.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
-    ).toBeGreaterThan(0);
-    expect(learn.raw.projectedPolicy).not.toBeNull();
-    expect(learn.raw.projectedPolicy?.sequence).toEqual(["r1"]);
+    expect(verify.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(verify.embedding_model_id).not.toBe("knowledgecfg-v1-d64");
+    expect(verify.vector).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(verify.raw.projectedPolicy).not.toBeNull();
+    expect(verify.raw.projectedPolicy?.sequence).toEqual(["r1"]);
     expect(verify.raw.pow[0]?.payload).toBe("proof");
+    expect(
+      verify.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
+    ).toBeGreaterThan(0);
+
+    for (const flowKind of ["calibrate", "learn", "solve"] as const) {
+      const coerced = completeFlowEmbedding({
+        flowKind,
+        model,
+        sequence: ["r1"],
+      });
+      expect(coerced.raw.flowKind).toBe("verify");
+      expect(coerced.raw.projectedPolicy).not.toBeNull();
+    }
   });
 
   it("changes the path vector when the tree or walk changes; speech only moves path+text", () => {
@@ -213,22 +208,22 @@ describe("flow embedding store", () => {
     resetFlowEmbeddingStore("memory");
   });
 
-  it("persists recoverable raw and does not invent a Calibrate policy", async () => {
+  it("persists recoverable verification raw with a projected policy", async () => {
     const model = fixtureModel();
     const stored = await persistCompletedFlowEmbedding({
       workspaceId: "ws-flow",
-      flowKind: "calibrate",
+      flowKind: "verify",
       flowId: "flow-1",
       runId: "run-1",
       identity: "ada",
-      source: "sounding",
+      source: "runner",
       model,
-      sequence: ["try", "insight"],
+      sequence: ["r1"],
       pow: [{ type: "tool", tool_name: "probe", tool_action: "sounding", timestamp_ms: 1, payload: "band" }],
     });
     expect(stored.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
-    expect(stored.raw.projectedPolicy).toBeNull();
-    const listed = await listFlowEmbeddings({ workspaceId: "ws-flow", flowKind: "calibrate" });
+    expect(stored.raw.projectedPolicy).not.toBeNull();
+    const listed = await listFlowEmbeddings({ workspaceId: "ws-flow", flowKind: "verify" });
     expect(listed).toHaveLength(1);
     const byFlow = await listFlowEmbeddings({ workspaceId: "ws-flow", flowId: "flow-1" });
     expect(byFlow).toHaveLength(1);
@@ -289,69 +284,10 @@ describe("flow embedding store", () => {
     expect(listed[0]?.owner_user_id).toBe("player-1");
   });
 
-  it("persists a completed play-copy calibrate run as a player-owned copy embedding", async () => {
-    const started = playCopyFlowSessionInsert({
-      flowKind: "calibrate",
-      flowId: "cf-live",
-      runnerUserId: "player-1",
-      copyWorkspaceId: "copy-ws",
-      topic: "Continuity",
-      publicToken: "ctok",
-    });
-    const payload = playCopyCalibrateEmbeddingFromSounding({
-      session: { id: "sess-cal", metadata: started.metadata },
-      model: fixtureModel(),
-      metadata: { sounding: true, sounding_band: "coarse" },
-    });
-    expect(payload).not.toBeNull();
-    expect(payload!.sequence).toBeNull();
-    const stored = await persistCompletedFlowEmbedding({
-      workspaceId: payload!.workspaceId,
-      ownerUserId: payload!.ownerUserId,
-      flowKind: payload!.flowKind,
-      flowId: payload!.flowId,
-      runId: payload!.runId,
-      identity: payload!.identity,
-      source: payload!.source,
-      model: fixtureModel(),
-      sequence: payload!.sequence,
-      pow: payload!.pow,
-    });
-    expect(stored.owner_user_id).toBe("player-1");
-    expect(stored.workspace_id).toBe("copy-ws");
-    expect(stored.flow_kind).toBe("calibrate");
-    expect(stored.flow_id).toBe("cf-live");
-    expect(stored.run_id).toBe("sess-cal");
-    expect(stored.identity).toBe("play:player-1");
-    expect(stored.source).toBe("sounding");
-    expect(stored.raw.projectedPolicy).toBeNull();
-    expect(stored.raw.pow[0]?.tool_action).toBe("sounding");
-  });
 });
 
 describe("completion paths persist flow embeddings instead of snapshots", () => {
-  it("Learn, Verify, and Calibrate write embed+raw and never snapshot", () => {
-    const learn = read("components/session-view/use-session-phase.ts");
-    const confirmEnd = learn.slice(learn.indexOf("const handleConfirmEnd"));
-    expect(confirmEnd).toContain("sessionEndEmbeddingTarget");
-    expect(confirmEnd).toContain("postSolveFlowEmbedding");
-    expect(confirmEnd).toContain("postWorkspaceFlowEmbedding");
-    expect(confirmEnd).toContain('flowKind: "learn"');
-    expect(confirmEnd).not.toContain("lwm_snapshot");
-    expect(confirmEnd).not.toContain("insertKnowledgeConfigSnapshot");
-    expect(confirmEnd).not.toContain("embedPolicyScore");
-
-    const verifyEnd = read("components/tap-score/use-tap-score-flow.ts");
-    const finish = verifyEnd.slice(verifyEnd.indexOf("async function endSession"));
-    expect(finish).toContain("postWorkspaceFlowEmbedding");
-    expect(finish).toContain('flowKind: "verify"');
-    expect(finish).not.toContain("embedPolicyScore");
-    expect(finish).not.toContain("lwm_snapshot");
-    expect(finish).toContain('if (s.kind === "verify") {');
-    expect(finish.indexOf('if (s.kind === "verify") {')).toBeLessThan(
-      finish.indexOf("getIlePostSessionPath"),
-    );
-
+  it("Verification writes embed+raw and never snapshot", () => {
     const results = read("app/api/verification-flow/public/[token]/results/route.ts");
     expect(results).toContain("completeFlowEmbedding");
     expect(results).toContain("persistCompletedFlowEmbedding");
@@ -359,55 +295,25 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     expect(results).not.toContain("lwm_snapshot");
     expect(results).not.toContain("insertKnowledgeConfigSnapshot");
 
-    const proof = read("app/api/calibration-flow/public/[token]/proof/route.ts");
-    expect(proof).toContain("persistCompletedFlowEmbedding");
-    expect(proof).toContain('flowKind: "calibrate"');
-    expect(proof).toContain("sequence: null");
-    expect(proof).not.toContain("lwm_snapshot");
-
-    const scout = read("components/scout-tap/ScoutTapClient.tsx");
-    expect(scout).toContain("postWorkspaceFlowEmbedding");
-    expect(scout).toContain('flowKind: "calibrate"');
-    expect(scout).toContain("soundingProofUploadItem");
-
-    const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
-    expect(publicCalibrate).toContain("model: closed.model");
-    expect(publicCalibrate).toContain("soundingProofEvent");
-
-    const playVerify = read("app/play/verify/page.tsx");
-    expect(playVerify).toContain("playCopyVerifyEmbeddingFromProof");
-    expect(playVerify).toContain("postWorkspaceFlowEmbedding");
-    expect(playVerify).toContain("onLocalProof={storeProof}");
-    const playCalibrate = read("components/dashboard/play-calibrate-session.tsx");
-    expect(playCalibrate).toContain("playCopyCalibrateEmbeddingFromSounding");
-    expect(playCalibrate).toContain("postWorkspaceFlowEmbedding");
-    expect(playCalibrate).toContain("soundingProofMetadata");
-
     const listRoute = read("app/api/session/embed/route.ts");
     expect(listRoute).toContain("export async function POST");
     expect(listRoute).toContain("persistCompletedFlowEmbedding");
-    expect(listRoute).toContain("persistSolveCompletedEmbedding");
+    expect(listRoute).not.toContain("persistSolveCompletedEmbedding");
     const client = read("lib/flow-embedding-client.ts");
     expect(client).toContain("listWorkspaceFlowEmbeddings");
     expect(client).toContain("/api/session/embed");
-    const models = read("components/knowledge-panel/models-view.tsx");
-    expect(models).toContain('embeddingSource: "flowcfg"');
-    expect(models).toContain("Embeddings in");
-    expect(models).toContain("Overlay regions on the right.");
-    const hook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
-    expect(hook).toContain("const useFlowEmbeddings = true");
-    expect(hook).toContain("reconcileSelectedSubjectKeys");
-    expect(hook).toContain("sameFlowEmbeddingList");
+    expect(existsSync(join(ROOT, "app/api/calibration-flow/public/[token]/proof/route.ts"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "components/CalibrationFlowRunner.tsx"))).toBe(false);
   });
+});
 
-  it("live Calibrate is sounding and leftover canvas classify UI is gone", () => {
+describe("retired calibrate surfaces", () => {
+  it("live Calibrate sounding UI is gone", () => {
     expect(existsSync(join(ROOT, "components/calibrate/calibrate-live-surface.tsx"))).toBe(false);
-    const sounding = read("components/calibrate/calibrate-sounding-surface.tsx");
-    expect(sounding).toContain("data-calibrate-sounding");
-    expect(sounding).not.toContain("Comfortable");
-    const learnKept = read("components/session-view/learn-insight-kept-screen.tsx");
-    expect(learnKept).not.toContain("SessionPolicyScoreResult");
-    const verify = read("components/tap-score/tap-score-phases.tsx");
-    expect(verify).toContain("SessionPolicyScoreResult");
+    expect(existsSync(join(ROOT, "components/calibrate/calibrate-sounding-surface.tsx"))).toBe(
+      false,
+    );
   });
 });

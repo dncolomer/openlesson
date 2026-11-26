@@ -5,13 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
-  parseProductFlowKind,
-  PRODUCT_FLOW_KINDS,
-  productFlowKindLabel,
+  PROTOCOL_LABEL,
   productFlowNewPath,
   productRegionDashboardPath,
   productRegionPagePath,
-  type ProductFlowKind,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
@@ -30,7 +27,7 @@ import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import {
   DASHBOARD_REGION_SIMULATION_JOBS_PATH,
   DASHBOARD_REGION_SIMULATION_PATH,
-  matchSimulationFlows,
+  matchSimulationProtocols,
   nextRegionSimulationWizardStep,
   parseCustomExplorationStrategy,
   previousRegionSimulationWizardStep,
@@ -58,7 +55,7 @@ import type {
 type SetupFlow = {
   id: string;
   name: string;
-  topic?: string;
+  challenge?: string;
   questionCount: number;
   realSessionCount: number;
 };
@@ -85,24 +82,24 @@ function toggleId<T extends string>(current: readonly T[], id: T): T[] {
 
 function wizardHeading(step: RegionSimulationWizardStep): string {
   if (step === "name") return "Name this knowledge region";
-  if (step === "flows") return "Pick flows";
+  if (step === "protocols") return "Pick protocols";
   if (step === "explore") return "Choose exploration strategies";
   if (step === "ai-use") return "Add AI-use models";
   return "Run the simulation";
 }
 
-function wizardDescription(step: RegionSimulationWizardStep, productLabel: string): string {
+function wizardDescription(step: RegionSimulationWizardStep): string {
   if (step === "name") return "A short name for the dashboard list.";
-  if (step === "flows") {
-    return `Required. Search and pick the ${productLabel.toLowerCase()} flows that supply the problems the agents will solve.`;
+  if (step === "protocols") {
+    return `Required. Search and pick the ${PROTOCOL_LABEL.toLowerCase()}s that supply the problems the agents will solve.`;
   }
   if (step === "explore") {
     return "Clusters describe exploration styles, not a person's ability or worth. Add a custom strategy to use its prompt as the agent instructions.";
   }
   if (step === "ai-use") {
-    return "Optional. None are selected by default. Picking a model uses a single seed flow.";
+    return "Optional. None are selected by default. Picking a model uses a single seed protocol.";
   }
-  return `Review the setup, then run. Agents solve the selected ${productLabel.toLowerCase()} problems and the result is an annotated region.`;
+  return `Review the setup, then run. Agents solve the selected ${PROTOCOL_LABEL.toLowerCase()} problems and the result is an annotated region.`;
 }
 
 async function readSimulationStream(
@@ -146,23 +143,20 @@ async function readSimulationStream(
 }
 
 export function RegionSimulationSetup({
-  kind: lockedKind,
   apiPath = DASHBOARD_REGION_SIMULATION_PATH,
   detailsBasePath,
 }: {
-  kind?: ProductFlowKind;
   apiPath?: string;
   detailsBasePath?: string;
 }) {
   const router = useRouter();
-  const [kind, setKind] = useState<ProductFlowKind>(lockedKind ?? "solve");
   const [step, setStep] = useState<RegionSimulationWizardStep>("name");
-  const productLabel = productFlowKindLabel(kind);
+  const productLabel = PROTOCOL_LABEL;
   const [flows, setFlows] = useState<SetupFlow[]>([]);
   const [strategies, setStrategies] = useState<SetupStrategy[]>([]);
   const [name, setName] = useState("");
-  const [flowIds, setFlowIds] = useState<string[]>([]);
-  const [flowQuery, setFlowQuery] = useState("");
+  const [protocolIds, setProtocolIds] = useState<string[]>([]);
+  const [protocolQuery, setProtocolQuery] = useState("");
   const [strategyIds, setStrategyIds] = useState<ExplorationStrategyId[]>([]);
   const [customName, setCustomName] = useState("");
   const [customInstructions, setCustomInstructions] = useState("");
@@ -178,20 +172,20 @@ export function RegionSimulationSetup({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${apiPath}?kind=${kind}`)
+    fetch(apiPath)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           throw new Error(errorMessageFromBody(payload, "Could not load simulation setup"));
         }
         if (cancelled) return;
-        const listedFlows = Array.isArray(payload.flows) ? payload.flows : [];
+        const listedProtocols = Array.isArray(payload.protocols) ? payload.protocols : [];
         const listedStrategies = Array.isArray(payload.strategies) ? payload.strategies : [];
         setFlows(
-          listedFlows.map((flow: SetupFlow) => ({
+          listedProtocols.map((flow: SetupFlow) => ({
             id: String(flow.id || ""),
-            name: String(flow.name || "Flow"),
-            topic: flow.topic,
+            name: String(flow.name || "Protocol"),
+            challenge: flow.challenge,
             questionCount: Number(flow.questionCount) || 1,
             realSessionCount: Number(flow.realSessionCount) || 0,
           })),
@@ -228,28 +222,20 @@ export function RegionSimulationSetup({
     return () => {
       cancelled = true;
     };
-  }, [kind, apiPath]);
-
-  useEffect(() => {
-    setFlowIds([]);
-    setFlowQuery("");
-    setCustomName("");
-    setCustomInstructions("");
-    setStep("name");
-  }, [kind]);
+  }, [apiPath]);
 
   const selectedFlows = useMemo(
-    () => flows.filter((flow) => flowIds.includes(flow.id)),
-    [flowIds, flows],
+    () => flows.filter((flow) => protocolIds.includes(flow.id)),
+    [protocolIds, flows],
   );
   const flowMatches = useMemo(
     () =>
-      matchSimulationFlows(
-        flows.filter((flow) => !flowIds.includes(flow.id)),
-        flowQuery,
+      matchSimulationProtocols(
+        flows.filter((flow) => !protocolIds.includes(flow.id)),
+        protocolQuery,
         REGION_SIMULATION_FLOW_MATCH_LIMIT,
       ),
-    [flowIds, flowQuery, flows],
+    [protocolIds, protocolQuery, flows],
   );
   const customStrategies = strategies.filter((strategy) => strategy.custom);
   const catalogStrategies = strategies.filter((strategy) => !strategy.custom);
@@ -261,11 +247,11 @@ export function RegionSimulationSetup({
   }, [includeHumanData, showHumanOption]);
 
   function addFlow(id: string) {
-    setFlowIds((current) => {
+    setProtocolIds((current) => {
       if (aiUseCatalogIds.length) return [id];
       return current.includes(id) ? current : [...current, id];
     });
-    setFlowQuery("");
+    setProtocolQuery("");
   }
 
   async function pollJob(jobId: string, onProgress: (progress: RegionSimulationProgress[]) => void) {
@@ -286,7 +272,7 @@ export function RegionSimulationSetup({
   }
 
   function removeFlow(id: string) {
-    setFlowIds((current) => current.filter((item) => item !== id));
+    setProtocolIds((current) => current.filter((item) => item !== id));
   }
 
   function addCustomStrategy() {
@@ -320,7 +306,7 @@ export function RegionSimulationSetup({
   }
 
   async function run() {
-    if (!name.trim() || !flowIds.length || !strategyIds.length) return;
+    if (!name.trim() || !protocolIds.length || !strategyIds.length) return;
     setBusy(true);
     setError("");
     setResult(null);
@@ -340,9 +326,8 @@ export function RegionSimulationSetup({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind,
           name: name.trim(),
-          flowIds,
+          protocolIds,
           strategyIds,
           customStrategies: customStrategies
             .filter((strategy) => strategyIds.includes(strategy.id))
@@ -408,7 +393,7 @@ export function RegionSimulationSetup({
   const clusters: RegionSimulationClusterResult[] = result?.clusters ?? [];
   const canAdvance = regionSimulationWizardCanAdvance(step, {
     name,
-    flowIds,
+    protocolIds,
     strategyIds,
   });
   const selectedStrategies = strategies.filter((row) => strategyIds.includes(row.id));
@@ -460,11 +445,11 @@ export function RegionSimulationSetup({
   return (
     <ProductSurface
       label={`${productLabel} knowledge region`}
-      activeTab={dashboardTabForProductSurface(kind, "region")}
+      activeTab={dashboardTabForProductSurface(undefined, "region")}
     >
       <div
         className={PRODUCT_CREATE_SHELL}
-        data-knowledge-region-create={kind}
+        data-knowledge-region-create=""
         data-region-simulation-wizard=""
         data-region-simulation-wizard-step={result ? "result" : step}
       >
@@ -480,7 +465,7 @@ export function RegionSimulationSetup({
           description={
             result
               ? `Simulated exploration styles on the selected ${productLabel.toLowerCase()} flows. Clusters describe how agents searched, not a person's ability.`
-              : wizardDescription(step, productLabel)
+              : wizardDescription(step)
           }
         />
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -529,7 +514,7 @@ export function RegionSimulationSetup({
                 href={
                   detailsBasePath
                     ? `${detailsBasePath}/${encodeURIComponent(result.id || "")}`
-                    : result.regionPath || productRegionPagePath(kind, result.id || "")
+                    : result.regionPath || productRegionPagePath(result.id || "")
                 }
                 className={FLOW_PRIMARY_BTN}
                 data-open-region-details=""
@@ -541,50 +526,30 @@ export function RegionSimulationSetup({
         ) : (
           <FlowFormCard data-region-simulation-setup="">
             {step === "name" ? (
-              <div className="grid gap-6 md:grid-cols-2">
-                <FlowField label="Type">
-                  <select
-                    className={FLOW_FORM_INPUT}
-                    value={kind}
-                    disabled={Boolean(lockedKind)}
-                    data-region-kind=""
-                    onChange={(event) => {
-                      const next = parseProductFlowKind(event.target.value);
-                      if (next) setKind(next);
-                    }}
-                  >
-                    {PRODUCT_FLOW_KINDS.map((item) => (
-                      <option key={item} value={item}>
-                        {productFlowKindLabel(item)}
-                      </option>
-                    ))}
-                  </select>
-                </FlowField>
-                <FlowField label="Region name">
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Region name"
-                    data-region-name-input
-                    className={FLOW_FORM_INPUT}
-                  />
-                </FlowField>
-              </div>
+              <FlowField label="Region name">
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Region name"
+                  data-region-name-input
+                  className={FLOW_FORM_INPUT}
+                />
+              </FlowField>
             ) : null}
 
-            {step === "flows" ? (
+            {step === "protocols" ? (
               flows.length === 0 ? (
                 <Link
-                  href={productFlowNewPath(kind)}
+                  href={productFlowNewPath()}
                   data-create-flow-first=""
                   className={FLOW_PRIMARY_BTN}
                 >
-                  Create a Flow
+                  Create a Protocol
                 </Link>
               ) : (
                 <fieldset className="space-y-2" data-region-simulation-flows="">
                   <legend className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    {productLabel} flows
+                    Protocols
                   </legend>
                   {selectedFlows.length ? (
                     <ul className="flex flex-wrap gap-2" data-region-simulation-flow-selected="">
@@ -604,8 +569,8 @@ export function RegionSimulationSetup({
                     </ul>
                   ) : null}
                   <input
-                    value={flowQuery}
-                    onChange={(event) => setFlowQuery(event.target.value)}
+                    value={protocolQuery}
+                    onChange={(event) => setProtocolQuery(event.target.value)}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter") return;
                       event.preventDefault();
@@ -641,7 +606,7 @@ export function RegionSimulationSetup({
                     </ul>
                   ) : (
                     <p className="text-xs text-neutral-500" data-region-simulation-flow-empty="">
-                      {flowQuery.trim() ? "No matching flows." : "All matching flows are already selected."}
+                      {protocolQuery.trim() ? "No matching protocols." : "All matching protocols are already selected."}
                     </p>
                   )}
                 </fieldset>
@@ -771,7 +736,7 @@ export function RegionSimulationSetup({
                       onChange={() => {
                         const next = toggleId(aiUseCatalogIds, row.id);
                         setAiUseCatalogIds(next);
-                        if (next.length && flowIds.length > 1) setFlowIds(flowIds.slice(0, 1));
+                        if (next.length && protocolIds.length > 1) setProtocolIds(protocolIds.slice(0, 1));
                       }}
                       data-region-simulation-ai-use={row.id}
                     />
@@ -814,7 +779,7 @@ export function RegionSimulationSetup({
                     <dd className="mt-1 text-white">{productLabel}</dd>
                   </div>
                   <div>
-                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Flows</dt>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Protocols</dt>
                     <dd className="mt-1 text-white">
                       {selectedFlows.map((flow) => flow.name).join(", ") || "—"}
                     </dd>
@@ -853,7 +818,7 @@ export function RegionSimulationSetup({
                       onChange={(event) => setIncludeHumanData(event.target.checked)}
                     />
                     <span>
-                      Include data from real humans in these flows
+                      Include data from real humans in these protocols
                       <span className="ml-2 text-neutral-500">
                         {realSessionCount} session{realSessionCount === 1 ? "" : "s"}
                       </span>

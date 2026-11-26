@@ -14,7 +14,7 @@ const ROOT = join(__dirname, "../..");
 
 describe("unified sessions", () => {
   it("maps logical TAP tables onto session kinds", () => {
-    expect(kindFromGuestLogicalTable("workspace_calibrate_sessions")).toBe("calibrate");
+    expect(kindFromGuestLogicalTable("workspace_calibrate_sessions")).toBe("verify");
     expect(kindFromGuestLogicalTable("workspace_verify_sessions")).toBe("verify");
     expect(kindFromGuestLogicalTable("workspace_learn_links")).toBe("learn");
     expect(kindFromGuestLogicalTable("workspace_calibrate_sessions")).not.toBe("solve");
@@ -23,14 +23,14 @@ describe("unified sessions", () => {
   it("hydrates guest_link fields onto the session row", () => {
     const row = hydrateUnifiedGuestRow({
       id: "s1",
-      kind: "calibrate",
+      kind: "verify",
       guest_link: { requested_duration_seconds: 900, show_end_session: true },
     });
     expect(row?.requested_duration_seconds).toBe(900);
-    expect(row?.interaction_kind).toBe("calibrate");
+    expect(row?.interaction_kind).toBe("verify");
   });
 
-  it("inserts Calibrate guest sessions onto the unified table", async () => {
+  it("inserts leftover Calibrate guest sessions as verify", async () => {
     const calls: Array<{ table: string; row: Record<string, unknown> }> = [];
     const client = {
       from(table: string) {
@@ -59,8 +59,9 @@ describe("unified sessions", () => {
     });
     expect(error).toBeNull();
     expect(calls[0]?.table).toBe("sessions");
-    expect(calls[0]?.row.kind).toBe("calibrate");
-    expect(data?.kind).toBe("calibrate");
+    expect(calls[0]?.row.kind).toBe("verify");
+    expect(data?.kind).toBe("verify");
+    expect(calls[0]?.row).not.toHaveProperty("calibrate_flow_id");
   });
 
   it("updates TAP fields onto sessions.guest_link", async () => {

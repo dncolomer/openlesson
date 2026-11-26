@@ -64,9 +64,9 @@ const SKILL_REQUEST = {
 };
 
 const FLOW_TOOLS = [
-  "create_flow",
-  "list_flows",
-  "link_flow",
+  "create_protocol",
+  "list_protocols",
+  "get_protocol",
 ] as const;
 
 function assertNoLinkMint(label: string, text: string) {
@@ -90,24 +90,26 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
       expect(krNames).not.toContain(name);
       expect(standardNames).not.toContain(name);
     }
-    for (const name of ["create_workspace", "list_blocks", ...FLOW_TOOLS] as const) {
+    for (const name of FLOW_TOOLS) {
       expect(krNames).toContain(name);
       expect(standardNames).toContain(name);
     }
-    expect(standardNames).toContain("list_map_tools");
-    expect(standardNames).toContain("apply_map_tool");
-    expect(krNames).toContain("list_map_tools");
-    expect(krNames).toContain("apply_map_tool");
+    expect(krNames).not.toContain("create_workspace");
+    expect(krNames).not.toContain("list_blocks");
+    expect(krNames).not.toContain("list_map_tools");
+    expect(krNames).not.toContain("apply_map_tool");
+    expect(standardNames).not.toContain("list_map_tools");
     expect(krNames).toEqual(standardNames);
     expect(krNames).not.toContain("lwm_snapshot");
     expect(standardNames).not.toContain("lwm_snapshot");
     expect(krNames).not.toContain("buffer_proof_of_work");
+    expect(krNames).not.toContain("create_flow");
 
     const krCatalog = mcpProofOfWorkCatalogForWorkspace("knowledge_region").map((t) => t.name);
     const stdCatalog = mcpProofOfWorkCatalogForWorkspace("standard").map((t) => t.name);
     expect(krCatalog).toEqual(krNames);
     expect(stdCatalog).not.toContain("create_tap_link");
-    expect(stdCatalog).toContain("list_blocks");
+    expect(stdCatalog).not.toContain("list_blocks");
     expect(krCatalog).not.toContain("create_tapbench_link");
   });
 
@@ -122,26 +124,26 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     );
 
     assertNoLinkMint("KR skill instructions", kr);
-    expect(kr).toContain("create_flow");
-    expect(kr).toContain("link_flow");
-    expect(kr).toContain("apply_map_tool");
+    expect(kr).toContain("create_protocol");
+    expect(kr).not.toContain("create_flow");
+    expect(kr).not.toContain("link_flow");
+    expect(kr).not.toContain("apply_map_tool");
     expect(kr).not.toContain("lwm_snapshot");
     expect(kr).not.toContain("buffer_proof_of_work");
-    expect(kr).toContain(WORKSPACE_API_BASE);
 
     expect(textExposesKnowledgeLinkMint(standard)).toBe(false);
     expect(standard).not.toContain("create_tap_link");
-    expect(standard).toContain("create_flow");
-    expect(standard).toContain("list_blocks");
-    expect(standard).toContain("Learning Map");
+    expect(standard).toContain("create_protocol");
+    expect(standard).not.toContain("list_blocks");
 
     const krDoc = skillDocumentedToolsForWorkspace("knowledge_region").map((t) => t.name);
     const stdDoc = skillDocumentedToolsForWorkspace("standard").map((t) => t.name);
     expect(krDoc.some((n) => (KNOWLEDGE_LINK_MINT_TOOL_NAMES as readonly string[]).includes(n))).toBe(
       false,
     );
-    expect(stdDoc).toContain("list_blocks");
+    expect(stdDoc).not.toContain("list_blocks");
     expect(stdDoc).not.toContain("create_tap_link");
+    expect(stdDoc).toContain("create_protocol");
   });
 
   it("recommendIntegrationActions recommends map and flow tools on both kinds", () => {
@@ -166,26 +168,21 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     const krBlob = JSON.stringify(kr);
     const stdBlob = JSON.stringify(standard);
     assertNoLinkMint("KR recommended actions", krBlob);
-    expect(kr.some((a) => a.mcp_tool === "create_flow" || a.mcp_tool === "link_flow")).toBe(
-      true,
-    );
-    expect(kr.some((a) => a.rest_equivalent.includes(WORKSPACE_API_BASE) || a.rest_equivalent.includes("/flows"))).toBe(
-      true,
-    );
+    expect(kr.some((a) => a.mcp_tool === "create_protocol")).toBe(true);
+    expect(kr.some((a) => a.rest_equivalent.includes("/protocols"))).toBe(true);
     expect(kr.some((a) => a.mcp_tool === "create_tap_link")).toBe(false);
 
-    expect(standard.some((a) => a.mcp_tool === "list_blocks")).toBe(true);
+    expect(standard.some((a) => a.mcp_tool === "create_protocol")).toBe(true);
     expect(standard.some((a) => a.mcp_tool === "create_tap_link")).toBe(false);
     expect(stdBlob).not.toContain("tap-links");
-    expect(omittedKind.some((a) => a.mcp_tool === "list_blocks")).toBe(true);
+    expect(omittedKind.some((a) => a.mcp_tool === "list_protocols")).toBe(true);
   });
 
   it("KR Integration copy and generate-skill paths use workspace kind; mint deny still holds", () => {
     const copy = knowledgeRegionIntegrationCopy();
     assertNoLinkMint("KR integration skillDescription", copy.skillDescription);
     assertNoLinkMint("KR integration mcpNote", copy.mcpNote);
-    expect(copy.skillDescription).toContain("Learning Map");
-    expect(copy.skillDescription).toContain("/api/v3/workspaces");
+    expect(copy.skillDescription).toContain("/api/v3/protocols");
     expect(copy.skillDescription).not.toContain("lwm_snapshot");
     expect(copy.mcpNote).toContain("/api/mcp");
     expect(workspaceSettingsIntegrationCopy("knowledge_region")).toEqual(
@@ -201,13 +198,13 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     const copyRoute = read("app/api/workspace/copy-to-verification/route.ts");
     expect(copyRoute).toContain("410");
     expect(copyRoute).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
-    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
+    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/protocols");
     const createTool = read("lib/pow-api/mcp-tools/evidence-tools.ts");
-    expect(createTool).toContain("Create a Learning Map only");
-    expect(createTool).toContain("create_flow");
+    expect(createTool).toContain("create_protocol");
+    expect(createTool).toContain("challenge");
+    expect(createTool).not.toContain("create_flow");
     expect(createTool).not.toContain("kind=learning|verification");
-    expect(createTool).toContain('enum: ["learning", "standard"]');
-    expect(createTool).toContain('enum: [...PRODUCT_FLOW_KIND_ENUM]');
+    expect(createTool).not.toContain("PRODUCT_FLOW_KIND_ENUM");
     expect(createTool).not.toContain('"knowledge_region"');
 
     const panel = read("components/WorkspaceIntegrationPanel.tsx");

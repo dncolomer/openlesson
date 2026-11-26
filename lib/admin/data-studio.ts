@@ -126,8 +126,9 @@ export type StudioSessionLinkParse = {
 
 /**
  * Parse a TAP/TAP Learning share URL, path, or bare private token for Data Studio PoW lookup.
- * Accepts `/calibrate/session/{token}`, `/learn/session/{token}`, `/verify/session/{token}`,
- * legacy `/tap/session/{token}` / `/ile/session/{token}`, full URLs, or bare tokens.
+ * Accepts `/learn/session/{token}`, `/verify/session/{token}`, leftover
+ * `/calibrate/session/{token}`, `/tap/session/{token}` / `/ile/session/{token}`,
+ * full URLs, or bare tokens.
  */
 export function parseStudioSessionLinkInput(
   input: string | null | undefined,

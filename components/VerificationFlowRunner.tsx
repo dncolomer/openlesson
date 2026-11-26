@@ -167,7 +167,6 @@ export function VerificationFlowRunner({ token }: { token: string }) {
 
   return (
     <ProductFlowIdentityForm
-      kind="verification"
       identity={identity}
       onIdentityChange={setIdentity}
       error={error}

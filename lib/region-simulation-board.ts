@@ -29,7 +29,7 @@ import {
 import { REGION_SIMULATION_SOURCE } from "@/lib/region-simulation";
 import { SESSION_POLICY_INFER_INTERVAL_MS } from "@/lib/session-policy-infer";
 
-export type RegionSimFlowKind = "verify" | "calibrate" | "solve" | "learn";
+export type RegionSimFlowKind = "verify" | "learn";
 
 export type BoardOp =
   | { type: "draw"; text: string; x?: number; y?: number }

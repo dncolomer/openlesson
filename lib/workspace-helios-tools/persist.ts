@@ -240,7 +240,7 @@ export async function executeHeliosMapToolCall(input: {
     } catch (err) {
       return fail(
         input.snapshot,
-        err instanceof Error ? err.message : "create_flow_failed",
+        err instanceof Error ? err.message : "create_protocol_failed",
       );
     }
   }
@@ -261,7 +261,7 @@ export async function executeHeliosMapToolCall(input: {
         cell,
         mapBlock,
       });
-    } else if (name === "create_flow" && host.createFlow) {
+    } else if (name === "create_protocol" && host.createFlow) {
       const created = await host.createFlow(heliosFlowCreateInput(args));
       return {
         ok: true,

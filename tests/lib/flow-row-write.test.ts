@@ -63,12 +63,8 @@ describe("flow row optional columns", () => {
     expect(calls[0]).not.toHaveProperty("workspace_id");
   });
 
-  it("wires verify, calibrate, and solve writers onto the shared helper", () => {
-    for (const rel of [
-      "lib/verification-flow-repository.ts",
-      "lib/calibration-flow-repository.ts",
-      "lib/solve-flow-repository.ts",
-    ]) {
+  it("wires the verification writer onto the shared helper", () => {
+    for (const rel of ["lib/verification-flow-repository.ts"]) {
       const src = readFileSync(join(ROOT, rel), "utf8");
       expect(src).toContain("writeFlowRowWithOptionalColumns");
       expect(src).toContain("@/lib/flow-row-write");

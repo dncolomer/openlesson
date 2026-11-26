@@ -1,5 +1,5 @@
 /**
- * Persist Calibrate / Learn / Verify embeddings with recoverable raw.
+ * Persist verification protocol embeddings with recoverable raw.
  * Completing those runs writes here.
  */
 

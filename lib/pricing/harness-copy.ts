@@ -17,18 +17,18 @@ export const HARNESS_PRICING_COPY = {
   monthlyName: highlightedPack.name,
   monthlyPrice: formatUsdFromCents(highlightedPack.priceCents),
   monthlyCadence: "one-time",
-  monthlyBody: "One-time credit packs. Creating maps is free; running sessions spends credits.",
+  monthlyBody: "One-time credit packs. Creating Knowledge Regions is free; running protocols spends credits.",
   monthlyCta: highlightedPack.cta,
   trialCta: `Start free with ${STARTER_CREDIT_GRANT} credits`,
   trialPrice: "$0",
   needsPlan: UNIFIED_PRICING_COPY.needsPlan,
   features: [
     `${STARTER_CREDIT_GRANT} starter credits on free signup`,
-    `${FLOW_SESSION_CREDIT_COST} credits per Calibrate, Learn, Verify, or Solve session`,
+    `${FLOW_SESSION_CREDIT_COST} credits per knowledge verification protocol run`,
     `${starterPack.name} for ${formatUsdFromCents(starterPack.priceCents)} one-time`,
-    "Credit packs for more Calibrate, Learn, Verify, and Solve sessions",
+    "Credit packs for more protocol runs",
   ],
   thesisLead:
-    "You are paying credits to run Solving, Learn, Verify, and Calibrate sessions.",
+    "You are paying credits to run Embeddable Knowledge Verification Protocols.",
   thesisLinks: HARNESS_PRICING_THESIS_LINKS,
 } as const;

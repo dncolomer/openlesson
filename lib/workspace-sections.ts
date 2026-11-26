@@ -3,9 +3,8 @@
  * Learning workspaces (stored kind `standard`): Workspace, DAGs, Map Types,
  * Unsys models, Context, and Settings for designers; Workspace for play-only
  * viewers.
- * Knowledge-region and calibration kinds have no WorkspaceView sections —
- * Flows live on the dashboard. Knowledge region details live on dashboard
- * chrome for Verification, Calibration, and Solve.
+ * Knowledge-region kinds have no WorkspaceView sections —
+ * Protocols live on the dashboard.
  */
 
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
@@ -19,7 +18,6 @@ export type WorkspaceSectionKey =
   | "unsys_models"
   | "goals"
   | "verification_flows"
-  | "calibration_flows"
   | "knowledge"
   | "insights"
   | "kpis"
@@ -37,7 +35,6 @@ export type WorkspaceMainSurface =
   | "unsys_models"
   | "goals"
   | "verification_flows"
-  | "calibration_flows"
   | "knowledge"
   | "insights"
   | "kpis"
@@ -50,7 +47,6 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "unsys_models",
   "goals",
   "verification_flows",
-  "calibration_flows",
   "context",
   "simulation",
   "knowledge",
@@ -80,10 +76,8 @@ export type WorkspaceSectionLayout = {
   mountsUnsysModelsPanel?: boolean;
   /** Goals tab — multi workspace goals CRUD. */
   mountsGoalsPanel: boolean;
-  /** Verification Flows tab — only on a Verification Workspace. */
+  /** Verification protocols tab — leftover workspace chrome. */
   mountsVerificationFlowsPanel?: boolean;
-  /** Calibration Flows tab — only on a Calibration Workspace. */
-  mountsCalibrationFlowsPanel?: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -217,24 +211,6 @@ export function resolveWorkspaceSectionLayout(
         mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         mountsVerificationFlowsPanel: true,
-        localTabs: [],
-        mountsPerformancePanel: false,
-        mountsIntegrationPanel: false,
-        mountsInsightsPanel: false,
-        mountsKpisPanel: false,
-      };
-    case "calibration_flows":
-      return {
-        section: "calibration_flows",
-        mainSurface: "calibration_flows",
-        showBlockMapChrome: false,
-        showSessionsColumn: false,
-        mountsContextPanel: false,
-        mountsSimulationPanel: false,
-        mountsDagsPanel: false,
-        mountsMapTypesPanel: false,
-        mountsGoalsPanel: false,
-        mountsCalibrationFlowsPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-type CatalogFlow = {
-  type: "flow";
+type CatalogProtocol = {
+  type: "protocol";
   id: string;
   name: string;
-  kind: string;
+  challenge?: string;
   publicToken: string;
 };
 
@@ -24,7 +24,7 @@ const BTN =
 
 export function LtiDeepLinkPicker() {
   const [error, setError] = useState("");
-  const [flows, setFlows] = useState<CatalogFlow[]>([]);
+  const [protocols, setProtocols] = useState<CatalogProtocol[]>([]);
   const [regions, setRegions] = useState<CatalogRegion[]>([]);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function LtiDeepLinkPicker() {
         if (!response.ok) {
           throw new Error(payload?.error?.message || "Could not load catalog");
         }
-        setFlows(Array.isArray(payload.flows) ? payload.flows : []);
+        setProtocols(Array.isArray(payload.protocols) ? payload.protocols : []);
         setRegions(Array.isArray(payload.regions) ? payload.regions : []);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load catalog"));
@@ -47,29 +47,28 @@ export function LtiDeepLinkPicker() {
           <p className={LABEL}>LTI 1.3</p>
           <h1 className="mt-2 font-serif text-2xl">Add to the course</h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Pick a published flow, attach a knowledge region, or create a region from a simulation.
+            Pick a published protocol, attach a knowledge region, or create a region from a simulation.
           </p>
         </div>
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
-        <section className={CARD} data-lti-deep-link-flows="">
-          <p className={LABEL}>Flows</p>
+        <section className={CARD} data-lti-deep-link-protocols="">
+          <p className={LABEL}>Protocols</p>
           <ul className="mt-4 space-y-2">
-            {flows.length === 0 ? (
-              <li className="text-sm text-neutral-500">No published flows in this organization.</li>
+            {protocols.length === 0 ? (
+              <li className="text-sm text-neutral-500">No published protocols in this organization.</li>
             ) : (
-              flows.map((flow) => (
-                <li key={flow.id}>
+              protocols.map((protocol) => (
+                <li key={protocol.id}>
                   <form method="post" action="/api/lti/deep-link" className="flex items-center justify-between gap-3">
-                    <input type="hidden" name="type" value="flow" />
-                    <input type="hidden" name="id" value={flow.id} />
-                    <input type="hidden" name="name" value={flow.name} />
-                    <input type="hidden" name="kind" value={flow.kind} />
-                    <input type="hidden" name="publicToken" value={flow.publicToken} />
+                    <input type="hidden" name="type" value="protocol" />
+                    <input type="hidden" name="id" value={protocol.id} />
+                    <input type="hidden" name="name" value={protocol.name} />
+                    <input type="hidden" name="publicToken" value={protocol.publicToken} />
                     <div>
-                      <p className="text-sm text-white">{flow.name}</p>
+                      <p className="text-sm text-white">{protocol.name}</p>
                       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-                        {flow.kind}
+                        {protocol.challenge || "Protocol"}
                       </p>
                     </div>
                     <button type="submit" className={BTN}>

@@ -474,12 +474,10 @@ describe("Helios map-builder prompt / tool-awareness", () => {
     expect(prompt).toMatch(/not a linear syllabus/);
     expect(prompt).toContain("TILE KINDS");
     expect(prompt).toMatch(/You choose the kinds/);
-    expect(prompt).toMatch(/do not fill the map with only Solve tiles/);
-    expect(prompt).toContain('"kind": "calibration"');
     expect(prompt).toContain('"kind": "content"');
-    expect(prompt).toContain('"kind": "solve"');
     expect(prompt).toContain('"kind": "verification"');
-    expect(prompt).toMatch(/mix those kinds in this turn/);
+    expect(prompt).not.toContain('"kind": "solve"');
+    expect(prompt).not.toContain('"kind": "calibration"');
     expect(prompt).toMatch(/MAP TYPES \(official Learning Map topologies/);
     expect(prompt).toContain("- islands");
     expect(prompt).toContain("- spiral");

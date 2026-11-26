@@ -1,6 +1,6 @@
 /**
- * Owner dashboard Knowledge regions: overlay models for Verification,
- * Calibration, and Solve flows, listed by owner_user_id.
+ * Owner dashboard Knowledge regions: overlay models for Protocols,
+ * listed by owner_user_id.
  */
 
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
@@ -20,11 +20,8 @@ export function dashboardKnowledgeRegionSimulationPath(regionId: string): string
     : `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/simulation`;
 }
 
-export type DashboardKnowledgeRegionKind = "verification" | "calibration" | "solve";
-
 export type DashboardKnowledgeRegion = {
   id: string;
-  kind: DashboardKnowledgeRegionKind;
   name: string;
   description: string | null;
   workspaceId: string;
@@ -33,31 +30,16 @@ export type DashboardKnowledgeRegion = {
   createdAt: string;
 };
 
-export function parseDashboardKnowledgeRegionKind(
-  value: unknown,
-): DashboardKnowledgeRegionKind | null {
-  if (value === "verification" || value === "calibration" || value === "solve") {
-    return value;
-  }
-  return null;
+export function dashboardKnowledgeRegionHref(regionId: string): string {
+  return productRegionPagePath(regionId);
 }
 
-export function dashboardKnowledgeRegionHref(
-  kind: DashboardKnowledgeRegionKind,
-  regionId: string,
-): string {
-  return productRegionPagePath(kind, regionId);
+export function dashboardKnowledgeRegionEditHref(regionId: string): string {
+  return productRegionEditPath(regionId);
 }
 
-export function dashboardKnowledgeRegionEditHref(
-  kind: DashboardKnowledgeRegionKind,
-  regionId: string,
-): string {
-  return productRegionEditPath(kind, regionId);
-}
-
-export function dashboardKnowledgeRegionCreateHref(kind: DashboardKnowledgeRegionKind): string {
-  return productRegionNewPath(kind);
+export function dashboardKnowledgeRegionCreateHref(): string {
+  return productRegionNewPath();
 }
 
 export function presentDashboardKnowledgeRegions(
@@ -67,12 +49,10 @@ export function presentDashboardKnowledgeRegions(
     description?: unknown;
     workspace_id?: unknown;
     owner_user_id?: unknown;
-    product?: unknown;
     subject_count?: unknown;
     created_at?: unknown;
     embedding_model_id?: unknown;
   }[],
-  kind: DashboardKnowledgeRegionKind | null,
   ownerUserId: string,
 ): DashboardKnowledgeRegion[] {
   const owner = String(ownerUserId || "").trim();
@@ -81,23 +61,20 @@ export function presentDashboardKnowledgeRegions(
   for (const region of regions) {
     const id = String(region.id || "").trim();
     const name = String(region.name || "").trim();
-    const product = parseDashboardKnowledgeRegionKind(region.product);
-    if (!id || !name || !product) continue;
+    if (!id || !name) continue;
     if (String(region.owner_user_id || "").trim() !== owner) continue;
-    if (kind && product !== kind) continue;
     if (String(region.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) continue;
     if (String(region.description || "").includes("region-simulation-cluster:")) continue;
     const subjectCount = Number(region.subject_count);
     out.push({
       id,
-      kind: product,
       name,
       description:
         typeof region.description === "string" && region.description.trim()
           ? region.description.trim()
           : null,
       workspaceId: String(region.workspace_id || "").trim(),
-      workspaceTitle: productFlowOwnerTitle(product),
+      workspaceTitle: productFlowOwnerTitle(),
       subjectCount: Number.isFinite(subjectCount) ? subjectCount : 0,
       createdAt: String(region.created_at || ""),
     });

@@ -230,7 +230,7 @@ export function flowRunSurfaceForWorkspace(row: {
 }
 
 export function playCopyFlowSessionInsert(input: {
-  flowKind: "solve" | "calibrate" | "verify";
+  flowKind: "calibrate" | "verify";
   flowId: string;
   runnerUserId: string;
   copyWorkspaceId: string;
@@ -260,20 +260,12 @@ export function playCopyFlowSessionInsert(input: {
     workspace_id: copyWorkspaceId,
     play_copy: true,
     identity,
+    verify_flow_id: flowId,
   };
-  if (input.flowKind === "solve") metadata.solve_flow_id = flowId;
-  if (input.flowKind === "calibrate") metadata.calibrate_flow_id = flowId;
-  if (input.flowKind === "verify") metadata.verify_flow_id = flowId;
   const blockId = String(input.blockId || "").trim();
   if (blockId) metadata.block_id = blockId;
   if (Array.isArray(input.questions)) metadata.questions = input.questions;
   const token = String(input.publicToken || "").trim();
-  const kindColumn =
-    input.flowKind === "solve"
-      ? "solve_flow_id"
-      : input.flowKind === "calibrate"
-        ? "calibrate_flow_id"
-        : "verify_flow_id";
   return {
     user_id: runnerUserId,
     workspace_id: copyWorkspaceId,
@@ -281,24 +273,22 @@ export function playCopyFlowSessionInsert(input: {
     identity,
     metadata,
     row: {
-      kind: input.flowKind,
+      kind: "verify",
       problem: input.topic,
       status: "pending",
       user_id: runnerUserId,
       workspace_id: copyWorkspaceId,
-      [kindColumn]: flowId,
+      verify_flow_id: flowId,
       identity,
       result:
         input.flowKind === "calibrate"
           ? null
-          : input.flowKind === "verify"
-            ? {
-                kind: "verify",
-                projectedPolicy: null,
-                knowledgeRegionId: null,
-                answers: [],
-              }
-            : { kind: "solve", projectedPolicy: null },
+          : {
+              kind: "verify",
+              projectedPolicy: null,
+              knowledgeRegionId: null,
+              answers: [],
+            },
       metadata,
     },
     hrefForSession: (sessionId: string) =>
@@ -312,17 +302,13 @@ export function playCopyFlowSessionInsert(input: {
 }
 
 export function playCopyFlowSessionHref(input: {
-  flowKind: "solve" | "calibrate" | "verify";
+  flowKind: "calibrate" | "verify";
   publicToken: string;
   copyWorkspaceId: string;
   sessionId: string;
 }): string {
   const sessionId = String(input.sessionId || "").trim();
-  if (input.flowKind === "calibrate" || input.flowKind === "verify") {
-    return dashboardPlayHref(input.flowKind, sessionId);
-  }
-  const token = encodeURIComponent(String(input.publicToken || "").trim());
-  return `/session?id=${encodeURIComponent(sessionId)}&solve=${token}`;
+  return dashboardPlayHref("verify", sessionId);
 }
 
 export function isPlayCopyRunMetadata(metadata: unknown): boolean {
@@ -344,7 +330,7 @@ export function playCopyRunContextFromSession(session: {
   id?: unknown;
   metadata?: unknown;
 }): {
-  flowKind: "solve" | "calibrate" | "verify";
+  flowKind: "calibrate" | "verify";
   copyWorkspaceId: string;
   flowId: string;
   sessionId: string;
@@ -355,15 +341,15 @@ export function playCopyRunContextFromSession(session: {
   const sessionId = String(session.id || "").trim();
   const copyWorkspaceId = String(meta.workspace_id || "").trim();
   if (!sessionId || !copyWorkspaceId) return null;
-  const solveId = String(meta.solve_flow_id || "").trim();
+  const leftoverId = String(meta.solve_flow_id || "").trim();
   const calibrateId = String(meta.calibrate_flow_id || "").trim();
-  const verifyId = String(meta.verify_flow_id || "").trim();
-  const flowKind = solveId ? "solve" : calibrateId ? "calibrate" : verifyId ? "verify" : null;
+  const verifyId = String(meta.verify_flow_id || leftoverId).trim();
+  const flowKind = calibrateId ? "calibrate" : verifyId ? "verify" : null;
   if (!flowKind) return null;
   return {
     flowKind,
     copyWorkspaceId,
-    flowId: solveId || calibrateId || verifyId,
+    flowId: calibrateId || verifyId,
     sessionId,
     identity: String(meta.identity || "").trim() || null,
   };
@@ -579,14 +565,14 @@ export function playCopyContributionEmbeddingInput(input: {
   flags: MapPlayDataAccessFlags;
   playerUserId: string;
   authorUserId: string;
-  flowKind: "solve" | "calibrate" | "verify" | "learn";
+  flowKind: "verify" | "learn";
   flowId: string;
   runId: string;
   identity?: string | null;
   raw: unknown;
 }): {
   ownerUserId: string;
-  flowKind: "solve" | "calibrate" | "verify" | "learn";
+  flowKind: "verify" | "learn";
   flowId: string;
   runId: string;
   identity: string | null;

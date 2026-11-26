@@ -1,15 +1,11 @@
 /**
- * Landing copy: Solve, Verify, and Map as the front door.
+ * Landing copy: Embeddable Knowledge Verification Protocols as the front door.
  * Pages interpolate these strings so tests drive shipped copy, not a parallel corpus.
  */
 import {
   DISCOVERY_CTA_LABEL,
   ENTERPRISE_SETUP_MAILTO,
-  HARNESS_PRICING_PATH,
-  KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
-  LEARNING_HARNESS_PATH,
-  MAPPING_PRICING_PATH,
   USE_CASES_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
@@ -21,15 +17,15 @@ export const APPROVED_BRAND_ANCHOR =
 export const PLATFORM_PHRASE = "From genuine work" as const;
 
 export const PLATFORM_HERO = {
-  pill: "UNDERSTAND VERIFY MAP",
-  h1: "Verify understanding through proof of work.",
-  p1: "Uncertain Systems verifies understanding from genuine work traces, not quiz scores. People and agents leave a stored path as they solve problems; that path is the proof.",
+  pill: "PROTOCOLS",
+  h1: "Embeddable Knowledge Verification Protocols.",
+  p1: "Uncertain Systems builds Embeddable Knowledge Verification Protocols. Understanding is verified from genuine work traces, not quiz scores. People and agents leave a stored path as they work The Protocol Challenge; that path is the proof.",
   p2: "Set those traces against a knowledge region you define. Use the result as evidence for hiring, development, or what to investigate next, not as a score of the whole person.",
 } as const;
 
 export const PLATFORM_PUBLIC_MAPS = {
   title: "Explore the protocols",
-  lead: "Try Solve, Verify, and Mapping protocols.",
+  lead: "Try Embeddable Knowledge Verification Protocols.",
   signupHref: "/register",
 } as const;
 
@@ -45,12 +41,12 @@ export const PLATFORM_SPINE = {
     {
       eyebrow: "02",
       name: "Unsys workspace",
-      body: "Course-seeded Problem Solving Harness. Learners keep lifetime access and can grow it past the course.",
+      body: "Course-seeded workspace. Learners keep lifetime access and can grow it past the course.",
     },
     {
       eyebrow: "03",
       name: "Optional skill validation",
-      body: "Knowledge Verification: proof from real work, not cheatable exams.",
+      body: "Embeddable Knowledge Verification Protocols: proof from real work, not quiz scores.",
     },
     {
       eyebrow: "04",
@@ -79,14 +75,14 @@ export const PLATFORM_DELIVERY = {
 } as const;
 
 export const PLATFORM_LAYERS = {
-  eyebrow: "THREE USES",
-  title: "Solve Protocol, Verify Protocol, Map Protocol.",
+  eyebrow: "THE PRODUCT",
+  title: "Embeddable Knowledge Verification Protocols.",
 } as const;
 
 export const PLATFORM_CORE = {
   eyebrow: "KNOWLEDGE REGIONS",
   title: "A knowledge region is where similar ways of thinking cluster.",
-  p1: "Every piece of work done in the system, by people or by agents, is embedded into a custom knowledge embeddings space. Over time, that work forms clusters that group humans and agents who think and solve problems in similar ways within a knowledge area: these are knowledge regions. You can use a region as a target to practise toward, as a frame of reference for assessing a person's or an agent system's fit and knowledge, or as a way to spot gaps worth investigating next.",
+  p1: "Every piece of work done in the system, by people or by agents, is embedded into a custom knowledge embeddings space. Over time, that work forms clusters that group humans and agents who think and work through problems in similar ways within a knowledge area: these are knowledge regions. You can use a region as a target for an Embeddable Knowledge Verification Protocol, as a frame of reference for assessing a person's or an agent system's fit and knowledge, or as a way to spot gaps worth investigating next.",
   p2: "Knowledge regions can grow organically with expert users or be built synthetically with expert agents. You can also build them privately, as an internal asset for your project, team, or company, without sharing confidential information like internal APIs, strategy documents, or product details.",
   scienceHref: SCIENCE_HUB_PATH,
   scienceLabel: "Read the science",
@@ -128,7 +124,7 @@ export const PLATFORM_PROOF = {
 export const PLATFORM_OUTCOMES = {
   eyebrow: "USE CASES",
   title: "Put knowledge building to work.",
-  lead: "Verify Protocol, Map Protocol, and Solve Protocol can work together when a team needs to assess capability through proof of work, turn work into insight, or understand difficult work.",
+  lead: "Embeddable Knowledge Verification Protocols put knowledge building to work when a team needs to assess capability through proof of work, turn work into insight, or examine difficult work against a knowledge region.",
   cta: DISCOVERY_CTA_LABEL,
   ctaHref: ENTERPRISE_SETUP_MAILTO,
   moreCta: "Read the use cases",
@@ -159,53 +155,23 @@ export const PLATFORM_OUTCOMES = {
 } as const;
 
 export const PLATFORM_PRODUCTS = {
-  harness: {
-    eyebrow: "PROBLEM WORK",
-    name: "Solve",
-    title: "Solve Protocol",
-    body: "The Problem Solving Harness is how Build Understanding works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
-    href: LEARNING_HARNESS_PATH,
-    cta: "Explore understanding",
-    pricingHref: HARNESS_PRICING_PATH,
-    image: "/lp-boxes/harness-books-blueprint.jpg",
-    imageAlt: "Blueprint sketch of an open gridded notebook, a compass, and a stack of volumes",
-  },
   verification: {
     eyebrow: "WORK EVIDENCE",
-    name: "Verify",
-    title: "Verify Protocol",
-    body: "Knowledge Verification looks at how someone explores a demanding problem, tests assumptions, and develops their reasoning, alongside the answer they reach. A session stores that work and can relate it to a knowledge region you define. The result is evidence for a hiring or development decision, not a score of the whole person.",
+    name: "Protocols",
+    title: "Embeddable Knowledge Verification Protocols",
+    body: "Embeddable Knowledge Verification Protocols look at how someone explores a demanding problem, tests assumptions, and develops their reasoning, alongside the answer they reach. A session stores that work and can relate it to a knowledge region you define. The Protocol Challenge is the topic that run is scored against. The result is evidence for a hiring or development decision, not a score of the whole person.",
     href: KNOWLEDGE_VERIFICATION_PATH,
-    cta: "Explore verification",
+    cta: "Explore the Protocols",
     pricingHref: VERIFICATION_PRICING_PATH,
     image: "/lp-boxes/verification-bottles-blueprint.jpg",
     imageAlt: "Blueprint sketch of laboratory bottles with blank plates and red seals",
   },
-  mapping: {
-    eyebrow: "DOMAIN REFERENCE",
-    name: "Map",
-    title: "Map Protocol",
-    body: "Knowledge Mapping is the domain asset: a knowledge region built around your expertise, with positions informed by work. Use it as a reference while people develop understanding and when you examine that understanding. It is a model of the domain you care about, not a neurological instrument and not a complete picture of competence.",
-    href: KNOWLEDGE_MAPPING_PATH,
-    cta: "Explore mapping",
-    pricingHref: MAPPING_PRICING_PATH,
-    image: "/lp-boxes/tapbench-maps-blueprint.jpg",
-    imageAlt: "Blueprint sketch of a folded map, compass, and knowledge-region plates",
-  },
 } as const;
 
-/** Full product catalog: Solve, Verify, Map. */
-export const PLATFORM_PRODUCT_LIST = [
-  PLATFORM_PRODUCTS.harness,
-  PLATFORM_PRODUCTS.verification,
-  PLATFORM_PRODUCTS.mapping,
-] as const;
+/** Full product catalog: Embeddable Knowledge Verification Protocols. */
+export const PLATFORM_PRODUCT_LIST = [PLATFORM_PRODUCTS.verification] as const;
 
-export const PLATFORM_LAYER_LIST = [
-  PLATFORM_PRODUCTS.harness,
-  PLATFORM_PRODUCTS.verification,
-  PLATFORM_PRODUCTS.mapping,
-] as const;
+export const PLATFORM_LAYER_LIST = [PLATFORM_PRODUCTS.verification] as const;
 
 /** Flattened homepage copy for contract tests that drive the shipped module. */
 export function homepageCopyText(): string {

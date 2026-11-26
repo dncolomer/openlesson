@@ -201,11 +201,7 @@ export function useWorkspaceLearner(input: {
       }
       const linked = mapBlockLaunch(block.map_block);
       if (linked.action === "none") return;
-      if (
-        linked.action === "calibrate" ||
-        linked.action === "verify" ||
-        linked.action === "solve"
-      ) {
+      if (linked.action === "verify") {
         const startRes = await fetch(DASHBOARD_MAPS_START_FLOW_PATH, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

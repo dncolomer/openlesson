@@ -595,7 +595,7 @@ export default function DashboardPage() {
 
         {activeTab === "home" && <DashboardHomeTab />}
 
-        {activeTab === "flows" ? (
+        {activeTab === "protocols" ? (
           <DashboardFlowsTab formatDate={formatDate} />
         ) : null}
 

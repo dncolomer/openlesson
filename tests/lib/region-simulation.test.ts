@@ -10,11 +10,12 @@ import {
   explorationStrategyById,
   isCustomExplorationStrategyId,
   isSimulatedEmbedding,
-  matchSimulationFlows,
+  matchSimulationProtocols,
   nextRegionSimulationWizardStep,
   nearestStrategyCluster,
   parseCustomExplorationStrategy,
   parseSimulationStrategies,
+  protocolIdsFromRequestBody,
   parseRegionSimulationWizardStep,
   parseSimulationStrategiesWithRecovered,
   planRegionSimulationSamples,
@@ -118,7 +119,7 @@ describe("region simulation", () => {
     const walk = runRegionSimulationSample(plan);
     expect(walk.sequence.length).toBeGreaterThan(0);
     expect(walk.embedding.raw.flowKind).toBe("verify");
-    expect(runRegionSimulationSample(plan, "solve").embedding.raw.flowKind).toBe("solve");
+    expect(runRegionSimulationSample(plan, "verify").embedding.raw.flowKind).toBe("verify");
     expect(walk.pow[0]?.tool_name).toBe(REGION_SIMULATION_SOURCE);
     expect(walk.pow[0]?.metadata?.simulated).toBe(true);
     expect(walk.pow[0]?.metadata?.strategyId).toBe("exploit-heavy");
@@ -182,7 +183,7 @@ describe("region simulation", () => {
       "Balanced",
       "Exploit-heavy",
     ]);
-    expect(result.regionPath).toContain("/verification/regions/");
+    expect(result.regionPath).toContain("/regions/");
     expect(result.clusters.every((cluster) => cluster.sampleCount === 3)).toBe(true);
     expect(result.progress.every((row) => row.done === 3 && row.total === 3)).toBe(true);
     expect(ticks.at(-1)).toBe(6);
@@ -211,7 +212,6 @@ describe("region simulation", () => {
           id: "parent",
           name: "Limits styles",
           owner_user_id: "me",
-          product: "verification",
           description: "region-simulation: 1 flows",
           subject_count: 6,
           created_at: "2026-11-09",
@@ -220,39 +220,37 @@ describe("region simulation", () => {
           id: "cluster",
           name: "Limits styles · Exploit-heavy",
           owner_user_id: "me",
-          product: "verification",
           description: "region-simulation-cluster:exploit-heavy",
           subject_count: 3,
           created_at: "2026-11-09",
         },
       ],
-      "verification",
       "me",
     );
     expect(regions.map((row) => row.id)).toEqual(["parent"]);
   });
 
-  it("uses the same simulation setup for Verification, Calibration, and Solve", () => {
+  it("uses the same simulation setup for knowledge verification protocols", () => {
     const create = read("components/product-flow/knowledge-region-create.tsx");
     expect(create).toContain("RegionSimulationSetup");
-    expect(create).toContain("kind?: ProductFlowKind");
+    expect(create).toContain("RegionSimulationSetup");
     expect(create).not.toContain("LegacyKnowledgeRegionCreate");
     const setup = read("components/product-flow/region-simulation-setup.tsx");
     expect(setup).toContain("PRODUCT_CREATE_SHELL");
     expect(setup).toContain("FlowWizardSteps");
     expect(setup).toContain("data-region-simulation-wizard");
     expect(setup).toContain("REGION_SIMULATION_WIZARD_STEPS");
-    expect(setup).toContain("md:grid-cols-2");
+    expect(setup).toContain("sm:grid-cols-2");
     expect(setup).not.toContain("lg:grid-cols-2");
     expect(setup).not.toContain("max-w-3xl");
     expect(setup).not.toContain("max-w-5xl");
     expect(setup).not.toContain("max-w-[96rem]");
-    expect(setup).toContain("data-region-kind");
+    expect(setup).not.toContain("data-region-kind");
     expect(setup).toContain("data-run-simulation");
     expect(setup).toContain("data-region-simulation-setup");
     expect(setup).toContain("data-region-simulation-review");
     expect(setup).toContain("data-region-simulation-result");
-    expect(setup).toContain("Include data from real humans in these flows");
+    expect(setup).toContain("Include data from real humans in these protocols");
     expect(setup).toContain("Run simulation");
     expect(setup).not.toContain("Run another simulation");
     expect(setup).toContain("Open details");
@@ -274,7 +272,7 @@ describe("region simulation", () => {
     expect(setup).not.toContain("/api/dashboard/region-simulation/jobs");
     expect(setup).toContain("customStrategies");
     expect(setup).toContain("REGION_SIMULATION_FLOW_MATCH_LIMIT");
-    expect(setup).toContain("kind=${kind}");
+    expect(setup).not.toContain("kind=${kind}");
     const route = read("app/api/dashboard/region-simulation/route.ts");
     expect(route).toContain("customStrategies: body.customStrategies");
     expect(route).toContain("parseSimulationStrategies");
@@ -282,87 +280,90 @@ describe("region simulation", () => {
     expect(route).toContain("enqueueRegionSimulation");
     expect(route).toContain("defaultChecked: AI_USE_DEFAULT_CHECKED");
     expect(route).toContain("requireAuthenticatedUser");
-    expect(route).toContain("listSolveFlowsForOwnerUserId");
-    expect(route).toContain("listCalibrationFlowsForOwnerUserId");
+    expect(route).toContain("listVerificationFlowsForOwnerUserId");
+    expect(route).not.toContain("listSolveFlowsForOwnerUserId");
+    expect(route).not.toContain("listCalibrationFlowsForOwnerUserId");
     expect(route).toContain("productFlowEmbeddingKind");
-    expect(route).toContain("topic: flow.topic");
+    expect(route).toContain("challenge: flow.topic");
+    expect(route).toContain("protocols: listed");
+    expect(route).toContain("protocolIdsFromRequestBody");
+    expect(route).not.toContain("body.flowIds");
     expect(route).not.toContain("flow.goal");
-    expect(read("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
-    expect(read("app/calibration/regions/new/page.tsx")).toContain('kind="calibration"');
-    expect(read("app/solve/regions/new/page.tsx")).toContain('kind="solve"');
+    expect(read("app/regions/new/page.tsx")).toContain("KnowledgeRegionCreate");
   });
 
-  it("advances create-region wizard steps with the same chrome as flow create", () => {
+  it("advances create-region wizard steps with the same chrome as protocol create", () => {
     expect([...REGION_SIMULATION_WIZARD_STEPS]).toEqual([
       "name",
-      "flows",
+      "protocols",
       "explore",
       "ai-use",
       "run",
     ]);
     expect(parseRegionSimulationWizardStep("explore")).toBe("explore");
     expect(parseRegionSimulationWizardStep("nope")).toBe("name");
-    expect(nextRegionSimulationWizardStep("name")).toBe("flows");
+    expect(nextRegionSimulationWizardStep("name")).toBe("protocols");
     expect(nextRegionSimulationWizardStep("run")).toBe("run");
-    expect(previousRegionSimulationWizardStep("flows")).toBe("name");
+    expect(previousRegionSimulationWizardStep("protocols")).toBe("name");
     expect(previousRegionSimulationWizardStep("name")).toBe("name");
     expect(
-      regionSimulationWizardCanAdvance("name", { name: "", flowIds: [], strategyIds: [] }),
+      regionSimulationWizardCanAdvance("name", { name: "", protocolIds: [], strategyIds: [] }),
     ).toBe(false);
     expect(
-      regionSimulationWizardCanAdvance("name", { name: "Limits", flowIds: [], strategyIds: [] }),
+      regionSimulationWizardCanAdvance("name", { name: "Limits", protocolIds: [], strategyIds: [] }),
     ).toBe(true);
     expect(
-      regionSimulationWizardCanAdvance("flows", {
+      regionSimulationWizardCanAdvance("protocols", {
         name: "Limits",
-        flowIds: [],
+        protocolIds: [],
         strategyIds: ["balanced"],
       }),
     ).toBe(false);
     expect(
-      regionSimulationWizardCanAdvance("flows", {
+      regionSimulationWizardCanAdvance("protocols", {
         name: "Limits",
-        flowIds: ["flow-1"],
+        protocolIds: ["flow-1"],
         strategyIds: [],
       }),
     ).toBe(true);
     expect(
       regionSimulationWizardCanAdvance("explore", {
         name: "Limits",
-        flowIds: ["flow-1"],
+        protocolIds: ["flow-1"],
         strategyIds: [],
       }),
     ).toBe(false);
     expect(
       regionSimulationWizardCanAdvance("ai-use", {
         name: "Limits",
-        flowIds: ["flow-1"],
+        protocolIds: ["flow-1"],
         strategyIds: ["balanced"],
       }),
     ).toBe(true);
     expect(
       regionSimulationWizardCanAdvance("run", {
         name: "Limits",
-        flowIds: ["flow-1"],
+        protocolIds: ["flow-1"],
         strategyIds: ["balanced"],
       }),
     ).toBe(true);
+    expect(protocolIdsFromRequestBody({ protocolIds: [" p1 ", "", "p2"] })).toEqual(["p1", "p2"]);
+    expect(protocolIdsFromRequestBody({ flowIds: ["legacy"] })).toEqual([]);
   });
 
-  it("stores Solve simulations on solve embeddings", async () => {
+  it("stores protocol simulations on verification embeddings", async () => {
     const result = await runRegionSimulation({
-      ownerUserId: "owner-solve",
+      ownerUserId: "owner-proto",
       name: "Gaussian packet",
-      kind: "solve",
       flows: [{ id: "flow-s", name: "Normalize", problems: ["Find A"] }],
       strategyIds: ["exploit-heavy"],
       samplesPerStrategy: 3,
       includeHumanData: false,
     });
-    expect(result.regionPath).toContain("/solve/regions/");
+    expect(result.regionPath).toContain("/regions/");
     const stored = await listFlowEmbeddingsForOwner({
-      ownerUserId: "owner-solve",
-      flowKind: "solve",
+      ownerUserId: "owner-proto",
+      flowKind: "verify",
     });
     expect(stored.filter((row) => row.source === REGION_SIMULATION_SOURCE)).toHaveLength(3);
   });
@@ -377,10 +378,10 @@ describe("region simulation", () => {
       { id: "6", name: "Algebra", topic: "alg" },
     ];
     expect(REGION_SIMULATION_FLOW_MATCH_LIMIT).toBe(4);
-    expect(matchSimulationFlows(flows, "").map((flow) => flow.id)).toEqual(["1", "2", "3", "4"]);
-    expect(matchSimulationFlows(flows, "diff").map((flow) => flow.id)).toEqual(["4", "5"]);
-    expect(matchSimulationFlows(flows, "algebra").map((flow) => flow.id)).toEqual(["6"]);
-    expect(matchSimulationFlows(flows, "missing")).toEqual([]);
+    expect(matchSimulationProtocols(flows, "").map((flow) => flow.id)).toEqual(["1", "2", "3", "4"]);
+    expect(matchSimulationProtocols(flows, "diff").map((flow) => flow.id)).toEqual(["4", "5"]);
+    expect(matchSimulationProtocols(flows, "algebra").map((flow) => flow.id)).toEqual(["6"]);
+    expect(matchSimulationProtocols(flows, "missing")).toEqual([]);
   });
 
   it("parses custom exploration strategies as simulation prompts", () => {
@@ -442,20 +443,19 @@ describe("region simulation", () => {
     ).toBe(custom.id);
   });
 
-  it("stores Calibration simulations on calibrate embeddings", async () => {
+  it("stores leftover calibration-named simulations as verification embeddings", async () => {
     const result = await runRegionSimulation({
       ownerUserId: "owner-cal",
       name: "Limits scout",
-      kind: "calibration",
       flows: [{ id: "flow-c", name: "Scout", problems: ["What is a limit?"] }],
       strategyIds: ["balanced"],
       samplesPerStrategy: 3,
       includeHumanData: false,
     });
-    expect(result.regionPath).toContain("/calibration/regions/");
+    expect(result.regionPath).toContain("/regions/");
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: "owner-cal",
-      flowKind: "calibrate",
+      flowKind: "verify",
     });
     expect(stored.filter((row) => row.source === REGION_SIMULATION_SOURCE)).toHaveLength(3);
   });
@@ -518,7 +518,6 @@ describe("region simulation", () => {
     expect(afterAdd.some((row) => row.identity === "ada" && row.source === "runner")).toBe(true);
 
     const addedDetails = presentKnowledgeRegionDetails({
-      kind: "verification",
       parent: added.parentRow,
       clusters: added.clusterRows,
       embeddings: afterAdd,
@@ -576,7 +575,6 @@ describe("region simulation", () => {
     expect(leftover.some((row) => row.identity === "ada" && row.source === "runner")).toBe(true);
 
     const removedDetails = presentKnowledgeRegionDetails({
-      kind: "verification",
       parent: afterClusterRemove.parentRow,
       clusters: afterClusterRemove.clusterRows,
       embeddings: leftover,

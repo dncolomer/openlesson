@@ -84,7 +84,7 @@ describe("OG share inventory (one unsys standard)", () => {
     const standard = read("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Verify understanding through proof of work/);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Embeddable Knowledge Verification Protocols/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
@@ -127,11 +127,7 @@ describe("OG share inventory (one unsys standard)", () => {
   it("discovers every dedicated opengraph-image / twitter-image route under app/", () => {
     const routes = walkOgRoutes(join(ROOT, "app")).sort();
     const expected = [
-      "all-you-can-learn/[workspaceId]/opengraph-image.tsx",
-      "docs/learning-map-api/opengraph-image.tsx",
       "docs/proof-of-work-api/opengraph-image.tsx",
-      "insights/[id]/opengraph-image.tsx",
-      "insights/[id]/twitter-image.tsx",
       "opengraph-image.tsx",
       "p/[id]/[slug]/opengraph-image.tsx",
       "pricing/opengraph-image.tsx",
@@ -154,21 +150,9 @@ describe("OG share inventory (one unsys standard)", () => {
       "docs-proof-of-work-api",
     );
 
-    // Insights are the dynamic-title exception; other entity cards stay unsys standard
-    const insightOg = read("app/insights/[id]/opengraph-image.tsx");
-    expect(insightOg).toContain("buildInsightOgShareInput");
-    expect(insightOg).toContain("composeOgImage");
-    expect(insightOg).toContain("getPublicInsightForMeta");
-    expect(insightOg).not.toContain("UNSYS_STANDARD_SHARE_TITLE");
-
     const publicOg = read("app/p/[id]/[slug]/opengraph-image.tsx");
     expect(publicOg).toContain("composeStandardOgImage");
     expect(publicOg).not.toContain("planData?.title");
-
-    const ayclOg = read("app/all-you-can-learn/[workspaceId]/opengraph-image.tsx");
-    expect(ayclOg).toContain("composeStandardOgImage");
-    expect(ayclOg).not.toContain("assembleAyclLandingSummary");
-    expect(ayclOg).not.toContain("All-You-Can-Learn");
   });
 
   it("twitter-image routes re-export opengraph-image where present", () => {
@@ -176,9 +160,6 @@ describe("OG share inventory (one unsys standard)", () => {
       'from "./opengraph-image"',
     );
     expect(read("app/pricing/twitter-image.tsx")).toContain(
-      'from "./opengraph-image"',
-    );
-    expect(read("app/insights/[id]/twitter-image.tsx")).toContain(
       'from "./opengraph-image"',
     );
   });
@@ -212,36 +193,16 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(science).toContain("standardShareSocialMetadata");
     expect(science).not.toContain("/science/opengraph-image");
 
-    const harness = read("app/solve-protocols/page.tsx");
-    expect(harness).toContain("standardShareSocialMetadata");
-    expect(harness).toMatch(/openGraph:\s*standardSocial\.openGraph/);
-    expect(harness).toMatch(/twitter:\s*standardSocial\.twitter/);
-
     const verification = read("app/verify-protocols/page.tsx");
     expect(verification).toContain("standardShareSocialMetadata");
     expect(verification).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(verification).toMatch(/twitter:\s*standardSocial\.twitter/);
 
-    const mapping = read("app/mapping-protocols/page.tsx");
-    expect(mapping).toContain("standardShareSocialMetadata");
-    expect(mapping).toMatch(/openGraph:\s*standardSocial\.openGraph/);
-    expect(mapping).toMatch(/twitter:\s*standardSocial\.twitter/);
-
     const docs = read("app/docs/proof-of-work-api/layout.tsx");
     expect(docs).toContain("standardShareSocialMetadata");
 
-    const insightPage = read("app/insights/[id]/page.tsx");
-    expect(insightPage).toContain("insightShareSocialMetadata");
-    expect(insightPage).not.toContain("standardShareSocialMetadata");
-
     const publicPage = read("app/p/[id]/[slug]/page.tsx");
     expect(publicPage).toContain("standardShareSocialMetadata");
-
-    const ayclPage = read("app/all-you-can-learn/[workspaceId]/page.tsx");
-    expect(ayclPage).toContain("standardShareSocialMetadata");
-
-    const workspacePage = read("app/workspace/[id]/page.tsx");
-    expect(workspacePage).toContain("standardShareSocialMetadata");
 
     expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
 

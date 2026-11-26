@@ -1,8 +1,8 @@
 /**
  * Public explainer for our uncertainty model.
  * Visitor copy uses FEP names: generative model, hidden state, state factor,
- * observation, action, policy. Calibrate, Learn, and Verify are how the system
- * uses that model. Do not call the generative model a map.
+ * observation, action, policy. Knowledge verification protocols use that model.
+ * Do not call the generative model a map.
  */
 
 import { LEARNING_MODEL_OBJECTS } from "@/lib/learning-model";
@@ -17,7 +17,6 @@ export const SCIENCE_LEARNING_MODEL_TERMS = [
   "action",
   "policy",
   "priced edge",
-  "Calibrate",
   "Learn",
   "Verify",
   "projection",
@@ -30,15 +29,15 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   eyebrow: "UNCERTAINTY MODEL",
   title: "A generative model you can act on.",
   lead:
-    "Our uncertainty model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning. The policy is how the autopilot helps choose what to explore next. The thinking stays yours.",
+    "Our uncertainty model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to run knowledge verification protocols. The policy is how the autopilot helps choose what to explore next. The thinking stays yours.",
   foundationTitle: "Where this comes from",
   foundation:
-    "Karl Friston’s Free Energy Principle says living systems keep a generative model of the world, then act to reduce uncertainty about its hidden states. A mismatch between the observation a hidden state would generate and what the learner produces is a surprise. We use those Concepts for Calibrate, Learn, and Verify. We do not compute variational free energy, and we do not claim the full formal theory.",
+    "Karl Friston’s Free Energy Principle says living systems keep a generative model of the world, then act to reduce uncertainty about its hidden states. A mismatch between the observation a hidden state would generate and what the learner produces is a surprise. We use those Concepts inside knowledge verification protocols. We do not compute variational free energy, and we do not claim the full formal theory.",
   howTitle: "What the system does",
   how:
     "Before a session starts we freeze a generative model of the concept. Related hidden states share a state factor. Each hidden state carries an observation: what we would expect while focusing on it. An action is travel along a priced edge from the current hidden state to another, with a cost: its expected-free-energy price. A policy is a sequence of those hidden states, or the cheapest outgoing edge. Taps, speech, and canvas work are projected onto a policy. Learn shows those costs so the policy can steer the next exploration. Verify hides them and scores distance from the cheapest policy. Understanding still happens in the work, not in the policy.",
   conceptsTitle: "The six Concepts",
-  modesTitle: "Three sessions, one generative model",
+  modesTitle: "Learn and Verify, one generative model",
   projectionTitle: "Projection",
   projectionHeading: "Work projects onto a policy.",
   projection:
@@ -64,36 +63,27 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   schematicTitle: "Integrals",
   schematicLead:
     "One frozen generative model of Integrals. Three state factors, each with its own color. Hidden states branch off those factors: one hidden state can have several finer hidden states at the same depth. The observation sits on the hidden state you are on. Priced edges leave that hidden state for another, each with a cost that depends on where you are.",
-  pipelinesTitle: "Calibrate, Learn, Verify",
+  pipelinesTitle: "Learn and Verify",
   pipelinesLead:
-    "The same frozen generative model. Calibrate builds a prior over hidden states. Learn follows a policy: edge costs stay visible, and the cheapest outgoing hidden state is the compass. Verify hides those costs and measures distance from the cheapest policy.",
+    "The same frozen generative model. Learn follows a policy: edge costs stay visible, and the cheapest outgoing hidden state is the compass. Verify hides those costs and measures distance from the cheapest policy. Knowledge verification protocols use that Verify measurement.",
 } as const;
 
 export const SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS: Record<string, string> = {
   "generative-model":
-    "The generative model represents a concept's hidden states, our observations of those states, and the priced edges that travel between them. Our system generates a learning simulation of this model that is then used to calibrate the learner's sessions, verify someone's knowledge, and serve as a learning compass to help someone learn more optimally.",
+    "The generative model represents a concept's hidden states, our observations of those states, and the priced edges that travel between them. Our system generates a learning simulation of this model that is then used to verify someone's knowledge and serve as a learning compass to help someone learn more optimally.",
   "hidden-state":
-    "A hidden state represents one hypothesis about the concept that the user is trying to learn or verify. The system infers which hidden state the user is focusing on while calibrating, learning, or verifying.",
+    "A hidden state represents one hypothesis about the concept that the user is trying to learn or verify. The system infers which hidden state the user is focusing on while learning or verifying.",
   "state-factor":
-    "A state factor represents one dimension of the concept, grouping the hidden states that answer the same kind of question. The system uses state factors to structure the generative model so calibration can find where understanding is thin, and so learning and verification stay oriented to that dimension.",
+    "A state factor represents one dimension of the concept, grouping the hidden states that answer the same kind of question. The system uses state factors to structure the generative model so learning and verification stay oriented to that dimension.",
   observation:
-    "An observation represents what we would expect while the user is focusing on a hidden state. The system keeps that observation with the hidden state and uses it, in calibration, learning, and verification, to project what the learner produces onto the generative model.",
+    "An observation represents what we would expect while the user is focusing on a hidden state. The system keeps that observation with the hidden state and uses it, in learning and verification, to project what the learner produces onto the generative model.",
   action:
     "An action represents travel from the current hidden state to another along a priced edge, and how that travel changes what we can learn about the concept. Each edge carries a cost: its expected-free-energy price. The system shows those costs while learning so the cheapest policy can steer, and records the same costs as distance while verifying.",
   policy:
-    "A policy represents a sequence of hidden states through the generative model, or the cheapest outgoing edge from the current hidden state. The system uses that cheapest policy as the learning compass. Calibration writes the prior the policy will use; learning shows the cheapest edge; verification scores distance from it.",
+    "A policy represents a sequence of hidden states through the generative model, or the cheapest outgoing edge from the current hidden state. The system uses that cheapest policy as the learning compass. Learning shows the cheapest edge; verification scores distance from it.",
 };
 
 export const SCIENCE_LEARNING_MODEL_MODES = [
-  {
-    id: "calibrate",
-    name: "Calibrate",
-    job: "Build a prior over hidden states",
-    input: "Tap hidden states you would not trust",
-    projection: "Spoken plan onto nearby hidden states of the same state factor",
-    result: "A prior: lost, localized, coverage, or unsettled",
-    body: SCIENCE_LEARNING_MODEL_COPY.calibrate,
-  },
   {
     id: "learn",
     name: "Learn",

@@ -46,11 +46,7 @@ import {
 
 export type { StudioEmbeddingOrigin };
 
-export const DATA_STUDIO_PRODUCTS = [
-  "verification",
-  "calibration",
-  "solve",
-] as const;
+export const DATA_STUDIO_PRODUCTS = ["verification"] as const;
 
 export type DataStudioProduct = (typeof DATA_STUDIO_PRODUCTS)[number];
 
@@ -166,22 +162,16 @@ function text(value: unknown): string {
 }
 
 export function parseDataStudioProduct(value: unknown): DataStudioProduct | null {
-  if (value === "verification" || value === "calibration" || value === "solve") {
-    return value;
-  }
+  if (value === "verification") return value;
   return null;
 }
 
-export function dataStudioFlowKind(product: DataStudioProduct): FlowKind {
-  if (product === "verification") return "verify";
-  if (product === "calibration") return "calibrate";
-  return "solve";
+export function dataStudioFlowKind(_product?: DataStudioProduct): FlowKind {
+  return "verify";
 }
 
-export function dataStudioProductLabel(product: DataStudioProduct): string {
-  if (product === "verification") return "Verification";
-  if (product === "calibration") return "Calibration";
-  return "Solve";
+export function dataStudioProductLabel(_product?: DataStudioProduct): string {
+  return "Protocol";
 }
 
 export function uniqueStudioIds(values: readonly unknown[]): string[] {

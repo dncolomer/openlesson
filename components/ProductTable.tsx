@@ -17,7 +17,7 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
   {
     name: "Workspace",
     icon: Layers,
-    pitch: "Foundation for every verification, optimization, and augmentation flow.",
+    pitch: "Foundation for every knowledge verification protocol.",
     description:
       "Structure skills and scenarios, attach docs and proof of work, and run every Uncertain Systems product against one live learning world model.",
     href: "/workspace/new",
@@ -45,11 +45,11 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
       "Buffer agent proof of work, then Stash (observation) or Submit (action) into the regular PoW API — pure-API Think Aloud for agents.",
   },
   {
-    name: "Calibrate, Learn, Verify",
+    name: "Knowledge Verification Protocols",
     icon: Mic,
-    pitch: "Three hosted flows for live human work.",
+    pitch: "Embeddable knowledge verification for live human work.",
     description:
-      "Calibrate, Learn, and Verify are the hosted sessions. Candidates and learners think aloud while they work. Epistemic foraging targets reasoning gaps in the moment — including human checks bots cannot fake.",
+      "Embeddable Knowledge Verification Protocols are the hosted product. Candidates work the Protocol Challenge while they think. Epistemic foraging targets reasoning gaps in the moment — including human checks bots cannot fake.",
   },
 ];
 

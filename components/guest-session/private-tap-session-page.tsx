@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { ScoutTapClient } from "@/components/scout-tap/ScoutTapClient";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import { hashPrivateToken } from "@/lib/tap-score";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -163,10 +162,6 @@ export default async function PrivateTapSessionPage({ params, searchParams, flow
     entryQueryParams: entryParams,
     participantIdentity,
   };
-
-  if (shell === "scout") {
-    return <ScoutTapClient {...clientProps} />;
-  }
 
   return <TapScoreClient {...clientProps} sidebarMode="verification-tap" />;
 }

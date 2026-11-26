@@ -75,8 +75,8 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).not.toContain("Uncertain Systems is a Human Knowledge Platform.");
     expect(lp).not.toMatch(/<h1[^>]*>[\s\S]*Human Knowledge Platform/);
 
-    expect(copy).toMatch(/Verify understanding through proof of work/);
-    expect(PLATFORM_HERO.h1).toBe("Verify understanding through proof of work.");
+    expect(copy).toMatch(/Embeddable Knowledge Verification Protocols/);
+    expect(PLATFORM_HERO.h1).toBe("Embeddable Knowledge Verification Protocols.");
     expect(PLATFORM_HERO.p1).toMatch(/genuine work traces/);
     expect(PLATFORM_HERO.p2).toMatch(/knowledge region/);
     expect("p2" in PLATFORM_HERO).toBe(true);
@@ -112,33 +112,23 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("LandingHeroEditorial");
     expect(lp).not.toContain("{PLATFORM_LAYERS.title}");
     expect(lp).not.toContain("PLATFORM_LAYERS.lead");
-    expect(PLATFORM_LAYERS.title).toMatch(/Solve Protocol/);
-    expect(PLATFORM_LAYERS.title).toMatch(/Verify Protocol/);
-    expect(PLATFORM_LAYERS.title).toMatch(/Map Protocol/);
+    expect(PLATFORM_LAYERS.title).toMatch(/Embeddable Knowledge Verification Protocols/);
+    expect(PLATFORM_LAYERS.title).not.toMatch(/Solve Protocol/);
+    expect(PLATFORM_LAYERS.title).not.toMatch(/Map Protocol/);
     expect(PLATFORM_LAYERS.title).not.toMatch(/Custom Knowledge Mapping/);
-    expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
-      "Solve",
-      "Verify",
-      "Map",
-    ]);
-    expect(PLATFORM_LAYER_LIST.map((p) => p.href)).toEqual([
-      "/solve-protocols",
-      "/verify-protocols",
-      "/mapping-protocols",
-    ]);
+    expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual(["Protocols"]);
+    expect(PLATFORM_LAYER_LIST.map((p) => p.href)).toEqual(["/verify-protocols"]);
     expect(lp).toContain("{product.href}");
     expect(lp).toContain("{product.name}");
     expect(lp).toContain("{product.dek}");
     expect(lp).toContain("data-home-layers");
     expect(PLATFORM_HERO.h1).not.toMatch(/Learning Harness/);
     expect(PLATFORM_HERO.h1).not.toMatch(/TAPBench/);
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/demanding problem/);
-    expect(PLATFORM_PRODUCTS.harness.cta).toBe("Explore understanding");
+    expect(PLATFORM_PRODUCTS.verification.body).toMatch(/Embeddable Knowledge Verification Protocols/);
     expect(PLATFORM_PRODUCTS.verification.body).toMatch(/explores a demanding problem/);
-    expect(PLATFORM_PRODUCTS.verification.cta).toBe("Explore verification");
-    expect(PLATFORM_PRODUCTS.mapping.body).toMatch(/knowledge region/);
-    expect(PLATFORM_PRODUCTS.mapping.cta).toBe("Explore mapping");
+    expect(PLATFORM_PRODUCTS.verification.cta).toBe("Explore the Protocols");
+    expect("harness" in PLATFORM_PRODUCTS).toBe(false);
+    expect("mapping" in PLATFORM_PRODUCTS).toBe(false);
 
     expect(lp).toContain("PLATFORM_CORE");
     expect(lp).toContain("data-home-core");
@@ -216,20 +206,20 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).not.toContain("LandingPublicMapsCarousel");
 
     expect(PLATFORM_PUBLIC_MAPS.title).toBe("Explore the protocols");
-    expect(PLATFORM_PUBLIC_MAPS.lead).toBe("Try Solve, Verify, and Mapping protocols.");
+    expect(PLATFORM_PUBLIC_MAPS.lead).toBe("Try Embeddable Knowledge Verification Protocols.");
     expect(homepageCopyText().toLowerCase()).not.toContain("learning map");
     expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe("/register");
   });
 
-  it("keeps Harness, Verification, and Mapping in the catalog and drops TAPBench", () => {
-    expect(PLATFORM_PRODUCT_LIST).toHaveLength(3);
+  it("keeps Embeddable Knowledge Verification Protocols in the catalog and drops TAPBench", () => {
+    expect(PLATFORM_PRODUCT_LIST).toHaveLength(1);
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/tapbench/page.tsx"))).toBe(false);
-    expect(fs.existsSync(path.join(REPO_ROOT, "app/solve-protocols/page.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/solve-protocols/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/learning-harness/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/acquisition/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/verify-protocols/page.tsx"))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, "app/mapping-protocols/page.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/mapping-protocols/page.tsx"))).toBe(false);
     const lp = readRel("app/page.tsx");
     expect(lp).not.toContain("PLATFORM_PRODUCTS.tapbench");
     expect(PLATFORM_HERO.h1).not.toBe("A Human Knowledge Platform.");

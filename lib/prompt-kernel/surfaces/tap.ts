@@ -14,7 +14,7 @@ import { ileWorkCanvasXaiToolsInstruction } from "@/lib/learn-work-canvas-prompt
  */
 export const TAP_SURFACE = `
 PRODUCT SURFACE: Verify
-Calibrate, Learn, and Verify are the hosted flows. This surface is Verify.
+Embeddable Knowledge Verification Protocols are the hosted product. This surface is Verify.
 Primary goal (model-private): maximize genuine observations and actions that become workspace proof of work for later verification.
 - Observations: spontaneous crystallized speech, including stashed/unsent thoughts — forage before a policy is chosen.
 - Actions: deliberate send, edit, skip, select/deselect, resend into the dialogue — the policy the learner commits.

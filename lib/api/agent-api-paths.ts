@@ -1,8 +1,8 @@
 /**
  * Public agent REST families (v3):
- *   - Independent Solve / Calibration / Verification flows `/api/v3/flows`
- *     (create/update match the dashboard wizard: problem, artifacts, files,
- *     unsys seed, exact problem on canvas, enforced channels)
+ *   - Embeddable Knowledge Verification Protocols `/api/v3/protocols`
+ *     (create/update match the dashboard wizard: challenge, artifacts, files,
+ *     unsys seed, exact challenge on canvas, enforced channels)
  *   - Knowledge region candidate render `/api/v3/knowledge-regions`
  *
  * Learning Map management (`/api/v3/workspaces`) is retired. Headless
@@ -11,9 +11,10 @@
  */
 
 export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
-export const FLOW_API_BASE = "/api/v3/flows" as const;
-export const FLOW_FILES_API_PATH = `${FLOW_API_BASE}/files` as const;
-export const FLOW_UNSYS_SEED_API_PATH = `${FLOW_API_BASE}/unsys-seed` as const;
+export const PROTOCOL_API_BASE = "/api/v3/protocols" as const;
+export const FLOW_API_BASE = PROTOCOL_API_BASE;
+export const FLOW_FILES_API_PATH = `${PROTOCOL_API_BASE}/files` as const;
+export const FLOW_UNSYS_SEED_API_PATH = `${PROTOCOL_API_BASE}/unsys-seed` as const;
 export const KNOWLEDGE_REGION_API_BASE = "/api/v3/knowledge-regions" as const;
 export const ACCOUNT_API_BASE = "/api/v3/account" as const;
 export const POW_API_BASE = "/api/v3/pow" as const;
@@ -23,7 +24,7 @@ export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 export const STASH_API_BASE = "/api/v3/stash" as const;
 
 /** Public agent REST families. Map/workspace, PoW sessions, Snapshot, and Stash are excluded. */
-export const PUBLIC_AGENT_API_FAMILIES = ["flow", "knowledge_region"] as const;
+export const PUBLIC_AGENT_API_FAMILIES = ["protocol", "knowledge_region"] as const;
 export type PublicAgentApiFamily = (typeof PUBLIC_AGENT_API_FAMILIES)[number];
 
 /** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */
@@ -32,7 +33,7 @@ export const EVAL_API_BASE = SNAPSHOT_API_BASE;
 export type PowSnapshotApiSurface = "pow" | "snapshot";
 /** @deprecated Use PowSnapshotApiSurface */
 export type PowEvalApiSurface = PowSnapshotApiSurface | "eval";
-export type AgentApiSurface = PowSnapshotApiSurface | "stash" | "workspace" | "flow";
+export type AgentApiSurface = PowSnapshotApiSurface | "stash" | "workspace" | "protocol";
 
 export function workspaceCollectionPath(baseUrl?: string | null): string {
   const base = (baseUrl || "").replace(/\/$/, "");

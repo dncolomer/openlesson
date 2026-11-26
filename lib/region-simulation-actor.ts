@@ -128,7 +128,7 @@ export function runCanvasFaithfulExplorationSample(
         seed: plan.seed,
         strategyId: strategy.id,
       });
-  const boardKind: RegionSimFlowKind = flowKind === "learn" ? "learn" : flowKind;
+  const boardKind: RegionSimFlowKind = flowKind;
   const burstBias = strategy.params.prefer === "cheap" ? 0.7 : strategy.params.prefer === "costly" ? 1.2 : 1;
   const runtime = createBoardRuntime({
     seed: plan.seed,
@@ -177,7 +177,7 @@ export function runCanvasFaithfulExplorationSample(
     });
     if (op === "commit") {
       const next = infer(step);
-      if (flowKind !== "calibrate" && next && next !== model.rootId) sequence.push(next);
+      if (next && next !== model.rootId) sequence.push(next);
       break;
     }
     const applied = applyBoardOp(runtime, op);
@@ -188,7 +188,7 @@ export function runCanvasFaithfulExplorationSample(
     if (next && lastHid === next) committed += 1;
     else committed = 1;
     lastHid = next;
-    if (flowKind !== "calibrate" && next && next !== model.rootId && !sequence.includes(next)) {
+    if (next && next !== model.rootId && !sequence.includes(next)) {
       sequence.push(next);
     }
     if (committed > strategy.params.commitAfter && lastHid === next && next) {
@@ -197,7 +197,7 @@ export function runCanvasFaithfulExplorationSample(
     }
   }
 
-  const walkSequence = flowKind === "calibrate" ? [] : sequence;
+  const walkSequence = sequence;
   const pow = [
     ...regionSimulationPow({
       strategy,

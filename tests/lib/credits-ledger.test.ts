@@ -167,7 +167,7 @@ describe("guest vs signed-in billed account", () => {
     const result = await debitFlowSessionCredits(store, {
       runnerUserId: null,
       ownerUserId: "owner-1",
-      flowKind: "calibrate",
+      flowKind: "verify",
     });
     expect(result.ok).toBe(true);
     expect((result as { skipped?: boolean }).skipped).toBe(true);
@@ -185,12 +185,12 @@ describe("guest vs signed-in billed account", () => {
     const result = await debitFlowSessionCredits(store, {
       runnerUserId: null,
       ownerUserId: "owner-1",
-      flowKind: "calibrate",
+      flowKind: "verify",
     });
     expect(result.ok).toBe(true);
     expect(result.billedUserId).toBe("owner-1");
     expect((await store.load("owner-1")).balance).toBe(
-      STARTER_CREDIT_GRANT - flowSessionCreditCost("calibrate"),
+      STARTER_CREDIT_GRANT - flowSessionCreditCost("verify"),
     );
     expect((await store.load("runner-1")).balance).toBe(STARTER_CREDIT_GRANT);
   });
@@ -229,27 +229,25 @@ describe("guest vs signed-in billed account", () => {
     });
     const result = await startBillableFlowSession(
       store,
-      { runnerUserId: "runner-1", ownerUserId: "owner-1", flowKind: "solve" },
-      async () => ({ sessionId: "shared-solve" }),
+      { runnerUserId: "runner-1", ownerUserId: "owner-1", flowKind: "verify" },
+      async () => ({ sessionId: "shared-verify" }),
     );
     expect(result.ok).toBe(true);
     expect((await store.load("runner-1")).balance).toBe(
-      STARTER_CREDIT_GRANT - flowSessionCreditCost("solve"),
+      STARTER_CREDIT_GRANT - flowSessionCreditCost("verify"),
     );
     expect((await store.load("owner-1")).balance).toBe(STARTER_CREDIT_GRANT);
   });
 });
 
 describe("session-start routes debit shipped credits", () => {
-  it("wires Learn, Calibrate, Verify, and Solve starts onto the debit helper", () => {
+  it("wires Learn, Calibrate, and Verify starts onto the debit helper", () => {
     const root = join(__dirname, "../..");
     const files = [
       "app/api/play/start/route.ts",
       "app/api/play/curious/route.ts",
       "lib/learn-link-auth.ts",
-      "lib/calibration-flow-repository.ts",
       "lib/verification-flow-repository.ts",
-      "lib/solve-flow-repository.ts",
     ];
     for (const rel of files) {
       const src = readFileSync(join(root, rel), "utf8");

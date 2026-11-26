@@ -276,17 +276,17 @@ export function planFeatureList(plan: string | null | undefined): string[] {
   const features: string[] = [];
   if (modules.includes("learn")) features.push("Learning workspaces and Learn sessions");
   if (modules.includes("author")) features.push("Course authoring and My Shop (All You Can Learn listings)");
-  if (modules.includes("verify")) features.push("Verification flows and knowledge regions");
-  if (modules.includes("calibrate")) features.push("Calibration flows and knowledge regions");
+  if (modules.includes("verify")) features.push("Knowledge verification protocols and knowledge regions");
+  if (modules.includes("calibrate")) features.push("Knowledge regions");
   if (plan === "trial") features.unshift("All modules for 3 days");
   if (plan === "api_metered") {
-    features.push("Flow API keys + MCP");
+    features.push("Protocol API keys + MCP");
     features.push("$99/mo platform + usage");
   }
   if (features.length === 0) {
     features.push("Free signup with starter credits");
     features.push("Create Knowledge Regions at no credit cost");
-    features.push("Pay credits to run Calibrate, Learn, Verify, and Solve sessions");
+    features.push("Pay credits to run knowledge verification protocols");
   }
   return features;
 }
@@ -310,11 +310,11 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     name: "Try everything",
     priceLabel: formatUsdFromCents(TRY_EVERYTHING_PRICE_CENTS),
     cadence: "one-time · 3 days",
-    body: "Learning, course authoring, Verification, and Calibration for three days. One payment.",
+    body: "Knowledge Regions and knowledge verification protocols for three days. One payment.",
     features: [
       "All modules for 3 days",
-      "Learning and My Shop",
-      "Verification and Calibration",
+      "Knowledge Regions",
+      "Knowledge verification protocols",
       `${formatUsdFromCents(TRY_EVERYTHING_PRICE_CENTS)} one-time`,
     ],
     cta: `Try everything for ${formatUsdFromCents(TRY_EVERYTHING_PRICE_CENTS)}`,
@@ -354,9 +354,9 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     name: "Verification",
     priceLabel: formatUsdFromCents(VERIFY_MONTHLY_PRICE_CENTS),
     cadence: "/ month",
-    body: "Verification flows and knowledge regions. Measure held knowledge.",
+    body: "Knowledge verification protocols and knowledge regions. Measure held knowledge.",
     features: [
-      "Verification flows",
+      "Knowledge verification protocols",
       "Knowledge regions",
       "Deep Project and live runs on this module",
     ],
@@ -368,25 +368,22 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     name: "Calibration",
     priceLabel: formatUsdFromCents(CALIBRATE_MONTHLY_PRICE_CENTS),
     cadence: "/ month",
-    body: "Calibration flows and knowledge regions. Write the opening picture of a domain.",
+    body: "Knowledge regions for leftover org plans. Public /pricing sells Protocols.",
     features: [
-      "Calibration flows",
       "Knowledge regions",
-      "Calibrate sessions",
     ],
-    cta: "Get Calibration",
+    cta: "Get Knowledge Regions",
   },
   {
     id: "bundle_verify_calibrate",
     eyebrow: "BUNDLE",
-    name: "Verification + Calibration",
+    name: "Protocols + Knowledge Regions",
     priceLabel: formatUsdFromCents(VERIFY_CALIBRATE_BUNDLE_PRICE_CENTS),
     cadence: "/ month",
-    body: "Both measurement modules together.",
+    body: "Protocols and knowledge regions together.",
     features: [
-      "Verification flows and regions",
-      "Calibration flows and regions",
-      "Bundle price for both modules",
+      "Knowledge verification protocols and regions",
+      "Bundle price for leftover org plans",
     ],
     cta: "Get the bundle",
   },
@@ -401,8 +398,8 @@ export const CREDIT_PACK_CARDS: readonly PublicSkuCard[] = CREDIT_PACKS.map((pac
   body: pack.body,
   features: [
     `${pack.credits} credits`,
-    `${FLOW_SESSION_CREDIT_COST} credits per flow session`,
-    "Calibrate, Learn, Verify, and Solve",
+    `${FLOW_SESSION_CREDIT_COST} credits per protocol run`,
+    "Knowledge verification protocols",
   ],
   cta: pack.cta,
   highlighted: pack.highlighted,

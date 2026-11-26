@@ -41,13 +41,10 @@ export function launchSessionFromTarget(
   return { ...session, action: "create_region" };
 }
 
-export function flowPublicPathForSession(session: LtiLaunchSession): string | null {
+export function protocolPublicPathForSession(session: LtiLaunchSession): string | null {
   const token = String(session.flowToken || "").trim();
   if (!token) return null;
-  const encoded = encodeURIComponent(token);
-  if (session.flowKind === "verification") return `/v/${encoded}`;
-  if (session.flowKind === "calibration") return `/c/${encoded}`;
-  return `/s/${encoded}`;
+  return `/v/${encodeURIComponent(token)}`;
 }
 
 export function regionPathForSession(session: LtiLaunchSession): string | null {

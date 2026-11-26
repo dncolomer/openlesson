@@ -17,10 +17,7 @@ import {
   knowledgeRegionPointKind,
   type KnowledgeRegionPointKind,
 } from "@/lib/knowledge-region-figure";
-import {
-  dashboardKnowledgeRegionHref,
-  type DashboardKnowledgeRegionKind,
-} from "@/lib/dashboard-knowledge-regions";
+import { dashboardKnowledgeRegionHref } from "@/lib/dashboard-knowledge-regions";
 import {
   aiUseIdentityLabel,
   explorationStrategyById,
@@ -34,8 +31,6 @@ import {
   type ExplorationStrategyId,
   type StudioEmbeddingOrigin,
 } from "@/lib/region-simulation";
-import type { ProductFlowKind } from "@/lib/product-flow";
-
 export type KnowledgeRegionDetailsCluster = {
   id: string;
   name: string;
@@ -61,7 +56,6 @@ export type KnowledgeRegionDetailsSample = {
 
 export type KnowledgeRegionDetails = {
   id: string;
-  kind: ProductFlowKind;
   name: string;
   description: string | null;
   createdAt: string;
@@ -86,7 +80,6 @@ export type KnowledgeRegionDetailsRow = {
   id?: unknown;
   name?: unknown;
   description?: unknown;
-  product?: unknown;
   owner_user_id?: unknown;
   workspace_id?: unknown;
   subject_count?: unknown;
@@ -96,8 +89,6 @@ export type KnowledgeRegionDetailsRow = {
   cosine_threshold?: unknown;
   mean_radius?: unknown;
   verify_flow_id?: unknown;
-  calibrate_flow_id?: unknown;
-  solve_flow_id?: unknown;
   subjects?: unknown;
 };
 
@@ -215,9 +206,7 @@ function regionCentroid(row: KnowledgeRegionDetailsRow): RegionCentroidInput | n
   };
 }
 
-function parentFlowId(row: KnowledgeRegionDetailsRow, kind: ProductFlowKind): string {
-  if (kind === "calibration") return text(row.calibrate_flow_id);
-  if (kind === "solve") return text(row.solve_flow_id);
+function parentFlowId(row: KnowledgeRegionDetailsRow): string {
   return text(row.verify_flow_id);
 }
 
@@ -282,9 +271,7 @@ function clusterForSimulatedEmbedding(
   return clusters.find((row) => identity === simulatedIdentityLabel(row.strategyName)) ?? null;
 }
 
-function embeddingFlowKind(kind: ProductFlowKind): string {
-  if (kind === "calibration") return "calibrate";
-  if (kind === "solve") return "solve";
+function embeddingFlowKind(): string {
   return "verify";
 }
 
@@ -301,12 +288,10 @@ export function presentKnowledgeRegionDetails(input: {
   clusters?: readonly KnowledgeRegionDetailsRow[];
   embeddings?: readonly (DataStudioEmbeddingRow | Record<string, unknown>)[];
   flowNames?: Readonly<Record<string, string>>;
-  kind: DashboardKnowledgeRegionKind;
 }): KnowledgeRegionDetails | null {
   const id = text(input.parent.id);
   const name = text(input.parent.name);
   if (!id || !name) return null;
-  const kind = input.kind;
   const parsed = parseRegionSimulationDescription(input.parent.description);
   const subjects = parseRegionSubjects(input.parent.subjects);
   const clusters = presentKnowledgeRegionClusters(input.parent, input.clusters ?? []);
@@ -326,8 +311,8 @@ export function presentKnowledgeRegionDetails(input: {
     .filter((row): row is RegionCentroidInput & { strategyId: ExplorationStrategyId | null; strategyName: string } => !!row);
 
   const parentCentroid = regionCentroid(input.parent);
-  const expectedKind = embeddingFlowKind(kind);
-  const seededFlowId = parentFlowId(input.parent, kind);
+  const expectedKind = embeddingFlowKind();
+  const seededFlowId = parentFlowId(input.parent);
   const rows: DataStudioEmbeddingRow[] = [];
   for (const raw of input.embeddings ?? []) {
     const embedding = asEmbeddingRow(raw);
@@ -480,7 +465,6 @@ export function presentKnowledgeRegionDetails(input: {
 
   return {
     id,
-    kind,
     name,
     description,
     createdAt: text(input.parent.created_at),
@@ -498,6 +482,6 @@ export function presentKnowledgeRegionDetails(input: {
     samples,
     embeddings,
     regions,
-    regionPath: dashboardKnowledgeRegionHref(kind, id),
+    regionPath: dashboardKnowledgeRegionHref(id),
   };
 }

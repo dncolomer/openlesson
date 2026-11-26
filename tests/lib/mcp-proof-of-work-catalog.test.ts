@@ -5,20 +5,21 @@ import { AGENT_TOOL_SURFACE } from "@/lib/pow-api/agent-tool-surface";
 
 describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
   it("exposes only independent flow management", () => {
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow", "knowledge_region"]);
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["protocol", "knowledge_region"]);
     const families = new Set(AGENT_TOOL_SURFACE.map((t) => t.family));
-    expect([...families]).toEqual(["flow", "knowledge_region"]);
+    expect([...families]).toEqual(["protocol", "knowledge_region"]);
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
     expect(names).toEqual([
-      "list_flows",
-      "create_flow",
-      "upload_flow_file",
-      "generate_flow_unsys_seed",
-      "get_flow",
-      "update_flow",
-      "delete_flow",
+      "list_protocols",
+      "create_protocol",
+      "upload_protocol_file",
+      "generate_protocol_unsys_seed",
+      "get_protocol",
+      "update_protocol",
+      "delete_protocol",
       "get_knowledge_region_candidate",
     ]);
+    expect(names).not.toContain("create_flow");
     expect(names).not.toContain("create_workspace");
     expect(names).not.toContain("list_map_tools");
     expect(names).not.toContain("apply_map_tool");
@@ -29,12 +30,12 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
   });
 
   it("documents REST twins for flow management, not Snapshot/Stash or sessions", () => {
-    const createFlow = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "create_flow");
-    expect(createFlow?.rest.path).toBe("/api/v3/flows");
-    const upload = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "upload_flow_file");
-    expect(upload?.rest.path).toBe("/api/v3/flows/files");
-    const unsys = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "generate_flow_unsys_seed");
-    expect(unsys?.rest.path).toBe("/api/v3/flows/unsys-seed");
+    const createProtocol = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "create_protocol");
+    expect(createProtocol?.rest.path).toBe("/api/v3/protocols");
+    const upload = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "upload_protocol_file");
+    expect(upload?.rest.path).toBe("/api/v3/protocols/files");
+    const unsys = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "generate_protocol_unsys_seed");
+    expect(unsys?.rest.path).toBe("/api/v3/protocols/unsys-seed");
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((t) => t.name);
     expect(names).not.toContain("link_flow");
     expect(names).not.toContain("apply_map_tool");

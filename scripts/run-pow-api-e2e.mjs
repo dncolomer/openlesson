@@ -2,8 +2,9 @@
 /**
  * Dedicated Proof-of-Work API product E2E.
  *
- * Teams (pro_teams): direct REST + MCP access — list/read workspaces, proof of work, scores, TAP links.
- * Workspace create is POST /api/v3/workspaces. TAP mint is cookie-auth /api/workspace/tap-links.
+ * Public agent REST is /api/v3/protocols (MCP create_protocol, challenge field, no kind).
+ * Knowledge-region candidate render is /api/v3/knowledge-regions.
+ * Teams (pro_teams): direct REST + MCP access. TAP mint is cookie-auth /api/workspace/tap-links.
  * Individual (regular_2026): Proof-of-Work API gated (api_plan_required); proof of work via TAP Learning/TAP web routes + Performance tab.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";

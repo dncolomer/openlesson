@@ -12,13 +12,12 @@ export const TAP_VOICE_CHALLENGE_SENTENCE_TWO =
   "I will read each question aloud and press I am done answering when a chain of thought ends.";
 export const TAP_VOICE_CHALLENGE_SCRIPT = `${PRACTICE_VOICE_CHALLENGE_SCRIPT} ${TAP_VOICE_CHALLENGE_SENTENCE_TWO}`;
 
-/** TAP Learning reads two sentences. The second is the session goal, with a sample card under it. */
+/** TAP Learning reads two sentences. The second is the session goal. */
 export const ILE_VOICE_CHALLENGE_SENTENCE_ONE =
   "I will now speak my thinking out loud the whole time, which gives a raw thinking signal and a baseline attention increase.";
 export const ILE_VOICE_CHALLENGE_SENTENCE_TWO =
-  "In this session I will work to craft insights on the canvas.";
+  "In this session I will work on the canvas.";
 export const ILE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${ILE_VOICE_CHALLENGE_SENTENCE_TWO}`;
-export const ILE_SAMPLE_INSIGHT_LABEL = "Sample insight";
 
 export const PREPARE_VOICE_CHALLENGE_SENTENCE_ONE =
   "I will now read these opening lines out loud to start.";
@@ -103,7 +102,7 @@ export function practiceVoiceChallengeTranscriptPasses(transcript: string): bool
   return voiceChallengeSentencesPass(PRACTICE_VOICE_CHALLENGE_SCRIPT, transcript);
 }
 
-/** TAP Learning also requires the second sentence about crafting insights. */
+/** TAP Learning also requires the second sentence about working on the canvas. */
 export function ileVoiceChallengeTranscriptPasses(transcript: string): boolean {
   return voiceChallengeSentencesPass(ILE_VOICE_CHALLENGE_SCRIPT, transcript);
 }

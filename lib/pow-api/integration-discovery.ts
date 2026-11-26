@@ -1,20 +1,20 @@
 import type { ContinuousEvaluationPolicy } from "./proof-of-work-schema";
 import { formatInterruptionContractForSkillPrompt } from "./predictive-interruption";
 import { buildIntegrationSkillApiPath } from "./proof-of-work-integration";
-import { FLOW_API_BASE } from "@/lib/api/agent-api-paths";
+import { PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
-    "Flow management — create, list, update, and delete independent Solve, Calibration, and Verification flows",
+    "Protocol management — create, list, update, and delete knowledge verification protocols",
     "Proof of work is recorded in the product UI — not a public agent session loop",
   ],
   workspace_model:
-    "Solve, Calibration, and Verification flows are independent. Agents create and update those flows; learners record proof of work in the product UI.",
+    "Knowledge verification protocols are independent. Agents create and update those protocols; learners record proof of work in the product UI.",
   integrator_model:
-    "Partner agents authorize with a Bearer key and manage Solve, Calibration, and Verification flows. ChatGPT, Claude, or any MCP client uses the same REST and MCP surface.",
+    "Partner agents authorize with a Bearer key and manage knowledge verification protocols. ChatGPT, Claude, or any MCP client uses the same REST and MCP surface.",
   docs: {
     api_reference: "/skill.md",
     human_guide: "/docs/proof-of-work-api",
@@ -66,18 +66,18 @@ export function buildIntegrationSurfaces(baseUrl: string): IntegrationSurfaceRef
   return [
     {
       transport: "rest",
-      label: "Flow management API (REST)",
+      label: "Protocol management API (REST)",
       auth: "Authorization: Bearer <api_key>",
-      entrypoint: `${base}${FLOW_API_BASE}`,
+      entrypoint: `${base}${PROTOCOL_API_BASE}`,
       when_to_use: "Production integrations, server-side agents, and clients with standard HTTP + Bearer auth.",
     },
     {
       transport: "mcp",
-      label: "Flow management MCP (JSON-RPC)",
+      label: "Protocol management MCP (JSON-RPC)",
       auth: "Authorization: Bearer <api_key>",
       entrypoint: buildMcpEndpointPattern(baseUrl),
       when_to_use:
-        "Cursor, Claude Desktop, Grok, and other MCP clients — full parity with REST for flow management.",
+        "Cursor, Claude Desktop, Grok, and other MCP clients — full parity with REST for protocol management.",
     },
   ];
 }
@@ -93,64 +93,64 @@ export function buildContinuousEvaluationMcpPolicy(
   } | null
 ): ContinuousEvaluationMcpPolicy {
   const skillRest = buildIntegrationSkillApiPath(workspaceId, baseUrl);
-  const flowsRest = `POST ${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}`;
-  const getRest = `GET ${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}/{flow_id}`;
-  const listRest = `GET ${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}`;
+  const protocolsRest = `POST ${baseUrl.replace(/\/$/, "")}${PROTOCOL_API_BASE}`;
+  const getRest = `GET ${baseUrl.replace(/\/$/, "")}${PROTOCOL_API_BASE}/{protocol_id}`;
+  const listRest = `GET ${baseUrl.replace(/\/$/, "")}${PROTOCOL_API_BASE}`;
   void contextCounts;
 
   return {
     principle: UNCERTAIN_SYSTEMS_SCOPE.workspace_model,
     more_evidence_improves:
-      "More Solve, Calibration, and Verification flows give partners a complete evaluation path.",
+      "More knowledge verification protocols give partners a complete evaluation path.",
     regeneration_required: true,
     mcp_endpoint_pattern: buildMcpEndpointPattern(baseUrl),
     proof_of_work_spec: {
-      mcp_tool: "create_flow",
-      rest_equivalent: flowsRest,
-      purpose: "Create a Solve, Calibration, or Verification flow",
+      mcp_tool: "create_protocol",
+      rest_equivalent: protocolsRest,
+      purpose: "Create a knowledge verification protocol",
       when_to_call: [
-        "When adding a new flow",
-        "When an authoring client needs a flow before a session",
+        "When adding a new protocol",
+        "When an authoring client needs a protocol before a session",
       ],
     },
     integration_skill: {
       mcp_tool: "generate_integration_skill",
       rest_equivalent: skillRest,
-      purpose: "Regenerate partner skill.md aligned with the current flows",
+      purpose: "Regenerate partner skill.md aligned with the current protocols",
       when_to_call: [
         "When onboarding a new partner agent version",
-        "After the flow set changes",
+        "After the protocol set changes",
       ],
     },
     upload_proof_of_work: {
-      mcp_tool: "update_flow",
-      rest_equivalent: `PATCH ${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}/{flow_id}`,
-      purpose: "Update an existing Solve, Calibration, or Verification flow",
+      mcp_tool: "update_protocol",
+      rest_equivalent: `PATCH ${baseUrl.replace(/\/$/, "")}${PROTOCOL_API_BASE}/{protocol_id}`,
+      purpose: "Update an existing knowledge verification protocol",
       when_to_call: [
-        "After create_flow, when the problem or questions change",
-        "When reconnecting an existing flow to a different topic",
+        "After create_protocol, when The Protocol Challenge or questions change",
+        "When reconnecting an existing protocol to a different challenge",
       ],
     },
     performance: {
-      mcp_tool: "list_flows",
+      mcp_tool: "list_protocols",
       rest_equivalent: listRest,
-      purpose: "List Solve, Calibration, and Verification flows owned by this key.",
+      purpose: "List knowledge verification protocols owned by this key.",
       when_to_call: [
-        "When reviewing the current flow set",
-        "Before creating a duplicate flow",
+        "When reviewing the current protocol set",
+        "Before creating a duplicate protocol",
       ],
     },
     progress_snapshot: {
-      mcp_tool: "get_flow",
+      mcp_tool: "get_protocol",
       rest_equivalent: getRest,
-      purpose: "Read one Solve, Calibration, or Verification flow.",
+      purpose: "Read one knowledge verification protocol.",
       when_to_call: [
-        "When connecting MCP and need flow context",
-        "Before update_flow",
+        "When connecting MCP and need protocol context",
+        "Before update_protocol",
         "After long idle gaps to re-orient the agent",
       ],
     },
-    recommended_cadence: `MCP loop: list_flows → create_flow → get_flow → update_flow. REST mirror: ${FLOW_API_BASE}.`,
+    recommended_cadence: `MCP loop: list_protocols → create_protocol → get_protocol → update_protocol. REST mirror: ${PROTOCOL_API_BASE}.`,
   };
 }
 
@@ -170,30 +170,30 @@ export function recommendIntegrationActions(options: {
 
   actions.push({
     priority: 1,
-    mcp_tool: "list_flows",
-    rest_equivalent: `GET ${FLOW_API_BASE}`,
-    reason: "List Solve, Calibration, and Verification flows owned by this key.",
+    mcp_tool: "list_protocols",
+    rest_equivalent: `GET ${PROTOCOL_API_BASE}`,
+    reason: "List knowledge verification protocols owned by this key.",
   });
 
   actions.push({
     priority: 2,
-    mcp_tool: "create_flow",
-    rest_equivalent: `POST ${FLOW_API_BASE}`,
-    reason: "Create a Solve, Calibration, or Verification flow.",
+    mcp_tool: "create_protocol",
+    rest_equivalent: `POST ${PROTOCOL_API_BASE}`,
+    reason: "Create a knowledge verification protocol.",
   });
 
   if (proof_of_work_artifacts >= 0) {
     actions.push({
       priority: 3,
-      mcp_tool: "get_flow",
-      rest_equivalent: `GET ${FLOW_API_BASE}/{flow_id}`,
-      reason: "Read one Solve, Calibration, or Verification flow.",
+      mcp_tool: "get_protocol",
+      rest_equivalent: `GET ${PROTOCOL_API_BASE}/{protocol_id}`,
+      reason: "Read one knowledge verification protocol.",
     });
     actions.push({
       priority: 4,
-      mcp_tool: "update_flow",
-      rest_equivalent: `PATCH ${FLOW_API_BASE}/{flow_id}`,
-      reason: "Update an existing flow.",
+      mcp_tool: "update_protocol",
+      rest_equivalent: `PATCH ${PROTOCOL_API_BASE}/{protocol_id}`,
+      reason: "Update an existing protocol.",
     });
   }
 
@@ -214,7 +214,7 @@ export function buildUncertainSystemsScopeForWorkspace(options: {
       block_count: options.blockCount,
       proof_of_work_artifact_count: options.proofOfWorkCount,
       progress_interpretation:
-        "Learning progress = map tiles and linked Solve, Calibration, and Verification flows measured against workspace_goal. Proof of work is recorded in the product UI.",
+        "Learning progress = knowledge verification protocols measured against workspace_goal. Proof of work is recorded in the product UI.",
     },
   };
 }
@@ -240,8 +240,8 @@ export const MCP_RESOURCE_CATALOG = [
   },
   {
     uri: "uncertain-systems://proof-of-work-loop",
-    name: "Flow management",
-    description: "Independent Solve, Calibration, and Verification flow loop, REST + MCP tool mapping.",
+    name: "Protocol management",
+    description: "Knowledge verification protocol loop, REST + MCP tool mapping.",
     mimeType: "text/markdown",
   },
   {
@@ -270,7 +270,7 @@ ${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
 ${UNCERTAIN_SYSTEMS_SCOPE.integrator_model}
 
 ## Surfaces (use either)
-- **REST:** \`${base}${FLOW_API_BASE}\` with Bearer API key
+- **REST:** \`${base}${PROTOCOL_API_BASE}\` with Bearer API key
 - **MCP:** \`${buildMcpEndpointPattern(baseUrl)}\` with Bearer API key and JSON-RPC tools/list
 
 Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.human_guide}
@@ -278,18 +278,18 @@ Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN
   }
 
   if (uri === "uncertain-systems://proof-of-work-loop") {
-    return `# Flow management
+    return `# Protocol management
 
-ChatGPT, Claude, or any MCP client authorizes with a Bearer key and manages Solve, Calibration, and Verification flows. Proof of work is recorded in the product UI.
+ChatGPT, Claude, or any MCP client authorizes with a Bearer key and manages knowledge verification protocols. Proof of work is recorded in the product UI.
 
 ## Recommended loop
-1. **list_flows** — existing Solve, Calibration, and Verification flows
-2. **create_flow** / POST ${FLOW_API_BASE} — kind solve | calibration | verification
-3. **get_flow** / GET ${FLOW_API_BASE}/{flow_id}
-4. **update_flow** / PATCH ${FLOW_API_BASE}/{flow_id}
+1. **list_protocols** — existing knowledge verification protocols
+2. **create_protocol** / POST ${PROTOCOL_API_BASE} — send challenge (The Protocol Challenge). Do not send kind.
+3. **get_protocol** / GET ${PROTOCOL_API_BASE}/{protocol_id}
+4. **update_protocol** / PATCH ${PROTOCOL_API_BASE}/{protocol_id}
 
 ## Quick orientation
-Call **list_flows** for Solve, Calibration, and Verification flows owned by this key.
+Call **list_protocols** for knowledge verification protocols owned by this key.
 
 Every schema/skill response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools).
 

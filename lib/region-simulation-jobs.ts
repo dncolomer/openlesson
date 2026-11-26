@@ -451,7 +451,7 @@ async function persistAiUseSample(job: RegionSimulationJobRow, checkpoint: AiUse
     seed: checkpoint.run_id,
     strategyId: "balanced",
   });
-  const sequence = job.plan.kind === "calibration" ? [] : checkpoint.sequence;
+  const sequence = checkpoint.sequence;
   await persistRegionSimulationSample({
     ownerUserId: job.owner_user_id,
     workspaceId: flow?.workspaceId,
@@ -521,7 +521,7 @@ export async function tickRegionSimulationJob(jobId: string): Promise<TickResult
               runId: item.runId,
               problem: item.problem,
               seed: item.seed,
-              flowKind: flowKindFor(job.plan.kind) === "learn" ? "learn" : flowKindFor(job.plan.kind),
+              flowKind: flowKindFor(job.plan.kind),
               ownerUserId: job.owner_user_id,
               planCursor: job.plan_cursor,
               sampleIndex: item.index,
@@ -532,7 +532,7 @@ export async function tickRegionSimulationJob(jobId: string): Promise<TickResult
         checkpoint,
         catalog,
         seed: item.seed,
-        flowKind: flowKindFor(job.plan.kind) === "learn" ? "learn" : flowKindFor(job.plan.kind),
+        flowKind: flowKindFor(job.plan.kind),
         model,
         ownerUserId: job.owner_user_id,
         apiKey,

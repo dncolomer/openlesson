@@ -89,26 +89,17 @@ describe("workspace create + builder static wiring", () => {
     expect(en.planView.planBuilder).toBe("Builder");
   });
 
-  it("workspace Knowledge hosts InsightsDashboardTab; Dashboard has no Insights diary", () => {
+  it("workspace Knowledge and Dashboard have no Insights diary", () => {
     const dash = read("app/dashboard/page.tsx");
     expect(dash).not.toContain("InsightsDashboardTab");
     expect(dash).not.toContain("DashboardInsightsTab");
     expect(dash).not.toContain("isDashboardInsightsTab");
-
-    // Workspace-scoped list UI; not Performance chat
-    const insightsTab = read("components/InsightsDashboardTab.tsx");
-    expect(insightsTab).toContain("export function InsightsDashboardTab");
-    expect(insightsTab).toContain("workspaceId");
-    expect(insightsTab).toContain("insightsListUrl(workspaceId)");
-    expect(insightsTab).toMatch(/workspace/i);
-    expect(insightsTab).not.toContain("PerformanceChat");
+    expect(fs.existsSync(path.join(ROOT, "components/InsightsDashboardTab.tsx"))).toBe(false);
   });
 
-  it("insights API filters to workspace-origin only and supports workspaceId scope", () => {
-    const route = read("app/api/insights/route.ts");
-    expect(route).toContain('.not("workspace_id", "is", null)');
-    expect(route).toContain('searchParams.get("workspaceId")');
-    expect(route).toContain('.eq("workspace_id", workspaceId)');
+  it("insights API routes are gone", () => {
+    expect(fs.existsSync(path.join(ROOT, "app/api/insights/route.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(ROOT, "app/api/insights"))).toBe(false);
   });
 
   it("block create/generate paths pass files + notes into context", () => {

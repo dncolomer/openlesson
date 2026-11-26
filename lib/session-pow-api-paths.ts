@@ -1,7 +1,6 @@
-export type SessionPowSurface = "solve" | "calibrate" | "verify";
+export type SessionPowSurface = "verify" | "learn";
 
-const SOLVE_SESSION_BASE = "/api/solve/session";
-const CALIBRATE_SESSION_BASE = "/api/calibrate/session";
+const LEARN_SESSION_BASE = "/api/workspace-learn";
 const VERIFY_SESSION_BASE = "/api/verify/session";
 
 function tapSessionVerbs(base: string) {
@@ -18,29 +17,19 @@ function tapSessionVerbs(base: string) {
   } as const;
 }
 
-export const SOLVE_POW_API_PATHS = {
-  idle: `${SOLVE_SESSION_BASE}/idle`,
-  speech: `${SOLVE_SESSION_BASE}/speech`,
-} as const;
-
-export const CALIBRATE_POW_API_PATHS = tapSessionVerbs(CALIBRATE_SESSION_BASE);
 export const VERIFY_POW_API_PATHS = tapSessionVerbs(VERIFY_SESSION_BASE);
 
-/** Calibrate idle/speech — former TAP_POW_API_PATHS. */
+/** TAP idle/speech — verification session kernel. */
 export const TAP_POW_API_PATHS = {
-  idle: CALIBRATE_POW_API_PATHS.idle,
-  speech: CALIBRATE_POW_API_PATHS.speech,
+  idle: VERIFY_POW_API_PATHS.idle,
+  speech: VERIFY_POW_API_PATHS.speech,
 } as const;
 
-/** Solve idle/speech — former Learn canvas ILE_POW_API_PATHS. */
+/** Learn canvas idle/speech. */
 export const ILE_POW_API_PATHS = {
-  idle: SOLVE_POW_API_PATHS.idle,
-  speech: SOLVE_POW_API_PATHS.speech,
+  idle: `${LEARN_SESSION_BASE}/idle`,
+  speech: `${LEARN_SESSION_BASE}/speech`,
 } as const;
-
-export function solvePublicApiPath(token: string): string {
-  return `/api/solve/public/${encodeURIComponent(token)}`;
-}
 
 export interface SessionPowContext {
   workspaceId?: string;

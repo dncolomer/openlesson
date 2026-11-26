@@ -134,7 +134,6 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
       runId: "run-ada",
       parent,
       embeddings: [embedding],
-      kind: "verification",
       referenceModel: tree(),
     });
     expect(payload.reference.hidden_states.map((row) => row.id).sort()).toEqual(
@@ -154,7 +153,6 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
       candidateId: "nobody",
       parent,
       embeddings: [stored(["root"])],
-      kind: "verification",
       referenceModel: tree(),
     });
     expect(payload.mapped.sequence).toEqual([]);

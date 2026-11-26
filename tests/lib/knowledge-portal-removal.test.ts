@@ -64,7 +64,7 @@ describe("Knowledge Portal removal", () => {
     expect(enCopy.onboardingGuide?.tap?.step1?.body).not.toMatch(/^Think out loud on a timer\./);
     expect((enCopy.onboardingGuide?.tap?.step1?.body || "").length).toBeGreaterThan(180);
     expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/^Start$/);
-    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/craft insights/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).not.toMatch(/craft insights/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/canvas/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).not.toMatch(/\bboard\b|end turn/i);
     expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeLessThan(120);
@@ -72,19 +72,12 @@ describe("Knowledge Portal removal", () => {
     expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);
 
-    const simulationPanel = read("components/SimulateInsightsSurface.tsx");
-    expect(simulationPanel).not.toMatch(/offline template/i);
-    expect(simulationPanel).not.toMatch(/via xAI/i);
-    expect(simulationPanel).not.toMatch(/xAI output/i);
-    expect(simulationPanel).not.toMatch(/xAI questions and exercises/i);
-    expect(simulationPanel).toContain("data-simulation-generate");
-    expect(simulationPanel).toContain("data-simulation-collection");
-    expect(simulationPanel).not.toContain("Generate workspace samples");
+    expect(existsSync(join(ROOT, "components/SimulateInsightsSurface.tsx"))).toBe(false);
     const blockSimPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
     expect(blockSimPanel).not.toMatch(/for xAI samples/i);
     expect(blockSimPanel).not.toMatch(/via xAI/i);
     expect(blockSimPanel).not.toMatch(/offline template/i);
-    expect(blockSimPanel).toContain("SimulateInsightsSurface");
+    expect(blockSimPanel).not.toContain("SimulateInsightsSurface");
     const newsWidget = read("components/WorkspaceTopicNewsWidget.tsx");
     expect(newsWidget).not.toMatch(/xAI-powered headlines/i);
 

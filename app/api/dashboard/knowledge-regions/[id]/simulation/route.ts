@@ -4,19 +4,13 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { parseDashboardKnowledgeRegionKind } from "@/lib/dashboard-knowledge-regions";
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import {
   isRegionSimulationClusterRow,
   parseRegionSimulationClusterStrategyId,
 } from "@/lib/knowledge-region-details";
-import {
-  flowOwnedByUser,
-  parseProductFlowKind,
-  productFlowEmbeddingKind,
-  type ProductFlowKind,
-} from "@/lib/product-flow";
+import { flowOwnedByUser, productFlowEmbeddingKind } from "@/lib/product-flow";
 import {
   clampSamplesPerStrategy,
   isSimulationStrategyClusterName,
@@ -37,15 +31,12 @@ import {
   REGION_SIM_TICK_MAX_DURATION,
   tickRegionSimulationJob,
 } from "@/lib/region-simulation-jobs";
-import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
-import { getSolveFlowById } from "@/lib/solve-flow-repository";
 import { getVerificationFlowById } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
 export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
 
 async function ownedSimulationFlow(
-  kind: ProductFlowKind,
   flowId: string,
   userId: string,
 ): Promise<{
@@ -55,12 +46,7 @@ async function ownedSimulationFlow(
   problems: string[];
   answersModelSeed?: unknown;
 } | null> {
-  const flow =
-    kind === "calibration"
-      ? await getCalibrationFlowById(flowId)
-      : kind === "solve"
-        ? await getSolveFlowById(flowId)
-        : await getVerificationFlowById(flowId);
+  const flow = await getVerificationFlowById(flowId);
   if (!flow || !flowOwnedByUser(flow, userId)) return null;
   return {
     id: flow.id,
@@ -92,7 +78,6 @@ function clusterStrategiesForParent(
 }
 
 async function flowsForRegion(input: {
-  kind: ProductFlowKind;
   ownerUserId: string;
   seedFlowId: string;
   parentName: string;
@@ -103,7 +88,7 @@ async function flowsForRegion(input: {
   try {
     embeddings = await listFlowEmbeddingsForOwner({
       ownerUserId: input.ownerUserId,
-      flowKind: productFlowEmbeddingKind(input.kind),
+      flowKind: productFlowEmbeddingKind(),
     });
   } catch {
     embeddings = [];
@@ -119,7 +104,7 @@ async function flowsForRegion(input: {
   const ids = requested.length ? requested : allowed;
   const flows = [];
   for (const flowId of ids) {
-    const flow = await ownedSimulationFlow(input.kind, flowId, input.ownerUserId);
+    const flow = await ownedSimulationFlow(flowId, input.ownerUserId);
     if (flow) flows.push(flow);
   }
   return flows;
@@ -133,7 +118,6 @@ async function loadOwnedParent(
   | {
       ok: true;
       userId: string;
-      kind: ProductFlowKind;
       name: string;
       seedFlowId: string;
       clusters: Array<{ name?: unknown; description?: unknown; embedding_model_id?: unknown }>;
@@ -144,7 +128,7 @@ async function loadOwnedParent(
   const { data: row, error } = await auth.supabase
     .from("knowledge_regions")
     .select(
-      "id, name, product, owner_user_id, embedding_model_id, verify_flow_id, calibrate_flow_id, solve_flow_id",
+      "id, name, owner_user_id, embedding_model_id, verify_flow_id",
     )
     .eq("id", regionId)
     .eq("owner_user_id", auth.user.id)
@@ -153,28 +137,14 @@ async function loadOwnedParent(
   if (String(row.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) {
     return { ok: false, response: jsonError(404, "Region not found") };
   }
-  const requested = parseDashboardKnowledgeRegionKind(
-    new URL(req.url).searchParams.get("kind"),
-  );
-  const kind =
-    requested ||
-    parseProductFlowKind(row.product) ||
-    "verification";
-  const seedFlowId =
-    kind === "calibration"
-      ? String(row.calibrate_flow_id || "").trim()
-      : kind === "solve"
-        ? String(row.solve_flow_id || "").trim()
-        : String(row.verify_flow_id || "").trim();
+  const seedFlowId = String(row.verify_flow_id || "").trim();
   const { data: siblings } = await auth.supabase
     .from("knowledge_regions")
-    .select("name, description, embedding_model_id, product")
-    .eq("owner_user_id", auth.user.id)
-    .eq("product", kind);
+    .select("name, description, embedding_model_id")
+    .eq("owner_user_id", auth.user.id);
   return {
     ok: true,
     userId: auth.user.id,
-    kind,
     name: String(row.name || "").trim(),
     seedFlowId,
     clusters: siblings || [],
@@ -190,12 +160,11 @@ export async function POST(
     const loaded = await loadOwnedParent(req, id);
     if (!loaded.ok) return loaded.response;
     const body = (await req.json()) as Record<string, unknown>;
-    const kind = parseProductFlowKind(body.kind) || loaded.kind;
     let embeddings: Awaited<ReturnType<typeof listFlowEmbeddingsForOwner>> = [];
     try {
       embeddings = await listFlowEmbeddingsForOwner({
         ownerUserId: loaded.userId,
-        flowKind: productFlowEmbeddingKind(kind),
+        flowKind: productFlowEmbeddingKind(),
       });
     } catch {
       embeddings = [];
@@ -218,7 +187,6 @@ export async function POST(
       ? body.flowIds.map((flowId) => String(flowId || "").trim()).filter(Boolean)
       : [];
     const flows = await flowsForRegion({
-      kind,
       ownerUserId: loaded.userId,
       seedFlowId: loaded.seedFlowId,
       parentName: loaded.name,
@@ -232,7 +200,7 @@ export async function POST(
           ownerUserId: loaded.userId,
           family: "exploration",
           name: loaded.name,
-          kind,
+          kind: "verification",
           flows: aiUseCatalogIds.length ? flows.slice(0, 1) : flows,
           strategies,
           samplesPerStrategy: clampSamplesPerStrategy(body.samplesPerStrategy),
@@ -251,7 +219,7 @@ export async function POST(
         ownerUserId: loaded.userId,
         family: "ai_use",
         name: loaded.name,
-        kind,
+        kind: "verification",
         flows: flows.slice(0, 1),
         catalogIds: aiUseCatalogIds,
         samplesPerAiUse,
@@ -266,7 +234,7 @@ export async function POST(
       ownerUserId: loaded.userId,
       regionId: id,
       name: loaded.name,
-      kind,
+      kind: "verification",
       flows,
       strategies,
       samplesPerStrategy: clampSamplesPerStrategy(body.samplesPerStrategy),

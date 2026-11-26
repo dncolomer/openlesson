@@ -1,5 +1,5 @@
 import { KnowledgeRegionCreate } from "@/components/product-flow/knowledge-region-create";
 
-export default function NewRegionPage() {
+export default function NewKnowledgeRegionPage() {
   return <KnowledgeRegionCreate />;
 }

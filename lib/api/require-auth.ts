@@ -5,7 +5,6 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
 import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/learn-link-auth";
-import { resolveSolveSessionAccess } from "@/lib/solve-session-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import {
@@ -382,39 +381,6 @@ export async function guardSessionRoute(
       persistUserId: ids.persistUserId,
       supabase: ile.supabase,
       guestUserId: principal.guestUserId ?? null,
-    };
-  }
-
-  if (solveToken) {
-    if (!sessionId) {
-      return {
-        ok: false,
-        response: jsonError(400, "sessionId is required"),
-      };
-    }
-    const solve = await resolveSolveSessionAccess(solveToken, sessionId);
-    if ("error" in solve) {
-      return {
-        ok: false,
-        response: jsonError(solve.status, solve.error),
-      };
-    }
-    const principal = solveGuestPrincipal({
-      sessionId,
-      identity: solve.identity,
-      ownerUserId: solve.ownerUserId,
-    });
-    const ids = persistIds(principal);
-    if ("error" in ids) {
-      return { ok: false, response: jsonError(500, "Workspace owner is missing") };
-    }
-    await bindOrgBackendsForUserId(ids.persistUserId);
-    return {
-      ok: true,
-      principal,
-      subjectId: ids.subjectId,
-      persistUserId: ids.persistUserId,
-      supabase: solve.supabase,
     };
   }
 

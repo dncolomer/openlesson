@@ -43,10 +43,11 @@ describe("free tier dashboard and paths", () => {
     expect(groups.some((group) => (group.id as string) === "calibration")).toBe(false);
     expect(clampDashboardTabForAccess("learning" as never, false)).toBe("home");
     expect(clampDashboardTabForAccess("shop" as never, false)).toBe("home");
-    expect(clampDashboardTabForAccess("flows", false)).toBe("flows");
+    expect(clampDashboardTabForAccess("flows" as never, false)).toBe("home");
+    expect(clampDashboardTabForAccess("protocols", false)).toBe("protocols");
     expect(clampDashboardTabForAccess("home", false)).toBe("home");
-    expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify", "calibrate"]);
-    expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify", "calibrate"]);
+    expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify"]);
+    expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify"]);
   });
 
   it("allows dashboard, map create, sessions, and product prefixes", () => {
@@ -55,14 +56,13 @@ describe("free tier dashboard and paths", () => {
     expect(isFreeTierAllowedPath("/session")).toBe(true);
     expect(isFreeTierAllowedPath("/play")).toBe(true);
     expect(isFreeTierAllowedPath("/play/verify")).toBe(true);
-    expect(isFreeTierAllowedPath("/play/calibrate")).toBe(true);
+    expect(isFreeTierAllowedPath("/protocols")).toBe(true);
     expect(isFreeTierAllowedPath("/workspace/abc")).toBe(false);
     expect(isFreeTierAllowedPath("/results")).toBe(false);
     expect(isFreeTierAllowedPath("/workspace/new")).toBe(false);
     expect(isFreeTierAllowedPath("/verification")).toBe(true);
-    expect(isFreeTierAllowedPath("/verification/flows/new")).toBe(true);
-    expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(true);
-    expect(isFreeTierAllowedPath("/flows/new")).toBe(true);
+    expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(false);
+    expect(isFreeTierAllowedPath("/flows/new")).toBe(false);
     expect(isFreeTierAllowedPath("/regions/new")).toBe(true);
     expect(isPaidOnlyWorkspaceKind("knowledge_region")).toBe(false);
     expect(isPaidOnlyWorkspaceKind("calibration")).toBe(false);

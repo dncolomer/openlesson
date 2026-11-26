@@ -334,7 +334,7 @@ export function SkillVerificationLanding() {
           </h2>
           <p className="mt-5 max-w-4xl">
             The same stack that powers Self-Service Skill Check and Self-Service Take-Home scales human
-            verification from recruitment campaigns to agency delivery. Hosted Calibrate, Learn, and Verify
+            verification from recruitment campaigns to agency delivery. Hosted knowledge verification protocols
             sessions and multi-block Learn journeys give you process signal traditional tests and polished
             portfolio uploads cannot fake.
           </p>

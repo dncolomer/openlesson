@@ -222,20 +222,12 @@ export function sourceLinkFromMetadata(
   return null;
 }
 
-/** Advertised guest session path for Calibrate, Learn, and Verify. */
+/** Advertised guest session path. Calibrate product URLs are gone; TAP scout runs as Verify. */
 export function flowSessionPath(
   kind: GuestLinkKind,
-  interactionKind?: string | null,
-): "/calibrate/session" | "/verify/session" | "/learn/session" {
+  _interactionKind?: string | null,
+): "/verify/session" | "/learn/session" {
   if (kind === "ile" || kind === "learn") return "/learn/session";
-  if (
-    kind === "calibrate" ||
-    interactionKind === "scout" ||
-    interactionKind === "calibrate" ||
-    interactionKind === "scouting"
-  ) {
-    return "/calibrate/session";
-  }
   return "/verify/session";
 }
 

@@ -92,7 +92,7 @@ describe("shareable TAP Learning guest PoW wiring", () => {
     expect(middlewareSource).toContain('"/ile/session"');
     expect(middlewareSource).toContain('"/tap/session"');
     expect(middlewareSource).toContain('"/learn/session/"');
-    expect(middlewareSource).toContain('"/calibrate/session"');
+    expect(middlewareSource).not.toContain('"/calibrate/session"');
     expect(middlewareSource).toContain('"/verify/session"');
   });
 });

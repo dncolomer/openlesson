@@ -1,10 +1,10 @@
 /**
  * Knowledge-region simulation: exploration-strategy catalog, even sample
- * spread across Verification, Calibration, or Solve flows, problem coverage,
+ * spread across knowledge verification protocols, problem coverage,
  * and deterministic agent walks on a seeded hidden-state tree.
  *
- * One sample is one agent on one problem from one selected flow, with one
- * strategy as its instructions, producing a proof-of-work trace.
+ * One sample is one agent on one Protocol Challenge from one selected protocol,
+ * with one strategy as its instructions, producing a proof-of-work trace.
  */
 
 import {
@@ -31,7 +31,7 @@ export const DASHBOARD_REGION_SIMULATION_JOBS_PATH = "/api/dashboard/region-simu
 
 export const REGION_SIMULATION_WIZARD_STEPS = [
   "name",
-  "flows",
+  "protocols",
   "explore",
   "ai-use",
   "run",
@@ -40,9 +40,14 @@ export type RegionSimulationWizardStep = (typeof REGION_SIMULATION_WIZARD_STEPS)
 
 export type RegionSimulationWizardDraft = {
   name: string;
-  flowIds: readonly string[];
+  protocolIds: readonly string[];
   strategyIds: readonly string[];
 };
+
+export function protocolIdsFromRequestBody(body: Record<string, unknown> | null | undefined): string[] {
+  const raw = Array.isArray(body?.protocolIds) ? body.protocolIds : [];
+  return raw.map((id) => String(id || "").trim()).filter(Boolean);
+}
 
 export function parseRegionSimulationWizardStep(value: unknown): RegionSimulationWizardStep {
   return REGION_SIMULATION_WIZARD_STEPS.includes(value as RegionSimulationWizardStep)
@@ -70,10 +75,10 @@ export function regionSimulationWizardCanAdvance(
 ): boolean {
   const name = String(draft.name || "").trim();
   if (step === "name") return Boolean(name);
-  if (step === "flows") return draft.flowIds.length > 0;
+  if (step === "protocols") return draft.protocolIds.length > 0;
   if (step === "explore") return draft.strategyIds.length > 0;
   if (step === "ai-use") return true;
-  return Boolean(name) && draft.flowIds.length > 0 && draft.strategyIds.length > 0;
+  return Boolean(name) && draft.protocolIds.length > 0 && draft.strategyIds.length > 0;
 }
 
 export const EXPLORATION_STRATEGY_IDS = [
@@ -337,18 +342,23 @@ export function regionSimulationFlowIds(input: {
   return seed ? [seed] : [];
 }
 
-export function matchSimulationFlows<T extends { id: string; name: string; topic?: string | null }>(
-  flows: readonly T[],
+export function matchSimulationProtocols<T extends {
+  id: string;
+  name: string;
+  challenge?: string | null;
+  topic?: string | null;
+}>(
+  protocols: readonly T[],
   query: string,
   limit = REGION_SIMULATION_FLOW_MATCH_LIMIT,
 ): T[] {
   const q = query.trim().toLowerCase();
   const matched = q
-    ? flows.filter((flow) => {
-        const hay = `${flow.name} ${flow.topic ?? ""} ${flow.id}`.toLowerCase();
+    ? protocols.filter((protocol) => {
+        const hay = `${protocol.name} ${protocol.challenge ?? protocol.topic ?? ""} ${protocol.id}`.toLowerCase();
         return hay.includes(q);
       })
-    : [...flows];
+    : [...protocols];
   const cap = Math.max(0, Math.floor(Number(limit) || 0));
   return matched.slice(0, cap);
 }

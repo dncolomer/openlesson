@@ -1,5 +1,5 @@
 /**
- * Live product language names Calibrate, Learn, and Verify.
+ * Live product language names knowledge verification protocols.
  * TAP, TAP Learning, and the retired environment acronym are not product
  * names on live surfaces. Identifiers, billing fields, and stored proof
  * action ids stay. Science Think Aloud Protocol copy is out of scope here.
@@ -62,7 +62,6 @@ const LIVE_SURFACES = [
   "components/tap-score/use-tap-score-flow.ts",
   "components/SessionItem.tsx",
   "components/workspace-view/use-workspace-learner.ts",
-  "components/InsightsDashboardTab.tsx",
   "components/CustomVerificationModelsPanel.tsx",
 ];
 
@@ -109,13 +108,11 @@ describe("retired product language is gone from shipped prose", () => {
     expect(hits).toEqual([]);
   });
 
-  it("former product slots name Calibrate, Learn, and Verify", () => {
+  it("former product slots name knowledge verification protocols", () => {
     const tapWord = /\bTAP\b/;
     for (const rel of FORMER_PRODUCT_SLOTS) {
       const text = stripComments(read(rel));
-      expect(text, rel).toContain("Calibrate");
-      expect(text, rel).toContain("Learn");
-      expect(text, rel).toContain("Verify");
+      expect(text.toLowerCase(), rel).toMatch(/protocol/);
       expect(text, rel).not.toMatch(tapWord);
       expect(text, rel).not.toContain("TAP Learning");
     }
@@ -155,8 +152,7 @@ describe("retired product language is gone from shipped prose", () => {
     }
   });
 
-  it("lineup copy is Calibrate, Learn, and Verify", () => {
-    const lineup = "Calibrate, Learn, and Verify";
+  it("lineup copy is knowledge verification protocols", () => {
     const tapWord = /\bTAP\b/;
     const lineupFiles = [
       "app/layout.tsx",
@@ -183,7 +179,7 @@ describe("retired product language is gone from shipped prose", () => {
     ];
     for (const rel of lineupFiles) {
       const text = stripComments(read(rel));
-      expect(text, rel).toContain(lineup);
+      expect(text.toLowerCase(), rel).toMatch(/protocol/);
       expect(text, rel).not.toContain("TAP Learning");
       expect(text, rel).not.toMatch(tapWord);
     }
@@ -231,8 +227,8 @@ describe("retired product language is gone from shipped prose", () => {
     }
   });
 
-  it("locale product rows name Calibrate, Learn, and Verify", () => {
-    const lineup = "Calibrate, Learn, and Verify";
+  it("locale product rows name knowledge verification protocols", () => {
+    const lineup = "knowledge verification protocols";
     for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
       const data = JSON.parse(read(`messages/${code}.json`)) as {
         planView: Record<string, string>;
@@ -241,7 +237,7 @@ describe("retired product language is gone from shipped prose", () => {
       const plan = data.planView;
       expect(plan.productIle, code).toBe("Learn");
       expect(plan.productIleHint, code).toBe(lineup);
-      expect(plan.guestLinksFilterKindTap, code).toBe("Calibrate and Verify");
+      expect(plan.guestLinksFilterKindTap, code).toBe("Protocols");
       expect(plan.guestLinksFilterKindIle, code).toBe("Learn");
       expect(plan.productIle, code).not.toContain("TAP");
       expect(data.welcome.panelIntro.startsWith("Welcome to Learn.")).toBe(true);
@@ -255,7 +251,7 @@ describe("retired product language is gone from shipped prose", () => {
         tap: { welcome: { play: string; callToAction: string; panelIntro: string } };
         scout: { thankYou: { drill: string } };
       };
-      expect(data.dashboard.emptyWorkspacesBody, code).toContain("Calibrate, Learn, or Verify");
+      expect(data.dashboard.emptyWorkspacesBody, code).toContain("knowledge verification protocols");
       expect(data.dashboard.emptyWorkspacesBody, code).not.toContain("Drill");
       expect(data.tap.welcome.play, code).toBe("Start");
       expect(data.tap.welcome.callToAction, code).not.toMatch(/\bPlay\b/);

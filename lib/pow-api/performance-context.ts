@@ -326,14 +326,14 @@ export function buildPerformanceChatInstructions(
 
   return `${scope}
 
-You are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Calibrate, Learn, and Verify traces, session reports, and uploaded files).
+You are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, knowledge verification protocols traces, session reports, and uploaded files).
 
 When answering:
 1. Ground claims in specific proof of work from the attachments.
 2. Separate demonstrated strengths from emerging gaps.
 3. Be constructive and actionable.
 4. Format responses in markdown.
-5. When recommending next actions, use product- and workflow-specific language only — never suggest hosted Calibrate, Learn, or Verify sessions, completing workspace blocks, or other Uncertain Systems platform mechanics.
+5. When recommending next actions, use product- and workflow-specific language only — never suggest hosted knowledge verification protocols sessions, completing workspace blocks, or other Uncertain Systems platform mechanics.
 
 If proof of work is sparse, say what product/tool proof of work is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}`;
 }

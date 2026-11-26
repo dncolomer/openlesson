@@ -6,9 +6,9 @@ import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { translateWithLocale } from "@/lib/i18n";
 import { ileWorkspaceStartAllowed } from "@/lib/practice-voice-challenge";
 import {
-  clampIleMinInsightsPerChapter,
-  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
-} from "@/lib/learn-turn-insights";
+  clampIleSessionInsightGoal,
+  ILE_SESSION_INSIGHT_GOAL_DEFAULT,
+} from "@/lib/learn-canvas-session";
 
 type OnboardingVariant = "ile" | "tap" | "scout";
 
@@ -166,14 +166,14 @@ export function SessionOnboardingGuide({
   omitIntroSlide = false,
   stepImages,
   step1VideoSrc = STEP1_ILE_GRID_PAN_VIDEO,
-  insightGoalCount = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  insightGoalCount = ILE_SESSION_INSIGHT_GOAL_DEFAULT,
   className = "",
   audioEnforced = true,
 }: SessionOnboardingGuideProps) {
   const [step, setStep] = useState(0);
   const lang = language ?? "en";
   const prefix = `onboardingGuide.${variant}`;
-  const insightCount = clampIleMinInsightsPerChapter(insightGoalCount);
+  const insightCount = clampIleSessionInsightGoal(insightGoalCount);
 
   if (variant === "ile" && showStartAction && !renderStep3Action) {
     if (audioEnforced === false) {

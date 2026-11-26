@@ -5,7 +5,6 @@ import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   dashboardKnowledgeRegionCreateHref,
   dashboardKnowledgeRegionHref,
-  parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
 import {
@@ -17,14 +16,13 @@ import {
 } from "@/lib/product-flow";
 
 describe("dashboard knowledge regions", () => {
-  it("lists verification and calibration regions by owner_user_id", () => {
+  it("lists owner regions as Protocols and skips path-text embeddings", () => {
     const regions = presentDashboardKnowledgeRegions(
       [
         {
           id: "r-learn",
           name: "Skip",
           owner_user_id: "me",
-          product: null,
           subject_count: 2,
           created_at: "2026-01-01",
         },
@@ -32,7 +30,6 @@ describe("dashboard knowledge regions", () => {
           id: "r-v",
           name: "Limits",
           owner_user_id: "me",
-          product: "verification",
           subject_count: 4,
           created_at: "2026-05-02",
         },
@@ -40,7 +37,6 @@ describe("dashboard knowledge regions", () => {
           id: "r-voice",
           name: "Limits · Path + Text",
           owner_user_id: "me",
-          product: "verification",
           subject_count: 4,
           created_at: "2026-05-03",
           embedding_model_id: "flowcfg-pathtext-v1-d96",
@@ -49,7 +45,6 @@ describe("dashboard knowledge regions", () => {
           id: "r-c",
           name: "Priors",
           owner_user_id: "me",
-          product: "calibration",
           description: "thin",
           subject_count: 1,
           created_at: "2026-05-01",
@@ -58,94 +53,42 @@ describe("dashboard knowledge regions", () => {
           id: "other",
           name: "Gone",
           owner_user_id: "them",
-          product: "verification",
           subject_count: 1,
         },
       ],
-      "verification",
       "me",
     );
-    expect(regions).toEqual([
-      {
-        id: "r-v",
-        kind: "verification",
-        name: "Limits",
-        description: null,
-        workspaceId: "",
-        workspaceTitle: "Verification flows",
-        subjectCount: 4,
-        createdAt: "2026-05-02",
-      },
-    ]);
-    const calibrate = presentDashboardKnowledgeRegions(
-      [
-        {
-          id: "r-c",
-          name: "Priors",
-          owner_user_id: "me",
-          product: "calibration",
-          description: "thin",
-          subject_count: 1,
-          created_at: "2026-05-01",
-        },
-      ],
-      "calibration",
-      "me",
-    );
-    expect(calibrate[0]?.workspaceTitle).toBe("Calibration flows");
-    expect(calibrate[0]?.description).toBe("thin");
-    expect(parseDashboardKnowledgeRegionKind("verification")).toBe("verification");
-    expect(parseDashboardKnowledgeRegionKind("solve")).toBe("solve");
-    expect(parseDashboardKnowledgeRegionKind("learning")).toBeNull();
-    const solveRegions = presentDashboardKnowledgeRegions(
+    expect(regions.map((row) => row.id)).toEqual(["r-v", "r-c", "r-learn"]);
+    expect(regions[0]).toMatchObject({
+      id: "r-v",
+      name: "Limits",
+      description: null,
+      workspaceId: "",
+      workspaceTitle: "Protocols",
+      subjectCount: 4,
+      createdAt: "2026-05-02",
+    });
+    expect(regions[0]).not.toHaveProperty("kind");
+    expect(regions[1]?.workspaceTitle).toBe("Protocols");
+    expect(regions[1]?.description).toBe("thin");
+    const leftoverSolve = presentDashboardKnowledgeRegions(
       [
         {
           id: "r-s",
           name: "Limits cohort",
           owner_user_id: "me",
-          product: "solve",
           subject_count: 3,
           created_at: "2026-06-01",
         },
-        {
-          id: "r-v",
-          name: "Limits",
-          owner_user_id: "me",
-          product: "verification",
-          subject_count: 4,
-          created_at: "2026-05-02",
-        },
       ],
-      "solve",
       "me",
     );
-    expect(solveRegions).toEqual([
-      {
-        id: "r-s",
-        kind: "solve",
-        name: "Limits cohort",
-        description: null,
-        workspaceId: "",
-        workspaceTitle: "Solve flows",
-        subjectCount: 3,
-        createdAt: "2026-06-01",
-      },
-    ]);
-    expect(dashboardKnowledgeRegionHref("solve", "r-s")).toBe(
-      productRegionPagePath("solve", "r-s"),
-    );
-    expect(dashboardKnowledgeRegionHref("verification", "r-1")).toBe(
-      "/verification/regions/r-1",
-    );
-    expect(dashboardKnowledgeRegionHref("calibration", "r-c")).toBe(
-      productRegionPagePath("calibration", "r-c"),
-    );
-    expect(productRegionPagePath("calibration", "r-c")).toBe("/calibration/regions/r-c");
-    expect(productRegionEditPath("verification", "r-1")).toBe("/verification/regions/r-1/edit");
-    expect(productRegionEditPath("solve", "r-s")).toBe("/solve/regions/r-s/edit");
-    expect(dashboardKnowledgeRegionCreateHref("verification")).toBe(
-      productRegionNewPath("verification"),
-    );
+    expect(leftoverSolve[0]?.workspaceTitle).toBe("Protocols");
+    expect(dashboardKnowledgeRegionHref("r-s")).toBe(productRegionPagePath("r-s"));
+    expect(dashboardKnowledgeRegionHref("r-1")).toBe("/regions/r-1");
+    expect(productRegionPagePath("r-c")).toBe("/regions/r-c");
+    expect(productRegionEditPath("r-1")).toBe("/regions/r-1/edit");
+    expect(dashboardKnowledgeRegionCreateHref()).toBe(productRegionNewPath());
     expect(knowledgeRegionCreateOffersFlowSelect(0)).toEqual({
       canSelectExistingFlow: false,
       needsCreateFlowFirst: true,
@@ -191,15 +134,10 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("components/knowledge-panel/models-view.tsx")).toContain(
       "Overlay regions on the right.",
     );
-    expect(readRepo("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
-    expect(readRepo("app/solve/regions/new/page.tsx")).toContain('kind="solve"');
-    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
-    expect(readRepo("app/calibration/regions/[id]/page.tsx")).not.toContain("redirect");
-    expect(readRepo("app/verification/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
-    expect(readRepo("app/verification/regions/[id]/page.tsx")).not.toContain("redirect");
-    expect(readRepo("app/solve/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
+    expect(readRepo("app/regions/new/page.tsx")).toContain("KnowledgeRegionCreate");
+    expect(readRepo("app/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
-      "dashboardKnowledgeRegionHref(region.kind, region.id)",
+      "dashboardKnowledgeRegionHref(region.id)",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
       "data-dashboard-type-filter",
@@ -235,9 +173,7 @@ describe("dashboard knowledge regions", () => {
     expect(
       existsSync(join(__dirname, "../../components/product-flow/knowledge-region-page.tsx")),
     ).toBe(true);
-    expect(readRepo("app/verification/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
-    expect(readRepo("app/calibration/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
-    expect(readRepo("app/solve/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
+    expect(readRepo("app/regions/[id]/edit/page.tsx")).toContain('mode="edit"');
     expect(readRepo("app/api/dashboard/knowledge-regions/[id]/route.ts")).toContain(
       "trashRegionSimulation",
     );
@@ -310,6 +246,6 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("app/api/dashboard/knowledge-regions/[id]/route.ts")).toContain(
       "presentKnowledgeRegionDetails",
     );
-    expect(productFlowNewPath("verification")).toBe("/verification/flows/new");
+    expect(productFlowNewPath()).toBe("/protocols/new");
   });
 });

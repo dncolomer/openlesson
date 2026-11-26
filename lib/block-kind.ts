@@ -1,45 +1,31 @@
 /**
- * Learning Map tiles: Solve, Verification, Calibration, and Content.
- * A map is an assembly of those pieces (flows + content). Legacy Learn
- * tiles (missing `map_block`) still parse and launch Learn; authoring
- * never creates them.
+ * Learning Map tiles: Protocol / Verification and Content.
+ * Leftover learn / solve / calibration tiles launch verification when they
+ * have a token, otherwise they become content with no session.
  */
 
-import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { productFlowPagePath } from "@/lib/product-flow";
-import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 
-export const MAP_BLOCK_KINDS = [
-  "learn",
-  "calibration",
-  "verification",
-  "solve",
-  "content",
-] as const;
+export const MAP_BLOCK_KINDS = ["protocol", "verification", "content"] as const;
 
 export type MapBlockKind = (typeof MAP_BLOCK_KINDS)[number];
 
-/** Kinds Helios and Manual may place. Learn is legacy stored data only. */
-export const AUTHORING_MAP_BLOCK_KINDS = [
-  "solve",
-  "verification",
-  "calibration",
-  "content",
-] as const;
+/** Kinds Helios and Manual may place. */
+export const AUTHORING_MAP_BLOCK_KINDS = ["verification", "content"] as const;
 
 export type AuthoringMapBlockKind = (typeof AUTHORING_MAP_BLOCK_KINDS)[number];
 
 export const MAP_BLOCK_COLUMN = "map_block";
 
 export const MAP_BLOCK_STORE_UNAVAILABLE =
-  "This map cannot store calibration, verification, solve, or content blocks yet.";
+  "This map cannot store protocol, verification, or content blocks yet.";
 
-/** Stored null / missing `map_block` is a legacy Learn tile. */
-export const DEFAULT_MAP_BLOCK_KIND: MapBlockKind = "learn";
+/** Missing `map_block` is leftover content (no session). */
+export const DEFAULT_MAP_BLOCK_KIND: MapBlockKind = "content";
 
-/** New tiles default to a Solve flow (the former implicit Learn session). */
-export const DEFAULT_AUTHORING_MAP_BLOCK_KIND: AuthoringMapBlockKind = "solve";
+/** New tiles default to a verification protocol. */
+export const DEFAULT_AUTHORING_MAP_BLOCK_KIND: AuthoringMapBlockKind = "verification";
 
 export type MapBlockAttachmentType = "file" | "link";
 
@@ -59,31 +45,32 @@ export type MapBlock = {
   attachments: MapBlockAttachment[];
 };
 
-export type MapBlockLaunchAction = "learn" | "calibrate" | "verify" | "solve" | "none";
+export type MapBlockLaunchAction = "verify" | "none";
 
 export type MapBlockLaunch =
-  | { action: "learn" }
-  | { action: "calibrate"; flowId: string; href: string }
   | { action: "verify"; flowId: string; href: string }
-  | { action: "solve"; flowId: string; href: string }
   | { action: "none" };
 
 const KIND_ALIASES: Record<string, MapBlockKind> = {
-  learn: "learn",
-  learning: "learn",
-  default: "learn",
-  calibration: "calibration",
-  calibrate: "calibration",
-  scout: "calibration",
+  protocol: "verification",
   verification: "verification",
   verify: "verification",
-  solve: "solve",
   content: "content",
   file: "content",
   files: "content",
   attachment: "content",
   attachments: "content",
 };
+
+const LEFTOVER_FLOW_KINDS = new Set([
+  "learn",
+  "learning",
+  "default",
+  "calibration",
+  "calibrate",
+  "scout",
+  "solve",
+]);
 
 export function isMapBlockKind(value: unknown): value is MapBlockKind {
   return (
@@ -108,28 +95,30 @@ export function isAuthoringMapBlockKind(
   );
 }
 
-/** New placement: unknown / Learn become Solve. */
+/** New placement: leftover learn / solve / calibration become verification. */
 export function parseAuthoringMapBlockKind(value: unknown): AuthoringMapBlockKind {
   const raw = String(value ?? "")
     .trim()
     .toLowerCase();
   if (!raw) return DEFAULT_AUTHORING_MAP_BLOCK_KIND;
-  const kind = KIND_ALIASES[raw] ?? DEFAULT_AUTHORING_MAP_BLOCK_KIND;
-  if (kind === "learn") return DEFAULT_AUTHORING_MAP_BLOCK_KIND;
-  return kind;
+  if (raw === "content" || raw === "file" || raw === "files") return "content";
+  return DEFAULT_AUTHORING_MAP_BLOCK_KIND;
 }
 
-/** Turn a stored/Helios payload into a placeable authoring tile (never Learn). */
+/** Turn a stored/Helios payload into a placeable authoring tile. */
 export function coerceAuthoringMapBlock(raw?: unknown): MapBlock {
   const n = normalizeMapBlock(raw);
-  if (n.kind !== "learn") return n;
-  return {
-    kind: DEFAULT_AUTHORING_MAP_BLOCK_KIND,
-    flowId: n.flowId,
-    flowPublicToken: n.flowPublicToken,
-    flowHref: n.flowHref,
-    attachments: [],
-  };
+  if (n.kind === "content") return n;
+  if (n.flowId || n.flowPublicToken) {
+    return {
+      kind: "verification",
+      flowId: n.flowId,
+      flowPublicToken: n.flowPublicToken,
+      flowHref: n.flowHref || (n.flowPublicToken ? verificationFlowPublicPath(n.flowPublicToken) : n.flowHref),
+      attachments: [],
+    };
+  }
+  return emptyMapBlock("verification");
 }
 
 function cleanId(value: unknown): string | null {
@@ -226,21 +215,21 @@ function emptyMapBlock(kind: MapBlockKind = DEFAULT_MAP_BLOCK_KIND): MapBlock {
 }
 
 export function defaultMapBlock(): MapBlock {
-  return emptyMapBlock("learn");
+  return emptyMapBlock("content");
 }
 
-export function isLearnMapBlock(block: MapBlock | null | undefined): boolean {
-  return !block || block.kind === "learn";
+export function isLearnMapBlock(_block: MapBlock | null | undefined): boolean {
+  return false;
 }
 
 export function isTypedMapBlock(block: MapBlock | null | undefined): boolean {
-  return Boolean(block && block.kind !== "learn");
+  return Boolean(block);
 }
 
 export function isFlowMapBlockKind(
   kind: MapBlockKind,
-): kind is "calibration" | "verification" | "solve" {
-  return kind === "calibration" || kind === "verification" || kind === "solve";
+): kind is "protocol" | "verification" {
+  return kind === "protocol" || kind === "verification";
 }
 
 function recordFromUnknown(raw: unknown): Record<string, unknown> | null {
@@ -262,9 +251,11 @@ export function normalizeMapBlock(raw?: unknown): MapBlock {
   }
   const rec = recordFromUnknown(raw);
   if (!rec) return defaultMapBlock();
-  const kind = parseMapBlockKind(
-    rec.kind ?? rec.blockKind ?? rec.block_kind ?? rec.type,
-  );
+  const rawKind = String(rec.kind ?? rec.blockKind ?? rec.block_kind ?? rec.type ?? "")
+    .trim()
+    .toLowerCase();
+  const leftover = LEFTOVER_FLOW_KINDS.has(rawKind);
+  const kind = leftover ? "verification" : parseMapBlockKind(rawKind);
   const flowId = cleanId(
     rec.flowId ??
       rec.flow_id ??
@@ -278,22 +269,32 @@ export function normalizeMapBlock(raw?: unknown): MapBlock {
   const flowPublicToken =
     cleanId(rec.flowPublicToken ?? rec.flow_public_token ?? rec.token ?? rec.publicToken) ||
     flowTokenFromPublicPath(rec.flowHref ?? rec.flow_href ?? rec.publicPath ?? rec.public_path);
+  const storedHref = cleanUrl(rec.flowHref ?? rec.flow_href ?? rec.publicPath ?? rec.public_path);
   const flowHref =
-    cleanUrl(rec.flowHref ?? rec.flow_href ?? rec.publicPath ?? rec.public_path) ||
-    (flowPublicToken
-      ? kind === "calibration"
-        ? calibrationFlowPublicPath(flowPublicToken)
-        : kind === "verification"
-          ? verificationFlowPublicPath(flowPublicToken)
-          : kind === "solve"
-            ? solveFlowPublicPath(flowPublicToken)
-            : null
-      : null);
+    storedHref ||
+    (flowPublicToken ? verificationFlowPublicPath(flowPublicToken) : null);
   const attachments = parseMapBlockAttachments(rec);
-  if (kind === "learn") return defaultMapBlock();
+  if (isFlowMapBlockKind(kind) && (flowId || flowPublicToken)) {
+    return {
+      kind: "verification",
+      flowId,
+      flowPublicToken,
+      flowHref,
+      attachments: [],
+    };
+  }
+  if (leftover && !flowId && !flowPublicToken) {
+    return {
+      kind: "content",
+      flowId: null,
+      flowPublicToken: null,
+      flowHref: null,
+      attachments,
+    };
+  }
   if (isFlowMapBlockKind(kind)) {
     return {
-      kind,
+      kind: "verification",
       flowId,
       flowPublicToken,
       flowHref,
@@ -313,7 +314,7 @@ export function parseMapBlock(raw: unknown): MapBlock {
   return normalizeMapBlock(raw);
 }
 
-/** Helios add_block args → MapBlock. Omitted or Learn kind becomes Solve. */
+/** Helios add_block args → MapBlock. Default kind is verification (a Protocol). */
 export function mapBlockFromHeliosArgs(args: Record<string, unknown>): MapBlock {
   const hasKind = args.kind != null || args.blockKind != null;
   const kind = hasKind
@@ -324,7 +325,6 @@ export function mapBlockFromHeliosArgs(args: Record<string, unknown>): MapBlock 
 
 export function serializeMapBlock(block: MapBlock): Record<string, unknown> | null {
   const n = normalizeMapBlock(block);
-  if (n.kind === "learn") return null;
   if (isFlowMapBlockKind(n.kind)) {
     return {
       kind: n.kind,
@@ -388,17 +388,15 @@ export function mapBlockPlaceError(block: MapBlock): string | null {
   return null;
 }
 
-/** New tiles cannot be Learn; flow tiles still need a flow id. */
+/** Flow tiles still need a flow id. */
 export function mapBlockAuthoringPlaceError(block: MapBlock): string | null {
-  if (block.kind === "learn") return "learn_block_retired";
   return mapBlockPlaceError(block);
 }
 
 /**
  * Kind (and content attachments) for a newly generated neighbor.
  * Flow tiles never copy the source flowId — each new tile mints its own
- * Solve / Verification / Calibration flow via `ensureAuthoringMapBlock`.
- * Content copies attachments. Legacy Learn becomes Solve.
+ * protocol via `ensureAuthoringMapBlock`. Content copies attachments.
  */
 export function authoringMapBlockKindTemplate(raw?: unknown): MapBlock {
   const block = coerceAuthoringMapBlock(raw);
@@ -414,118 +412,72 @@ export function authoringMapBlockForReuse(raw: unknown): MapBlock {
   return authoringMapBlockKindTemplate(raw);
 }
 
-/** Unsys seed studio is for Solve and Verification (and leftover Learn). */
+/** Unsys seed studio is for protocol / verification tiles. */
 export function mapBlockOffersUnsysModel(
   kind: string | null | undefined,
 ): boolean {
   const value = String(kind || "").trim();
-  return value === "learn" || value === "solve" || value === "verification";
+  return value === "protocol" || value === "verification";
 }
 
 export function mapBlockFlowHref(block: MapBlock): string | null {
   if (!isFlowMapBlockKind(block.kind) || !block.flowId) return null;
   if (block.flowHref) return block.flowHref;
-  if (block.flowPublicToken) {
-    if (block.kind === "calibration") return calibrationFlowPublicPath(block.flowPublicToken);
-    if (block.kind === "solve") return solveFlowPublicPath(block.flowPublicToken);
-    return verificationFlowPublicPath(block.flowPublicToken);
-  }
-  return productFlowPagePath(
-    block.kind === "calibration"
-      ? "calibration"
-      : block.kind === "solve"
-        ? "solve"
-        : "verification",
-    block.flowId,
-  );
+  if (block.flowPublicToken) return verificationFlowPublicPath(block.flowPublicToken);
+  return productFlowPagePath(block.flowId);
 }
 
 export function mapBlockLaunch(raw: unknown): MapBlockLaunch {
   const block = normalizeMapBlock(raw);
-  if (block.kind === "learn") return { action: "learn" };
   if (block.kind === "content") return { action: "none" };
-  if (!block.flowId) return { action: "none" };
-  const href = mapBlockFlowHref(block);
-  if (!href) return { action: "none" };
-  if (block.kind === "calibration") {
-    return { action: "calibrate", flowId: block.flowId, href };
-  }
-  if (block.kind === "solve") {
-    return { action: "solve", flowId: block.flowId, href };
-  }
+  if (!block.flowId && !block.flowPublicToken) return { action: "none" };
+  const href = mapBlockFlowHref(block) || (block.flowPublicToken
+    ? verificationFlowPublicPath(block.flowPublicToken)
+    : null);
+  if (!href || !block.flowId) return { action: "none" };
   return { action: "verify", flowId: block.flowId, href };
 }
 
-export function mapBlockAllowsLearn(raw: unknown): boolean {
-  return mapBlockLaunch(raw).action === "learn";
+export function mapBlockAllowsLearn(_raw: unknown): boolean {
+  return false;
 }
 
-export function mapBlockAllowsCalibrate(raw: unknown): boolean {
-  return mapBlockLaunch(raw).action === "calibrate";
+export function mapBlockAllowsCalibrate(_raw: unknown): boolean {
+  return false;
 }
 
 export function mapBlockAllowsVerify(raw: unknown): boolean {
   return mapBlockLaunch(raw).action === "verify";
 }
 
-export function mapBlockAllowsSolve(raw: unknown): boolean {
-  return mapBlockLaunch(raw).action === "solve";
+export function mapBlockAllowsSolve(_raw: unknown): boolean {
+  return false;
 }
 
 export function mapBlockHasSessionLaunch(raw: unknown): boolean {
-  const action = mapBlockLaunch(raw).action;
-  return (
-    action === "learn" ||
-    action === "calibrate" ||
-    action === "verify" ||
-    action === "solve"
-  );
+  return mapBlockLaunch(raw).action === "verify";
 }
 
 export function mapBlockKindLabel(kind: MapBlockKind): string {
-  if (kind === "calibration") return "Calibration";
-  if (kind === "verification") return "Verification";
-  if (kind === "solve") return "Solve";
   if (kind === "content") return "Content";
-  return "Learn";
+  return "Protocol";
 }
 
 export function formatOwnerFlowsForHeliosPrompt(input: {
-  calibration?: Array<{ id?: string; name?: string | null; goal?: string | null }>;
-  verification?: Array<{ id?: string; name?: string | null; topic?: string | null }>;
-  solve?: Array<{ id?: string; name?: string | null; topic?: string | null }>;
+  verification?: Array<{ id?: string; name?: string | null; topic?: string | null; challenge?: string | null }>;
+  protocol?: Array<{ id?: string; name?: string | null; topic?: string | null; challenge?: string | null }>;
 }): string {
-  const cal = (input.calibration || [])
+  const listed = [...(input.verification || []), ...(input.protocol || [])]
     .map((flow) => {
       const id = String(flow.id || "").trim();
       if (!id) return null;
-      const name = String(flow.name || flow.goal || id).trim();
-      return `- ${id} "${name}"`;
-    })
-    .filter(Boolean);
-  const ver = (input.verification || [])
-    .map((flow) => {
-      const id = String(flow.id || "").trim();
-      if (!id) return null;
-      const name = String(flow.name || flow.topic || id).trim();
-      return `- ${id} "${name}"`;
-    })
-    .filter(Boolean);
-  const sol = (input.solve || [])
-    .map((flow) => {
-      const id = String(flow.id || "").trim();
-      if (!id) return null;
-      const name = String(flow.name || flow.topic || id).trim();
+      const name = String(flow.name || flow.challenge || flow.topic || id).trim();
       return `- ${id} "${name}"`;
     })
     .filter(Boolean);
   return [
-    "OWNER FLOWS (prefer these existing ids, especially flows already on this map). A Learning Map is Solve, Verification, Calibration, and Content tiles — never a Learn session tile. You pick the kind per cell. Reuse a listed flow when it fits; to create a new flow that belongs to this map, omit flowId on add_block and pass flowName plus goal (calibration) or topic (verification or solve). Solve needs name + topic only. Do not invent a UUID.",
-    "Calibration flows (kind: calibration, argument flowId):",
-    cal.join("\n") || "(none)",
-    "Verification flows (kind: verification, argument flowId):",
-    ver.join("\n") || "(none)",
-    "Solve flows (kind: solve, argument flowId):",
-    sol.join("\n") || "(none)",
+    "OWNER PROTOCOLS (prefer these existing ids, especially protocols already on this map). A Learning Map is Protocol / Verification and Content tiles. Reuse a listed protocol when it fits; to create a new protocol that belongs to this map, omit flowId on add_block and pass flowName plus challenge. Do not invent a UUID.",
+    "Protocols (kind: verification, argument flowId):",
+    listed.join("\n") || "(none)",
   ].join("\n");
 }

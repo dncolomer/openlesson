@@ -1,16 +1,18 @@
 # Course authoring tools — inventory report
 
-**Product:** OpenLesson workspace (map-first course builder)  
+**Product:** Embeddable Knowledge Verification Protocols (dashboard `/protocols`) plus Learning Maps (workspaces)  
 **Scope:** Tools available to course **authors** (owners / builders) as implemented in source today  
 **Sources of truth:** `lib/workspace-sections.ts`, `lib/block-map-tools.ts`, `lib/workspace-right-pane.ts`, `components/BlockSkillGrid.tsx`, block/combine/add panes, Simulation + Context + Settings mounts  
 **Not covered:** Learner runtime (TAP, TAP Learning, Muse dialogue in-session), admin consoles, marketing surfaces — see [Exclusions](#exclusions)
+
+Protocols are authored on the dashboard (`POST /api/dashboard/protocols`, public `/v/{token}`). The Protocol Challenge is the brief. Knowledge Regions have no type. This report inventories Learning Map authoring only.
 
 ---
 
 ## 1. Top-level workspace sections
 
 Registry: `WORKSPACE_SECTION_KEYS` / `availableWorkspaceSections` in `lib/workspace-sections.ts`.  
-Nav labels (EN): Workspace · DAGs · Map Types · Unsys models · Goals · Context · Simulation · Knowledge · Data Studio · Settings.
+Live owner nav (EN): Workspace · DAGs · Map Types · Unsys models · Context · Settings. Owner `availableWorkspaceSections` does not list leftover keys below.
 
 | Section key | Who sees it | Purpose for authors |
 |---|---|---|
@@ -20,13 +22,11 @@ Nav labels (EN): Workspace · DAGs · Map Types · Unsys models · Goals · Cont
 | **`dags`** | Workspace owner only (Creator mode) | List/edit/delete multi-block **leads-to** DAGs created via map multi-select Apply — no create on this tab |
 | **`map_types`** | Workspace owner only (Creator / Build mode; hidden in Play and Explore) | Author custom chapter-map types and enable/disable built-ins; types are generator context, not 1:1 templates |
 | **`unsys_models`** | Workspace owner only | Unified list of saved block unsys-model seeds (`mountsUnsysModelsPanel`); edit opens the graph studio, delete drops a catalog or the whole seed |
-| **`goals`** | Owner / org admin only | Multi natural-language **workspace goals** CRUD (`mountsGoalsPanel`); block goals live on block-detail drawer |
-| **`verification_flows`** | Verification Workspace owners only (stored kind `knowledge_region`) | Create and manage verification flows (`mountsVerificationFlowsPanel`). Standard map workspaces do not list this section. |
-| **`calibration_flows`** | Verification Workspace owners only (stored kind `knowledge_region`) | Create and manage calibration flows (`mountsCalibrationFlowsPanel`). A calibration flow sorts a question pool on the canvas. It is not a verification run. Standard map workspaces do not list this section. |
-| **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`); LWM Snapshot goal selection (default / adhoc / custom) |
-| **`data_studio`** | Verification and Calibration owners / org admins | Visual embeddings navigator (`mountsDataStudioPanel`): 2D projections, flow/run filters, region overlay, inspect stored raw |
-| **`insights`** | Play (learner) mode only — not in Build/creator nav | Workspace-related Insights list (`mountsInsightsPanel`); generated from Work/PoW. Not a Knowledge subview. |
-| **`kpis`** | Signed-in viewers on a standard workspace (Play and Build, including non-owners). Hidden when logged out. Not on Knowledge Region. | That viewer's average time-to-insight for sessions on the workspace (`mountsKpisPanel`). |
+| **`goals`** | Not in live owner nav | Leftover registry key. Workspace goals CRUD is not a sold product surface. |
+| **`verification_flows`** | Not in live owner nav | Leftover registry key. Protocols live on the dashboard. `VerificationFlowsPanel` is deleted. |
+| **`knowledge`** | Owner / org admin only when mounted | Performance / knowledge analytics surface (`mountsPerformancePanel`) |
+| **`insights`** | Not in live owner nav | Leftover registry key. Insight-crafting and the Insights list are deleted. |
+| **`kpis`** | Not in live owner nav | Leftover registry key. Not a Protocols product surface. |
 | **`settings`** | Owner / org admin only | Identity (title/description — not goals), access, guest links, data studio, knowledge portal, integrations |
 
 **Note:** Privileged sections (`knowledge`, `settings`, `goals`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`. **DAGs** and **Map Types** are also hidden in Learner mode.
@@ -199,7 +199,7 @@ Also related: **Access** copy/chrome on workspace shell for sharing posture.
 
 | Surface | Purpose |
 |---|---|
-| **Performance / knowledge panel** | Author/owner view of performance reporting and knowledge-config style insights (`mountsPerformancePanel`) — analytics rather than map edit |
+| **Performance / knowledge panel** | Author/owner view of performance reporting (`mountsPerformancePanel`) — analytics rather than map edit |
 
 ---
 
@@ -245,11 +245,11 @@ Also related: **Access** copy/chrome on workspace shell for sharing posture.
 
 Not treated as **course map authoring** tools in this report (exist elsewhere in the product):
 
-- Learner TAP / TAPBench exercise runtime and stash flows  
-- TAP Learning (in-lesson experience) guest sessions and realtime POW  
+- Learner TAP / TAP Learning guest sessions and realtime POW  
 - Muse / Helios voice dialogue during a live session  
 - Global admin, billing, org invite flows (except Settings access flags)  
 - Public marketing / pitch / demo landing pages  
+- Dashboard Protocol authoring (`/protocols`, `/api/dashboard/protocols`) and Knowledge Regions (`/regions`)  
 
 ---
 

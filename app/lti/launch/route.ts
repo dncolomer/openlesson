@@ -6,41 +6,24 @@ import { readLtiFormBody } from "@/lib/lti/form-body";
 import { verifyLtiIdToken } from "@/lib/lti/launch";
 import { fetchPlatformJwks } from "@/lib/lti/platform-jwks";
 import {
-  flowPublicPathForSession,
+  protocolPublicPathForSession,
   launchSessionFromTarget,
   regionPathForSession,
   type LtiLaunchSession,
 } from "@/lib/lti/session";
 import { consumeOidcState, findLtiPlatform, saveLtiLaunch } from "@/lib/lti/store";
 import { LTI_DEEP_LINK_PATH } from "@/lib/lti/tool-urls";
-import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
-import { getSolveFlowByToken } from "@/lib/solve-flow-repository";
 import { getVerificationFlowByToken } from "@/lib/verification-flow-repository";
 import { ownerInOrganization } from "@/lib/lti/resource-link";
 import { organizationMemberIds } from "@/lib/lti/store";
-import type { ProductFlowKind } from "@/lib/product-flow";
 
 export const runtime = "nodejs";
 
-async function resolveFlowKind(
+async function resolveFlow(
   token: string,
-  hinted?: ProductFlowKind,
-): Promise<{ kind: ProductFlowKind; ownerUserId: string | null } | null> {
-  const order: ProductFlowKind[] = hinted
-    ? [hinted, "solve", "verification", "calibration"]
-    : ["solve", "verification", "calibration"];
-  const unique = [...new Set(order)];
-  for (const kind of unique) {
-    const flow =
-      kind === "solve"
-        ? await getSolveFlowByToken(token)
-        : kind === "verification"
-          ? await getVerificationFlowByToken(token)
-          : await getCalibrationFlowByToken(token);
-    if (flow) {
-      return { kind, ownerUserId: flow.ownerUserId || null };
-    }
-  }
+): Promise<{ ownerUserId: string | null } | null> {
+  const flow = await getVerificationFlowByToken(token);
+  if (flow) return { ownerUserId: flow.ownerUserId || null };
   return null;
 }
 
@@ -87,13 +70,13 @@ export async function POST(req: NextRequest) {
     session = launchSessionFromTarget(session, launch.target);
 
     if (session.flowToken) {
-      const resolved = await resolveFlowKind(session.flowToken, session.flowKind);
+      const resolved = await resolveFlow(session.flowToken);
       if (!resolved) return jsonError(404, "Flow not found");
       const members = await organizationMemberIds(platform.organizationId);
       if (!ownerInOrganization(resolved.ownerUserId, members)) {
         return jsonError(403, "Flow is not in this organization");
       }
-      session = { ...session, flowKind: resolved.kind };
+      session = { ...session, flowKind: "verification" };
     }
 
     await saveLtiLaunch(session);
@@ -113,9 +96,9 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    const flowPath = flowPublicPathForSession(session);
-    if (flowPath) {
-      const response = NextResponse.redirect(new URL(`${flowPath}?lti=1`, req.url), 302);
+    const protocolPath = protocolPublicPathForSession(session);
+    if (protocolPath) {
+      const response = NextResponse.redirect(new URL(`${protocolPath}?lti=1`, req.url), 302);
       response.cookies.set(cookie.name, token, cookie);
       return response;
     }
@@ -126,7 +109,7 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    return jsonError(400, "No flow or knowledge region on this launch");
+    return jsonError(400, "No protocol or knowledge region on this launch");
   } catch (error) {
     const message = error instanceof Error ? error.message : "LTI launch failed";
     return jsonError(500, message);

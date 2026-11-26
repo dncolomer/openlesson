@@ -2,7 +2,7 @@
 
 **A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning Map** via workspace management, then create Solve, Calibration, and Verification flows (`create_flow` or cookie `POST /api/dashboard/flows`). Agents integrate through workspace/map/flow management plus MCP. Proof of work is recorded in the product UI.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create **knowledge verification protocols** (`create_protocol` or cookie `POST /api/dashboard/protocols`). Agents integrate through `/api/v3/protocols` plus MCP. Proof of work is recorded in the product UI.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -12,25 +12,21 @@ Live at [uncertain.systems](https://uncertain.systems)
 
 Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). The product is a **Human Learning Harness**: uncheatable proof that knowledge is actually held, without a tutor and without a quiz-in-isolation. The scientific policy underneath it is [epistemic foraging](https://uncertain.systems/science#science-epistemic-foraging): an active search for information that reduces uncertainty, rather than chasing test scores.
 
-Workspaces come in two durable kinds:
-
-- **Standard (map)** — blocks on a knowledge map, Calibrate / Learn / Verify practice links, and the full PoW → Snapshot loop.
-- **Verification Workspace** (stored as `knowledge_region`) — Goals / Verification Flows / Context / Knowledge / Settings. Flows collect proof of work from a question pool and a per-flow agent skill. Context is the same notes, files, and links tab. This kind does not mint practice links.
+The hosted product is **Embeddable Knowledge Verification Protocols**. Knowledge Regions stay as regions (no type). A protocol runs The Protocol Challenge against a region and records proof of work.
 
 ## How It Works
 
-1. **Create a Learning Map** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning only (`kind: "learning"` / `standard`). Or in the product UI (`/workspace/new`).
-2. **Create flows** — MCP `create_flow` / REST `POST /api/v3/workspaces/{id}/flows` for Solve, Calibration, and Verification. Cookie dashboard remains `POST /api/dashboard/flows`.
-3. **Place flows on the map** — `link_flow` or Helios `apply_map_tool`. Learners run those flows in the product UI.
+1. **Create a protocol** — MCP `create_protocol` / REST `POST /api/v3/protocols` with `challenge` (The Protocol Challenge). Cookie dashboard remains `POST /api/dashboard/protocols`. Do not send `kind`.
+2. **Read or update** — `get_protocol` / `update_protocol`. Upload context with `upload_protocol_file`; generate Unsys with `generate_protocol_unsys_seed`.
+3. **Learners run the protocol** in the product UI. Proof of work is recorded there.
 
-Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use Learning Map + flow management. Snapshot, Stash, and headless proof-of-work are not public agent surfaces.
+Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use protocol management. Snapshot, Stash, and headless proof-of-work are not public agent surfaces.
 
 ## Key Features
 
-- **Verification workspaces** — assessable blocks, workspace goals, and continuous proof of work
-- **Verification Workspace** — Goals / Verification Flows / Context / Knowledge / Settings; flow-scoped proof of work; custom knowledge regions and Data Studio. Does not mint knowledge links.
-- **Public agent APIs + MCP** — Learning Map and flow management (`/api/v3/workspaces`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
-- **Calibrate, Learn, and Verify** — practice sessions on standard workspaces (knowledge-link mint)
+- **Embeddable Knowledge Verification Protocols** — public protocol runs with The Protocol Challenge
+- **Knowledge Regions** — domain geometry for protocols, without a type field
+- **Public agent APIs + MCP** — Protocol and Knowledge Region management (`/api/v3/protocols`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
 - **unsys** — practice dialogue in Learn sessions and workspace chat
@@ -161,11 +157,12 @@ Requires `XAI_API_KEY` (STT + action inference). Persist also needs Supabase ser
 
 Uncertain Systems exposes **one** public agent family, with MCP parity at `POST /api/mcp`:
 
-- **Learning Map and flow management** (`/api/v3/workspaces`, `/api/v3/flows`) — create and edit Learning Maps, Helios map tools, workspace settings, and Solve / Calibration / Verification flows.
+- **Protocol management** (`/api/v3/protocols`) — create, list, update, and delete knowledge verification protocols (`create_protocol`, `challenge`).
+- **Knowledge region candidate** (`/api/v3/knowledge-regions/{id}/candidates/{candidate_id}`).
 
 Headless proof-of-work, Snapshot, and Stash are not public agent families. Generate an API key from the dashboard (`/dashboard`).
 
-See [`public/skill.md`](public/skill.md) and [`docs/LEARNING_MAP_API.md`](docs/LEARNING_MAP_API.md). Interactive reference: [`/docs/learning-map-api`](/docs/learning-map-api).
+See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
 
 ## Uncertain Systems
 

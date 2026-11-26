@@ -1,6 +1,6 @@
 "use client";
 
-import { type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { type MutableRefObject } from "react";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { SessionPolicyAutosave } from "@/components/session-view/session-policy-autosave";
 import { useSessionBranchField } from "@/components/session-view/session-branch-prepare";
@@ -12,10 +12,6 @@ import {
 } from "@/components/session-view/session-policy-context";
 import { sessionCanvasMayOpen } from "@/lib/session-field-gate";
 import { sessionPrepareBlockId } from "@/lib/session-branch-prepare";
-import type { IleCanvasCraftInsightConfig } from "@/components/session-view/learn-canvas-craft-insight";
-import type { InsightSummary } from "@/lib/insights";
-import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
-import { ilePowNextIndex } from "@/lib/learn-pow-counters";
 import { ileChapterCanvasRemountKey } from "@/lib/learn-session-global-context";
 import {
   serializeIleWorkCanvasScene,
@@ -56,11 +52,6 @@ export function SessionChapterWorkCanvas({
   ileToken,
   ayclToken,
   solveToken,
-  recordSessionPowArtifact,
-  sessionPowArtifactsRef,
-  insightWorkMarkRef,
-  setSessionInsights,
-  onInsightKept,
   policyRef,
   onLearnerWaitChange,
 }: {
@@ -98,12 +89,6 @@ export function SessionChapterWorkCanvas({
   ileToken?: string;
   ayclToken?: string;
   solveToken?: string;
-  recordSessionPowArtifact: IleCanvasCraftInsightConfig["recordSessionPowArtifact"];
-  sessionPowArtifactsRef: { current: IlePowCounterArtifact[] };
-  insightWorkMarkRef: { current: number };
-  setSessionInsights: Dispatch<SetStateAction<InsightSummary[]>>;
-  /** Fires after the insight is accepted, cleaned up, and saved. */
-  onInsightKept?: (insight: InsightSummary) => void;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
   onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
 }) {
@@ -189,26 +174,6 @@ export function SessionChapterWorkCanvas({
       sessionMarkMode="learn"
       sessionMarkListKey={`${session.id}:${chapterId}`}
       sessionMarkQuestions={sessionMarkQuestions}
-      craftInsight={{
-        chapterId,
-        chapterLabel: activeChapterLabel,
-        sessionId: session.id,
-        workspaceId,
-        ileToken,
-        recordSessionPowArtifact,
-        workArtifacts: sessionPowArtifactsRef.current,
-        workSinceIndex: insightWorkMarkRef.current,
-        onCrafted: (insight, meta) => {
-          insightWorkMarkRef.current = ilePowNextIndex(
-            sessionPowArtifactsRef.current,
-          );
-          setSessionInsights((current) => {
-            if (current.some((row) => row.id === insight.id)) return current;
-            return [insight, ...current];
-          });
-          if (meta?.endsLearnSession) onInsightKept?.(insight);
-        },
-      }}
     />
     </>
   );

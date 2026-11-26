@@ -185,7 +185,7 @@ export function DashboardUsageTab({
                         <p className={usageLabelClass}>Session cost</p>
                         <p className="mt-1 text-sm text-white">
                           {usageData.sessionCreditCost ?? FLOW_SESSION_CREDIT_COST} credits per
-                          Calibrate, Learn, Verify, or Solve session
+                          knowledge verification protocol run
                         </p>
                         <p className="mt-1 text-xs text-neutral-500">
                           Creating a Knowledge Region does not spend credits.

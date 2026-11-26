@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SessionStageProgress } from "@/components/session-view/session-stage-progress";
@@ -76,11 +76,10 @@ describe("session stage progress", () => {
       learn: "Learn",
       verify: "Verify",
     });
-    expect(read("components/session-view/learn-insight-kept-screen.tsx")).toContain(
-      "FLOW_END_KICKERS.learn",
+    expect(existsSync(join(ROOT, "components/session-view/learn-insight-kept-screen.tsx"))).toBe(
+      false,
     );
     expect(read("components/scout-tap/scout-tap-phases.tsx")).toContain("FLOW_END_KICKERS.calibrate");
-    expect(read("components/CalibrationFlowRunner.tsx")).toContain("FLOW_END_KICKERS.calibrate");
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain("FLOW_END_KICKERS.verify");
     expect(read("components/session-view/session-chrome.tsx")).not.toContain("SessionStageHud");
     expect(read("components/tap-score/tap-score-phases.tsx")).not.toContain("SessionStageHud");

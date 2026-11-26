@@ -14,7 +14,7 @@ You are scoring the primary workspace score from **proof-of-work (PoW) data only
 
 Allowed evidence (INPUT):
 - Attached PoW artifacts: tool traces, screen/screenshots, video, EEG, and any other uploaded proof-of-work files
-- Calibrate, Learn, and Verify selective thought traces and transcripts when present as PoW — including the **actual text content** of stashed/submitted thoughts, chat exchanges, and exercise submissions
+- knowledge verification protocols selective thought traces and transcripts when present as PoW — including the **actual text content** of stashed/submitted thoughts, chat exchanges, and exercise submissions
 - Temporally stamped events (timestamps, inter-event gaps, idle, dwell, bursts)
 - The workspace performance context JSON that catalogs those PoW refs, block scopes, and counts
 
@@ -28,20 +28,20 @@ Rules:
 1. Every primary score, marker score, strength, growth area, and gap must be grounded in concrete PoW you can point to (artifact type, tool event, **quoted or paraphrased trace/transcript text**, timestamp pattern, or explicit absence of PoW).
 2. When PoW is sparse or missing for a claim, lower scores and state the thin-signal honestly — never fabricate competency, readiness, or goal progress.
 3. Timestamps and event ordering are first-class: use them for temporal_summary and authenticity (GHC) when present.
-4. Remediation outputs (gap repairs, next_steps, suggestions) stay in domain/product/workflow language — never recommend Calibrate, Learn, or Verify sessions, block completion, or other Uncertain Systems platform mechanics as outputs. Those flows may supply scoring INPUT only.
+4. Remediation outputs (gap repairs, next_steps, suggestions) stay in domain/product/workflow language — never recommend knowledge verification protocols sessions, block completion, or other Uncertain Systems platform mechanics as outputs. Those flows may supply scoring INPUT only.
 5. Do not score "potential" or "intent" detached from observed PoW.
 6. Do not produce generic coaching essays; prefer short claims tied to evidence in the attached corpus.
 `.trim();
 
 /**
  * Verification-only overlay: mandatory submit vs stash (observation vs action) analysis
- * when Calibrate, Learn, or Verify selective-thought PoW is present.
+ * when knowledge verification protocols selective-thought PoW is present.
  */
 export const SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY = `
 VERIFICATION — SUBMIT / STASH ANALYSIS:
-Primary (verification) scoring MUST perform an explicit submit/stash analysis when Calibrate, Learn, or Verify selective-thought proof of work is present.
+Primary (verification) scoring MUST perform an explicit submit/stash analysis when knowledge verification protocols selective-thought proof of work is present.
 
-Definitions (Free Energy Principle; aligned with Calibrate, Learn, and Verify selective thought):
+Definitions (Free Energy Principle; aligned with knowledge verification protocols selective thought):
 - **Observations**: spontaneous crystallized speech, including **stashed / unsent** thoughts — forage before a policy is chosen
 - **Actions**: deliberate **send**, edit, skip, select/deselect, or **resend** into the dialogue — the policy the learner commits
 
@@ -51,7 +51,7 @@ Required analysis when selective-thought PoW exists:
 3. Weight natural temporal pacing, hesitation/repair patterns, and non-templated language for GHC authenticity.
 4. Prefer verification markers that reflect demonstrated knowledge coverage from these traces plus other PoW — not polish alone.
 
-When **no** Calibrate, Learn, or Verify selective-thought PoW is present:
+When **no** knowledge verification protocols selective-thought PoW is present:
 - Do **not** invent observation / action dynamics or fake submit/stash pairs.
 - Set ghc_confidence to "none" or "low" and score verification from remaining tool/artifact PoW only, noting the missing selective-thought signal.
 `.trim();

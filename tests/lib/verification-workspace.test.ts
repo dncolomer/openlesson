@@ -821,9 +821,8 @@ describe("verification workspace shell gates", () => {
       },
     });
     expect(generated).toEqual(["What is a limit?", "How does a sequence converge?"]);
-    const generateRoute = read("app/api/dashboard/flows/generate-questions/route.ts");
+    const generateRoute = read("app/api/dashboard/protocols/generate-questions/route.ts");
     expect(generateRoute).toContain("generateVerificationPoolFromTopic");
-    expect(generateRoute).toContain("generateCalibrationPoolFromGoal");
     expect(generateRoute).toContain("callXaiJSON");
     expect(generateRoute).toContain("requireAuthenticatedUser");
     expect(read("components/product-flow/product-flow-page.tsx")).toContain("data-flow-problem");
@@ -839,19 +838,8 @@ describe("verification workspace shell gates", () => {
     expect(shell).not.toContain("Calibration workspace");
     expect(shell).not.toContain("Learning workspace");
 
-    const flows = read("components/VerificationFlowsPanel.tsx");
-    expect(flows).toContain("data-flow-problem");
-    expect(flows).not.toContain("data-verification-flow-add-question");
-    expect(flows).toContain("data-verification-flow-public-link");
-    expect(flows).toContain("FlowPublicActions");
-    expect(read("components/CalibrationFlowsPanel.tsx")).toContain("FlowPublicActions");
+    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
     expect(read("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
-    expect(flows).not.toContain("data-verification-flow-skill");
-    expect(flows).not.toContain("Generate skill");
-    expect(flows).not.toContain("buildVerificationFlowSkillMarkdown");
-    expect(flows).not.toContain("verificationFlowSkillFilename");
-    expect(flows).not.toContain("anchor.download = filename");
-    expect(flows).not.toContain("<pre");
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).not.toContain("VerificationFlowsPanel");
     expect(hosts).not.toContain("CalibrationFlowsPanel");
@@ -938,8 +926,7 @@ describe("verification workspace shell gates", () => {
     expect(tapClient).toContain("kind={kind}");
     expect(tapClient).toContain('sidebarMode === "verification-tap" || localOpening ? "verify" : "scored"');
     const runner = read("components/VerificationFlowRunner.tsx");
-    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
-    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");
+    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
     expect(runner).toContain("lockDuration");
     expect(runner).toContain("initialMinutes");
     expect(runner).toContain("ProductFlowIdentityForm");

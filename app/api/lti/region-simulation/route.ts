@@ -2,13 +2,14 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { readLtiLaunchSession } from "@/lib/lti/request-session";
 import { bindContextRegion, organizationAdminUserId } from "@/lib/lti/store";
-import { flowOwnedByUser, parseProductFlowKind, productFlowEmbeddingKind, type ProductFlowKind } from "@/lib/product-flow";
+import { flowOwnedByUser, productFlowEmbeddingKind } from "@/lib/product-flow";
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import {
   clampSamplesPerStrategy,
   EXPLORATION_STRATEGIES,
   isSimulatedEmbedding,
   parseSimulationStrategies,
+  protocolIdsFromRequestBody,
   REGION_SIMULATION_DEFAULT_SAMPLES,
   REGION_SIMULATION_MAX_SAMPLES,
   REGION_SIMULATION_MIN_SAMPLES,
@@ -37,18 +38,8 @@ import {
   listVerificationFlowsForOwnerUserId,
   listVerificationResultsForFlowId,
 } from "@/lib/verification-flow-repository";
-import {
-  getCalibrationFlowById,
-  listCalibrationFlowsForOwnerUserId,
-} from "@/lib/calibration-flow-repository";
-import { getSolveFlowById, listSolveFlowsForOwnerUserId } from "@/lib/solve-flow-repository";
-
 export const runtime = "nodejs";
 export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
-
-function simulationKind(value: unknown): ProductFlowKind {
-  return parseProductFlowKind(value) || "verification";
-}
 
 async function requireInstructorOwner() {
   const session = await readLtiLaunchSession();
@@ -59,14 +50,13 @@ async function requireInstructorOwner() {
 }
 
 async function realSessionCountForFlow(input: {
-  kind: ProductFlowKind;
   flowId: string;
   embeddings: readonly { flow_id?: string | null; source?: string | null }[];
 }): Promise<number> {
   const fromEmbeddings = input.embeddings.filter(
     (row) => String(row.flow_id || "") === input.flowId && !isSimulatedEmbedding(row),
   ).length;
-  if (fromEmbeddings > 0 || input.kind !== "verification") return fromEmbeddings;
+  if (fromEmbeddings > 0) return fromEmbeddings;
   const results = await listVerificationResultsForFlowId(input.flowId);
   return results.filter((row) => row.source !== "skill" || Boolean(row.identity)).length;
 }
@@ -75,38 +65,30 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireInstructorOwner();
     if ("error" in auth) return auth.error;
-    const kind = simulationKind(new URL(req.url).searchParams.get("kind"));
     let embeddings: Awaited<ReturnType<typeof listFlowEmbeddingsForOwner>> = [];
     try {
       embeddings = await listFlowEmbeddingsForOwner({
         ownerUserId: auth.ownerUserId,
-        flowKind: productFlowEmbeddingKind(kind),
+        flowKind: productFlowEmbeddingKind(),
       });
     } catch {
       embeddings = [];
     }
-    const flows =
-      kind === "calibration"
-        ? await listCalibrationFlowsForOwnerUserId(auth.ownerUserId)
-        : kind === "solve"
-          ? await listSolveFlowsForOwnerUserId(auth.ownerUserId)
-          : await listVerificationFlowsForOwnerUserId(auth.ownerUserId);
+    const flows = await listVerificationFlowsForOwnerUserId(auth.ownerUserId);
     const listed = [];
     for (const flow of flows) {
       listed.push({
         id: flow.id,
         name: flow.name,
-        topic: flow.topic,
+        challenge: flow.topic,
         questionCount: Math.max(1, problemsForSimulationFlow(flow).length),
         realSessionCount: await realSessionCountForFlow({
-          kind,
           flowId: flow.id,
           embeddings,
         }),
       });
     }
     return NextResponse.json({
-      kind,
       strategies: EXPLORATION_STRATEGIES.map((strategy) => ({
         id: strategy.id,
         name: strategy.name,
@@ -120,7 +102,7 @@ export async function GET(req: NextRequest) {
       defaultSamplesPerAiUse: REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE,
       minSamplesPerAiUse: REGION_SIMULATION_MIN_SAMPLES_PER_AI_USE,
       maxSamplesPerAiUse: REGION_SIMULATION_MAX_SAMPLES_PER_AI_USE,
-      flows: listed,
+      protocols: listed,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load simulation setup";
@@ -133,13 +115,10 @@ export async function POST(req: NextRequest) {
     const auth = await requireInstructorOwner();
     if ("error" in auth) return auth.error;
     const body = (await req.json()) as Record<string, unknown>;
-    const kind = simulationKind(body.kind);
     const name = String(body.name || "").trim();
     if (!name) return jsonError(400, "name is required");
-    const flowIds = Array.isArray(body.flowIds)
-      ? body.flowIds.map((id) => String(id || "").trim()).filter(Boolean)
-      : [];
-    if (!flowIds.length) return jsonError(400, "Select at least one flow");
+    const protocolIds = protocolIdsFromRequestBody(body);
+    if (!protocolIds.length) return jsonError(400, "Select at least one protocol");
     const strategies = parseSimulationStrategies({
       strategyIds: body.strategyIds,
       customStrategies: body.customStrategies,
@@ -154,14 +133,9 @@ export async function POST(req: NextRequest) {
       problems: string[];
       answersModelSeed?: unknown;
     }> = [];
-    for (const flowId of flowIds) {
-      const flow =
-        kind === "calibration"
-          ? await getCalibrationFlowById(flowId)
-          : kind === "solve"
-            ? await getSolveFlowById(flowId)
-            : await getVerificationFlowById(flowId);
-      if (!flow || !flowOwnedByUser(flow, auth.ownerUserId)) return jsonError(404, "Flow not found");
+    for (const flowId of protocolIds) {
+      const flow = await getVerificationFlowById(flowId);
+      if (!flow || !flowOwnedByUser(flow, auth.ownerUserId)) return jsonError(404, "Protocol not found");
       flows.push({
         id: flow.id,
         name: flow.name,
@@ -181,7 +155,7 @@ export async function POST(req: NextRequest) {
         ownerUserId: auth.ownerUserId,
         family: "exploration",
         name,
-        kind,
+        kind: "verification",
         flows: aiUseCatalogIds.length ? flows.slice(0, 1) : flows,
         strategies,
         samplesPerStrategy,
@@ -218,7 +192,7 @@ export async function POST(req: NextRequest) {
           const result = await runRegionSimulation({
             ownerUserId: auth.ownerUserId,
             name,
-            kind,
+            kind: "verification",
             flows,
             strategies,
             samplesPerStrategy,

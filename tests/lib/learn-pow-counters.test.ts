@@ -18,7 +18,6 @@ import {
   toIlePowDisplayCounts,
   type IlePowCounterArtifact,
 } from "@/lib/learn-pow-counters";
-import { ileInsightWorkThoughtsSinceMark } from "@/lib/learn-turn-insights";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
@@ -146,14 +145,5 @@ describe("countIlePowByType (session-global)", () => {
     );
     expect(slim.n).toBe(1);
     expect(slim.metadata).toEqual({ impure: true, calibration_passed: false });
-
-    const since = ileInsightWorkThoughtsSinceMark({
-      artifacts: ledger.artifacts,
-      sinceIndex: 40,
-      draft: { id: "draft-1", text: "keep" },
-    });
-    expect(since.some((row) => row.id.includes("work-40-"))).toBe(true);
-    expect(since.some((row) => row.id.includes("work-41-"))).toBe(true);
-    expect(since.some((row) => row.id === "draft-1")).toBe(true);
   });
 });

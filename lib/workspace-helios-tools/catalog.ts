@@ -18,7 +18,7 @@ export const HELIOS_MAP_TOOL_IDS = [
   "set_dynamic_effect",
   "set_generator_effect",
   "delete_block",
-  "create_flow",
+  "create_protocol",
   "search_web",
   "attach_content",
   "add_note",
@@ -53,14 +53,14 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Add block",
     description:
-      "Place a new 1×1 tile. You choose the kind for this cell from TILE KINDS. Arguments: title, optional row and col (next open cell if omitted), kind (solve, verification, calibration, content — never learn). On a whole-map build, mix kinds; omit kind only for a single unspecified tile (then solve). Solve/verification/calibration: pass flowId of an OWNER FLOW, or omit flowId and pass flowName plus topic (the Problem) to create a flow that belongs to this map then link it. All three kinds share name + topic; do not pass a question pool. Content takes files/links attachments and has no session.",
+      "Place a new 1×1 tile. Arguments: title, optional row and col (next open cell if omitted), kind (verification or content). Default kind is verification (a Protocol). Protocol tiles: pass flowId of an OWNER PROTOCOL, or omit flowId and pass flowName plus challenge to create a protocol that belongs to this map then link it. Content takes files/links attachments and has no session.",
   },
   {
     id: "generate_shape",
     family: "topologies",
     title: "Generate in shape",
     description:
-      "Create one freeform tile covering a contiguous empty-cell selection (Generate-in-shape drawer). Same kind/flow rules as add_block (default solve, create-then-link).",
+      "Create one freeform tile covering a contiguous empty-cell selection (Generate-in-shape drawer). Same kind/protocol rules as add_block (default verification, create-then-link).",
   },
   {
     id: "split_block",
@@ -95,7 +95,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Bridge blocks",
     description:
-      "Fill a 1-cell corridor of new blocks between selected anchors (Bridge drawer). Default thickness is 1 cell (width 0). width is half-width: 0 = 1 cell, 1 = 3 cells, 2 = 5 cells. Each corridor tile mints its own flow. Pass kinds[] (solve | verification | calibration | content, one per cell in corridor order) when the walk should mix types; omit to inherit the first anchor's kind.",
+      "Fill a 1-cell corridor of new blocks between selected anchors (Bridge drawer). Default thickness is 1 cell (width 0). width is half-width: 0 = 1 cell, 1 = 3 cells, 2 = 5 cells. Each corridor tile mints its own protocol. Pass kinds[] (verification | content, one per cell in corridor order) when the walk should mix types; omit to inherit the first anchor's kind.",
   },
   {
     id: "cluster_blocks",
@@ -146,11 +146,11 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     description: "Remove a block (Danger zone drawer).",
   },
   {
-    id: "create_flow",
+    id: "create_protocol",
     family: "edit",
-    title: "Create flow",
+    title: "Create protocol",
     description:
-      "Create an owner calibration, verification, or solve flow without placing a block. Arguments: kind (calibration|verification|solve), name, then one Author source — topic (optional exactProblemOnCanvas on Solve/Verification), artifacts (problem generated when a learner opens), or openingCanvasScene (Solve/Verification). Prefer add_block with omitted flowId when you also need to place a tile.",
+      "Create an owner protocol without placing a block. Arguments: name, then one Author source — challenge (optional exactProblemOnCanvas), artifacts (problem generated when a learner opens), or openingCanvasScene. Prefer add_block with omitted flowId when you also need to place a tile.",
   },
   {
     id: "search_web",
@@ -232,10 +232,10 @@ export function heliosMapToolAwarenessText(
     "topologies (add/place, generate-in-shape, split, clone, expand, combine, bridge, cluster),",
     "unusable ground, generative blocks (dynamic and generator), DAGs, remaining edit/delete ops,",
     "research (search_web then attach_content), and overlay (map notes and drawing layers).",
-    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"solve\" | \"verification\" | \"calibration\" | \"content\" }. You pick kind per cell from TILE KINDS — never learn. On a whole-map build mix kinds in one turn. Solve, verification, and calibration: link an existing owner flow via flowId (see OWNER FLOWS) or omit flowId and pass flowName plus topic (the Problem) to create then link. Do not pass questions. Content blocks attach files/links and have no session. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
+    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"verification\" | \"content\" }. Default kind is verification (a Protocol). Protocol tiles: link an existing owner protocol via flowId (see OWNER PROTOCOLS) or omit flowId and pass flowName plus challenge to create then link. Do not pass questions. Content blocks attach files/links and have no session. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
     "search_web arguments: { \"query\": \"...\" }. On a map-build turn, place content tiles and attach a clearly canonical source. Ask the author before attaching uncertain hits.",
     "attach_content arguments: { \"blockId\": \"...\", \"links\": [{ \"name\": \"...\", \"url\": \"https://...\" }], \"files\": [{ \"name\": \"notes.pdf\", \"url\": \"https://.../notes.pdf\" }] }.",
-    "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0, \"kinds\": [\"solve\", \"verification\"] }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor. kinds is optional, one per corridor cell; each cell mints its own flow. You may mix solve, verification, calibration, and content on a bridge.",
+    "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0, \"kinds\": [\"verification\", \"content\"] }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor. kinds is optional, one per corridor cell; each cell mints its own protocol. You may mix verification and content on a bridge.",
     "apply_dag arguments: { \"blockIds\": [\"id1\",\"id2\"], \"edges\": [{ \"from\": \"id1\", \"to\": \"id2\", \"kind\": \"next\" }] }.",
     "If blockIds/edges are omitted, apply_dag uses current blocks in reading order.",
     ...lines,

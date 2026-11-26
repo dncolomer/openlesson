@@ -26,7 +26,7 @@ import {
 export const PRODUCTION_STUDIO_DEMO_MARKER = "[PROD:studio-demo-v1]";
 export const PRODUCTION_STUDIO_DEMO_VERSION = "v1";
 
-export type StudioDemoProduct = "verification" | "calibration";
+export type StudioDemoProduct = "verification";
 export type StudioDemoRunKey = "ada" | "bea" | "cam" | "dev" | "eve" | "fay";
 
 export type StudioDemoRunDef = {
@@ -483,8 +483,8 @@ export const PRODUCTION_STUDIO_DEMO_SETS: readonly StudioDemoSetDef[] = [
   {
     id: "calibrate-continuity",
     marker: `${PRODUCTION_STUDIO_DEMO_MARKER}:calibrate-continuity`,
-    product: "calibration",
-    flowKind: "calibrate",
+    product: "verification",
+    flowKind: "verify",
     title: "Demo Calibrate — Continuity",
     topic: "Continuity at a point",
     goal: "Sound the hidden-state field for continuity at a before any policy is projected.",
@@ -519,8 +519,8 @@ export const PRODUCTION_STUDIO_DEMO_SETS: readonly StudioDemoSetDef[] = [
   {
     id: "calibrate-conditional",
     marker: `${PRODUCTION_STUDIO_DEMO_MARKER}:calibrate-conditional`,
-    product: "calibration",
-    flowKind: "calibrate",
+    product: "verification",
+    flowKind: "verify",
     title: "Demo Calibrate — Conditional",
     topic: "Conditional probability",
     goal: "Sound the hidden-state field for P(A | B) before any policy is projected.",
@@ -581,7 +581,7 @@ export function encodeStudioDemoRun(
   run: StudioDemoRunDef,
   model: SessionBranchModel = set.tree(),
 ): FlowEmbeddingRecord {
-  const sounded = set.flowKind === "calibrate" ? soundModel(model, run.sequence) : model;
+  const sounded = model;
   return completeFlowEmbedding({
     flowKind: set.flowKind,
     model: sounded,

@@ -70,7 +70,7 @@ describe("canvas-faithful exploration actor", () => {
   it("keeps calibrate policy null even after occupancy", () => {
     const walk = runCanvasFaithfulExplorationSample(
       plan("information-seeking"),
-      "calibrate",
+      "verify",
       EXPLORATION_STRATEGIES,
       fixtureModel(),
     );

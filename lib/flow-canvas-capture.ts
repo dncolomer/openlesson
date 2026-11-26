@@ -1,5 +1,5 @@
 /**
- * Optional Work-canvas content capture for Solve and Verification flows.
+ * Optional Work-canvas content capture for knowledge verification protocols.
  * Default off: classified canvas actions still record as PoW, but the board
  * itself is not snapshotted. When on, a mermaid markdown document is stored
  * every N canvas actions as a BlobStore document. It never enters embeddings.
@@ -28,8 +28,8 @@ export const DEFAULT_FLOW_CANVAS_CAPTURE: FlowCanvasCapture = {
   everyActions: FLOW_CANVAS_CAPTURE_EVERY_DEFAULT,
 };
 
-export function flowAuthorShowsCanvasCapture(kind: string | null | undefined): boolean {
-  return kind === "solve" || kind === "verification";
+export function flowAuthorShowsCanvasCapture(_kind?: string | null): boolean {
+  return true;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

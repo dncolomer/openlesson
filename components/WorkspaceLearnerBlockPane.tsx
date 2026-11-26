@@ -30,7 +30,7 @@ import {
 } from "@/lib/block-creator-effects";
 import { START_NEW_SESSION_LABEL } from "@/lib/block-previous-sessions";
 import { applyLearnerDrawerRequest } from "@/lib/block-circular-menu";
-import { LEARNER_WORK_DRAWER_TITLE } from "@/lib/insights";
+const LEARNER_WORK_DRAWER_TITLE = "Work";
 
 export type LearnerBlockRef = {
   id: string;
@@ -48,8 +48,8 @@ export type LearnerBlockRef = {
 };
 
 /**
- * Learner-only right pane: practice launch (Calibrate / Learn / Verify)
- * and optional dependency drawers. Not mounted in Creator mode.
+ * Learner-only right pane: practice launch (Learn) and optional dependency
+ * drawers. Not mounted in Creator mode.
  *
  * Creator effects (combinable):
  * - Dynamic: “?” until generated; unlock-after deps

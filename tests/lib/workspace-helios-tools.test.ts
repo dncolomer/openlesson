@@ -36,15 +36,14 @@ function emptySnap(): HeliosMapSnapshot {
   return heliosMapSnapshotFromBlocks({ blocks: [], unusableCells: [] });
 }
 
-const SOLVE_FLOW = { kind: "solve" as const, flowId: "flow-1" };
+const PROTOCOL_FLOW = { kind: "verification" as const, flowId: "flow-1" };
 
 const createFlowHost = {
-  createFlow: async (input: { kind: "calibration" | "verification" | "solve"; name: string }) => ({
+  createFlow: async (input: { name: string; challenge: string }) => ({
     id: "flow-1",
-    kind: input.kind,
     name: input.name,
     publicToken: "tok",
-    publicPath: "/s/tok",
+    publicPath: "/v/tok",
   }),
 };
 
@@ -120,7 +119,7 @@ describe("Helios map tool catalog + dispatch", () => {
     expect(families.has("research")).toBe(true);
     expect(HELIOS_MAP_TOOL_IDS).toContain("search_web");
     expect(HELIOS_MAP_TOOL_IDS).toContain("attach_content");
-    expect(HELIOS_MAP_TOOL_IDS).toContain("create_flow");
+    expect(HELIOS_MAP_TOOL_IDS).toContain("create_protocol");
     for (const id of HELIOS_MAP_TOOL_IDS) {
       expect(isHeliosMapToolId(id)).toBe(true);
       expect(HELIOS_MAP_TOOL_CATALOG.some((t) => t.id === id)).toBe(true);
@@ -149,7 +148,7 @@ describe("Helios map tool catalog + dispatch", () => {
   it("add_block without a cell uses the next open tile; apply_dag chains current blocks", () => {
     const first = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
-      args: { title: "Start", id: "a", ...SOLVE_FLOW },
+      args: { title: "Start", id: "a", ...PROTOCOL_FLOW },
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
@@ -162,7 +161,7 @@ describe("Helios map tool catalog + dispatch", () => {
 
     const second = dispatchHeliosMapTool(first.snapshot, {
       name: "add_block",
-      args: { title: "Next", id: "b", ...SOLVE_FLOW },
+      args: { title: "Next", id: "b", ...PROTOCOL_FLOW },
     });
     expect(second.ok).toBe(true);
     if (!second.ok) return;
@@ -177,7 +176,7 @@ describe("Helios map tool catalog + dispatch", () => {
 
     const xy = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
-      args: { title: "XY", id: "xy", x: 4, y: 5, ...SOLVE_FLOW },
+      args: { title: "XY", id: "xy", x: 4, y: 5, ...PROTOCOL_FLOW },
     });
     expect(xy.ok).toBe(true);
     if (!xy.ok) return;
@@ -201,7 +200,7 @@ describe("Helios map tool catalog + dispatch", () => {
     expect(nextOpenHeliosCell(offset)).toEqual({ row: 0, col: 0 });
     const filledOrigin = dispatchHeliosMapTool(offset, {
       name: "add_block",
-      args: { title: "Home", id: "home", ...SOLVE_FLOW },
+      args: { title: "Home", id: "home", ...PROTOCOL_FLOW },
     });
     expect(filledOrigin.ok).toBe(true);
     if (!filledOrigin.ok) return;
@@ -231,7 +230,7 @@ describe("Helios map tool catalog + dispatch", () => {
   it("add_block and generate_shape place topologies; unusable, generative, and DAG mutate", () => {
     const added = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
-      args: { row: 0, col: 0, title: "Alpha", id: "a", ...SOLVE_FLOW },
+      args: { row: 0, col: 0, title: "Alpha", id: "a", ...PROTOCOL_FLOW },
     });
     expect(added.ok).toBe(true);
     if (!added.ok) return;
@@ -252,7 +251,7 @@ describe("Helios map tool catalog + dispatch", () => {
         ],
         title: "Shape",
         id: "shape-1",
-        ...SOLVE_FLOW,
+        ...PROTOCOL_FLOW,
       },
     });
     expect(shaped.ok).toBe(true);
@@ -264,7 +263,7 @@ describe("Helios map tool catalog + dispatch", () => {
 
     const occupied = dispatchHeliosMapTool(added.snapshot, {
       name: "add_block",
-      args: { row: 0, col: 0, title: "Nope", ...SOLVE_FLOW },
+      args: { row: 0, col: 0, title: "Nope", ...PROTOCOL_FLOW },
     });
     expect(occupied.ok).toBe(false);
 
@@ -277,7 +276,7 @@ describe("Helios map tool catalog + dispatch", () => {
     expect(isUnusableCell(unusable.snapshot.unusableCells, 4, 5)).toBe(true);
     const blocked = dispatchHeliosMapTool(unusable.snapshot, {
       name: "add_block",
-      args: { row: 4, col: 5, title: "Blocked", ...SOLVE_FLOW },
+      args: { row: 4, col: 5, title: "Blocked", ...PROTOCOL_FLOW },
     });
     expect(blocked.ok).toBe(false);
 
@@ -514,13 +513,13 @@ describe("Helios map tool catalog + dispatch", () => {
   it("executeHeliosMapToolCall persists apply_dag from the dispatch preview chain", async () => {
     const first = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
-      args: { title: "Start", id: "a", ...SOLVE_FLOW },
+      args: { title: "Start", id: "a", ...PROTOCOL_FLOW },
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
     const second = dispatchHeliosMapTool(first.snapshot, {
       name: "add_block",
-      args: { title: "Next", id: "b", ...SOLVE_FLOW },
+      args: { title: "Next", id: "b", ...PROTOCOL_FLOW },
     });
     expect(second.ok).toBe(true);
     if (!second.ok) return;

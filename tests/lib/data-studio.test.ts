@@ -938,11 +938,11 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       flags,
       playerUserId: "player-1",
       authorUserId: "author-1",
-      flowKind: "solve",
+      flowKind: "verify",
       flowId: "sf1",
       runId: "run-play",
       identity: "play:player-1",
-      raw: { flowKind: "solve", pow: [{ payload: "secret transcript" }] },
+      raw: { flowKind: "verify", pow: [{ payload: "secret transcript" }] },
     });
     expect(contribution?.ownerUserId).toBe("author-1");
     expect(contribution?.source).toBe("play_path");
@@ -952,7 +952,7 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
         flags: parseMapPlayDataAccessFlags({}),
         playerUserId: "player-1",
         authorUserId: "author-1",
-        flowKind: "solve",
+        flowKind: "verify",
         flowId: "sf1",
         runId: "run-play",
         raw: {},
@@ -961,21 +961,21 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
 
     const invite = studioRow({
       id: "invite-1",
-      flowKind: "solve",
+      flowKind: "verify",
       prompt: "invite run",
       ownerUserId: "author-1",
       userId: "author-1",
     });
     const privatePlay = studioRow({
       id: "play-private",
-      flowKind: "solve",
+      flowKind: "verify",
       prompt: "player only",
       ownerUserId: "player-1",
       userId: "player-1",
     });
     const contributed = studioRow({
       id: "play-path",
-      flowKind: "solve",
+      flowKind: "verify",
       prompt: "shared path",
       ownerUserId: "author-1",
       userId: "author-1",
@@ -999,7 +999,7 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       }),
     ).toBe(true);
     const presented = presentDashboardDataStudio({
-      product: "solve",
+      product: "verification",
       viewerUserId: "author-1",
       workspaces: [],
       embeddings: [invite, privatePlay, contributed],

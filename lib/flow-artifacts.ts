@@ -1,6 +1,6 @@
 /**
- * File artifacts linked on Solve / Verification / Calibration flows.
- * Bytes live on org-scoped xAI Files; the flow stores name, mime, file id.
+ * File artifacts linked on knowledge verification protocols.
+ * Bytes live on org-scoped xAI Files; the protocol stores name, mime, file id.
  */
 
 import { isStoredFileId } from "@/lib/ai/stored-file-id";
@@ -11,7 +11,7 @@ import {
   normalizeHeliosFileMime,
 } from "@/lib/workspace-helios-files";
 
-export const FLOW_ARTIFACTS_PATH = "/api/dashboard/flows/files";
+export const FLOW_ARTIFACTS_PATH = "/api/dashboard/protocols/files";
 export const FLOW_ARTIFACT_ACCEPT = HELIOS_MAP_FILE_ACCEPT;
 export const FLOW_ARTIFACT_MAX_BYTES = HELIOS_MAP_MAX_FILE_BYTES;
 export const FLOW_ARTIFACT_MAX_COUNT = 20;

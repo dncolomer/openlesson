@@ -64,7 +64,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "Verification findings drive what gets practiced next.",
       subtitle:
-        "Optimization is the second vertical: route humans into the Learning use case of session, one interface for Calibrate, Learn, and Verify, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
+        "Optimization is the second vertical: route humans into the Learning use case of session, one interface for knowledge verification protocols, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("optimization"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],

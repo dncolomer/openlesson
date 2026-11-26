@@ -3,7 +3,7 @@
  * and the shipped Goals / Verification Flows controls.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   appendGeneratedFlows,
@@ -165,8 +165,7 @@ describe("context generation pool", () => {
     const goals = read("components/WorkspaceGoalsPanel.tsx");
     expect(goals).toContain('kind="goals"');
     expect(goals).toContain("contextGeneration");
-    const flows = read("components/VerificationFlowsPanel.tsx");
-    expect(flows).toContain('kind="verification_flow"');
+    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
     const pool = read("components/ContextGenerationPool.tsx");
     expect(pool).toContain("Generate goals from context");
     expect(pool).toContain("Generate topic + questions from context");

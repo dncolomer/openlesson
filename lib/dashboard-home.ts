@@ -6,14 +6,8 @@ import {
   workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
-import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
-import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
-import {
-  flowDisplayName,
-  productFlowKindFromDashboardKind,
-  productFlowPagePath,
-} from "@/lib/product-flow";
+import { flowDisplayName, productFlowPagePath } from "@/lib/product-flow";
 
 export type DashboardWorkspaceCountKey = DashboardWorkspaceTypeFilter;
 
@@ -44,11 +38,8 @@ export function dashboardWorkspaceCounts(
   };
 }
 
-export type DashboardRecentFlowKind = "verify" | "calibrate" | "solve";
-
 export type DashboardRecentFlow = {
   id: string;
-  kind: DashboardRecentFlowKind;
   name: string;
   title: string;
   workspaceId: string;
@@ -56,8 +47,8 @@ export type DashboardRecentFlow = {
   createdAt: string;
   publicPath: string;
   workspacePath: string;
-  flowPath: string;
-  topic: string;
+  protocolPath: string;
+  challenge: string;
   questionCount: number;
 };
 
@@ -92,19 +83,19 @@ export function truncateDashboardFlowName(
   return truncateDashboardFlowLabel(value, max);
 }
 
-export function dashboardFlowWorkspacePath(kind: DashboardRecentFlowKind, flowId: string): string {
-  return productFlowPagePath(productFlowKindFromDashboardKind(kind), flowId);
+export function dashboardFlowWorkspacePath(_kindOrId: unknown, flowId?: string): string {
+  return productFlowPagePath(_kindOrId, flowId);
 }
 
 export function presentDashboardRecentFlow(input: {
   id: unknown;
-  kind: DashboardRecentFlowKind;
   name?: unknown;
   title?: unknown;
   workspaceId?: unknown;
   workspaceTitle?: unknown;
   createdAt?: unknown;
   publicToken?: unknown;
+  challenge?: unknown;
   topic?: unknown;
   questionCount?: unknown;
 }): DashboardRecentFlow | null {
@@ -112,29 +103,24 @@ export function presentDashboardRecentFlow(input: {
   if (!id) return null;
   const workspaceId = String(input.workspaceId || "").trim();
   const token = String(input.publicToken || "").trim();
-  const publicPath =
-    input.kind === "calibrate"
-      ? calibrationFlowPublicPath(token)
-      : input.kind === "solve"
-        ? solveFlowPublicPath(token)
-        : verificationFlowPublicPath(token);
+  const publicPath = verificationFlowPublicPath(token);
   const name = flowDisplayName({
     name: input.name,
     title: input.title,
   });
-  const flowPath = dashboardFlowWorkspacePath(input.kind, id);
+  const protocolPath = productFlowPagePath(id);
+  const challenge = String(input.challenge ?? input.topic ?? "").trim();
   return {
     id,
-    kind: input.kind,
     name,
     title: name,
     workspaceId,
     workspaceTitle: String(input.workspaceTitle || "").trim() || "Workspace",
     createdAt: String(input.createdAt || ""),
-    publicPath: token ? publicPath : flowPath,
-    workspacePath: flowPath,
-    flowPath,
-    topic: String(input.topic ?? "").trim(),
+    publicPath: token ? publicPath : protocolPath,
+    workspacePath: protocolPath,
+    protocolPath,
+    challenge,
     questionCount: questionCountFromUnknown(input.questionCount),
   };
 }

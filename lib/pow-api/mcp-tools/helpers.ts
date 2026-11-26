@@ -14,11 +14,12 @@ export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — flow management and knowledge-region candidate render with REST parity.
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — knowledge verification protocols and knowledge-region candidate render with REST parity.
 
-Create, list, update, and delete independent Solve, Calibration, and Verification flows. REST: /api/v3/flows.
-Author sources on create_flow / update_flow (choose one): topic (optional exact_problem_on_canvas), artifacts/files (problem generated when a learner opens; generate_problem_on_open), or opening_canvas_scene. Also answers_model_seed / uncertainty_model (custom tree with weights, or generate_unsys), enforced_channels, canvas_capture.
-Upload context files with upload_flow_file. Generate the Unsys model with generate_flow_unsys_seed.
+Create, list, update, and delete knowledge verification protocols. REST: /api/v3/protocols.
+Author sources on create_protocol / update_protocol (choose one): challenge (The Protocol Challenge; optional exact_problem_on_canvas), artifacts/files (challenge generated when a learner opens; generate_problem_on_open), or opening_canvas_scene. Also answers_model_seed / uncertainty_model (custom tree with weights, or generate_unsys), enforced_channels, canvas_capture.
+Do not send kind. Create and list reject solve, calibration, calibrate, learn, mapping, and map.
+Upload context files with upload_protocol_file. Generate the Unsys model with generate_protocol_unsys_seed.
 Read one candidate in a knowledge region. REST: /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}.
 
 Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent tools.

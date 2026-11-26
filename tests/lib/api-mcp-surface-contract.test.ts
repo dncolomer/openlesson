@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
-  FLOW_API_BASE,
+  PROTOCOL_API_BASE,
   PUBLIC_AGENT_API_FAMILIES,
 } from "@/lib/api/agent-api-paths";
 import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-proof-of-work-server";
@@ -38,7 +38,7 @@ describe("lib/pow-api package path (renamed from agent-v2)", () => {
   it("v3/MCP routes import from @/lib/pow-api not agent-v2", () => {
     const samples = [
       "app/api/mcp/route.ts",
-      "app/api/v3/flows/route.ts",
+      "app/api/v3/protocols/route.ts",
     ];
     for (const rel of samples) {
       const src = readFileSync(join(ROOT, rel), "utf8");
@@ -66,6 +66,7 @@ function restPathToRouteFile(path: string): string {
     .replace(/\{workspace_id\}/g, "[id]")
     .replace(/\{session_id\}/g, "[sessionId]")
     .replace(/\{flow_id\}/g, "[flowId]")
+    .replace(/\{protocol_id\}/g, "[protocolId]")
     .replace(/\{block_id\}/g, "[blockId]")
     .replace(/\{knowledge_region_id\}/g, "[id]")
     .replace(/\{candidate_id\}/g, "[candidateId]")
@@ -95,10 +96,11 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     expect(agentToolNames()).not.toContain("list_workspaces");
     expect(agentToolNames()).not.toContain("list_map_tools");
     expect(agentToolNames()).not.toContain("apply_map_tool");
-    expect(agentToolNames()).toContain("create_flow");
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow", "knowledge_region"]);
+    expect(agentToolNames()).toContain("create_protocol");
+    expect(agentToolNames()).not.toContain("create_flow");
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["protocol", "knowledge_region"]);
     for (const tool of AGENT_TOOL_SURFACE) {
-      expect(["flow", "knowledge_region"]).toContain(tool.family);
+      expect(["protocol", "knowledge_region"]).toContain(tool.family);
       const routeFile = restPathToRouteFile(tool.rest.path);
       expect(existsSync(routeFile), `${tool.name} → ${tool.rest.path} missing ${routeFile}`).toBe(
         true,
@@ -109,13 +111,13 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
   it("path builders resolve to existing public agent route handlers", () => {
     const cases: { built: string; routeRel: string }[] = [
       {
-        built: FLOW_API_BASE,
-        routeRel: "app/api/v3/flows/route.ts",
+        built: PROTOCOL_API_BASE,
+        routeRel: "app/api/v3/protocols/route.ts",
       },
     ];
 
     for (const { built, routeRel } of cases) {
-      expect(built.startsWith(FLOW_API_BASE)).toBe(true);
+      expect(built.startsWith(PROTOCOL_API_BASE)).toBe(true);
       expect(existsSync(join(ROOT, routeRel))).toBe(true);
     }
     expect(existsSync(join(ROOT, "app/api/v3/workspaces/route.ts"))).toBe(false);
@@ -127,8 +129,11 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       existsSync(join(ROOT, "components/marketing/LandingPublicMapsCarousel.tsx")),
     ).toBe(false);
     const skill = readFileSync(join(ROOT, "public/skill.md"), "utf8");
-    expect(skill).toContain("list_flows");
-    expect(skill).toContain("create_flow");
+    expect(skill).toContain("list_protocols");
+    expect(skill).toContain("create_protocol");
+    expect(skill).toContain("challenge");
+    expect(skill).not.toContain("create_flow");
+    expect(skill).not.toContain("/api/v3/flows");
     expect(skill).not.toContain("create_workspace");
     expect(skill).not.toContain("list_map_tools");
     expect(skill).not.toContain("apply_map_tool");
@@ -148,7 +153,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     expect(existsSync(collectionRoute)).toBe(false);
     expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).not.toContain("list_workspaces");
     expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).not.toContain("create_workspace");
-    expect(existsSync(join(ROOT, "app/api/v3/flows/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/protocols/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/flows/route.ts"))).toBe(false);
   });
 
   it("learning-progress and TAPBench mint are not on the agent surface", () => {
@@ -169,8 +175,24 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     ).toBe(false);
   });
 
-  it("MCP public tools are independent flow management only", () => {
+  it("MCP public tools are independent protocol management only", () => {
     const mcpNames = new Set<string>(MCP_EVIDENCE_TOOLS.map((t) => t.name));
+    for (const name of [
+      "list_protocols",
+      "create_protocol",
+      "upload_protocol_file",
+      "generate_protocol_unsys_seed",
+      "get_protocol",
+      "update_protocol",
+      "delete_protocol",
+      "get_knowledge_region_candidate",
+    ] as const) {
+      expect(mcpNames.has(name)).toBe(true);
+    }
+    const create = MCP_EVIDENCE_TOOLS.find((t) => t.name === "create_protocol");
+    expect(create?.inputSchema.properties).toHaveProperty("challenge");
+    expect(create?.inputSchema.properties).not.toHaveProperty("kind");
+    expect(JSON.stringify(create?.inputSchema)).toContain("Protocol Challenge");
     for (const name of [
       "list_flows",
       "create_flow",
@@ -179,9 +201,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "get_flow",
       "update_flow",
       "delete_flow",
-      "get_knowledge_region_candidate",
     ] as const) {
-      expect(mcpNames.has(name)).toBe(true);
+      expect(mcpNames.has(name)).toBe(false);
     }
     for (const name of [
       "create_workspace",
@@ -241,7 +262,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     const src = readMcpSurface();
     expect(src).not.toMatch(/name === "upload_proof_of_work"/);
     expect(src).not.toMatch(/name === "start_session"/);
-    expect(src).toContain("create_flow");
+    expect(src).toContain("create_protocol");
+    expect(src).not.toContain("create_flow");
     expect(src).not.toContain("link_flow");
   });
 

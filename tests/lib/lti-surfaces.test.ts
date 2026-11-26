@@ -24,7 +24,7 @@ describe("lti surfaces", () => {
     expect(read("components/dashboard/dashboard-integrations-tab.tsx")).toContain(
       "DashboardLmsCard",
     );
-    expect(read("components/SolveFlowRunner.tsx")).toContain("ltiIdentityForPublicToken");
+    expect(read("components/VerificationFlowRunner.tsx")).toContain("ltiIdentityForPublicToken");
     expect(read("messages/en.json")).toContain('"ltiTitle": "LTI 1.3 Advantage"');
     expect(read("messages/en.json")).toContain("any LTI-compliant LMS");
     expect(read("messages/en.json")).not.toMatch(/lti(Subtitle|PasteHint|Keyset)": "[^"]*Brightspace/);
@@ -51,7 +51,7 @@ describe("lti surfaces", () => {
       deploymentId: "d1",
       resourceLinkId: "rl",
       flowToken: "tok",
-      flowKind: "solve",
+      flowKind: "verification",
     });
     const session = await decodeLaunchCookie(token);
     expect(session?.identity).toBe("lti:https://school.brightspace.com:user-9");

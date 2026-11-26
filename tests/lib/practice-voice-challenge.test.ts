@@ -9,7 +9,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionStageSurface } from "../helpers/surface-source";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
-import { IleInsightEmptySlots } from "@/components/session-view/learn-insight-trophies";
 import { IleSessionImpureScreen } from "@/components/session-view/learn-silence-lock-screen";
 import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
@@ -475,16 +474,7 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(guide).toContain("ileWorkspaceStartAllowed");
     expect(guide).toContain("onStart?.()");
     expect(view).toContain("onStart={() => { void handleWelcomePlay(); }}");
-    const html = renderToStaticMarkup(
-      createElement(IleInsightEmptySlots, { count: 3, label: "slots" }),
-    );
-    expect(html).toContain("data-ile-welcome-insight-skeleton");
-    expect(html).toContain("data-ile-welcome-insight-skeleton-mark");
-    expect(html).toContain("data-ile-welcome-insight-skeleton-bar");
-    expect(html).not.toContain("data-ile-welcome-insight-placeholder-text");
-    const text = html.replace(/<[^>]+>/g, " ");
-    expect(text).not.toMatch(/After you work a chapter/);
-    expect(html).not.toMatch(/>Empty</);
+    expect(existsSync(join(ROOT, "components/session-view/learn-insight-trophies.tsx"))).toBe(false);
     const spoken = renderToStaticMarkup(createElement(PracticeVoiceChallenge, { onPass: () => {} }));
     const ileSpoken = renderToStaticMarkup(
       createElement(PracticeVoiceChallenge, { onPass: () => {}, variant: "ile" }),
@@ -511,7 +501,7 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(spoken).not.toContain("data-practice-voice-local-skip");
     expect(ileSpoken).not.toContain("data-practice-voice-local-skip");
     expect(ileSpoken).toContain('data-practice-voice-variant="ile"');
-    expect(ileSpoken.replace(/<[^>]+>/g, "")).toContain("In this session I will work to craft insights");
+    expect(ileSpoken.replace(/<[^>]+>/g, "")).toContain("In this session I will work on the canvas");
     expect(ileSpoken).toContain('data-practice-voice-sentence="2"');
     expect(ileSpoken).not.toContain("data-ile-sample-insight-card");
     expect(ileSpoken).not.toContain("data-ile-sample-insight-bar");
@@ -555,7 +545,6 @@ describe("shipped voice-challenge UI wiring", () => {
 
   it("Calibrate confirms start, then mounts the Prepare voice challenge, then sounding", () => {
     const phases = read("components/scout-tap/scout-tap-phases.tsx");
-    const runner = read("components/CalibrationFlowRunner.tsx");
     expect(phases).toContain("confirmStart");
     expect(phases).toContain("passChallenge");
     expect(phases).toContain("PracticeVoiceChallenge");
@@ -564,9 +553,6 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(phases).toContain("onConfirm={confirmStart}");
     expect(phases).toContain("data-calibrate-start");
     expect(phases).toContain("<CalibrateSoundingSurface");
-    expect(runner).not.toContain("PracticeVoiceChallenge");
-    expect(runner).not.toContain("data-calibrate-voice-challenge");
-    expect(runner).toContain("data-calibrate-voice-optional");
     expect(scoutThinkAloudEnabled()).toBe(false);
     expect(phases).toContain("scoutThinkAloudEnabled()");
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
@@ -611,7 +597,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(view).not.toContain("pauseLiveSpeech()");
     expect(view).not.toContain("silenceRest");
     expect(view).toContain("useIleSessionPurity");
-    expect(view).toContain("slotCount={minInsightsPerChapter}");
+    expect(view).not.toContain("slotCount={minInsightsPerChapter}");
+    expect(view).not.toContain("IleInsightEmptySlots");
     expect(view).toContain("IleSessionImpureScreen");
     expect(view).not.toContain("IleSilenceRestScreen");
     expect(view).not.toContain("setShowSaveExitNameDialog");

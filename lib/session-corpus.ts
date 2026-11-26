@@ -111,9 +111,9 @@ export function buildSessionCorpusRecord(input: {
 
 export function corpusRecordToFlowRaw(
   record: SessionCorpusRecord,
-  family: EmbeddingFamily | FlowKind = record.kind,
+  _family: EmbeddingFamily | SessionKind = record.kind,
 ): FlowEmbeddingRaw {
-  const kind = (parseSessionKind(family) ?? record.kind) as FlowKind;
+  const kind: FlowKind = "verify";
   const pow = corpusPowToFlowRows(record.proofOfWork);
   if (record.fieldModel) {
     return completeFlowEmbedding({
@@ -135,7 +135,7 @@ export function corpusRecordToFlowRaw(
       ...recovered,
       flowKind: kind,
       pow,
-      projectedPolicy: kind === "calibrate" ? null : recovered.projectedPolicy,
+      projectedPolicy: recovered.projectedPolicy,
     };
   }
   return completeFlowEmbedding({
@@ -151,7 +151,7 @@ export function corpusRecordToFlowRaw(
  */
 export function reembedSessionCorpus(
   record: SessionCorpusRecord,
-  family: EmbeddingFamily | FlowKind = record.kind,
+  family: EmbeddingFamily | SessionKind = record.kind,
 ): FlowEmbeddingRecord {
   return embedFlowOutput(corpusRecordToFlowRaw(record, family));
 }

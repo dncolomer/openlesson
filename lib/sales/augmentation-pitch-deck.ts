@@ -70,7 +70,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
       bullets: [
         "Onboarding, courses, and prep get the same workspace world model",
-        "session — one interface for Calibrate, Learn, and Verify — replaces lightweight recall widgets where depth matters",
+        "session — one interface for knowledge verification protocols — replaces lightweight recall widgets where depth matters",
         "Probes arrive in context",
         "Coaching tuned to the gap the workspace already detected",
       ],

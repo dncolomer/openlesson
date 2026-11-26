@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { insightApiErrorMessage } from "@/lib/insights";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   WORKSPACE_KPI_TIME_TO_INSIGHT_EMPTY,
   WORKSPACE_KPI_TIME_TO_INSIGHT_LABEL,
@@ -39,7 +39,7 @@ export function WorkspaceKpisPanel({ workspaceId }: { workspaceId: string }) {
         );
         const data = (await res.json()) as TimeToInsightPayload;
         if (!res.ok) {
-          throw new Error(insightApiErrorMessage(data, "Failed to load time-to-insight"));
+          throw new Error(errorMessageFromBody(data, "Failed to load time-to-insight"));
         }
         if (cancelled) return;
         setReadout(

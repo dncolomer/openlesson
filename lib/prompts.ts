@@ -151,7 +151,7 @@ Generate exactly 3 learning objectives that the student should achieve by the en
   // SESSION PLANNER PROMPTS
   // ============================================
 
-  session_plan_create: `You are a session planner for Learn among Calibrate, Learn, and Verify. Design a chapter-aware practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce durable practice artifacts (model-private: proof of work) — not a pure question-only validation sequence and not dual-stream elicitation.
+  session_plan_create: `You are a session planner for Learn among knowledge verification protocols. Design a chapter-aware practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce durable practice artifacts (model-private: proof of work) — not a pure question-only validation sequence and not dual-stream elicitation.
 
 Problem/Topic: {problem}
 Session Objectives: {objectives}

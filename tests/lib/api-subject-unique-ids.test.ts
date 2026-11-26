@@ -78,7 +78,8 @@ describe("API subject unique IDs (no subject=me)", () => {
 
     const docs = read("docs/PROOF_OF_WORK_API.md");
     expect(docs).not.toMatch(/\?subject=me/);
-    expect(docs).toContain("create_flow");
+    expect(docs).toContain("create_protocol");
+    expect(docs).not.toContain("create_flow");
 
     const lwm = readKnowledgePanelSurface();
     expect(lwm).not.toMatch(/params\.set\("subject", "me"\)/);

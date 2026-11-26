@@ -17,13 +17,10 @@ import {
 const ROOT = join(__dirname, "../..");
 
 describe("production Data Studio demo sets", () => {
-  it("ships two verification and two calibration sets with mixed membership", () => {
+  it("ships four verification protocol sets with mixed membership", () => {
     expect(PRODUCTION_STUDIO_DEMO_SETS).toHaveLength(4);
     expect(PRODUCTION_STUDIO_DEMO_SETS.filter((set) => set.product === "verification")).toHaveLength(
-      2,
-    );
-    expect(PRODUCTION_STUDIO_DEMO_SETS.filter((set) => set.product === "calibration")).toHaveLength(
-      2,
+      4,
     );
     for (const set of PRODUCTION_STUDIO_DEMO_SETS) {
       expect(set.marker.startsWith(PRODUCTION_STUDIO_DEMO_MARKER)).toBe(true);
@@ -37,11 +34,7 @@ describe("production Data Studio demo sets", () => {
       expect(ada.embedding.vector_path_text).not.toEqual(bea.embedding.vector_path_text);
       expect(ada.embedding.vector).not.toEqual(eve.embedding.vector);
       expect(ada.embedding.raw.flowKind).toBe(set.flowKind);
-      if (set.product === "calibration") {
-        expect(ada.embedding.raw.projectedPolicy).toBeNull();
-      } else {
-        expect(ada.embedding.raw.projectedPolicy?.sequence).toEqual(["r1", "r1-c1"]);
-      }
+      expect(ada.embedding.raw.projectedPolicy?.sequence).toEqual(["r1", "r1-c1"]);
       const region = buildStudioDemoRegion(set, encoded);
       expect(region.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
       expect(region.subject_count).toBe(3);

@@ -7,21 +7,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
-  IleMapInsightsWidget,
-} from "@/components/session-view/learn-insight-trophies";
 import { SessionTopicCard, sessionSidebarTopic } from "@/components/session-view/learn-work-dock-bar";
-import {
-  IleTurnInsightCraft,
-  ileTurnInsightTopic,
-} from "@/components/session-view/learn-turn-insight-craft";
-import {
-  ileBlockSessionFrame,
-  ileBlockSessionOpenWorkIds,
-} from "@/lib/learn-canvas-session";
+import { ileBlockSessionFrame } from "@/lib/learn-canvas-session";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
-import type { InsightSummary } from "@/lib/insights";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/learn-pow-spend";
 import {
@@ -406,33 +394,11 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).not.toContain("turnInsightCraft(true)");
     expect(view).toContain("ileSessionSettingsPath");
     expect(view).toContain("if (showWelcomeModal)");
-    expect(view).toContain("IleTurnInsightCraft");
+    expect(view).not.toContain("IleTurnInsightCraft");
     expect(view).not.toContain("IleSessionInsightsPanel");
-    expect(view).toContain("IleMapInsightsWidget");
-    const craft = read("components/session-view/learn-turn-insight-craft.tsx");
-    expect(craft).toContain("data-ile-turn-insight-craft");
-    expect(craft).toContain("data-ile-end-turn-screen");
-    expect(craft).toContain("data-ile-end-turn-blocked-reason");
-    expect(craft).toContain("data-ile-turn-insight-chapters");
-    expect(craft).toContain("data-ile-turn-insight-chapter-list");
-    expect(craft).toContain("ileTurnInsightTopic");
-    expect(craft).not.toContain("dockedChapters.map");
-    expect(craft).toContain("IleWorkDockChip");
+    expect(view).not.toContain("IleMapInsightsWidget");
     expect(read("components/session-view/use-session-field.ts")).toContain("ileBlockSessionOpenWorkIds");
-    expect(craft).toContain("compact");
-    expect(craft).not.toContain("bg-amber-300/10");
-    expect(craft).not.toContain("text-amber-100");
-    expect(craft).not.toContain("data-ile-turn-insight-draft");
-    expect(craft).not.toContain("data-ile-turn-insight-evaluate");
-    expect(craft).not.toContain("Thoughts pool");
-    expect(craft).not.toContain("Link to an active chapter");
-    expect(craft).toContain("dockedChapters");
     expect(read("components/SessionView.tsx")).not.toContain("turnInsightCraft");
-    expect(craft).toContain("Continue with the next turn");
-    expect(craft).toContain("Save and go out of the workspace");
-    expect(craft).toContain("Back to work");
-    expect(craft).not.toContain("DialogFrame");
-    expect(craft).not.toContain("portal={portal}");
     expect(chrome).not.toContain("data-ile-insight-craft-widget");
     expect(chrome).not.toContain("ileMapInsightCraftFrameClass()");
     expect(chrome).not.toContain("data-ile-work-dock-covered");
@@ -455,12 +421,11 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(world).toContain("aestheticImageForId");
     expect(world).toContain("hideIcon={Boolean(tileAesthetic)}");
     expect(world).not.toContain("IleChapterInsightCountBadge");
-    expect(view).toContain("IleInsightTrophyStrip");
-    expect(view).toContain("slotCount={minInsightsPerChapter}");
+    expect(view).not.toContain("IleInsightTrophyStrip");
     expect(view).toContain("workCanvasHeaderLeading={workCanvasInsightSlots}");
     expect(view).not.toContain("compactHeaderLeading");
     expect(view).not.toContain('renderWorkCanvas("pip")');
-    expect(view).toContain("IleMapInsightsWidget");
+    expect(view).not.toContain("IleMapInsightsWidget");
     expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
     expect(read("components/SessionView.tsx")).not.toContain("workCanvasHeaderExtra");
     expect(chrome).not.toContain("workCanvasHeaderExtra");
@@ -482,25 +447,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
       "data-session-sidebar-focus",
     );
     expect(chrome).toContain("mapInsightsWidget");
-    const trophies = read("components/session-view/learn-insight-trophies.tsx");
-    expect(trophies).toContain("data-ile-insight-trophy");
-    expect(trophies).toContain("data-ile-insight-slot-empty");
-    expect(trophies).toContain("data-ile-map-insights-widget");
-    expect(trophies).toContain("ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3");
-    expect(trophies).toContain("data-ile-map-insights-more");
-    expect(trophies).toContain("ILE_MAP_INSIGHTS_MORE_LABEL");
-    expect(trophies).toContain("Math.max(goal, insights.length)");
-    expect(trophies).toContain('data-ile-insight-slot-card="empty"');
-    expect(trophies).toContain("ILE_INSIGHT_EMPTY_SLOT_LABEL");
-    expect(trophies).not.toContain("Craft insights on the Work canvas.");
-    expect(trophies).toContain("data-ile-work-canvas-timer");
-    expect(trophies).toContain("data-ile-insight-trophy-icon");
-    expect(trophies).toContain("data-ile-insight-flag-icon");
-    expect(trophies).not.toMatch(/border-amber-/);
-    expect(trophies).toContain("data-ile-chapter-insight-count");
-    const expand = read("components/session-view/learn-canvas-craft-insight.tsx");
-    expect(expand).toContain("data-ile-craft-insight");
-    expect(expand).toContain("ILE_CRAFT_INSIGHT_LABEL");
+    expect(existsSync(join(ROOT, "components/session-view/learn-insight-trophies.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/session-view/learn-canvas-craft-insight.tsx"))).toBe(false);
     const enHelp = JSON.parse(read("messages/en.json")) as {
       onboardingGuide: {
         ile: {
@@ -510,9 +458,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
         };
       };
     };
-    expect(enHelp.onboardingGuide.ile.title).toMatch(/Craft \{count\} insights/);
-    expect(enHelp.onboardingGuide.ile.titleOne).toMatch(/Craft 1 insight/);
-    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
+    expect(enHelp.onboardingGuide.ile.title).toMatch(/Work through \{count\} chapters/);
+    expect(enHelp.onboardingGuide.ile.titleOne).toMatch(/Work through 1 chapter/);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/work on each chapter's canvas/i);
     expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/canvas/i);
     expect(enHelp.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
     expect(enHelp.onboardingGuide.ile.step3.highlight).toBe("");
@@ -522,8 +470,6 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(guide).toContain("data-ile-voice-challenge");
     expect(guide).not.toContain("IleInsightEmptySlots");
     expect(guide).toContain("insightGoalCount");
-    expect(trophies).toContain("data-ile-welcome-insight-slots");
-    expect(trophies).toContain("IleInsightEmptySlots");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("hideIcon");
     expect(view).toContain("openWorkIdsRef");
@@ -669,48 +615,6 @@ describe("one current chapter", () => {
   });
 });
 
-describe("end turn topic chip", () => {
-  it("draws one dock chip for the session chapter when several labels are passed", () => {
-    const steps = [
-      { id: "initial-prompt" },
-      { id: "chapter-2" },
-      { id: "chapter-3" },
-      { id: "chapter-4" },
-      { id: "chapter-5" },
-    ];
-    expect(ileBlockSessionOpenWorkIds(steps)).toEqual(["initial-prompt"]);
-    const labels = steps.map((step, index) => ({
-      id: step.id,
-      label: `Ch ${index + 1}`,
-      keyword: index === 0 ? "Initial prompt" : `Later ${index}`,
-      focused: index === 2,
-    }));
-    expect(ileTurnInsightTopic(labels)?.id).toBe("chapter-3");
-    const html = renderToStaticMarkup(
-      createElement(IleTurnInsightCraft, {
-        open: true,
-        dockedChapters: labels,
-        gate: {
-          canComplete: false,
-          reason: "Each chapter needs an insight.",
-          minPerChapter: 1,
-          unmetChapterIds: labels.map((row) => row.id),
-          chaptersToComplete: [],
-        },
-        onContinue: () => {},
-        onSaveAndExit: () => {},
-        onBack: () => {},
-      }),
-    );
-    expect(html.match(/data-ile-open-work-chip=/g)).toHaveLength(1);
-    expect(html).toContain('data-ile-open-work-chip="chapter-3"');
-    expect(html).not.toContain('data-ile-open-work-chip="initial-prompt"');
-    expect(html).not.toContain('data-ile-open-work-chip="chapter-2"');
-    expect(html).not.toContain('data-ile-open-work-chip="chapter-5"');
-    expect(html.match(/data-ile-turn-insight-chapter=/g)).toHaveLength(1);
-  });
-});
-
 describe("session topic card", () => {
   it("keeps the focused chapter and draws one static card", () => {
     const topic = sessionSidebarTopic([
@@ -741,58 +645,3 @@ describe("session topic card", () => {
   });
 });
 
-function insightFixture(id: string): InsightSummary {
-  return {
-    id,
-    title: id,
-    summary: "",
-    created_at: "2026-01-01T00:00:00.000Z",
-  };
-}
-
-describe("IleMapInsightsWidget slots", () => {
-  it("draws one empty slot when the insight goal is one", () => {
-    const html = renderToStaticMarkup(
-      createElement(IleMapInsightsWidget, {
-        insights: [],
-        visible: true,
-        slotCount: 1,
-      }),
-    );
-    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
-    expect(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT).toBe(3);
-    expect(empties).toHaveLength(1);
-    expect(html).toContain('data-ile-map-insights-slot-count="1"');
-    expect(html).not.toContain("data-ile-map-insights-more");
-    expect(html).not.toContain("<button");
-  });
-
-  it("draws as many empty slots as the insight goal", () => {
-    const html = renderToStaticMarkup(
-      createElement(IleMapInsightsWidget, {
-        insights: [],
-        visible: true,
-        slotCount: 5,
-      }),
-    );
-    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
-    expect(empties).toHaveLength(5);
-    expect(html).toContain('data-ile-map-insights-goal="5"');
-    expect(html).toContain('data-ile-map-insights-slot-count="5"');
-  });
-
-  it("keeps every accepted insight past the goal and does not add empty rows", () => {
-    const html = renderToStaticMarkup(
-      createElement(IleMapInsightsWidget, {
-        insights: [insightFixture("a"), insightFixture("b")],
-        visible: true,
-        slotCount: 1,
-      }),
-    );
-    const filled = html.match(/data-ile-insight-slot-card="filled"/g) ?? [];
-    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
-    expect(filled).toHaveLength(2);
-    expect(empties).toHaveLength(0);
-    expect(html).toContain("data-ile-map-insights-more");
-  });
-});

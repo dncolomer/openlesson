@@ -1,5 +1,5 @@
 /**
- * Unsys seed attached to a product flow (Solve / Verify / Calibrate).
+ * Unsys seed attached to a knowledge verification protocol.
  * The slow create wizard authors this seed; session prepare reads it first.
  */
 
@@ -13,7 +13,7 @@ import { SCIENCE_UNSYS_PATH } from "@/lib/science/hub";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import { parseUnsysSeedSpec } from "@/lib/unsys-tree-spec";
 
-export const FLOW_UNSYS_SEED_PATH = "/api/dashboard/flows/unsys-seed";
+export const FLOW_UNSYS_SEED_PATH = "/api/dashboard/protocols/unsys-seed";
 
 export const FLOW_UNSYS_SCIENCE_HREF = SCIENCE_UNSYS_PATH;
 

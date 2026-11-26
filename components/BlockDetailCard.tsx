@@ -342,7 +342,7 @@ export function BlockDetailCard({
         </>
       ) : null}
 
-      {/* Duration for Calibrate, Verify, and Drill. Learn has no clock. */}
+      {/* Duration for Verify. Learn has no clock. */}
       {showDurationPicker ? (
         <div className="mt-3" data-launch-duration-picker>
           <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">

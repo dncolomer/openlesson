@@ -131,17 +131,17 @@ describe("evidence integration helpers", () => {
     expect(enriched.spec_version).toBe("1.3");
     expect(enriched.pow_model_version).toBe("pow-model-v1");
     expect(enriched.interruption_contract).toBeTruthy();
-    expect(enriched.performance_report_contract?.endpoint_pattern).toContain("/map-tools");
-    expect(enriched.performance_report_contract?.mcp_tool).toBe("apply_map_tool");
+    expect(enriched.performance_report_contract?.endpoint_pattern).toContain("/protocols");
+    expect(enriched.performance_report_contract?.mcp_tool).toBe("create_protocol");
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
     expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
-    expect(enriched.continuous_evaluation?.performance.api_path).toContain("/map-tools");
-    expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("create_flow");
+    expect(enriched.continuous_evaluation?.performance.api_path).toContain("/protocols");
+    expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("create_protocol");
     expect(enriched.continuous_evaluation_mcp?.upload_proof_of_work.rest_equivalent).toContain(
-      "/flows/{flow_id}/link",
+      "/protocols/{protocol_id}",
     );
-    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/map-tools");
-    expect(enriched.continuous_evaluation_mcp?.performance.mcp_tool).toBe("apply_map_tool");
+    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/protocols");
+    expect(enriched.continuous_evaluation_mcp?.performance.mcp_tool).toBe("list_protocols");
     expect(enriched.integration_surfaces?.length).toBe(2);
     expect(enriched.uncertain_systems_scope).toBeTruthy();
     expect(enriched.recommended_next_actions?.length).toBeGreaterThan(0);
@@ -168,13 +168,13 @@ describe("evidence integration helpers", () => {
       "https://uncertain.systems",
     );
 
-    expect(enriched.performance_report_contract?.mcp_tool).toBe("apply_map_tool");
-    expect(enriched.performance_report_contract?.endpoint_pattern).toContain("/map-tools");
+    expect(enriched.performance_report_contract?.mcp_tool).toBe("create_protocol");
+    expect(enriched.performance_report_contract?.endpoint_pattern).toContain("/protocols");
     expect(enriched.performance_report_contract?.required_fields).toEqual(
-      expect.arrayContaining(["workspace_id", "tool", "tool_calls"]),
+      expect.arrayContaining(["name", "challenge"]),
     );
     expect(enriched.performance_report_contract?.endpoint_pattern).not.toContain("lwm-snapshot");
-    expect(enriched.vertical_score_contracts?.verification?.mcp_tool).toBe("apply_map_tool");
+    expect(enriched.vertical_score_contracts?.verification?.mcp_tool).toBe("create_protocol");
   });
 
   it("builds continuous evaluation policy with proof of work-aware triggers", () => {
@@ -183,8 +183,8 @@ describe("evidence integration helpers", () => {
     });
 
     expect(policy.more_evidence_improves.toLowerCase()).toContain("more");
-    expect(policy.proof_of_work_spec.api_path).toContain("/flows");
-    expect(policy.performance.api_path).toContain("/map-tools");
+    expect(policy.proof_of_work_spec.api_path).toContain("/protocols");
+    expect(policy.performance.api_path).toContain("/protocols");
     expect(policy.more_evidence_improves).not.toContain("lwm-snapshot");
     expect(policy.integration_skill.api_path).toBe(
       buildIntegrationSkillApiPath("ws-1", "https://uncertain.systems")
@@ -213,8 +213,9 @@ describe("evidence integration helpers", () => {
     });
 
     expect(text).toContain("demo");
-    expect(text).toContain("create_flow");
-    expect(text).toContain("link_flow");
+    expect(text).toContain("create_protocol");
+    expect(text).not.toContain("create_flow");
+    expect(text).not.toContain("link_flow");
     expect(text).not.toContain("lwm_snapshot");
     expect(text).not.toMatch(/MCP tools: verification_score, augmentation_score, optimization_score/);
   });
@@ -252,12 +253,12 @@ describe("buildIntegrationSkillInstructions", () => {
       null
     );
 
-    expect(instructions).toContain("Learning Map");
     expect(instructions).toContain("/api/v3/workspaces/ws-1/integration-skill");
-    expect(instructions).toContain("list_map_tools");
-    expect(instructions).toContain("create_flow");
-    expect(instructions).toContain("link_flow");
-    expect(instructions).toContain("apply_map_tool");
+    expect(instructions).toContain("create_protocol");
+    expect(instructions).toContain("list_protocols");
+    expect(instructions).not.toContain("create_flow");
+    expect(instructions).not.toContain("link_flow");
+    expect(instructions).not.toContain("list_map_tools");
     expect(instructions).not.toContain("lwm_snapshot");
     expect(instructions).toContain("current status");
   });
@@ -372,8 +373,9 @@ describe("buildProofOfWorkSchemaInstructions", () => {
     expect(instructions).toContain("Discovery");
     expect(instructions).toContain("product-independent");
     expect(instructions).toContain("never recommend TAP sessions");
-    expect(instructions).toContain("create_flow");
-    expect(instructions).toContain("link_flow");
+    expect(instructions).toContain("create_protocol");
+    expect(instructions).not.toContain("create_flow");
+    expect(instructions).not.toContain("link_flow");
     expect(instructions).not.toContain("generate_proof_of_work_schema");
     expect(instructions).not.toContain("lwm_snapshot");
     expect(instructions).not.toContain("/lwm-snapshot");

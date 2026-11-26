@@ -123,15 +123,15 @@ describe("generic uncertainty model tree spec", () => {
     ).toBe(true);
   });
 
-  it("MCP create_flow documents a custom tree spec", () => {
-    const create = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "create_flow");
+  it("MCP create_protocol documents a custom tree spec", () => {
+    const create = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "create_protocol");
     const properties = create?.inputSchema.properties ?? {};
     expect(properties).toHaveProperty("answers_model_seed");
     expect(properties).toHaveProperty("uncertainty_model");
     const seedDoc = JSON.stringify(properties.answers_model_seed || {});
     expect(seedDoc).toContain("nodes");
     expect(seedDoc).toContain("weight");
-    const dashboard = read("app/api/dashboard/flows/route.ts");
+    const dashboard = read("app/api/dashboard/protocols/route.ts");
     expect(dashboard).toContain("unsysSeedFromRequestBody");
     const agent = read("lib/pow-api/agent-flow-management.ts");
     expect(agent).toContain("requestHasUnsysSeed");

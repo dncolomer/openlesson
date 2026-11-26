@@ -107,14 +107,15 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(copy.skillDescription).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
     expect(textExposesKnowledgeLinkMint(knowledgeRegion)).toBe(false);
     expect(textExposesKnowledgeLinkMint(copy.skillDescription)).toBe(false);
-    expect(knowledgeRegion).toContain("create_flow");
+    expect(knowledgeRegion).toContain("create_protocol");
+    expect(knowledgeRegion).not.toContain("create_flow");
     expect(knowledgeRegion).not.toContain("link_flow");
     expect(knowledgeRegion).not.toContain("buffer_proof_of_work");
     expect(knowledgeRegion).not.toContain("create_tap_link");
     expect(standard).not.toContain("create_tap_link");
     expect(standard).not.toContain("list_blocks");
-    expect(standard).toContain("list_flows");
-    expect(standard).toContain("create_flow");
+    expect(standard).toContain("list_protocols");
+    expect(standard).toContain("create_protocol");
   });
 
   it("appends the canvas tool catalog to the skill an agent downloads", () => {
@@ -146,7 +147,8 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
   it("does not expose headless upload_proof_of_work on the public MCP catalog", () => {
     expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).not.toContain("upload_proof_of_work");
     expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).not.toContain("buffer_proof_of_work");
-    expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).toContain("create_flow");
+    expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).toContain("create_protocol");
+    expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).not.toContain("create_flow");
     expect(AGENT_TOOL_SURFACE.map((entry) => entry.name)).not.toContain("upload_proof_of_work");
   });
 
@@ -162,7 +164,9 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     ];
     for (const rel of files) {
       const src = readFileSync(join(root, rel), "utf8");
-      expect(src, rel).toContain("create_flow");
+      expect(src, rel).toContain("create_protocol");
+      expect(src, rel).not.toContain("create_flow");
+      expect(src, rel).not.toContain("/api/v3/flows");
       expect(publicDocInstructsHeadlessPowLoop(src), rel).toBe(false);
     }
   });

@@ -335,9 +335,9 @@ export function formatHeliosMapSnapshotForPrompt(
           .join(",") || "-";
       const next = (b.next_block_ids || []).join(",") || "-";
       const lock = (b.lock_until_block_ids || []).join(",") || "-";
-      const kind = b.map_block?.kind || "learn";
+      const kind = b.map_block?.kind || "verification";
       const kindExtra =
-        kind === "calibration" || kind === "verification" || kind === "solve"
+        kind === "protocol" || kind === "verification"
           ? ` flow:${b.map_block?.flowId || "-"}`
           : kind === "content"
             ? ` attachments:${(b.map_block?.attachments || []).length}`

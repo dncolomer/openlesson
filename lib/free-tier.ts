@@ -19,7 +19,7 @@ export const FREE_WEEKLY_SESSION_LIMIT = 3;
 
 export const FREE_DASHBOARD_TAB_IDS = [
   "home",
-  "flows",
+  "protocols",
   "usage",
 ] as const satisfies readonly DashboardTab[];
 
@@ -33,9 +33,8 @@ const FREE_TIER_ALLOWED_PREFIXES = [
   "/session",
   "/play",
   "/verification",
-  "/calibration",
-  "/solve",
-  "/flows",
+  "/protocols",
+  "/v/",
   "/regions",
 ] as const;
 
@@ -123,7 +122,7 @@ export function dashboardNavGroupsForAccess(
   }));
 }
 
-/** Play start kinds. Free and paid both run Learn, Verify, and Calibrate. */
+/** Play start kinds. Free and paid both run leftover Learn and Verification. */
 export function dashboardPlayKindsForAccess(
   _hasPaidAccess?: boolean,
 ): DashboardPlayKind[] {

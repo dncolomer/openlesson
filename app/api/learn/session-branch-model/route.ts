@@ -1,5 +1,5 @@
 /**
- * Session start for Learn, Calibrate, and Verification.
+ * Session start for leftover Learn and Verification.
  * xAI prepares the field. Nothing local fills it in.
  * The author seed is used when present. Otherwise xAI writes the field.
  */
@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
-import { getCalibrationFlowById, getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
 import { exactProblemOpeningWork } from "@/lib/learn-opening-work";
 import {
   flowOpeningCanvasHasContent,
@@ -19,13 +18,11 @@ import {
   definitionUnsysSeedFromBlocks,
   studentModelFromDefinitionSeed,
 } from "@/lib/definition-unsys-seed";
-import { getSolveFlowById, getSolveFlowByToken } from "@/lib/solve-flow-repository";
 import {
   authorSeedBlockIdFromPreparePlan,
   authorSeedSessionIdFromPreparePlan,
   definitionFlowTokenFromPreparePlan,
   planSessionBranchPrepare,
-  sessionPrepareBlockId,
   type SessionBranchPrepareInput,
 } from "@/lib/session-branch-prepare";
 import {
@@ -46,7 +43,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 type OpeningGenerateContext = {
-  kind?: "solve" | "verification" | "calibration" | "learn";
+  kind?: "verification" | "learn";
   problem?: string;
   artifacts?: FlowArtifact[];
   fileIds?: string[];
@@ -74,7 +71,6 @@ async function openingWorkPayload(
     artifacts: generateContext.artifacts,
     name: plan.chapterTitle,
     problem: generateContext.problem || plan.chapterBrief,
-    kind: generateContext.kind,
   });
   if (generated?.openingWork) {
     return {
@@ -113,10 +109,7 @@ export async function POST(request: NextRequest) {
     if (plan.kind === "missing-material") return jsonError(400, "A chapter is required.");
     if (plan.kind === "none") return jsonError(400, "A session is required.");
 
-    if (plan.kind === "calibration") {
-      const flow = await getCalibrationFlowByToken(plan.token);
-      if (!flow) return jsonError(404, "Calibration flow not found");
-    } else if (plan.kind === "verification") {
+    if (plan.kind === "verification") {
       const flow = await getVerificationFlowByToken(plan.token);
       if (!flow) return jsonError(404, "Verification flow not found");
     } else if (plan.kind === "workspace") {
@@ -146,33 +139,11 @@ export async function POST(request: NextRequest) {
     };
     try {
       const tokenedEarly = definitionFlowTokenFromPreparePlan(plan);
-      if (tokenedEarly?.kind === "calibration") {
-        const flow = await getCalibrationFlowByToken(tokenedEarly.token);
-        if (flow) {
-          generateContext = {
-            kind: "calibration",
-            problem: flow.topic || flow.goal,
-            artifacts: flow.artifacts,
-            generateProblemOnOpen: flow.generateProblemOnOpen,
-          };
-        }
-      } else if (tokenedEarly?.kind === "verification") {
+      if (tokenedEarly?.kind === "verification") {
         const flow = await getVerificationFlowByToken(tokenedEarly.token);
         if (flow) {
           generateContext = {
             kind: "verification",
-            problem: flow.topic,
-            artifacts: flow.artifacts,
-            exactProblemOnCanvas: flow.exactProblemOnCanvas,
-            openingCanvasScene: flow.openingCanvasScene,
-            generateProblemOnOpen: flow.generateProblemOnOpen,
-          };
-        }
-      } else if (tokenedEarly?.kind === "solve") {
-        const flow = await getSolveFlowByToken(tokenedEarly.token);
-        if (flow) {
-          generateContext = {
-            kind: "solve",
             problem: flow.topic,
             artifacts: flow.artifacts,
             exactProblemOnCanvas: flow.exactProblemOnCanvas,
@@ -192,20 +163,7 @@ export async function POST(request: NextRequest) {
         let definitionWorkspaceId = "";
         let flowSeed: unknown = null;
         const tokened = definitionFlowTokenFromPreparePlan(plan);
-        if (tokened?.kind === "calibration") {
-          const flow = await getCalibrationFlowByToken(tokened.token);
-          flowId = String(flow?.id || "");
-          definitionWorkspaceId = String(flow?.workspaceId || "");
-          if (flow) {
-            flowSeed = flow.answersModelSeed ?? null;
-            generateContext = {
-              kind: "calibration",
-              problem: flow.topic || flow.goal,
-              artifacts: flow.artifacts,
-              generateProblemOnOpen: flow.generateProblemOnOpen,
-            };
-          }
-        } else if (tokened?.kind === "verification") {
+        if (tokened?.kind === "verification") {
           const flow = await getVerificationFlowByToken(tokened.token);
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
@@ -220,38 +178,16 @@ export async function POST(request: NextRequest) {
               generateProblemOnOpen: flow.generateProblemOnOpen,
             };
           }
-        } else if (tokened?.kind === "solve") {
-          const flow = await getSolveFlowByToken(tokened.token);
-          flowId = String(flow?.id || "");
-          definitionWorkspaceId = String(flow?.workspaceId || "");
-          if (flow) {
-            flowSeed = flow.answersModelSeed ?? null;
-            generateContext = {
-              kind: "solve",
-              problem: flow.topic,
-              artifacts: flow.artifacts,
-              exactProblemOnCanvas: flow.exactProblemOnCanvas,
-              openingCanvasScene: flow.openingCanvasScene,
-              generateProblemOnOpen: flow.generateProblemOnOpen,
-            };
-          }
         }
         if (!flowId) {
           const sessionId = authorSeedSessionIdFromPreparePlan(plan);
           if (sessionId) {
             const { data: sessionRow } = await supabase
               .from("sessions")
-              .select(
-                "metadata, solve_flow_id, calibrate_flow_id, verify_flow_id, workspace_id",
-              )
+              .select("metadata, verify_flow_id, workspace_id")
               .eq("id", sessionId)
               .maybeSingle();
-            flowId = String(
-              sessionRow?.solve_flow_id ||
-                sessionRow?.calibrate_flow_id ||
-                sessionRow?.verify_flow_id ||
-                "",
-            ).trim();
+            flowId = String(sessionRow?.verify_flow_id || "").trim();
             const meta =
               sessionRow?.metadata && typeof sessionRow.metadata === "object"
                 ? (sessionRow.metadata as Record<string, unknown>)
@@ -277,71 +213,27 @@ export async function POST(request: NextRequest) {
           }
         }
         if (flowId) {
-          const solve = await getSolveFlowById(flowId);
-          if (solve) {
-            flowSeed = flowSeed || solve.answersModelSeed || null;
+          const verify = await getVerificationFlowById(flowId);
+          if (verify) {
+            flowSeed = flowSeed || verify.answersModelSeed || null;
             generateContext = {
-              kind: "solve",
-              problem: solve.topic,
-              artifacts: solve.artifacts,
-              exactProblemOnCanvas: solve.exactProblemOnCanvas,
-              openingCanvasScene: solve.openingCanvasScene,
-              generateProblemOnOpen: solve.generateProblemOnOpen,
+              kind: "verification",
+              problem: verify.topic,
+              artifacts: verify.artifacts,
+              exactProblemOnCanvas: verify.exactProblemOnCanvas,
+              openingCanvasScene: verify.openingCanvasScene,
+              generateProblemOnOpen: verify.generateProblemOnOpen,
             };
-          } else {
-            const verify = await getVerificationFlowById(flowId);
-            if (verify) {
-              flowSeed = flowSeed || verify.answersModelSeed || null;
-              generateContext = {
-                kind: "verification",
-                problem: verify.topic,
-                artifacts: verify.artifacts,
-                exactProblemOnCanvas: verify.exactProblemOnCanvas,
-                openingCanvasScene: verify.openingCanvasScene,
-                generateProblemOnOpen: verify.generateProblemOnOpen,
-              };
-            } else {
-              const calibrate = await getCalibrationFlowById(flowId);
-              if (calibrate) {
-                flowSeed = flowSeed || calibrate.answersModelSeed || null;
-                generateContext = {
-                  kind: "calibration",
-                  problem: calibrate.topic || calibrate.goal,
-                  artifacts: calibrate.artifacts,
-                  generateProblemOnOpen: calibrate.generateProblemOnOpen,
-                };
-              }
-            }
           }
         }
         if (flowId) {
-          const { data: flowRow } = await supabase
-            .from("solve_flows")
+          const { data: verRow } = await supabase
+            .from("verify_flows")
             .select("id, workspace_id")
             .eq("id", flowId)
             .maybeSingle();
-          if (flowRow) {
-            definitionWorkspaceId =
-              definitionWorkspaceId || String(flowRow.workspace_id || "");
-          } else {
-            const { data: calRow } = await supabase
-              .from("calibrate_flows")
-              .select("id, workspace_id")
-              .eq("id", flowId)
-              .maybeSingle();
-            if (calRow) {
-              definitionWorkspaceId =
-                definitionWorkspaceId || String(calRow.workspace_id || "");
-            } else {
-              const { data: verRow } = await supabase
-                .from("verify_flows")
-                .select("id, workspace_id")
-                .eq("id", flowId)
-                .maybeSingle();
-              definitionWorkspaceId =
-                definitionWorkspaceId || String(verRow?.workspace_id || "");
-            }
-          }
+          definitionWorkspaceId =
+            definitionWorkspaceId || String(verRow?.workspace_id || "");
           const { data: blocks } = definitionWorkspaceId
             ? await supabase
                 .from("blocks")

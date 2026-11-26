@@ -100,7 +100,7 @@ import {
   type KnowledgeRegionDetails,
   type KnowledgeRegionDetailsSample,
 } from "@/lib/knowledge-region-details";
-import { productFlowKindLabel, type ProductFlowKind } from "@/lib/product-flow";
+import { PROTOCOL_LABEL } from "@/lib/product-flow";
 import { parseLtiRosterNames } from "@/lib/lti/nrps";
 
 const FIGURE_SCREEN = {
@@ -129,18 +129,16 @@ function toggleId<T extends string>(current: readonly T[], id: T): T[] {
 }
 
 export function KnowledgeRegionPage({
-  kind,
   regionId,
   detailsUrl,
   mode = "view",
 }: {
-  kind: ProductFlowKind;
   regionId: string;
   detailsUrl?: string;
   mode?: "view" | "edit";
 }) {
   const router = useRouter();
-  const productLabel = productFlowKindLabel(kind);
+  const productLabel = PROTOCOL_LABEL;
   const [details, setDetails] = useState<KnowledgeRegionDetails | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -184,10 +182,9 @@ export function KnowledgeRegionPage({
     let cancelled = false;
     setLoading(true);
     setError("");
-    const params = new URLSearchParams({ kind });
     const href =
       detailsUrl ||
-      `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}?${params}`;
+      `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}`;
     void fetch(href)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
@@ -213,7 +210,7 @@ export function KnowledgeRegionPage({
     return () => {
       cancelled = true;
     };
-  }, [kind, regionId, detailsUrl]);
+  }, [regionId, detailsUrl]);
 
   useEffect(() => {
     return loadDetails();
@@ -388,7 +385,7 @@ export function KnowledgeRegionPage({
           : null,
       },
       visiblePointKinds,
-      analysisLabel: knowledgeRegionAnalysisPointLabel(details.kind),
+      analysisLabel: knowledgeRegionAnalysisPointLabel(PROTOCOL_LABEL),
       visibleClusterIds,
       selectedPointId: selectedSampleId,
       mode: figureMode,
@@ -577,7 +574,7 @@ export function KnowledgeRegionPage({
       const response = await fetch(simulationPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, ...body }),
+        body: JSON.stringify(body),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -625,11 +622,11 @@ export function KnowledgeRegionPage({
   return (
     <ProductSurface
       label={`${productLabel} knowledge region`}
-      activeTab={dashboardTabForProductSurface(kind, "region")}
+      activeTab={dashboardTabForProductSurface(undefined, "region")}
     >
       <div
         className={`${PRODUCT_CREATE_SHELL} min-h-[32rem]`}
-        data-knowledge-region-details={kind}
+        data-knowledge-region-details=""
         data-knowledge-region-mode={mode}
       >
           <FlowFormHeader
@@ -689,7 +686,7 @@ export function KnowledgeRegionPage({
                       </div>
                       <div>
                         <dt className={FLOW_FORM_LABEL}>
-                          {knowledgeRegionAnalysisPointLabel(details.kind)}
+                          {knowledgeRegionAnalysisPointLabel(PROTOCOL_LABEL)}
                         </dt>
                         <dd className="mt-1 text-white">{details.analysisCount}</dd>
                       </div>
@@ -1520,7 +1517,7 @@ export function KnowledgeRegionPage({
                           id,
                           label:
                             id === "analysis"
-                              ? knowledgeRegionAnalysisPointLabel(details.kind)
+                              ? knowledgeRegionAnalysisPointLabel(PROTOCOL_LABEL)
                               : id === "cohort"
                                 ? "Reference"
                                 : id === "ai_use"
@@ -1573,7 +1570,7 @@ export function KnowledgeRegionPage({
                       : null
                   }
                   mode={figureMode}
-                  productKind={details.kind}
+                  productKind={PROTOCOL_LABEL}
                   identityLabel={knowledgeRegionIdentityLabel(
                     selectedSample.identity,
                     rosterNames,

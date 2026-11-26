@@ -460,17 +460,13 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
     expect(live).not.toContain("buildTapCanvasSnapshotUploadItem");
     expect(live).toContain("uploadTapWorkCanvasPow");
     expect(live).toContain("onCanvasPowActions");
-    const preparePhases = read("components/scout-tap/scout-tap-phases.tsx");
-    const prepareClient = read("components/scout-tap/ScoutTapClient.tsx");
-    expect(preparePhases).not.toContain("onCanvasPowActions");
-    expect(preparePhases).not.toContain("<WorkCanvas");
-    expect(prepareClient).toContain("uploadTapWorkCanvasPow");
-    expect(prepareClient).toContain("soundingProofUploadItem");
+    expect(existsSync(join(ROOT, "components/scout-tap/ScoutTapClient.tsx"))).toBe(false);
     const runtime = read("lib/tap-session-runtime.ts");
-    expect(runtime).toContain("CALIBRATE_POW_API_PATHS");
+    expect(runtime).toContain("VERIFY_POW_API_PATHS");
     expect(runtime).toContain("tapSessionRuntimePaths");
     expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/calibrate/session/canvas/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/verify/session/canvas/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/calibrate/session/canvas/route.ts"))).toBe(false);
 
     writeScratch(
       "tap-canvas-pow.log",
@@ -478,7 +474,7 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
         `tool=${tool?.toolName}/${tool?.toolAction}`,
         `snap=${snap.toolName}/${snap.toolAction}`,
         "live wires buildTapWorkCanvasActionUploadItem + mermaid documents",
-        "path=/api/calibrate/session/canvas",
+        "path=/api/verify/session/canvas",
       ].join("\n") + "\n",
     );
   });

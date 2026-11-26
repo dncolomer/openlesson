@@ -420,7 +420,7 @@ describe("prompt impact layers for UI", () => {
       expect(layer.summary, layer.id).not.toContain("TAP Learning");
     }
     const surfaces = ctx.promptImpactLayers.find((l) => l.id === "surfaces");
-    expect(surfaces?.summary).toContain("Calibrate, Learn, and Verify");
+    expect(surfaces?.summary).toContain("Knowledge verification protocols");
   });
 });
 
@@ -436,7 +436,7 @@ describe("structural artifacts", () => {
         join(ROOT, "supabase/migrations/20260731180000_workspace_context_map_ground.sql"),
       ),
     ).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/workspace/map-ground/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/workspace/map-ground/route.ts"))).toBe(false);
 
     const view = readWorkspaceViewSurface();
     expect(view).toContain("data-workspace-context-section");

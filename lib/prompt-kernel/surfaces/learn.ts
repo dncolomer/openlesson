@@ -19,7 +19,7 @@ import { ileWorkCanvasXaiToolsInstruction } from "@/lib/learn-work-canvas-prompt
  */
 export const ILE_SURFACE = `
 PRODUCT SURFACE: Learn
-Calibrate, Learn, and Verify are the hosted flows. This surface is Learn.
+Embeddable Knowledge Verification Protocols are the hosted product. This surface is the leftover Learn canvas kernel used while a protocol runs.
 Primary goals (model-private):
 1. Optimize — move the learner forward through the **current chapter** goal with good-enough progress (not endless validation or perfect wording).
 2. Augment — actively co-author the chapter Work canvas and route practice so they produce observable work artifacts for later scoring.

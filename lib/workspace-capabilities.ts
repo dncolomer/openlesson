@@ -3,8 +3,8 @@
  *
  * Learning workspace (stored kind `standard`): a designer builds a map and
  * people in the organisation play it. Selling is AYCL only.
- * Verification and Calibration are first-class flows (owner_user_id).
- * Leftover knowledge_region / calibration payloads parse as Learning.
+ * Protocols are owner-scoped (owner_user_id). Leftover knowledge_region /
+ * calibration payloads parse as Learning.
  *
  * Knowledge Portal is not a feature of either product.
  */
@@ -98,9 +98,9 @@ function featurePhrase(feature: WorkspaceFeature): string {
     case "goals":
       return "goals";
     case "verification_flows":
-      return "verification flows";
+      return "protocols";
     case "calibration_flows":
-      return "calibration flows";
+      return "knowledge regions";
     case "context":
       return "context";
     case "knowledge":
@@ -149,6 +149,13 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
     case "get_account_settings":
     case "update_account_settings":
     case "generate_integration_skill":
+    case "list_protocols":
+    case "create_protocol":
+    case "get_protocol":
+    case "update_protocol":
+    case "delete_protocol":
+    case "upload_protocol_file":
+    case "generate_protocol_unsys_seed":
     case "list_flows":
     case "create_flow":
     case "get_flow":

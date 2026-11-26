@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
-  DASHBOARD_FLOWS_PATH,
-  flowAuthorShowsCountdown,
-  flowAuthorShowsEnforcedChannels,
+  DASHBOARD_PROTOCOLS_PATH,
+  PROTOCOL_CHALLENGE_LABEL,
+  PROTOCOL_LABEL,
   productFlowDashboardPath,
-  type ProductFlowKind,
+  protocolChallengeFromUnknown,
 } from "@/lib/product-flow";
 import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 import { ProductSurface } from "@/components/product-flow/product-surface";
@@ -48,6 +48,7 @@ import { FlowPublicLinks } from "@/components/product-flow/copy-flow-url-button"
 type LoadedFlow = {
   id: string;
   name: string;
+  challenge?: string;
   topic?: string;
   goal?: string;
   artifacts?: FlowArtifact[];
@@ -63,14 +64,7 @@ type LoadedFlow = {
   canvasCapture?: FlowCanvasCapture;
 };
 
-
-export function ProductFlowPage({
-  kind,
-  flowId,
-}: {
-  kind: ProductFlowKind;
-  flowId: string;
-}) {
+export function ProductFlowPage({ flowId }: { flowId: string }) {
   const router = useRouter();
   const [flow, setFlow] = useState<LoadedFlow | null>(null);
   const [name, setName] = useState("");
@@ -93,20 +87,18 @@ export function ProductFlowPage({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [modelBusy, setModelBusy] = useState(false);
-  const productLabel =
-    kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
 
   const load = useCallback(async () => {
-    const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flowId)}?kind=${kind}`);
+    const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flowId)}`);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      setError(errorMessageFromBody(payload, "Could not load flow"));
+      setError(errorMessageFromBody(payload, "Could not load protocol"));
       return;
     }
-    const next = payload.flow as LoadedFlow;
+    const next = payload.protocol as LoadedFlow;
     setFlow(next);
     setName(String(next.name || payload.name || ""));
-    setProblem(String(next.topic || next.goal || ""));
+    setProblem(protocolChallengeFromUnknown(next));
     setArtifacts(parseFlowArtifacts(next.artifacts));
     setExactProblemOnCanvas(Boolean(next.exactProblemOnCanvas));
     setOpeningCanvasScene(parseFlowOpeningCanvasScene(next.openingCanvasScene));
@@ -126,7 +118,7 @@ export function ProductFlowPage({
         }))
         .filter((row: { id: string; url: string }) => row.id && row.url),
     );
-  }, [flowId, kind]);
+  }, [flowId]);
 
   useEffect(() => {
     void load();
@@ -137,7 +129,7 @@ export function ProductFlowPage({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
+      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -149,19 +141,17 @@ export function ProductFlowPage({
           generateProblemOnOpen,
           durationMinutes: minutes,
           answersModelSeed,
-          enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
-            ? enforcedChannels
-            : undefined,
-          canvasCapture: flowAuthorShowsCanvasCapture(kind) ? canvasCapture : undefined,
+          enforcedChannels,
+          canvasCapture: flowAuthorShowsCanvasCapture() ? canvasCapture : undefined,
         }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(errorMessageFromBody(payload, "Could not save flow"));
+        throw new Error(errorMessageFromBody(payload, "Could not save protocol"));
       }
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save flow");
+      setError(err instanceof Error ? err.message : "Could not save protocol");
     } finally {
       setBusy(false);
     }
@@ -172,18 +162,18 @@ export function ProductFlowPage({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
+      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "remove" }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(errorMessageFromBody(payload, "Could not remove flow"));
+        throw new Error(errorMessageFromBody(payload, "Could not remove protocol"));
       }
-      router.push(`/dashboard?tab=${kind}`);
+      router.push(productFlowDashboardPath());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove flow");
+      setError(err instanceof Error ? err.message : "Could not remove protocol");
       setBusy(false);
     }
   }
@@ -193,7 +183,7 @@ export function ProductFlowPage({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
+      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "addLink", label }),
@@ -215,7 +205,7 @@ export function ProductFlowPage({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
+      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "removeLink", linkId }),
@@ -232,29 +222,13 @@ export function ProductFlowPage({
     }
   }
 
-  const description =
-    kind === "calibration"
-      ? "The problem is fixed. Name, files, and countdown can still change."
-      : kind === "verification"
-        ? "The problem is fixed. Name, files, countdown, and Exact problem on canvas can still change."
-        : "The problem is fixed. Name, files, and Exact problem on canvas can still change.";
-
   return (
-    <ProductSurface
-      label={`${productLabel} flow`}
-      activeTab={dashboardTabForProductSurface(kind)}
-    >
-      <div
-        className="mx-auto w-full max-w-[96rem] space-y-6"
-        data-product-flow-page={kind}
-        data-verification-flows-panel={kind === "verification" ? "" : undefined}
-        data-calibration-flows-panel={kind === "calibration" ? "" : undefined}
-        data-solve-flows-panel={kind === "solve" ? "" : undefined}
-      >
+    <ProductSurface label={PROTOCOL_LABEL} activeTab={dashboardTabForProductSurface()}>
+      <div className="mx-auto w-full max-w-[96rem] space-y-6" data-product-flow-page="">
         <FlowFormHeader
-          backHref={productFlowDashboardPath(kind)}
-          title={name || productLabel}
-          description={description}
+          backHref={productFlowDashboardPath()}
+          title={name || PROTOCOL_LABEL}
+          description={`${PROTOCOL_CHALLENGE_LABEL} is fixed. Name, files, countdown, and Exact problem on canvas can still change.`}
           extra={
             publicUrl ? (
               <div className="mt-6 max-w-xl">
@@ -285,23 +259,17 @@ export function ProductFlowPage({
           </div>
         ) : (
         <FlowFormCard>
-          <FlowField label="Flow name">
+          <FlowField label="Protocol name">
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Flow name"
+              placeholder="Protocol name"
               data-flow-name=""
               className={FLOW_FORM_INPUT}
             />
           </FlowField>
 
-          <section
-            className="space-y-5"
-            data-flow-problem=""
-            data-verification-flow-editor={kind === "verification" ? "" : undefined}
-            data-solve-flow-editor={kind === "solve" ? "" : undefined}
-            data-calibration-flow-editor={kind === "calibration" ? "" : undefined}
-          >
+          <section className="space-y-5" data-flow-problem="">
             <FlowProblemFields
               layout="split"
               problem={problem}
@@ -309,13 +277,12 @@ export function ProductFlowPage({
               artifacts={artifacts}
               onArtifactsChange={setArtifacts}
               workspaceId={flow?.workspaceId}
-              topicHook={kind}
               exactProblemOnCanvas={exactProblemOnCanvas}
               onExactProblemOnCanvasChange={setExactProblemOnCanvas}
               openingCanvasPrepared={flowOpeningCanvasHasContent(openingCanvasScene)}
               openingCanvasScene={openingCanvasScene}
               onPrepareOpeningCanvas={
-                flowShowsOpeningCanvas(kind) ? () => setAuthoringCanvas(true) : undefined
+                flowShowsOpeningCanvas() ? () => setAuthoringCanvas(true) : undefined
               }
               onClearOpeningCanvas={() => setOpeningCanvasScene(null)}
               generateProblemOnOpen={generateProblemOnOpen}
@@ -323,24 +290,20 @@ export function ProductFlowPage({
               flowName={name}
               problemReadOnly
               aside={
-                flowAuthorShowsCountdown(kind) ? (
-                  <FlowField label="Countdown">
-                    <select
-                      value={minutes}
-                      data-flow-countdown=""
-                      data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
-                      data-verification-flow-minutes={kind === "verification" ? "" : undefined}
-                      onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
-                      className={FLOW_FORM_INPUT}
-                    >
-                      {FLOW_COUNTDOWN_MINUTES.map((value) => (
-                        <option key={value} value={value}>
-                          {value} min
-                        </option>
-                      ))}
-                    </select>
-                  </FlowField>
-                ) : null
+                <FlowField label="Countdown">
+                  <select
+                    value={minutes}
+                    data-flow-countdown=""
+                    onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
+                    className={FLOW_FORM_INPUT}
+                  >
+                    {FLOW_COUNTDOWN_MINUTES.map((value) => (
+                      <option key={value} value={value}>
+                        {value} min
+                      </option>
+                    ))}
+                  </select>
+                </FlowField>
               }
             />
           </section>
@@ -350,7 +313,6 @@ export function ProductFlowPage({
               Unsys model
             </p>
             <FlowUnsysModelStep
-              kind={kind}
               name={name}
               problem={problem}
               artifacts={artifacts}
@@ -361,18 +323,16 @@ export function ProductFlowPage({
             />
           </section>
 
-          {flowAuthorShowsEnforcedChannels(kind) ? (
-            <section className="space-y-3" data-flow-channels-editor="">
-              <FlowChannelsFields
-                value={enforcedChannels}
-                onChange={setEnforcedChannels}
-                canvasCapture={flowAuthorShowsCanvasCapture(kind) ? canvasCapture : undefined}
-                onCanvasCaptureChange={
-                  flowAuthorShowsCanvasCapture(kind) ? setCanvasCapture : undefined
-                }
-              />
-            </section>
-          ) : null}
+          <section className="space-y-3" data-flow-channels-editor="">
+            <FlowChannelsFields
+              value={enforcedChannels}
+              onChange={setEnforcedChannels}
+              canvasCapture={flowAuthorShowsCanvasCapture() ? canvasCapture : undefined}
+              onCanvasCaptureChange={
+                flowAuthorShowsCanvasCapture() ? setCanvasCapture : undefined
+              }
+            />
+          </section>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button
@@ -381,13 +341,10 @@ export function ProductFlowPage({
               onClick={() => void save()}
               className={FLOW_PRIMARY_BTN}
             >
-              Save flow
+              Save protocol
             </button>
             <button
               type="button"
-              data-verification-flow-remove={kind === "verification" ? "" : undefined}
-              data-calibration-flow-remove={kind === "calibration" ? "" : undefined}
-              data-solve-flow-remove={kind === "solve" ? "" : undefined}
               className={FLOW_DANGER_BTN}
               disabled={busy || modelBusy}
               onClick={() => void remove()}

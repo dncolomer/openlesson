@@ -1,6 +1,6 @@
 /**
- * Cookie / public Solve / Learn guest / TAP access for in-app PoW and embeddings.
- * Independent flows do not require a map workspace.
+ * Cookie / leftover Learn guest / TAP access for in-app PoW and embeddings.
+ * Independent protocols do not require a map workspace.
  */
 
 import type { NextResponse } from "next/server";
@@ -8,10 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSolveFlowById } from "@/lib/solve-flow-repository";
-import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
 import { getVerificationFlowById } from "@/lib/verification-flow-repository";
-import { resolveSolveSessionAccess } from "@/lib/solve-session-auth";
 import { resolveIleLinkSessionAccess } from "@/lib/learn-link-auth";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { entryQueryParamsFromBody, type EntryQueryParams } from "@/lib/guest-link-access";
@@ -24,6 +21,9 @@ import type { UploadWorkspaceProofOfWorkWorkspace } from "@/lib/pow-api/upload-w
 import type { FlowKind } from "@/lib/flow-embedding";
 import { flowLinkLabelFromMetadata } from "@/lib/flow-links";
 
+/** Leftover Learn ile-token access may still persist embeddings as "learn". */
+export type SessionProofFlowKind = FlowKind | "learn";
+
 export type SessionProofAccess = {
   supabase: SupabaseClient;
   auth: AuthContext;
@@ -33,7 +33,7 @@ export type SessionProofAccess = {
   workspaceId: string | null;
   sessionId: string | null;
   tapSessionId: string | null;
-  flowKind: FlowKind | null;
+  flowKind: SessionProofFlowKind | null;
   flowId: string | null;
   identity: string | null;
   linkLabel?: string | null;
@@ -77,7 +77,7 @@ function metaRecord(value: unknown): Record<string, unknown> {
 }
 
 function flowIdsFromSession(row: Record<string, unknown> | null | undefined): {
-  flowKind: FlowKind | null;
+  flowKind: SessionProofFlowKind | null;
   flowId: string | null;
   workspaceId: string | null;
   identity: string | null;
@@ -86,45 +86,27 @@ function flowIdsFromSession(row: Record<string, unknown> | null | undefined): {
     return { flowKind: null, flowId: null, workspaceId: null, identity: null };
   }
   const meta = metaRecord(row.metadata);
-  const solveFlowId = text(row.solve_flow_id ?? row.solveFlowId ?? meta.solve_flow_id ?? meta.solveFlowId);
-  const calibrateFlowId = text(
-    row.calibrate_flow_id ?? row.calibrateFlowId ?? meta.calibrate_flow_id ?? meta.calibrateFlowId,
-  );
   const verifyFlowId = text(
     row.verify_flow_id ?? row.verifyFlowId ?? meta.verify_flow_id ?? meta.verifyFlowId,
   );
   const workspaceId =
     text(row.workspace_id ?? meta.workspace_id ?? meta.workspaceId) || null;
   const identity = text(row.identity ?? meta.identity) || null;
-  if (solveFlowId) return { flowKind: "solve", flowId: solveFlowId, workspaceId, identity };
-  if (calibrateFlowId) return { flowKind: "calibrate", flowId: calibrateFlowId, workspaceId, identity };
   if (verifyFlowId) return { flowKind: "verify", flowId: verifyFlowId, workspaceId, identity };
   const kind = text(row.kind);
-  if (kind === "learn" || kind === "calibrate" || kind === "verify" || kind === "solve") {
-    return { flowKind: kind, flowId: null, workspaceId, identity };
-  }
+  if (kind === "verify") return { flowKind: "verify", flowId: null, workspaceId, identity };
+  if (kind === "learn") return { flowKind: "learn", flowId: null, workspaceId, identity };
   return { flowKind: workspaceId ? "learn" : null, flowId: null, workspaceId, identity };
 }
 
 async function ownerUserIdForFlow(input: {
-  flowKind: FlowKind | null;
+  flowKind: SessionProofFlowKind | null;
   flowId: string | null;
 }): Promise<string | null> {
   const flowId = text(input.flowId);
-  if (!flowId) return null;
-  if (input.flowKind === "solve") {
-    const flow = await getSolveFlowById(flowId);
-    return text(flow?.ownerUserId) || null;
-  }
-  if (input.flowKind === "calibrate") {
-    const flow = await getCalibrationFlowById(flowId);
-    return text(flow?.ownerUserId) || null;
-  }
-  if (input.flowKind === "verify") {
-    const flow = await getVerificationFlowById(flowId);
-    return text(flow?.ownerUserId) || null;
-  }
-  return null;
+  if (!flowId || input.flowKind !== "verify") return null;
+  const flow = await getVerificationFlowById(flowId);
+  return text(flow?.ownerUserId) || null;
 }
 
 export function sessionProofAccessFromBody(body: Record<string, unknown>): SessionProofAccessInput {
@@ -144,45 +126,10 @@ export async function requireSessionProofAccess(
 ): Promise<SessionProofAccess | NextResponse> {
   const sessionId = text(input.sessionId) || null;
   const tapSessionId = text(input.tapSessionId) || null;
-  const solveToken = text(input.solveToken);
   const ileToken = text(input.ileToken);
   const privateToken = text(input.privateToken);
   const requestedWorkspaceId = text(input.workspaceId);
   const entryQueryParams = input.entryQueryParams ?? {};
-
-  if (solveToken) {
-    if (!sessionId) return jsonError(400, "sessionId is required");
-    const access = await resolveSolveSessionAccess(solveToken, sessionId);
-    if ("error" in access) return jsonError(access.status, access.error);
-    const workspaceId = isProofWorkspaceId(access.workspaceId) ? access.workspaceId : null;
-    const ownerUserId = text(access.ownerUserId);
-    const billingUserId = text(access.runOwnerUserId) || ownerUserId;
-    if (!billingUserId) return jsonError(500, "Workspace owner is missing");
-    const workspace = await loadBillingWorkspaceForProof(access.supabase, {
-      workspaceId,
-      ownerUserId,
-      organizationId: null,
-    });
-    return {
-      supabase: access.supabase,
-      auth: authFromParticipant({
-        userId: billingUserId,
-        guestUserId: null,
-        organizationId: workspace.organization_id,
-        keyId: "solve-session",
-      }),
-      billingUserId,
-      ownerUserId: ownerUserId || billingUserId,
-      workspace: { ...workspace, user_id: workspace.user_id || ownerUserId || billingUserId },
-      workspaceId,
-      sessionId,
-      tapSessionId: null,
-      flowKind: "solve",
-      flowId: access.flow.id,
-      identity: access.identity,
-      linkLabel: flowLinkLabelFromMetadata(access.session.metadata),
-    };
-  }
 
   if (ileToken) {
     if (!sessionId) return jsonError(400, "sessionId is required");
@@ -242,8 +189,6 @@ export async function requireSessionProofAccess(
     });
     const sessionRow = access.existingSession as Record<string, unknown> | null;
     const flows = flowIdsFromSession(sessionRow);
-    const flowKind: FlowKind =
-      access.sessionTable.includes("calibrate") ? "calibrate" : flows.flowKind === "calibrate" ? "calibrate" : "verify";
     return {
       supabase: access.supabase,
       auth: authFromParticipant({
@@ -258,7 +203,7 @@ export async function requireSessionProofAccess(
       workspaceId,
       sessionId: text(access.focusSessionId) || sessionId,
       tapSessionId: text(access.tapSessionId) || tapSessionId,
-      flowKind,
+      flowKind: "verify",
       flowId: flows.flowId,
       identity: flows.identity,
       linkLabel: flowLinkLabelFromMetadata(sessionRow?.metadata),
@@ -277,7 +222,7 @@ export async function requireSessionProofAccess(
   const { data: session } = await admin
     .from("sessions")
     .select(
-      "id, user_id, kind, workspace_id, solve_flow_id, calibrate_flow_id, verify_flow_id, identity, metadata, organization_id",
+      "id, user_id, kind, workspace_id, verify_flow_id, identity, metadata, organization_id",
     )
     .eq("id", sessionId)
     .maybeSingle();

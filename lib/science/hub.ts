@@ -108,7 +108,7 @@ export const MAPPING_THESIS_LINKS: readonly ThesisDeepLink[] = [
 
 export const HARNESS_PRICING_THESIS_LINKS: readonly ThesisDeepLink[] = [
   { href: SCIENCE_FEP_PATH, label: "Free Energy Principle", hint: "What you are paying to run" },
-  { href: SCIENCE_LEARNING_MODEL_PATH, label: LEARNING_MODEL_PUBLIC_LABEL, hint: "Calibrate, Learn, the generative model" },
+  { href: SCIENCE_LEARNING_MODEL_PATH, label: LEARNING_MODEL_PUBLIC_LABEL, hint: "Learn, Verify, the generative model" },
 ];
 
 export const VERIFICATION_PRICING_THESIS_LINKS: readonly ThesisDeepLink[] = [

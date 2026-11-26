@@ -10,16 +10,10 @@ import {
   dashboardNavGroupIdForTab,
   dashboardHrefForTab,
   dashboardTabForProductSurface,
-  dashboardListFilterForTab,
   dashboardProductLabel,
-  dashboardRegionsProduct,
-  dashboardTypeFilterForTab,
   isDashboardNavTabItem,
   isDashboardProductTab,
   isDashboardRegionsTab,
-  isDashboardShopTab,
-  isDashboardPracticeTab,
-  isDashboardPracticePerformanceTab,
   parseDashboardTab,
 } from "@/lib/dashboard-nav";
 import {
@@ -71,8 +65,6 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("practice")).toBe("protocols");
     expect(parseDashboardTab("practice_studio")).toBe("regions");
     expect(parseDashboardTab("practice_performance")).toBe("protocols");
-    expect(isDashboardPracticeTab("practice")).toBe(false);
-    expect(isDashboardPracticePerformanceTab("practice_performance")).toBe(false);
     expect(parseDashboardTab("learning_studio")).toBe("home");
     expect(parseDashboardTab("verification_studio")).toBe("regions");
     expect(parseDashboardTab("calibration_studio")).toBe("regions");
@@ -85,20 +77,12 @@ describe("dashboard nav", () => {
   it("maps product tabs to type filters and create deep-links", () => {
     expect(isDashboardProductTab(parseDashboardTab("learning"))).toBe(false);
     expect(isDashboardProductTab("home")).toBe(false);
-    expect(dashboardTypeFilterForTab("home")).toBeNull();
-    expect(dashboardTypeFilterForTab("protocols")).toBeNull();
-    expect(dashboardTypeFilterForTab("regions")).toBeNull();
     expect(isDashboardProductTab("solve")).toBe(false);
     expect(isDashboardProductTab("protocol")).toBe(true);
-    expect(dashboardTypeFilterForTab(parseDashboardTab("shop"))).toBeNull();
-    expect(dashboardListFilterForTab(parseDashboardTab("shop"))).toBeNull();
-    expect(dashboardListFilterForTab(parseDashboardTab("learning"))).toBeNull();
-    expect(isDashboardShopTab(parseDashboardTab("shop"))).toBe(false);
     expect(isDashboardRegionsTab("regions")).toBe(true);
     expect(isDashboardRegionsTab("verification_regions")).toBe(false);
-    expect(dashboardRegionsProduct("regions")).toBeNull();
-    expect(dashboardFrameLabel("regions")).toBe("Knowledge regions");
-    expect(dashboardFrameLabel(parseDashboardTab("calibration_studio"))).toBe("Knowledge regions");
+    expect(dashboardFrameLabel("regions")).toBe("Knowledge Regions");
+    expect(dashboardFrameLabel(parseDashboardTab("calibration_studio"))).toBe("Knowledge Regions");
     expect(dashboardCreateHref()).toBe("/protocols/new");
     expect(dashboardCreateHref("protocol")).toBe("/protocols/new");
     expect(dashboardCreateHref("protocol")).toBe(productFlowNewPath());
@@ -106,7 +90,7 @@ describe("dashboard nav", () => {
     expect(dashboardCreateLabel()).toBe("Create protocol →");
     expect(dashboardCreateLabel("protocol")).toBe("Create protocol →");
     expect(dashboardFrameLabel("protocols")).toBe("Protocols");
-    expect(dashboardFrameLabel("regions")).toBe("Knowledge regions");
+    expect(dashboardFrameLabel("regions")).toBe("Knowledge Regions");
     expect(dashboardTabForProductSurface("solve")).toBe("protocols");
     expect(dashboardTabForProductSurface("solve", "region")).toBe("regions");
     expect(dashboardFrameLabel("home")).toBe("Home");
@@ -116,7 +100,7 @@ describe("dashboard nav", () => {
     expect(dashboardTabForProductSurface("calibration", "region")).toBe("regions");
   });
 
-  it("subdivides the sidebar into Home, Flows, Knowledge regions, and Account", () => {
+  it("subdivides the sidebar into Home, Flows, Knowledge Regions, and Account", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => (group.id as string) === "learning");
     const teaching = DASHBOARD_NAV_GROUPS.find((group) => (group.id as string) === "teaching");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).toEqual(["account"]);
@@ -142,7 +126,7 @@ describe("dashboard nav", () => {
     expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.label)).toEqual([
       "Home",
       "Protocols",
-      "Knowledge regions",
+      "Knowledge Regions",
     ]);
     expect(DASHBOARD_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.id))).not.toContain(
       "practice_performance",
@@ -152,7 +136,7 @@ describe("dashboard nav", () => {
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("calibration");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("products");
     expect(dashboardHomeCtas().map((cta) => cta.id)).toEqual(["protocols", "regions"]);
-    expect(dashboardHomeCtas().map((cta) => cta.label)).toEqual(["Protocols", "Knowledge regions"]);
+    expect(dashboardHomeCtas().map((cta) => cta.label)).toEqual(["Protocols", "Knowledge Regions"]);
     expect(dashboardHomeCtas().map((cta) => cta.href)).toEqual([
       dashboardHrefForTab("protocols"),
       dashboardHrefForTab("regions"),
@@ -376,7 +360,7 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("DashboardDataStudioTab");
     expect(dashSrc).not.toContain("DashboardPracticePerformanceTab");
     expect(dashSrc).not.toContain("DashboardPracticeTab");
-    expect(dashboardFrameLabel(parseDashboardTab("solve_studio"))).toBe("Knowledge regions");
+    expect(dashboardFrameLabel(parseDashboardTab("solve_studio"))).toBe("Knowledge Regions");
     expect(dashboardFrameLabel(parseDashboardTab("practice_performance"))).toBe("Protocols");
     expect(dashSrc).not.toContain("isDashboardStudioTab");
     expect(dashSrc).not.toContain("data-dashboard-data-studio");
@@ -426,7 +410,20 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:h-full");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:max-h-full");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
-      'className="shrink-0 border-b border-white/20 px-2 py-2 last:border-b-0"',
+      'className="shrink-0 border-b border-white/20 px-2 py-2"',
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "data-dashboard-org-switcher",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "data-dashboard-org-switcher-select",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("mt-auto");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "/api/organization/memberships",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "/api/organization/switch",
     );
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
       "open ? \"flex min-h-0 flex-1 flex-col\"",
@@ -486,7 +483,7 @@ describe("dashboard platform surface", () => {
       "sticky top-0 z-10",
     );
     expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Protocols");
-    expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Knowledge regions");
+    expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Knowledge Regions");
     expect(readRepo("lib/dashboard-home-overview.ts")).not.toContain("Solve / Practice");
     expect(dashSrc).not.toContain("data-dashboard-home-announcements");
     expect(dashSrc).not.toContain("DASHBOARD_ANNOUNCEMENTS");

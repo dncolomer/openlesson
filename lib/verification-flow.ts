@@ -1,6 +1,6 @@
 /**
  * Verification flows for Verification Workspaces (stored kind `knowledge_region`).
- * Question picking, identity uniqueness, flow membership, region embeddings,
+ * Question picking, identity, flow membership, region embeddings,
  * synthetic proof-of-work requests, and Knowledge-subtab filtering are pure.
  * Callers (UI, routes) must use these functions — do not re-implement them.
  */
@@ -222,22 +222,11 @@ export function verificationQuestionStartingPrompt(question: {
   return question.text.trim();
 }
 
-export function isLtiParticipantIdentity(raw: string): boolean {
-  return String(raw || "").trim().startsWith("lti:");
-}
-
 export function acceptParticipantIdentity(
   raw: string,
-  existing: readonly string[],
-): { ok: true; identity: string } | { ok: false; reason: "empty" | "duplicate" } {
+): { ok: true; identity: string } | { ok: false; reason: "empty" } {
   const identity = String(raw || "").trim();
   if (!identity) return { ok: false, reason: "empty" };
-  if (
-    !isLtiParticipantIdentity(identity) &&
-    existing.some((value) => value.trim() === identity)
-  ) {
-    return { ok: false, reason: "duplicate" };
-  }
   return { ok: true, identity };
 }
 
@@ -733,18 +722,20 @@ export function applyVerificationCommand(
     if (!flow) return { ok: false, reason: "not_found", state };
     const archived = publicInviteClaimReason(flow);
     if (archived) return { ok: false, reason: archived, state };
-    const existing = state.identities
-      .filter((item) => item.flowId === flow.id)
-      .map((item) => item.identity);
-    const decision = acceptParticipantIdentity(command.identity, existing);
+    const decision = acceptParticipantIdentity(command.identity);
     if (!decision.ok) return { ok: false, reason: decision.reason, state };
+    const already = state.identities.some(
+      (item) => item.flowId === flow.id && item.identity === decision.identity,
+    );
     return {
       ok: true,
       identity: decision.identity,
-      state: {
-        ...state,
-        identities: [...state.identities, { flowId: flow.id, identity: decision.identity }],
-      },
+      state: already
+        ? state
+        : {
+            ...state,
+            identities: [...state.identities, { flowId: flow.id, identity: decision.identity }],
+          },
     };
   }
 

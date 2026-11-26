@@ -45,6 +45,7 @@ describe("session guide panel", () => {
     expect(html).not.toContain("The board is still opening.");
     expect(html).not.toContain("data-ile-canvas-dictate");
     expect(html).not.toContain("data-ile-canvas-pointer");
+    expect(html).not.toContain('data-session-command="developer-mode"');
     expect(html).not.toContain("data-ile-craft-insight");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
       expect(html).not.toContain(`data-session-command="${command.id}"`);
@@ -86,8 +87,11 @@ describe("session guide panel", () => {
     expect(learn).toContain('data-ile-command-index="01"');
     expect(learn).toContain('data-ile-command-index="07"');
     expect(learn).toContain('data-session-command="auto-layout"');
+    expect(learn).not.toContain('data-session-command="developer-mode"');
     expect(learn).toContain('role="switch"');
     expect(learn).toContain("data-session-auto-layout-track");
+    expect(learn).not.toContain("data-session-developer-mode-track");
+    expect(learn).not.toContain("Developer mode");
     expect(learn).toContain('data-session-command="breakdown"');
     expect(learn).toContain('data-session-command="concepts"');
     expect(learn).not.toContain('data-session-command="define"');
@@ -115,6 +119,7 @@ describe("session guide panel", () => {
     expect(verify).toContain('data-session-command="draw"');
     expect(verify).toContain('data-session-command="pointer"');
     expect(verify).toContain('data-session-command="auto-layout"');
+    expect(verify).not.toContain('data-session-command="developer-mode"');
     expect(verify).toContain('role="switch"');
     expect(verify).toContain('data-session-command="breakdown"');
     expect(verify).toContain('data-session-command="concepts"');
@@ -207,6 +212,8 @@ describe("session guide panel", () => {
     expect(plates).toContain("ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS");
     expect(plates).toContain("min-h-[3.25rem]");
     expect(plates).toContain("AutoLayoutToggle");
+    expect(plates).not.toContain("DeveloperModeToggle");
+    expect(plates).not.toContain('data-session-command="developer-mode"');
     expect(plates).toContain('role="switch"');
     expect(plates).toContain("bg-white");
     expect(plates).toContain("flex-row");

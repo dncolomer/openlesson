@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(process.cwd()),
   },
-  serverExternalPackages: [
-    "@coral-xyz/anchor",
-  ],
   async redirects() {
     return [
       {
@@ -75,26 +72,6 @@ const nextConfig: NextConfig = {
       {
         source: "/api/calibrate/session/:path*",
         destination: "/api/verify/session/:path*",
-        permanent: true,
-      },
-      {
-        source: "/api/v3/pow/keys",
-        destination: "/api/dashboard/api-keys",
-        permanent: true,
-      },
-      {
-        source: "/api/v3/pow/keys/:path*",
-        destination: "/api/dashboard/api-keys/:path*",
-        permanent: true,
-      },
-      {
-        source: "/workspace/:id/scout",
-        destination: "/workspace/:id/calibrate",
-        permanent: true,
-      },
-      {
-        source: "/workspace/:id/tap",
-        destination: "/workspace/:id/verify",
         permanent: true,
       },
       { source: "/_pitch", destination: "/pitch", permanent: false },

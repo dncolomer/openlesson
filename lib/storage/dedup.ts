@@ -68,7 +68,6 @@ export async function saveWithDedupBlob(
 
 export function clearDedupCache(): void {
   Object.keys(deduplicatorCache).forEach((key) => delete deduplicatorCache[key]);
-  console.log("[Deduplicator] Cache cleared");
 }
 
 export function getDedupCacheSize(): number {

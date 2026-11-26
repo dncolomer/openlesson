@@ -533,19 +533,6 @@ describe("static wiring: migration, APIs, UI", () => {
     expect(mig).toContain("workspace_tap_sessions_status_check");
   });
 
-  it("API routes wire invalidate_link_id and invalidate_all", () => {
-    for (const rel of [
-      "app/api/workspace/tap-links/route.ts",
-      "app/api/workspace/learn-links/route.ts",
-    ]) {
-      const src = read(rel);
-      expect(src).toContain("invalidate_link_id");
-      expect(src).toContain("invalidate_all");
-      expect(src).toMatch(/invalidateTap|invalidateIle/);
-    }
-    expect(read("app/api/workspace/tap-links/route.ts")).toContain("invalidateTapLinksAll");
-    expect(read("app/api/workspace/learn-links/route.ts")).toContain("invalidateIleLinksAll");
-  });
 
   it("TAP access resolution and session page reject revoked", () => {
     const auth = read("lib/tap-score-session-auth.ts");

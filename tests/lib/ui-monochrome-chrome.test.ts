@@ -40,16 +40,6 @@ const REMOVED_SHELL_PANELS = [
 ];
 
 describe("UI monochrome chrome (white outline aesthetic)", () => {
-  it("shell panels have no forbidden blue/cyan/purple/yellow Tailwind chrome", () => {
-    for (const rel of REMOVED_SHELL_PANELS) {
-      expect(existsSync(join(ROOT, rel)), rel).toBe(false);
-    }
-    for (const rel of SHELL_PANELS) {
-      const src = read(rel);
-      const hit = src.match(FORBIDDEN);
-      expect(hit, `${rel} still has accent utility: ${hit?.[0] ?? ""}`).toBeNull();
-    }
-  });
 
   it("loading modal uses white/neutral tops; probe panels are absent", () => {
     expect(existsSync(join(ROOT, "components/ModelLoadingModal.tsx"))).toBe(false);

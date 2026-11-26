@@ -255,49 +255,6 @@ describe("block-map-tools", () => {
     expect(isBlockMapToolEnabled("zoom_in", noOps)).toBe(true);
   });
 
-  it("unusable ground and generate-in-area live in drawers; enablement is selection-driven", () => {
-    expect(
-      isBlockMapToolEnabled("mark_unusable", state({ selectedEmptyCellCount: 2 })),
-    ).toBe(true);
-    expect(
-      isBlockMapToolEnabled("generate_shape", state({ selectedEmptyCellCount: 2 })),
-    ).toBe(true);
-    expect(
-      isBlockMapToolEnabled("merge", state({ selectedBlockCount: 2, selectedBlocksContiguous: true })),
-    ).toBe(true);
-    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 }))).toBe(
-      true,
-    );
-    const add = readFileSync(
-      join(process.cwd(), "components/WorkspaceAddBlockPane.tsx"),
-      "utf8",
-    );
-    const shape = readFileSync(
-      join(process.cwd(), "components/WorkspaceGenerateShapePane.tsx"),
-      "utf8",
-    );
-    const ground = readFileSync(
-      join(process.cwd(), "components/UnusableGroundDrawer.tsx"),
-      "utf8",
-    );
-    expect(add).toContain('drawerId="unusable_ground"');
-    expect(shape).toContain('drawerId="unusable_ground"');
-    expect(add).toContain("UnusableGroundDrawer");
-    expect(shape).toContain("UnusableGroundDrawer");
-    expect(ground).toContain("applyUnusableSelection");
-    expect(ground).toContain("onSetUnusableCells");
-    const view = readFileSync(
-      join(process.cwd(), "components/WorkspaceView.tsx"),
-      "utf8",
-    );
-    expect(view).toContain('op: "set_unusable_cells"');
-    const detail = readFileSync(
-      join(process.cwd(), "components/WorkspaceBlockDetailPane.tsx"),
-      "utf8",
-    );
-    expect(detail).toContain('drawerId="clone"');
-    expect(detail).toContain('drawerId="split"');
-  });
 
   it("disables map tools when the map is not editable", () => {
     const noEdit = state({ canEdit: false, hasGridOps: false });
@@ -1277,26 +1234,6 @@ describe("block-map-tools", () => {
     expect(removed.length).toBe(1);
   });
 
-  it("Generate-in-shape dialog does not offer Suggest 3 topics", () => {
-    const panel = readMapGridSurface();
-    const add = readFileSync(
-      join(process.cwd(), "components/WorkspaceAddBlockPane.tsx"),
-      "utf8",
-    );
-    const shape = readFileSync(
-      join(process.cwd(), "components/WorkspaceGenerateShapePane.tsx"),
-      "utf8",
-    );
-    expect(panel).not.toContain("data-suggest-shape-topics");
-    expect(panel).not.toContain("labels.suggestTopics");
-    expect(add).not.toContain("data-add-block-suggest");
-    expect(add).not.toContain("suggestTopics");
-    expect(shape).not.toContain("data-suggest-shape-topics");
-    expect(shape).not.toContain("suggestTopics");
-    expect(shape).toContain("WorkspacePromptContextAlternatives");
-    expect(add).toContain("WorkspacePromptContextAlternatives");
-    expect(panel).toContain("data-generate-shape-dialog");
-  });
 });
 
 describe("selection-driven ground authoring (left toolbar)", () => {
@@ -1583,9 +1520,8 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     const fs = require("node:fs");
     const path = require("node:path");
     const grid = readMapGridSurface();
-    const pane = fs.readFileSync(
-      path.join(process.cwd(), "components/WorkspaceMapAuthoringPane.tsx"),
-      "utf8",
+    expect(fs.existsSync(path.join(process.cwd(), "components/WorkspaceMapAuthoringPane.tsx"))).toBe(
+      false,
     );
     const list = fs.readFileSync(
       path.join(process.cwd(), "components/SessionList.tsx"),
@@ -1619,14 +1555,6 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     expect(grid).toContain("data-block-highlight={highlightRole}");
     expect(grid).toContain("data-prereq-edit-active");
     expect(list).toContain("onMapGround");
-    // Right pane: no ground authoring chrome (toolbar-only path).
-    expect(pane).not.toContain("data-unusable-row");
-    expect(pane).not.toContain("data-lock-target-select");
-    expect(pane).not.toContain("data-map-ground-toolbar-hint");
-    expect(pane).not.toContain("Map & topology");
-    expect(pane).not.toContain("Ground authoring on the map");
-    expect(pane).not.toContain("WorkspacePromptImpactPanel");
-    expect(pane).not.toContain("How context shapes practice");
     // Unusable cells must be clickable for multi-select clear (not disabled={...isUnusable}).
     expect(grid).toContain('data-map-cell-unusable={isUnusable ? "true" : "false"}');
     // Empty cells stay pointer-enabled for drag-pan even when !canEdit (Learner mode).

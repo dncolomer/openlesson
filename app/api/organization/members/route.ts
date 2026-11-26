@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  listOrganizationMemberRows,
+  removeOrganizationMembership,
+} from "@/lib/organization/membership-store";
 
 export const runtime = "nodejs";
 
@@ -22,7 +26,6 @@ export async function DELETE(request: Request) {
       return jsonError(400, "Member ID required");
     }
 
-    // Get requester's profile
     const { data: requesterProfile, error: requesterError } = await supabase
       .from("profiles")
       .select("organization_id, is_org_admin")
@@ -42,47 +45,30 @@ export async function DELETE(request: Request) {
     }
 
     const adminClient = getAdminClient();
+    const memberRows = await listOrganizationMemberRows(
+      adminClient,
+      requesterProfile.organization_id,
+    );
+    const target = memberRows.find((row) => row.userId === memberId);
 
-    // Get target member's profile
-    const { data: targetProfile, error: targetError } = await adminClient
-      .from("profiles")
-      .select("organization_id, is_org_admin")
-      .eq("id", memberId)
-      .single();
-
-    if (targetError || !targetProfile) {
-      return jsonError(404, "Member not found");
-    }
-
-    // Verify they're in the same organization
-    if (targetProfile.organization_id !== requesterProfile.organization_id) {
+    if (!target) {
       return jsonError(400, "Member not in your organization");
     }
 
-    // If removing self and is org admin, check if there are other org admins
-    if (memberId === user.id && targetProfile.is_org_admin) {
-      const { data: otherAdmins } = await adminClient
-        .from("profiles")
-        .select("id")
-        .eq("organization_id", requesterProfile.organization_id)
-        .eq("is_org_admin", true)
-        .neq("id", user.id);
-
-      if (!otherAdmins || otherAdmins.length === 0) {
+    if (memberId === user.id && target.isOrgAdmin) {
+      const otherAdmins = memberRows.filter(
+        (row) => row.userId !== user.id && row.isOrgAdmin,
+      );
+      if (otherAdmins.length === 0) {
         return jsonError(400, "Cannot leave as the last org admin. Promote another member first.");
       }
     }
 
-    // Remove member from organization
-    const { error: updateError } = await adminClient
-      .from("profiles")
-      .update({ organization_id: null, is_org_admin: false })
-      .eq("id", memberId);
-
-    if (updateError) {
-      console.error("Error removing member:", updateError);
-      return jsonError(500, "Failed to remove member");
-    }
+    await removeOrganizationMembership(
+      adminClient,
+      memberId,
+      requesterProfile.organization_id,
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

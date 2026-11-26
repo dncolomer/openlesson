@@ -133,28 +133,6 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(isBlockMapIconName(derived.icon)).toBe(true);
   });
 
-  it("generation prompts ask for keyword only (pattern is server-assigned)", () => {
-    const instruction = composeBlockMapGlyphJsonInstruction();
-    expect(instruction).toMatch(/keyword/);
-    expect(instruction).toMatch(/1 or 2 map words/i);
-    expect(instruction).not.toMatch(/exactly two map words/i);
-    expect(instruction).toMatch(/random 3×3 rearrangement/i);
-    expect(composeGenerateShapeBlockSystemMessage()).toContain("keyword");
-    expect(composeGenerateShapeBlockSystemMessage()).toMatch(/Do not pick an icon/);
-    expect(composeAddBlockAtSlotSystemMessage()).toContain("keyword");
-    expect(composeEffectGenerationSystemMessage()).toContain("keyword");
-    expect(read("lib/workspace-grid-ops/generate_shape.ts")).toContain(
-      "blockMapGlyphDbFields",
-    );
-    expect(read("app/api/workspace/add-block-at-slot/route.ts")).toContain(
-      "map_keyword",
-    );
-    expect(read("lib/insert-workspace-blocks.ts")).toContain("map_keyword");
-    const chapterInstruction = composeChapterMapGlyphJsonInstruction();
-    expect(chapterInstruction).toMatch(/Each chapter\/step must include "keyword"/);
-    expect(chapterInstruction).toMatch(/not copy the first words/i);
-    expect(chapterInstruction).toMatch(/1 or 2 map words/i);
-  });
 
   it("workspace tiles show glyph and hide occupancy modifiers", () => {
     const grid = readMapGridSurface();
@@ -174,8 +152,8 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
   });
 
   it("typed map blocks keep the 3×3 occupancy and a type-name caption", () => {
-    expect(mapBlockKindIconName("learn")).toBeNull();
-    expect(mapBlockKindIconName("calibration")).toBe("calibration");
+    expect(mapBlockKindIconName("learn")).toBe("verification");
+    expect(mapBlockKindIconName("calibration")).toBe("verification");
     expect(mapBlockKindIconName("verification")).toBe("verification");
     expect(mapBlockKindIconName("content")).toBe("content");
     expect(isTypedMapBlockKindIcon("calibration")).toBe(true);
@@ -196,8 +174,5 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(grid).toContain("data-map-block-kind-caption");
     expect(grid).not.toContain("MapBlockKindDecorator");
     expect(grid).not.toContain("data-map-block-kind-decorator");
-    expect(read("app/api/workspace/add-block-at-slot/route.ts")).not.toContain(
-      "mapBlockKindIconName(mapBlock.kind)",
-    );
   });
 });

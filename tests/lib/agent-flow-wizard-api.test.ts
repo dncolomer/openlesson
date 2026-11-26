@@ -100,8 +100,13 @@ describe("public flow create/update matches the dashboard wizard", () => {
     });
     expect(accepted.ok).toBe(true);
     if (!accepted.ok) return;
-    expect(accepted.exactProblemOnCanvas).toBe(false);
-    expect(accepted.enforcedChannels).toEqual(OPTIONAL_FLOW_ENFORCED_CHANNELS);
+    expect(accepted.exactProblemOnCanvas).toBe(true);
+    expect(accepted.enforcedChannels).toEqual({
+      audio: true,
+      muse: true,
+      screenshots: true,
+      video: true,
+    });
   });
 
   it("create_flow keeps Exact only on written topic and drops it on files or canvas", () => {

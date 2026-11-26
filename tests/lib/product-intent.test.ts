@@ -183,76 +183,13 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
-  it("Settings / dashboard / workspace chrome avoid TAP/TAP Learning product brands", () => {
-    const integration = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(integration).not.toContain("Create shareable TAP and TAP Learning guest links");
-    expect(integration).not.toMatch(/shareable practice links/i);
-    expect(integration).not.toContain("WorkspaceGuestLinksPanel");
-    expect(integration).not.toContain("WorkspaceKnowledgePortalPanel");
-    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
-
-    const dashboard = readDashboardSurface();
-    expect(dashboard).not.toContain(">TAP sessions<");
-    expect(dashboard).not.toContain(">TAP Learning sessions<");
-    const retiredProductWord = ["I", "L", "E"].join("");
-    expect(dashboard).not.toContain(`>${retiredProductWord} sessions<`);
-    // Accept either legacy rollup labels or Explore/Drill family labels
-    const hasSessionLabels =
-      dashboard.includes("Timed sessions") ||
-      dashboard.includes("Drill sessions") ||
-      dashboard.includes("Open-ended sessions") ||
-      dashboard.includes("Explore sessions");
-    expect(hasSessionLabels).toBe(true);
-    expect(dashboard).not.toContain("TAP/TAP Learning PoW not billed");
-
-    const en = read("messages/en.json");
-    expect(en).toMatch(/shareable practice links/i);
-    // Must not reintroduce full technical product names as primary labels
-    expect(en).not.toContain('"productIle": "TAP Learning"');
-    expect(en).toMatch(/forkToEditBody.*practice sessions/);
-
-    const grid = readMapGridSurface();
-    expect(grid).not.toContain("double-click block for TAP/TAP Learning");
-    // Map chrome should not brand technical product names
-    expect(grid).not.toMatch(/TAP\/TAP Learning/);
-  });
 
   it("labels never use TAP/TAP Learning as product names", () => {
     const labels = Object.values(PRODUCT_INTENT_LABELS).join(" ");
     expect(labels).not.toMatch(/\bTAP\b|\bILE\b/);
   });
 
-  it("authoring surfaces have no With AI vs Solo / Dialog vs Solo Exercise choice", () => {
-    const card = read("components/BlockDetailCard.tsx");
-    expect(card).not.toContain("modalityDialog");
-    expect(card).not.toContain("modalitySolo");
-    expect(card).not.toContain("data-modality-option");
-    expect(card).not.toContain("data-product-intent-modality-grid");
-    expect(card).not.toContain("Timebox");
-    expect(card).not.toContain("Open-ended session (no clock)");
-    expect(card).not.toContain('role="switch"');
 
-    const edit = read("components/WorkspaceBlockEditPanel.tsx");
-    expect(edit).not.toContain("With AI");
-    expect(edit).not.toContain(">Solo<");
-    expect(edit).not.toContain("data-block-edit-allow-solo");
-    expect(edit).not.toContain("data-block-edit-allow-dialog");
-
-    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
-  });
-
-  it("workspace TAP route accepts minutes and locks duration in the client", () => {
-    const page = read("app/workspace/[id]/tap/page.tsx");
-    expect(page).toContain("minutes");
-    expect(page).toContain("initialMinutes");
-    expect(page).toContain("lockDuration");
-    const score = readTapScoreSurface();
-    expect(score).toContain("lockDuration");
-    expect(score).toContain("showDurationPicker={!privateToken && !durationLocked}");
-    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
-    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
-
-  });
 });
 
 describe("evidence: product-intent remap log", () => {

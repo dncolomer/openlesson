@@ -1,1 +1,240 @@
-export * from "@/app/api/workspace-tap-score/complete/route";
+import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
+import { resolveTapSessionAccess, tapProofSessionId } from "@/lib/tap-score-session-auth";
+import { hashPrivateToken } from "@/lib/tap-score";
+import {
+  buildTapTranscriptPayload,
+  flagTapSessionProofOfWorkImpure,
+  flagTapSessionProofOfWorkPractice,
+  TAP_TRANSCRIPT_TOOL_NAME,
+} from "@/lib/tap-score-traces";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
+import type { AuthContext } from "@/lib/pow-api/types";
+import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
+import {
+  isTapPracticeRequest,
+  stampPoWPracticeFlag,
+  TAP_PRACTICE_DURATION_SECONDS,
+} from "@/lib/tap-practice";
+import {
+  CALIBRATE_SESSIONS_TABLE,
+  insertGuestSession,
+  storedCalibrateVerifyWrite,
+  updateGuestSession,
+} from "@/lib/guest-session-tables";
+import { billingWorkspaceFromTapAccess } from "@/lib/pow-api/billing-workspace";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const privateToken = body.privateToken ? String(body.privateToken) : "";
+    const workspaceId = body.workspaceId ? String(body.workspaceId) : "";
+    const transcript = Array.isArray(body.transcript) ? body.transcript : [];
+    const durationSeconds = Number(body.durationSeconds || 0);
+    const practice = isTapPracticeRequest(body.practice);
+    const requestedDurationSeconds = practice
+      ? TAP_PRACTICE_DURATION_SECONDS
+      : Number(body.requestedDurationSeconds || 0);
+    const blockId = body.blockId ? String(body.blockId) : null;
+    const focusSessionId = body.sessionId ? String(body.sessionId) : null;
+    const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
+    const sessionQuality =
+      body.sessionQuality === "impure" || body.impure === true ? "impure" : "pure";
+
+    if (transcript.length === 0) {
+      return jsonError(400, "transcript is required");
+    }
+
+    const access = await resolveTapSessionAccess({
+      privateToken,
+      workspaceId,
+      tapSessionId,
+      blockId,
+      focusSessionId,
+      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
+    });
+    if ("error" in access) {
+      return jsonError(access.status, access.error);
+    }
+
+    const resolvedTapSessionId = access.tapSessionId;
+    if (!resolvedTapSessionId) {
+      return jsonError(400, "tapSessionId is required");
+    }
+
+    const workspace = await billingWorkspaceFromTapAccess(access);
+
+    const auth: AuthContext = {
+      user_id: access.guestUserId ? null : access.userId,
+      guest_user_id: access.guestUserId,
+      organization_id: access.organizationId,
+      is_org_admin: false,
+      key_id: "tap-complete",
+      scopes: ["workspaces:write"],
+    };
+
+    if (sessionQuality === "impure") {
+      // Stamp every existing session PoW row in metadata (exportable, no new column).
+      await flagTapSessionProofOfWorkImpure(
+        access.supabase,
+        access.workspaceId,
+        resolvedTapSessionId,
+      );
+    }
+    if (practice) {
+      await flagTapSessionProofOfWorkPractice(
+        access.supabase,
+        access.workspaceId,
+        resolvedTapSessionId,
+      );
+    }
+
+    const transcriptPayload = buildTapTranscriptPayload({
+      tapSessionId: resolvedTapSessionId,
+      workspaceId: access.workspaceId,
+      blockId: blockId || access.blockId,
+      focusSessionId: focusSessionId || access.focusSessionId,
+      transcript: transcript.map((entry: { role?: string; text?: string; content?: string; at?: string }) => ({
+        role: String(entry.role || "unknown"),
+        text: String(entry.text || entry.content || ""),
+        at: entry.at ? String(entry.at) : undefined,
+      })),
+      durationSeconds,
+      sessionQuality,
+      practice,
+    });
+
+    const transcriptJson = JSON.stringify(transcriptPayload, null, 2);
+    const transcriptMetadataBase = stampPoWPracticeFlag(
+      {
+        tap_session_id: resolvedTapSessionId,
+        duration_seconds: durationSeconds,
+        message_count: transcript.length,
+        ...(sessionQuality === "impure"
+          ? { quality: "impure", impure: true, session_quality: "impure" }
+          : {}),
+      },
+      practice,
+    );
+    await uploadWorkspaceProofOfWork(access.supabase, auth, workspace, {
+      workspaceId: access.workspaceId,
+      type: "tool",
+      mime_type: "application/json",
+      data: Buffer.from(transcriptJson, "utf8").toString("base64"),
+      block_id: blockId || access.blockId,
+      session_id: tapProofSessionId(access, focusSessionId),
+      file_name: `tap-transcript-${resolvedTapSessionId}.json`,
+      timestamp_ms: Date.now(),
+      tool_name: TAP_TRANSCRIPT_TOOL_NAME,
+      tool_action:
+        practice && sessionQuality === "impure"
+          ? "complete_practice_impure"
+          : practice
+            ? "complete_practice"
+            : sessionQuality === "impure"
+              ? "complete_impure"
+              : "complete",
+      metadata: stampSourceLinkMetadata(transcriptMetadataBase, {
+        kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
+        linkId: resolvedTapSessionId,
+      }),
+    });
+
+    const completedAt = new Date().toISOString();
+    const existingRequested =
+      typeof access.existingSession?.requested_duration_seconds === "number"
+        ? access.existingSession.requested_duration_seconds
+        : null;
+    const resolvedRequestedDuration =
+      requestedDurationSeconds > 0 ? requestedDurationSeconds : existingRequested ?? 900;
+
+    const sessionPayload = {
+      duration_seconds: durationSeconds,
+      requested_duration_seconds: resolvedRequestedDuration,
+      status: "completed",
+      completed_at: completedAt,
+    };
+
+    const write = storedCalibrateVerifyWrite(
+      access.sessionTable === CALIBRATE_SESSIONS_TABLE ? "calibrate" : "verify",
+    );
+    const written = access.existingSession
+      ? await updateGuestSession(
+          access.supabase,
+          access.sessionTable,
+          resolvedTapSessionId,
+          sessionPayload,
+          "id, workspace_id, block_id, status, guest_link",
+        )
+      : await insertGuestSession(
+          access.supabase,
+          access.sessionTable,
+          {
+            workspace_id: access.workspaceId || null,
+            user_id: access.guestUserId ? access.workspaceOwnerUserId : access.userId,
+            guest_user_id: access.guestUserId,
+            organization_id: access.organizationId,
+            duration_seconds: durationSeconds,
+            requested_duration_seconds: resolvedRequestedDuration,
+            block_id: blockId || access.blockId,
+            session_id: tapProofSessionId(access, focusSessionId),
+            status: "completed",
+            completed_at: completedAt,
+            private_token_hash: privateToken ? hashPrivateToken(privateToken) : null,
+            interaction_kind: write.interaction_kind,
+            session_shell: write.session_shell,
+          },
+          "id, workspace_id, block_id, status, guest_link",
+        );
+    const row = written.data;
+    const writeError = written.error as { message?: string } | null;
+
+    if (writeError) {
+      console.error("[workspace-tap-score/complete] Write error:", writeError);
+      return jsonError(500, writeError.message || "Could not complete Verify session");
+    }
+
+    if (access.completionWebhookUrl) {
+      const { normalizeWebhookUrl } = await import("@/lib/pow-api/tap-link-config");
+      const safeWebhook = normalizeWebhookUrl(access.completionWebhookUrl);
+      if (safeWebhook) {
+        void fetch(safeWebhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "tap_session.completed",
+            workspace_id: access.workspaceId,
+            tap_session_id: resolvedTapSessionId,
+            guest_user_id: access.guestUserId,
+            assigned_user_id: access.assignedUserId,
+            completed_at: completedAt,
+            duration_seconds: durationSeconds,
+          }),
+        }).catch((webhookError) => {
+          console.error("[workspace-tap-score/complete] Webhook error:", webhookError);
+        });
+      } else {
+        console.warn(
+          "[workspace-tap-score/complete] Skipping blocked or invalid completion webhook URL"
+        );
+      }
+    }
+
+    return NextResponse.json({
+      workspaceId: access.workspaceId,
+      tapSession: row,
+      postSession: access.postSession,
+      redirectUrl: access.redirectUrl,
+      sessionQuality,
+      practice,
+    });
+  } catch (error) {
+    console.error("[workspace-tap-score/complete] Error:", error);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    const status = message === "Not authenticated" ? 401 : message === "Not authorized" ? 403 : 500;
+    return jsonError(status, message);
+  }
+}

@@ -63,9 +63,8 @@ describe("UI i18n surface keys resolve in en.json", () => {
   it("collects dotted t()/translateWithLocale keys from components and app", () => {
     const keys = collectUsedDottedUiKeys();
     expect(keys.length).toBeGreaterThan(100);
-    // Known surface that previously showed raw keys
-    expect(keys).toContain("chapterMap.editPromptPlaceholder");
-    expect(keys).toContain("chapterMap.editSuggest");
+    expect(keys).not.toContain("chapterMap.editPromptPlaceholder");
+    expect(keys).not.toContain("chapterMap.editSuggest");
   });
 
   it("every used dotted UI key has a non-empty English string", () => {
@@ -74,21 +73,8 @@ describe("UI i18n surface keys resolve in en.json", () => {
     expect(missing, `Missing en strings:\n${missing.join("\n")}`).toEqual([]);
   });
 
-  it("chapterMap edit surface keys are real copy (not raw keys)", () => {
-    const placeholder = getMessageLeaf(en, "chapterMap.editPromptPlaceholder");
-    const suggest = getMessageLeaf(en, "chapterMap.editSuggest");
-    expect(typeof placeholder).toBe("string");
-    expect(typeof suggest).toBe("string");
-    expect(String(placeholder).trim().length).toBeGreaterThan(5);
-    expect(String(suggest).trim().length).toBeGreaterThan(3);
-    expect(placeholder).not.toBe("chapterMap.editPromptPlaceholder");
-    expect(suggest).not.toBe("chapterMap.editSuggest");
-  });
-
   it("new keys exist on every locale file (parity for filled surface holes)", () => {
     const required = [
-      "chapterMap.editPromptPlaceholder",
-      "chapterMap.editSuggest",
       "chapterMap.complete",
       "common.signIn",
       "dashboard.noApiKeysYet",

@@ -86,7 +86,7 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
     },
     {
       id: "regions",
-      label: "Knowledge regions",
+      label: "Knowledge Regions",
       href: regions.href,
       body: "Simulate exploration strategies on your protocols and inspect the resulting regions.",
       ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.regions),

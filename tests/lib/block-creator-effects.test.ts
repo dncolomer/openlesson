@@ -247,46 +247,6 @@ describe("block-effect-generation prompts", () => {
   });
 });
 
-describe("creator effects wired into workspace UI + API", () => {
-  it("no Promptable drawer/UI; Dynamic + Generator remain", () => {
-    const panels = read("components/WorkspaceBlockEffectsPanels.tsx");
-    expect(panels).toContain("data-dynamic-unlock-picker");
-    expect(panels).toContain("data-generator-save-targets");
-    expect(panels).not.toContain("WorkspaceBlockPromptableEffectPanel");
-    expect(panels).not.toContain("data-promptable-framing");
-
-    const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).not.toContain("effect_promptable");
-    expect(detail).not.toContain("Promptable");
-    expect(detail).toContain("effect_dynamic");
-    expect(detail).toContain("effect_generator");
-
-    // Empty-cell Add is create-only; Dynamic/Generator live on detail pane
-    const addPane = read("components/WorkspaceAddBlockPane.tsx");
-    expect(addPane).not.toContain("effect_promptable");
-    expect(addPane).not.toContain("WorkspaceBlockPromptableEffectPanel");
-    expect(addPane).not.toContain('drawerId="effect_dynamic"');
-    expect(addPane).not.toContain('drawerId="effect_generator"');
-    expect(addPane).not.toContain("WorkspaceBlockDynamicEffectPanel");
-    expect(addPane).not.toContain("WorkspaceBlockGeneratorEffectPanel");
-
-    const learner = read("components/WorkspaceLearnerBlockPane.tsx");
-    expect(learner).not.toContain("promptable");
-    expect(learner).not.toContain("needsPromptable");
-    expect(learner).toContain("data-learner-dynamic-unlock");
-
-    const genRoute = read("app/api/workspace/block-effect-generate/route.ts");
-    expect(genRoute).not.toContain("promptable");
-    expect(genRoute).toContain("dynamic");
-    expect(genRoute).toContain("generator_cell");
-    // Learners can spawn generator targets after Mark Done (admin write after auth)
-    expect(genRoute).toContain("createAdminClient");
-
-    const grid = readMapGridSurface();
-    expect(grid).not.toContain('data-creator-effect-icon="promptable"');
-  });
-});
-
 try {
   mkdirSync(SCRATCH, { recursive: true });
   writeFileSync(join(SCRATCH, "block-creator-effects.ok"), "1");

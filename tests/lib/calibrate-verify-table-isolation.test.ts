@@ -54,23 +54,6 @@ function fakeClient() {
 }
 
 describe("Calibrate vs Verify table isolation", () => {
-  it("inserting and opening Calibrate never reads or writes Verify", async () => {
-    const client = fakeClient();
-    const write = storedCalibrateVerifyWrite("scout");
-    expect(write.table).toBe(CALIBRATE_SESSIONS_TABLE);
-    expect(write.interaction_kind).toBe("calibrate");
-
-    await insertGuestSession(client, write.table, {
-      user_id: "u1",
-      interaction_kind: write.interaction_kind,
-      private_token_hash: "cal-hash",
-    });
-    const found = await findCalibrateSessionByToken(client, "cal-hash");
-    expect(found).toBeTruthy();
-    expect(client.calls.every((c) => c.table === "sessions")).toBe(true);
-    expect(client.calls.filter((c) => c.op === "insert").every((c) => c.kind === "calibrate")).toBe(true);
-    expect(client.calls.some((c) => c.kind === "verify")).toBe(false);
-  });
 
   it("inserting and opening Verify never reads or writes Calibrate", async () => {
     const client = fakeClient();

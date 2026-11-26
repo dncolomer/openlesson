@@ -449,82 +449,7 @@ describe("Simulation shares live practice builders", () => {
     );
   });
 
-  it("drawer + overview UI wire workspaceGoal into deriveBlockSimulation", () => {
-    expect(existsSync(join(ROOT, "app/api/workspace/simulate-insights/route.ts"))).toBe(false);
-    expect(existsSync(join(ROOT, "components/SimulateInsightsSurface.tsx"))).toBe(false);
 
-    const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).not.toContain('title="Simulate Insights"');
-    expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
-
-    const view = readWorkspaceViewSurface();
-    expect(view).not.toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
-
-    const overview = deriveWorkspaceSimulationOverview(
-      [
-        {
-          id: "b1",
-          title: richCtx.blockTitle,
-          description: richCtx.blockDescription,
-          is_start: true,
-        },
-      ],
-      {
-        workspaceTitle: richCtx.workspaceTitle,
-        workspaceGoal: richCtx.workspaceGoal,
-        rootTopic: richCtx.rootTopic,
-      },
-    );
-    expect(Array.isArray(overview.sampleProbes)).toBe(true);
-
-    const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
-    expect(hosts).not.toContain("WorkspaceSimulationPanel");
-  });
-
-  it("simulation LLM system/user reuse TAP opening + domain exercise builders", () => {
-    const system = buildSimulationSamplesSystemPrompt();
-    expect(system).toContain(kernelOpeningTask().slice(0, 40));
-    expect(system).toContain(buildDomainExerciseAuthorSystemPrompt("tap_exercise").slice(0, 40));
-    expect(system).toMatch(/out loud|stage direction/i);
-    expect(system).toMatch(/meta-learning|already know/i);
-
-    const user = buildSimulationSamplesUserPrompt({
-      ...richCtx,
-      blocks: [
-        {
-          id: "b1",
-          title: "Positive predictive value",
-          description: richCtx.blockDescription,
-          position_x: 0,
-          position_y: 0,
-          is_start: true,
-        },
-      ],
-      focusedBlockId: "b1",
-    });
-    expect(user).toMatch(/Bayesian clinical reasoning|Update clinical beliefs/i);
-    expect(user).toMatch(/Positive predictive value|Block inventory|Map layout|workspace/i);
-
-    const route = read("app/api/workspace/block-content-samples/route.ts");
-    expect(route).toContain("buildSimulationSamplesSystemPrompt");
-    expect(route).toContain("buildSimulationSamplesUserPrompt");
-    expect(route).not.toMatch(/outline the steps or solution out loud/i);
-    expect(route).toContain("practice-item-builders");
-
-    // Workspace Simulation tab API also uses shared real-prompt path
-    const tabRoute = read("app/api/workspace/simulation-samples/route.ts");
-    expect(tabRoute).toContain("buildSimulationSamplePrompts");
-    expect(tabRoute).toContain("workspace-simulation-samples");
-    expect(tabRoute).toMatch(/scope|blockId/);
-
-    const lib = read("lib/block-simulation.ts");
-    expect(lib).toContain("enforceSimulationProbeQuota");
-    expect(lib).not.toMatch(/return synthQuestion|return synthExercise/);
-
-    const samplesLib = read("lib/workspace-simulation-samples.ts");
-    expect(samplesLib).toContain("buildSimulationSamplesSystemPrompt");
-    expect(samplesLib).toContain("normalizeSimulationSampleResponse");
-  });
 });
 
 describe("session complete does not auto-score", () => {
@@ -535,12 +460,12 @@ describe("session complete does not auto-score", () => {
     );
     expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/never auto-run when a session ends/i);
 
-    const tapComplete = read("app/api/workspace-tap-score/complete/route.ts");
+    const tapComplete = read("app/api/verify/session/complete/route.ts");
     expect(tapComplete).not.toContain("buildVerticalScoreInstructions");
     expect(tapComplete).not.toContain("runVerticalScore");
     expect(tapComplete).toContain("uploadWorkspaceProofOfWork");
 
-    expect(existsSync(join(ROOT, "app/api/workspace-tap-score/performance/route.ts"))).toBe(
+    expect(existsSync(join(ROOT, "app/api/verify/session/performance/route.ts"))).toBe(
       false,
     );
     expect(existsSync(join(ROOT, "app/api/workspace-learn/performance/route.ts"))).toBe(false);

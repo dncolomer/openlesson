@@ -22,7 +22,7 @@ export function IleStartLoading({
   children = null,
 }: {
   t: SessionViewTranslate;
-  /** Replaces "Starting session" when this same plate is a save or a route wait. */
+  /** Replaces "Starting the protocol" when this same plate is a save or a route wait. */
   statusLabel?: string | null;
   fieldStatus?: "preparing" | "failed" | null;
   fieldError?: string | null;

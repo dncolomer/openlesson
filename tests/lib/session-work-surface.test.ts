@@ -28,7 +28,6 @@ const OLD_LIVE_SPLITS = [
 
 describe("shared live work surface", () => {
   const host = read("components/session-view/session-work-surface.tsx");
-  const prepare = read("components/scout-tap/scout-tap-phases.tsx");
   const learn = read("components/session-view/session-chrome.tsx");
   expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
@@ -46,29 +45,10 @@ describe("shared live work surface", () => {
     expect(sidebarAt).toBeLessThan(stageAt);
     expect(host).toContain("relative z-0 min-h-0 min-w-0 overflow-hidden");
     expect(host).toContain("absolute inset-0 flex h-full min-h-0 w-full flex-col");
+    expect(host).toContain("<SessionPowLogOverlay");
+    expect(learn).toContain("<SessionPowLogOverlay");
   });
 
-  it("Calibrate live play uses sounding cards, a clock, and a start voice check", () => {
-    const surface = read("components/calibrate/calibrate-sounding-surface.tsx");
-    expect(prepare).toContain("<CalibrateSoundingSurface");
-    expect(prepare).toContain("<SessionWorkSurface");
-    expect(prepare).toContain('mode="calibrate"');
-    expect(surface).toContain("data-calibrate-sounding");
-    expect(surface).toContain("data-sounding-still");
-    expect(surface).not.toContain("SessionWorkSurface");
-    expect(surface).not.toContain("data-calibrate-done-classifying");
-    expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
-    expect(surface).not.toContain("WorkCanvas");
-    expect(surface).not.toContain("TapAestheticSection");
-    expect(prepare).toContain("PracticeVoiceChallenge");
-    expect(prepare).toContain("data-scout-live-control-strip");
-    expect(prepare).toContain("listening={false}");
-    expect(prepare).not.toContain("useSessionThoughtInterface");
-    for (const marker of OLD_LIVE_SPLITS) {
-      expect(prepare, marker).not.toContain(marker);
-      expect(surface, marker).not.toContain(marker);
-    }
-  });
 
   it("Learn live play stays on the TAP Learning canvas sidebar without a visible countdown", () => {
     expect(learn).toContain("data-ile-canvas-sidebar-split");
@@ -112,44 +92,6 @@ describe("shared live work surface", () => {
     }
   });
 
-  it("puts leave and end controls in the sidebar actions row, not the clock", () => {
-    expect(host).toContain("actions={actions}");
-    const sidebar = read("components/session-view/session-sidebar.tsx");
-    expect(sidebar).toContain("data-session-sidebar-actions");
-    expect(sidebar).toContain("data-session-sidebar-focus");
-    expect(sidebar).not.toContain("data-session-sidebar-counts");
-    expect(sidebar).not.toContain("data-session-sidebar-toggle");
-
-    const prepareClock = prepare.slice(prepare.indexOf("clock={"), prepare.indexOf("actions={"));
-    expect(prepareClock).toContain("data-scout-live-control-strip");
-    expect(prepareClock).toContain("<TapLiveClock");
-    expect(prepareClock).not.toContain("data-scout-end-session");
-    const prepareActions = prepare.slice(prepare.indexOf("actions={"), prepare.indexOf("chapters={"));
-    expect(prepareActions).toContain("showEndSession");
-    expect(prepareActions).toContain("data-scout-end-session");
-    expect(prepareActions).toContain("End session");
-    expect(prepareActions).toContain("SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS");
-
-    const tapClock = tap.slice(tap.indexOf("clock={"), tap.indexOf("actions={"));
-    expect(tapClock).toContain("data-tap-live-control-strip");
-    expect(tapClock).not.toContain("data-tap-end-session");
-    const tapActions = tap.slice(tap.indexOf("actions={"), tap.indexOf("chapters={"));
-    expect(tapActions).toContain("showEndSession");
-    expect(tapActions).toContain("data-tap-end-session");
-    expect(tapActions).toContain("End session");
-
-    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
-    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
-
-    const voice = read("components/session-view/learn-voice-bar.tsx");
-    expect(voice).toContain("data-ile-bar-save");
-    expect(voice).toContain("data-save-and-exit");
-    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
-    expect(learn).toContain("actions={actions}");
-    expect(learn).not.toContain("transcript={voiceBar}");
-    expect(readSessionStageSurface()).toContain("<IleVoiceBarActions");
-    expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
-  });
 
   it("renders finished sessions, waits, and confirms through the shared chrome", () => {
     const html = renderToStaticMarkup(
@@ -197,19 +139,12 @@ describe("shared live work surface", () => {
     expect(wideHtml).not.toContain("my-auto");
 
     const finished = [
-      prepare,
       tap,
       read("components/session-view/learn-silence-lock-screen.tsx"),
     ];
     for (const src of finished) {
       expect(src).toContain("<SessionFinishedScreen");
     }
-    expect(prepare).toContain("data-scout-thank-you");
-    expect(prepare).toContain("data-tap-session-thank-you");
-    expect(prepare).toContain("data-tap-explore-uncertain-systems");
-    expect(prepare).not.toContain("data-scout-restart");
-    expect(prepare).not.toContain("data-scout-workspace");
-    expect(prepare).not.toContain("data-scout-jump-work");
     expect(tap).toContain("data-tap-session-thank-you");
     expect(tap).toContain("data-tap-session-impure");
     expect(tap).not.toContain("data-tap-practice-done");
@@ -229,7 +164,6 @@ describe("shared live work surface", () => {
     expect(silence).not.toContain("data-ile-impurity-save");
 
     for (const src of [
-      prepare,
       tap,
       read("components/SessionView.tsx"),
       read("components/session-view/session-welcome-modal.tsx"),

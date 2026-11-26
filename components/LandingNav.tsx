@@ -26,14 +26,15 @@ function communityAnchorProps(href: string) {
   return {};
 }
 
+const PROTOCOL_NAV_HREF = MAIN_NAV_PRODUCT_LINKS[0].href;
+const PROTOCOL_NAV_BUTTON_CLASS =
+  "inline-flex items-center bg-white px-3 py-2 text-base font-medium text-black transition hover:bg-zinc-200";
+
 export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
-  const [platformOpen, setPlatformOpen] = useState(false);
   const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false);
-  const [mobilePlatformOpen, setMobilePlatformOpen] = useState(false);
   const communityRef = useRef<HTMLDivElement>(null);
-  const platformRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -52,20 +53,16 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
   }, []);
 
   useEffect(() => {
-    if (!communityOpen && !platformOpen) return;
+    if (!communityOpen) return;
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (!communityRef.current?.contains(target)) {
         setCommunityOpen(false);
       }
-      if (!platformRef.current?.contains(target)) {
-        setPlatformOpen(false);
-      }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setCommunityOpen(false);
-        setPlatformOpen(false);
       }
     };
     document.addEventListener("mousedown", onPointerDown);
@@ -74,7 +71,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [communityOpen, platformOpen]);
+  }, [communityOpen]);
 
   return (
     <header
@@ -90,45 +87,10 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-base text-zinc-500 md:flex" aria-label="Main navigation">
-          <div className="relative" ref={platformRef} data-nav-products>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 bg-white px-3 py-2 text-base font-medium text-black transition hover:bg-zinc-200"
-              aria-expanded={platformOpen}
-              aria-haspopup="menu"
-              aria-controls="platform-menu"
-              onClick={() => {
-                setPlatformOpen((open) => !open);
-                setCommunityOpen(false);
-              }}
-            >
+          <div data-nav-products>
+            <Link href={PROTOCOL_NAV_HREF} className={PROTOCOL_NAV_BUTTON_CLASS}>
               {PLATFORM_NAV_LABEL}
-              <ChevronDown
-                size={14}
-                className={`transition-transform ${platformOpen ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-            </button>
-            {platformOpen && (
-              <div
-                id="platform-menu"
-                role="menu"
-                aria-label={PLATFORM_NAV_LABEL}
-                className="absolute left-0 top-full z-50 mt-2 min-w-[14rem] border border-zinc-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
-              >
-                {MAIN_NAV_PRODUCT_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    role="menuitem"
-                    className="block px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                    onClick={() => setPlatformOpen(false)}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            )}
+            </Link>
           </div>
 
           <Link href={USE_CASES_NAV_LINK.href} className="transition hover:text-white">
@@ -156,7 +118,6 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               aria-controls="community-menu"
               onClick={() => {
                 setCommunityOpen((open) => !open);
-                setPlatformOpen(false);
               }}
             >
               {COMMUNITY_NAV_LABEL}
@@ -220,34 +181,13 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           <ul className="space-y-1 text-base">
             <li>
               <div data-nav-products>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between bg-white px-3 py-2 text-left text-base font-medium text-black"
-                  aria-expanded={mobilePlatformOpen}
-                  onClick={() => setMobilePlatformOpen((open) => !open)}
+                <Link
+                  href={PROTOCOL_NAV_HREF}
+                  className={`${PROTOCOL_NAV_BUTTON_CLASS} w-full justify-between`}
+                  onClick={() => setMobileOpen(false)}
                 >
                   {PLATFORM_NAV_LABEL}
-                  <ChevronDown
-                    size={14}
-                    className={`transition-transform ${mobilePlatformOpen ? "rotate-180" : ""}`}
-                    aria-hidden
-                  />
-                </button>
-                {mobilePlatformOpen && (
-                  <ul className="mb-1 mt-1 space-y-0.5 border border-zinc-800 bg-[#0a0a0a]/95 py-1">
-                    {MAIN_NAV_PRODUCT_LINKS.map((link) => (
-                      <li key={link.href}>
-                        <Link
-                          href={link.href}
-                          className="block px-3 py-2 text-zinc-300"
-                          onClick={() => setMobileOpen(false)}
-                        >
-                          {link.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                </Link>
               </div>
             </li>
             <li>

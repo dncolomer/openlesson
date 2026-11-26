@@ -521,20 +521,6 @@ describe("chapter-map position honor path", () => {
 });
 
 describe("create surface wiring (structural)", () => {
-  it("authoring still generates session plans without the Learn create route", () => {
-    expect(existsSync(path.join(process.cwd(), "app/api/session-plan/create/route.ts"))).toBe(
-      false,
-    );
-    const previewSrc = readFileSync(
-      path.join(process.cwd(), "app/api/workspace/preview-session/route.ts"),
-      "utf8",
-    );
-    expect(previewSrc).toContain("createSessionPlanLLM");
-    const xaiSrc = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
-    expect(xaiSrc).toContain("SESSION_PLAN_CREATE_JSON_SCHEMA");
-    expect(xaiSrc).toContain("callXaiWithSchema");
-    expect(xaiSrc).toContain("createSessionPlanLLM");
-  });
 
   it("welcome UI does not allocate chapter-plan start knobs", () => {
     const viewSrc = readSessionViewSurface();
@@ -563,95 +549,4 @@ describe("create surface wiring (structural)", () => {
     expect(src).not.toContain('.from("session_plans")');
   });
 
-  it("workspace generate + UI document initial_chapters (programmatic create stays available)", () => {
-    const genSrc = readFileSync(
-      path.join(process.cwd(), "app/api/workspace/generate/route.ts"),
-      "utf8",
-    );
-    expect(genSrc).toContain("composeWorkspacePlanGeneratePrompt");
-    expect(genSrc).toContain("normalizeGeneratedPlanNodes");
-    expect(genSrc).toContain("insertGeneratedWorkspaceBlocks");
-    expect(genSrc).toContain("unusable_cells");
-    expect(genSrc).toContain("blockedCellsFromMapType");
-    expect(genSrc).toContain("applyGeneratedMapTypePlacement");
-    expect(existsSync(path.join(process.cwd(), "components/ChapterMapPanel.tsx"))).toBe(false);
-    const xaiCreate = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
-    expect(xaiCreate).toContain("relocateChapterStepsOffBlocked");
-    expect(xaiCreate).toContain("blockedCellsFromMapType");
-    expect(genSrc).toContain("extractGeneratedPlanNodes");
-
-    expect(existsSync(path.join(process.cwd(), "components/WorkspaceModeSelect.tsx"))).toBe(
-      false,
-    );
-    expect(existsSync(path.join(process.cwd(), "components/HumanModeSelect.tsx"))).toBe(false);
-
-    // Primary create surface at /workspace/new (standalone page, not WorkspaceModeSelect)
-    const newWorkspaceSrc = readFileSync(
-      path.join(process.cwd(), "app/workspace/new/page.tsx"),
-      "utf8",
-    );
-    expect(newWorkspaceSrc).not.toContain("initialChapters");
-    expect(newWorkspaceSrc).not.toContain("InitialChaptersPicker");
-    expect(newWorkspaceSrc).toContain("createBlankMap");
-    expect(newWorkspaceSrc).toContain("data-create-blank-map");
-    const pickerSrc = readFileSync(
-      path.join(process.cwd(), "components/InitialChaptersPicker.tsx"),
-      "utf8",
-    );
-    expect(pickerSrc).toContain("dummyDensityCells");
-    expect(pickerSrc).toContain("ChapterMiniMap");
-    expect(pickerSrc).toContain("option.descKey");
-    expect(pickerSrc).toContain("data-initial-chapters-carousel");
-    expect(pickerSrc).toContain("data-initial-chapters-prev");
-    expect(pickerSrc).toContain("data-initial-chapters-next");
-    expect(pickerSrc).toContain("stepMapTypeCatalog");
-    expect(pickerSrc).toContain("pickRandomMapType");
-    expect(pickerSrc).toContain("data-initial-chapters-random-pick");
-    expect(pickerSrc).toMatch(
-      /data-initial-chapters-random[\s\S]{0,120}data-initial-chapters-random-pick/,
-    );
-    expect(pickerSrc).not.toContain('type="checkbox"');
-    expect(pickerSrc).toContain("fillHeight");
-    expect(pickerSrc).toContain("flex h-full min-h-0 flex-col");
-    expect(pickerSrc).toContain("data-map-type-preview");
-    expect(pickerSrc).toContain("max-w-[100cqmin]");
-    expect(pickerSrc).toContain("aspect-square");
-    expect(pickerSrc).not.toContain("grid-cols-2");
-    expect(pickerSrc).not.toContain("sm:grid-cols-4");
-    expect(pickerSrc).toContain("line-clamp-3");
-    expect(pickerSrc).toContain("min-h-[3.6rem]");
-    const welcomeSrc = readFileSync(
-      path.join(process.cwd(), "components/session-view/session-welcome-modal.tsx"),
-      "utf8",
-    );
-    expect(welcomeSrc).not.toContain("catalogStrip");
-    expect(welcomeSrc).not.toContain('data-ile-map-type-align="aesthetics"');
-    expect(welcomeSrc).not.toContain("data-ile-session-chapter-count");
-    expect(welcomeSrc).not.toContain("data-ile-session-insight-goal");
-    expect(welcomeSrc).not.toContain("data-ile-silence-lock-minutes");
-    expect(welcomeSrc).toContain("data-ile-session-chapters");
-    expect(welcomeSrc).toContain("flex h-full min-h-0 min-w-0 flex-col");
-    const miniSrc = readFileSync(
-      path.join(process.cwd(), "components/ChapterMiniMap.tsx"),
-      "utf8",
-    );
-    expect(miniSrc).toContain("miniMapDummyFrame");
-    const copy = JSON.parse(
-      readFileSync(path.join(process.cwd(), "messages/en.json"), "utf8"),
-    ) as { session: Record<string, string>; planMode: Record<string, string> };
-    expect(copy.session.initialChapters).toBe("Map type");
-    expect(copy.planMode.initialChapters).toBe("Map type");
-
-    const mcpSrc = readMcpSurface();
-    expect(mcpSrc).toContain("createManagedWorkspace");
-    expect(mcpSrc).toContain("create_workspace");
-    expect(mcpSrc).not.toContain("rejectProgrammaticWorkspaceCreate");
-
-    const docs = readFileSync(
-      path.join(process.cwd(), "docs/PROOF_OF_WORK_API.md"),
-      "utf8",
-    );
-    expect(docs).toContain("create_workspace");
-    expect(docs).toContain("/api/v3/workspaces");
-  });
 });

@@ -4,6 +4,7 @@ import {
   findInviteByToken,
   inviteOrganization,
 } from "@/lib/organization/find-invite";
+import { upsertOrganizationMembership } from "@/lib/organization/membership-store";
 
 export type AcceptInviteResult =
   | {
@@ -21,6 +22,7 @@ export type AcceptInviteResult =
 /**
  * Accept an organization invite for a user (service-role only).
  * Ensures a profile exists first so missing auth triggers cannot block join.
+ * Adds a membership and switches the active org; prior orgs stay attached.
  */
 export async function acceptOrganizationInviteForUser(
   admin: SupabaseClient,
@@ -39,7 +41,6 @@ export async function acceptOrganizationInviteForUser(
     };
   }
 
-  // Prefer RPC with transfer semantics (hashed + legacy token lookup).
   const { data: rpcResult, error: rpcError } = await admin.rpc(
     "accept_organization_invite",
     {
@@ -72,8 +73,6 @@ export async function acceptOrganizationInviteForUser(
       };
     }
 
-    // After ensureUserProfile, "User not found" is unexpected — fall through to inline.
-    // Other RPC business errors are returned as-is.
     const rpcErr = result.error || "Failed to accept invite";
     if (!/user not found/i.test(rpcErr)) {
       return {
@@ -84,10 +83,9 @@ export async function acceptOrganizationInviteForUser(
     }
     console.warn("accept_organization_invite returned User not found; retrying inline");
   } else if (rpcError) {
-    console.warn("accept_organization_invite RPC error, using inline transfer:", rpcError);
+    console.warn("accept_organization_invite RPC error, using inline join:", rpcError);
   }
 
-  // Inline transfer fallback
   const invite = await findInviteByToken(admin, token);
   if (!invite) {
     return { ok: false, error: "Invalid invite token", status: 404 };
@@ -108,57 +106,16 @@ export async function acceptOrganizationInviteForUser(
     return { ok: false, error: "User profile not found", status: 404 };
   }
 
-  if (profile.organization_id === invite.organization_id) {
-    if (!invite.used_by) {
-      await admin
-        .from("organization_invites")
-        .update({ used_by: userId, used_at: new Date().toISOString() })
-        .eq("id", invite.id);
-    }
-    return {
-      ok: true,
-      alreadyMember: true,
-      organization: org
-        ? { id: org.id, name: org.name, slug: org.slug, logo_url: org.logo_url ?? null }
-        : null,
-    };
-  }
+  const { data: existingMembership } = await admin
+    .from("organization_members")
+    .select("is_org_admin")
+    .eq("user_id", userId)
+    .eq("organization_id", invite.organization_id)
+    .maybeSingle();
 
-  const oldOrgId = profile.organization_id as string | null;
+  const alreadyMember =
+    Boolean(existingMembership) || profile.organization_id === invite.organization_id;
 
-  if (oldOrgId) {
-    const { error: leaveError } = await admin
-      .from("profiles")
-      .update({ organization_id: null, is_org_admin: false })
-      .eq("id", userId);
-
-    if (leaveError) {
-      console.error("[accept-invite] leave old org failed:", leaveError);
-      return {
-        ok: false,
-        error: leaveError.message || "Failed to leave current organization",
-        status: 500,
-      };
-    }
-
-    const { count } = await admin
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", oldOrgId);
-
-    if ((count ?? 0) === 0) {
-      await admin
-        .from("organizations")
-        .update({
-          archived_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", oldOrgId)
-        .eq("kind", "personal");
-    }
-  }
-
-  // Claim invite first (unique-ish race guard via used_by)
   if (!invite.used_by) {
     const { data: claimed, error: claimError } = await admin
       .from("organization_invites")
@@ -171,20 +128,36 @@ export async function acceptOrganizationInviteForUser(
     if (claimError) {
       return { ok: false, error: "Failed to accept invite", status: 500 };
     }
-    if (!claimed) {
+    if (!claimed && !alreadyMember) {
       return { ok: false, error: "This invite has already been used", status: 400 };
     }
   }
 
+  try {
+    await upsertOrganizationMembership(
+      admin,
+      userId,
+      invite.organization_id,
+      existingMembership?.is_org_admin === true,
+    );
+  } catch (err) {
+    console.error("[accept-invite] membership upsert failed:", err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Failed to join organization",
+      status: 500,
+    };
+  }
+
+  const isOrgAdmin = existingMembership?.is_org_admin === true;
   const { data: joined, error: joinError } = await admin
     .from("profiles")
-    .update({ organization_id: invite.organization_id, is_org_admin: false })
+    .update({ organization_id: invite.organization_id, is_org_admin: isOrgAdmin })
     .eq("id", userId)
     .select("id, organization_id")
     .single();
 
   if (joinError || joined?.organization_id !== invite.organization_id) {
-    // Roll back invite claim if we couldn't attach the profile
     if (!invite.used_by) {
       await admin
         .from("organization_invites")
@@ -202,6 +175,7 @@ export async function acceptOrganizationInviteForUser(
 
   return {
     ok: true,
+    alreadyMember,
     organization: org
       ? { id: org.id, name: org.name, slug: org.slug, logo_url: org.logo_url ?? null }
       : null,

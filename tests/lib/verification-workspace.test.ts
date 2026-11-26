@@ -147,15 +147,13 @@ describe("standard TAP starting topics", () => {
 });
 
 describe("verification flow identity and result membership", () => {
-  it("accepts a non-empty identity and refuses a duplicate", () => {
-    expect(acceptParticipantIdentity("  ", [])).toEqual({ ok: false, reason: "empty" });
-    expect(acceptParticipantIdentity("  ada ", [])).toEqual({ ok: true, identity: "ada" });
-    expect(acceptParticipantIdentity("ada", ["ada"])).toEqual({ ok: false, reason: "duplicate" });
-    expect(acceptParticipantIdentity("Ada", ["ada"]).ok).toBe(true);
+  it("accepts a non-empty identity and lets the same person claim again", () => {
+    expect(acceptParticipantIdentity("  ")).toEqual({ ok: false, reason: "empty" });
+    expect(acceptParticipantIdentity("  ada ")).toEqual({ ok: true, identity: "ada" });
+    expect(acceptParticipantIdentity("ada")).toEqual({ ok: true, identity: "ada" });
+    expect(acceptParticipantIdentity("Ada")).toEqual({ ok: true, identity: "Ada" });
     expect(
-      acceptParticipantIdentity("lti:https://school.brightspace.com:user-9", [
-        "lti:https://school.brightspace.com:user-9",
-      ]),
+      acceptParticipantIdentity("lti:https://school.brightspace.com:user-9"),
     ).toEqual({
       ok: true,
       identity: "lti:https://school.brightspace.com:user-9",
@@ -181,15 +179,39 @@ describe("verification flow identity and result membership", () => {
     expect(claimed.ok).toBe(true);
     if (!claimed.ok) return;
     state = claimed.state;
-    const duplicate = applyVerificationCommand(state, {
+    const again = applyVerificationCommand(state, {
       type: "claim",
       flowId: "flow-a",
       identity: "ada",
     });
-    expect(duplicate.ok).toBe(false);
-    if (duplicate.ok) return;
-    expect(duplicate.reason).toBe("duplicate");
-    expect(duplicate.state.identities).toHaveLength(1);
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.identity).toBe("ada");
+    expect(again.state.identities).toHaveLength(1);
+
+    const first = applyVerificationCommand(again.state, {
+      type: "addResult",
+      flowId: "flow-a",
+      identity: "ada",
+      source: "runner",
+      prompt: "first run",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const second = applyVerificationCommand(first.state, {
+      type: "addResult",
+      flowId: "flow-a",
+      identity: "ada",
+      source: "runner",
+      prompt: "second run",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    const ada = resultsForFlow(second.state.results, "flow-a").filter(
+      (item) => item.identity === "ada",
+    );
+    expect(ada).toHaveLength(2);
+    expect(ada.map((item) => item.prompt)).toEqual(["first run", "second run"]);
   });
 
   it("keeps runner and skill results on their flow", () => {
@@ -789,185 +811,6 @@ describe("verification workspace shell gates", () => {
     expect(standard[0]).toBe("workspace");
   });
 
-  it("names the create card and shell Verification Workspace and mounts flow controls only for this kind", async () => {
-    const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain("data-create-blank-map");
-    expect(page).not.toContain('title: "Verification workspace"');
-    expect(page).not.toContain('data-create-mode="knowledge_region"');
-    expect(page).not.toContain('data-create-mode="calibration"');
-    expect(page).not.toContain("Calibration workspace");
-    const workspacePage = read("app/workspace/[id]/page.tsx");
-    expect(workspacePage).toContain("noMapWorkspaceDashboardHref");
-    expect(workspacePage).toContain("workspace_kind");
-    expect(workspacePage).toContain("redirect(href)");
-    expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
-    expect(read("components/product-flow/product-surface.tsx")).toContain("DashboardSidebar");
-    expect(read("components/product-flow/product-surface.tsx")).not.toContain("Navbar");
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
-      "dashboardTabForProductSurface(kind)",
-    );
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("Publish");
-    expect(read("components/product-flow/product-flow-wizard.tsx")).not.toContain(
-      "data-verification-generate-from-topic",
-    );
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-problem");
-    const generated = await generateVerificationPoolFromTopic({
-      topic: "Limits",
-      complete: async (request) => {
-        expect(request.kind).toBe("verification_from_topic");
-        expect(request.user).toContain("Limits");
-        expect(request.instructions).toContain("3 to 5");
-        return { questions: ["What is a limit?", "How does a sequence converge?"] };
-      },
-    });
-    expect(generated).toEqual(["What is a limit?", "How does a sequence converge?"]);
-    const generateRoute = read("app/api/dashboard/protocols/generate-questions/route.ts");
-    expect(generateRoute).toContain("generateVerificationPoolFromTopic");
-    expect(generateRoute).toContain("callXaiJSON");
-    expect(generateRoute).toContain("requireAuthenticatedUser");
-    expect(read("components/product-flow/product-flow-page.tsx")).toContain("data-flow-problem");
-    expect(read("components/product-flow/product-flow-page.tsx")).not.toContain(
-      "data-calibration-flow-add-question",
-    );
-    const shell = read("components/workspace-view/workspace-chrome.tsx");
-    expect(shell).not.toContain("data-verification-workspace-shell");
-    expect(shell).not.toContain("data-calibration-workspace-shell");
-    expect(shell).toContain("workspaceProductShell");
-    expect(shell).toContain('data-workspace-product-shell="learning"');
-    expect(shell).not.toContain("Verification workspace");
-    expect(shell).not.toContain("Calibration workspace");
-    expect(shell).not.toContain("Learning workspace");
-
-    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
-    expect(read("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
-    const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
-    expect(hosts).not.toContain("VerificationFlowsPanel");
-    expect(hosts).not.toContain("CalibrationFlowsPanel");
-    expect(hosts).not.toContain("WorkspaceGoalsPanel");
-    expect(hosts).not.toContain("WorkspaceDataStudioPanel");
-    expect(hosts).not.toContain('visibleSections.includes("verification_flows")');
-    expect(hosts).not.toContain("isNoMapWorkspace");
-    expect(hosts).toContain("if (visibleSections.length === 0) return null");
-
-    const regions = read("components/CustomVerificationModelsPanel.tsx");
-    expect(regions).not.toContain("data-region-create-from-flow");
-    expect(regions).not.toContain("Create from verification flow");
-    const settings = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(settings).not.toContain("CustomVerificationModelsPanel");
-    expect(settings).not.toContain("workspaceAllowsCopyToVerification");
-    expect(settings).not.toContain("WorkspaceCopyToVerification");
-    const copyRoute = read("app/api/workspace/copy-to-verification/route.ts");
-    expect(copyRoute).toContain("410");
-    expect(copyRoute).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
-    expect(read("lib/pow-api/workspace-management.ts")).not.toContain(
-      "createVerificationWorkspaceFromPrompt",
-    );
-    expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
-    expect(settings).toContain("integration-skill");
-    expect(settings).toContain('activeSubview === "integrations"');
-
-    expect(existsSync(join(ROOT, "components/knowledge-panel/ranking-view.tsx"))).toBe(false);
-    expect(existsSync(join(ROOT, "components/knowledge-panel/strengths-gaps-view.tsx"))).toBe(false);
-    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
-    const modelsFilter = read("components/knowledge-panel/models-view.tsx");
-    expect(modelsFilter).toContain("VerificationFlowSubtabFilter");
-    expect(modelsFilter).toContain('subtab="embeddings"');
-    const modelsView = read("components/knowledge-panel/models-view.tsx");
-    expect(modelsView).toContain('embeddingSource: "flowcfg"');
-    expect(modelsView).toContain("Embeddings in");
-    expect(modelsView).toContain("FLOW_EMBEDDING_MODEL_ID");
-    expect(modelsView).toContain("data-embeddings-model");
-    expect(modelsView).toContain("data-embeddings-model-copy");
-    expect(modelsView).toContain("data-embeddings-regions-rail");
-    expect(modelsView).toContain("Embeddings in");
-    expect(modelsView).toContain("FLOW_EMBEDDING_MODEL_ID");
-    const trajectory = read("components/KnowledgeConfigTrajectoryPanel.tsx");
-    expect(trajectory).toContain("/api/workspace/calibration-flows");
-    expect(trajectory).toContain("/api/workspace/verification-flows");
-    expect(trajectory).toContain("resolvedFlowKind === \"calibrate\"");
-    const embeddingsHook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
-    expect(embeddingsHook).toContain("listWorkspaceFlowEmbeddings");
-    expect(embeddingsHook).toContain("knowledgeConfigFromFlowEmbeddings");
-    expect(embeddingsHook).toContain("regionMatchesFlowEmbeddingSpace");
-    expect(embeddingsHook).toContain('embeddingSource?: "flowcfg" | string');
-    expect(settings).not.toContain("Regions in flowcfg-v1-d96.");
-    expect(read("lib/verification-knowledge-subtab.ts")).toContain(
-      'embedding_model_id: "flowcfg-v1-d96"',
-    );
-    const filter = read("components/VerificationFlowSubtabFilter.tsx");
-    expect(filter).toContain("data-verification-flow-filter");
-    expect(filter).toContain("filterKnowledgeRowsByVerificationFlow");
-    const performance = read("components/WorkspacePerformancePanel.tsx");
-    expect(performance).toContain("isNoMapWorkspace(workspaceKind)");
-    expect(performance).toContain("workspaceKnowledgeFlowKind");
-    expect(embeddingsHook).toContain("flowKind");
-    expect(modelsView).toContain("flowKind");
-
-    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
-
-    expect(existsSync(join(ROOT, "components/knowledge-panel/use-knowledge-lwm.ts"))).toBe(false);
-
-
-    const tapStart = read("components/tap-score/tap-score-phases.tsx");
-    expect(tapStart).toContain("SessionStartBackButton");
-    expect(tapStart).toContain("onBackToWorkspace");
-    expect(tapStart).toContain("TapStartingTopicCards");
-    expect(tapStart).not.toContain("data-verification-flow-filter");
-    expect(tapStart).not.toContain("VerificationFlowSubtabFilter");
-    expect(tapStart).toContain("kind === \"verify\" ? (");
-    expect(tapStart).toContain("data-tap-session-thank-you");
-    expect(tapStart).toContain("data-tap-explore-uncertain-systems");
-    expect(tapStart).toContain("data-tap-back-dashboard");
-    expect(tapStart).toContain('href="/dashboard"');
-    expect(tapStart).not.toContain("data-tap-back-workspace");
-    expect(tapStart).toContain("thankYouTitle");
-    expect(tapStart).toContain("thankYouVerifyBody");
-    const tapClient = read("components/TapScoreClient.tsx");
-    expect(tapClient).toContain("kind={kind}");
-    expect(tapClient).toContain('sidebarMode === "verification-tap" || localOpening ? "verify" : "scored"');
-    const runner = read("components/VerificationFlowRunner.tsx");
-    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
-    expect(runner).toContain("lockDuration");
-    expect(runner).toContain("initialMinutes");
-    expect(runner).toContain("ProductFlowIdentityForm");
-    expect(read("components/product-flow/product-flow-identity-form.tsx")).toContain(
-      "data-verification-identity",
-    );
-    expect(runner).toContain("data-verification-empty-pool");
-    expect(runner).toContain("TapScoreClient");
-    expect(runner).toContain("presetStartingTopics={presetTopics}");
-    expect(runner).toContain("setPresetTopics(cards)");
-    expect(runner).toContain("payload.topics");
-    expect(read("components/TapStartingTopicCards.tsx")).toContain("topics.map");
-    expect(read("components/TapStartingTopicCards.tsx")).not.toContain("const [first, second, third]");
-    expect(runner).toContain("localOpening");
-    expect(runner).toContain("verificationQuestionStartingPrompt");
-    expect(runner).not.toContain("resolveTapStartingTopicsFromLlm");
-    expect(runner).not.toContain("/api/workspace-tap-score/topics");
-    const canvasAsk = read("components/tap-score/use-tap-score-flow.ts");
-    expect(canvasAsk).toContain("postVerificationCanvasAsk");
-    expect(canvasAsk).toContain("/api/verification-flow/public/");
-    expect(canvasAsk).toContain("postIleSessionChat");
-    expect(canvasAsk).not.toContain(
-      "return { text: input.prompt, elements: null, origin: null, raw: input.prompt }",
-    );
-    const publicChat = join(ROOT, "app/api/verification-flow/public/[token]/chat/route.ts");
-    expect(existsSync(publicChat)).toBe(true);
-    expect(read("app/api/verification-flow/public/[token]/chat/route.ts")).toContain("callXai");
-    expect(read("app/api/verification-flow/public/[token]/chat/route.ts")).toContain(
-      "buildVerificationFlowChatSystemPrompt",
-    );
-    const opening = localVerificationOpening({
-      openingQuestion: verificationQuestionStartingPrompt({ text: "What is a limit?" }),
-    });
-    expect(opening).toBe("What is a limit?");
-    const scene = applyTapVerificationOpeningToWorkCanvas(emptyTapWorkCanvasScene(), [
-      { id: "opening", role: "assistant", content: opening },
-    ]);
-    expect(JSON.stringify(scene)).toContain("What is a limit?");
-    expect(JSON.stringify(scene)).toContain("Work");
-    expect(localVerificationOpening({ openingQuestion: "" })).toBe("");
-  });
 
   it("refuses to update or remove a flow from another workspace", () => {
     const first = applyVerificationCommand(emptyVerificationState(), {

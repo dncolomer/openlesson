@@ -89,7 +89,7 @@ describe("tap-practice pure helpers", () => {
 
     // Complete path stamps practice after impure so practice flags survive.
     const complete = fs.readFileSync(
-      path.join(ROOT, "app/api/workspace-tap-score/complete/route.ts"),
+      path.join(ROOT, "app/api/verify/session/complete/route.ts"),
       "utf8",
     );
     expect(complete).toContain("flagTapSessionProofOfWorkPractice");
@@ -135,12 +135,12 @@ describe("TAP client practice surface (not TAP Learning)", () => {
 
   it("API write paths accept practice and stamp Practice PoW", () => {
     for (const rel of [
-      "app/api/workspace-tap-score/trace/route.ts",
-      "app/api/workspace-tap-score/speech/route.ts",
-      "app/api/workspace-tap-score/idle/route.ts",
-      "app/api/workspace-tap-score/chat/route.ts",
-      "app/api/workspace-tap-score/complete/route.ts",
-      "app/api/workspace-tap-score/start/route.ts",
+      "app/api/verify/session/trace/route.ts",
+      "app/api/verify/session/speech/route.ts",
+      "app/api/verify/session/idle/route.ts",
+      "app/api/verify/session/chat/route.ts",
+      "app/api/verify/session/complete/route.ts",
+      "app/api/verify/session/start/route.ts",
     ]) {
       const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
       expect(src, rel).toContain("isTapPracticeRequest");

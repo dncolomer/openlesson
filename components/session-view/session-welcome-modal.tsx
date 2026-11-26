@@ -8,11 +8,6 @@ import { SessionStartShell } from "@/components/session-view/session-start-shell
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
-import {
-  ILE_SESSION_CHAPTER_COUNT_DEFAULT,
-  capIleSessionChapters,
-} from "@/lib/learn-canvas-session";
-import { ileWelcomeShowsContinuePreview } from "@/lib/learn-welcome-chapters";
 import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/learn-pow-spend";
 import { ILE_SESSION_INSIGHT_GOAL_DEFAULT } from "@/lib/learn-canvas-session";
 import { DEFAULT_DURATION_MINUTES } from "@/lib/tap-score-client-helpers";
@@ -51,10 +46,10 @@ export function SessionWelcomeModal({
   onBackToWorkspace,
   onReadyStart: _onReadyStart,
   hasSessionPlan: _hasSessionPlan,
-  sessionId,
-  sessionStartedAt,
-  sessionPlan,
-  resumeSession = false,
+  sessionId: _sessionId,
+  sessionStartedAt: _sessionStartedAt,
+  sessionPlan: _sessionPlan,
+  resumeSession: _resumeSession = false,
 }: SessionWelcomeModalProps) {
   if (isPreparing) {
     return (
@@ -70,18 +65,8 @@ export function SessionWelcomeModal({
   }
 
   const isButtonDisabled = isPreparing;
-  const welcomeExtras = {
-    resume: resumeSession,
-    stepCount: sessionPlan?.steps?.length ?? 0,
-  };
-  const showContinuePreview = ileWelcomeShowsContinuePreview(chapterPlanStatus, welcomeExtras);
   const statusUnknown = chapterPlanStatus === "unknown";
   const statusFailed = chapterPlanStatus === "failed";
-  const completedCount = (sessionPlan?.steps || []).filter((step) => step.status === "completed").length;
-  const visibleChapters = capIleSessionChapters(
-    sessionPlan?.steps ?? [],
-    ILE_SESSION_CHAPTER_COUNT_DEFAULT,
-  );
 
   return (
     <SessionStartShell
@@ -105,40 +90,6 @@ export function SessionWelcomeModal({
                 disabled={isButtonDisabled}
               >
                 <div data-ile-session-chapters className="flex min-h-0 min-w-0 flex-col gap-4">
-                  {showContinuePreview ? (
-                    <div
-                      data-ile-continue-welcome
-                      className="rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
-                    >
-                      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                        {t("session.continueSession")}
-                      </p>
-                      <p className="mt-2 text-[12px] leading-snug text-neutral-400">
-                        {t("session.continueSessionDesc")}
-                      </p>
-                      <dl className="mt-3 space-y-1.5 text-[11px]">
-                        <div className="flex justify-between gap-2">
-                          <dt className="text-neutral-500">{t("session.continueSessionId")}</dt>
-                          <dd data-continue-session-id className="truncate font-mono text-neutral-300">
-                            {sessionId || sessionPlan?.sessionId || ""}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt className="text-neutral-500">{t("session.continueSessionStarted")}</dt>
-                          <dd data-continue-session-started className="text-neutral-300">
-                            {sessionStartedAt || ""}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt className="text-neutral-500">{t("session.continueSessionChapters")}</dt>
-                          <dd data-ile-continue-chapter-count className="text-neutral-300">
-                            {visibleChapters.length}
-                            {completedCount > 0 ? ` · ${completedCount} done` : ""}
-                          </dd>
-                        </div>
-                      </dl>
-                    </div>
-                  ) : null}
                   {statusUnknown ? (
                     <p className="text-[11px] text-neutral-500">{t("session.initialChaptersChecking")}</p>
                   ) : null}

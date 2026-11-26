@@ -152,7 +152,9 @@ describe("generate problem from artifacts", () => {
     const wizard = read("components/product-flow/product-flow-wizard.tsx");
     expect(wizard).toContain("onGenerateProblemOnOpenChange");
     expect(wizard).toContain("generateProblemOnOpen: accepted.generateProblemOnOpen");
-    expect(wizard).toContain("data-flow-publish-generate-on-open");
+    expect(read("components/product-flow/flow-publish-review.tsx")).toContain(
+      "data-flow-publish-generate-on-open",
+    );
     const page = read("components/product-flow/product-flow-page.tsx");
     expect(page).toContain("onGenerateProblemOnOpenChange");
     expect(page).toContain("generateProblemOnOpen");

@@ -436,7 +436,7 @@ describe("Helios map tool catalog + dispatch", () => {
     );
     expect(mixedAdded[0]?.map_block?.kind).toBe("verification");
     if (mixedAdded[1]) {
-      expect(mixedAdded[1].map_block?.kind).toBe("calibration");
+      expect(mixedAdded[1].map_block?.kind).toBe("content");
     }
 
     const thick = dispatchHeliosMapTool(pair, {

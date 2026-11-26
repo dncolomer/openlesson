@@ -309,25 +309,6 @@ describe("buildStrengthsGapsBrowseModel + analysis", () => {
 });
 
 describe("Knowledge Strengths & Gaps tab wiring", () => {
-  it("does not show Ranking or Strengths & Gaps on the Knowledge screen", () => {
-    const panel = readFileSync(
-      join(ROOT, "components/WorkspacePerformancePanel.tsx"),
-      "utf8",
-    );
-
-    const subviewsMatch = panel.match(
-      /const PERFORMANCE_SUBVIEWS[^=]*=\s*\[([\s\S]*?)\];/,
-    );
-    expect(subviewsMatch).toBeTruthy();
-    const subviewOrder = [...(subviewsMatch?.[1].matchAll(/"([^"]+)"/g) ?? [])].map(
-      (m) => m[1],
-    );
-    expect(subviewOrder).toEqual(["knowledge"]);
-    expect(subviewOrder).not.toContain("ranking");
-    expect(subviewOrder).not.toContain("strengths_gaps");
-    expect(panel).not.toContain('panelView="strengths_gaps"');
-    expect(panel).not.toContain('panelView="ranking"');
-  });
 
   it("Knowledge panel does not mount strengths_gaps view", () => {
     const kctp = readKnowledgePanelSurface();

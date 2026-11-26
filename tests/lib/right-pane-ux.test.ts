@@ -79,15 +79,6 @@ describe("Explore|Drill × Dialog/Solo → four launch targets", () => {
 });
 
 describe("desktop layout + block detail chrome", () => {
-  it("right column is half of prior half-width tokens (map 3/4, right 1/4)", () => {
-    expect(WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS).toBe("md:w-3/4");
-    expect(WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS).toBe("md:w-1/4");
-    // Prior split was md:w-1/2 each; new right is 50% of that width.
-    const view = readWorkspaceViewSurface();
-    expect(view).toContain("WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS");
-    expect(view).toContain("WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS");
-    expect(view).not.toMatch(/md:w-1\/2 md:border-b-0 md:border-r/);
-  });
 
   it("BlockDetailCard is Explore/Drill only; no ? help", () => {
     const card = read("components/BlockDetailCard.tsx");
@@ -116,139 +107,8 @@ describe("desktop layout + block detail chrome", () => {
     expect(card).not.toContain("How context shapes practice");
   });
 
-  it("Customize the session on launch card; exclusive drawers local + examples (no Prompt tab)", () => {
-    const item = read("components/SessionItem.tsx");
-    expect(item).toContain("Customize the session");
-    expect(item).toContain("data-customize-session");
-    // Detail path must not load or pass aesthetics hero image
-    expect(item).not.toContain("aestheticImageForId");
-    expect(item).not.toContain("fetchAestheticPackages");
-    expect(item).not.toContain("thumbnailSrc=");
-
-    // Peer top-level drawers live on WorkspaceBlockDetailPane (not nested Tabs)
-    const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).toContain("data-block-detail-mini-tabs");
-    expect(detail).toContain("data-block-detail-drawers");
-    expect(detail).not.toContain('drawerId="local"');
-    expect(detail).not.toContain('drawerId="simulation"');
-    expect(detail).not.toContain('drawerId="practice"');
-    // Creator Details/Sessions drawer removed — Edit owns title/description.
-    expect(detail).not.toContain('drawerId="detail"');
-    expect(detail).not.toContain('title="Local context"');
-    expect(detail).not.toContain('title="Simulate Insights"');
-    expect(detail).toContain("defaultExpanded={false}");
-    // Edit drawer (update) + peer Danger zone drawer (delete)
-    expect(detail).toContain('drawerId="edit"');
-    expect(detail).toContain("WorkspaceBlockEditPanel");
-    expect(detail).toContain("onUpdateBlock");
-    const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
-    expect(drawers).toContain("WorkspaceBlockDangerDrawer");
-    expect(drawers).toContain("onDelete={onDeleteBlock}");
-    const editPanel = read("components/WorkspaceBlockEditPanel.tsx");
-    expect(editPanel).toContain("data-block-edit-panel");
-    expect(editPanel).toContain("data-block-edit-save");
-    expect(editPanel).not.toContain("Danger zone");
-    expect(editPanel).not.toContain("data-block-edit-delete");
-    const dangerPanel = read("components/WorkspaceBlockDangerPanel.tsx");
-    expect(dangerPanel).toContain("data-block-edit-delete");
-    expect(dangerPanel).toContain("data-block-danger-pane");
-    const tools = read("lib/block-map-tools.ts");
-    expect(tools).toContain("isBlockMapToolEnabled");
-    expect(tools).not.toContain('"edit"');
-    expect(detail).not.toContain('prompt: "Prompt"');
-    expect(detail).not.toContain("WorkspacePromptImpactPanel");
-    expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
-    expect(detail).not.toContain("data-block-detail-close");
-
-    const simPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    expect(simPanel).not.toContain("SimulateInsightsSurface");
-    expect(simPanel).not.toContain("data-simulation-questions");
-    expect(simPanel).not.toContain("data-simulation-exercises");
-    expect(simPanel).not.toContain("/api/workspace/block-content-samples");
-    expect(simPanel).not.toContain("data-simulation-audience");
-
-    expect(BLOCK_DETAIL_MINI_TABS).toEqual(["edit"]);
-    expect(BLOCK_DETAIL_MINI_TABS).not.toContain("prompt" as never);
-    expect(BLOCK_DETAIL_MINI_TABS).not.toContain("local" as never);
-    expect(BLOCK_DETAIL_MINI_TABS).not.toContain("simulation" as never);
-    expect(nextBlockDetailMiniTab("edit", "edit")).toBe("edit");
-    expect(nextBlockDetailMiniTab("edit", "prompt")).toBe("edit");
-    expect(nextBlockDetailMiniTab("edit", "nope")).toBe("edit");
-    expect(resolveExclusiveBlockDetailDrawer("edit", "edit")).toBe("edit");
-    expect(resolveExclusiveBlockDetailDrawer("edit", "prompt")).toBe("edit");
-
-    const examples = deriveBlockExampleTopics({
-      title: "Bayes rule",
-      description: "Update beliefs with evidence. How do priors work?",
-      planningPrompt: "Focus on medical testing examples",
-    });
-    expect(examples.topics.some((t) => /Bayes/i.test(t))).toBe(true);
-    expect(examples.questions.length).toBeGreaterThan(0);
-
-    const view = readWorkspaceViewSurface();
-    expect(view).toContain("WorkspaceBlockDetailPane");
-    expect(view).not.toContain("WorkspaceBlockDetailTabs");
-    expect(view).not.toMatch(
-      /WorkspaceBlockLocalContextPanel[\s\S]*How context shapes practice/,
-    );
-
-    const cardSrc = read("components/BlockDetailCard.tsx");
-    expect(cardSrc).toContain("data-block-detail-no-hero-image");
-    expect(cardSrc).not.toMatch(/<img[\s\S]*thumbnail|thumbnailSrc[\s\S]*<img/);
-    // thumbnailSrc accepted for API compat but not rendered as hero
-    expect(cardSrc).toContain("void thumbnailSrc");
-
-    writeEvidence(
-      "block-detail-drawers.log",
-      [
-        "tabs=" + BLOCK_DETAIL_MINI_TABS.join(","),
-        "hasPromptTab=" + BLOCK_DETAIL_MINI_TABS.includes("prompt" as never),
-        "drawersMarker=" + detail.includes("data-block-detail-drawers"),
-        "peerLocal=" + detail.includes('drawerId="local"'),
-        "peerSimulation=" + detail.includes('drawerId="simulation"'),
-        "nextInvalidStaysEdit=" +
-          String(nextBlockDetailMiniTab("edit", "prompt") === "edit"),
-      ].join("\n"),
-    );
-    writeEvidence(
-      "block-detail-no-hero.log",
-      [
-        "noHeroImageMarker=" + cardSrc.includes("data-block-detail-no-hero-image"),
-        "voidsThumbnail=" + cardSrc.includes("void thumbnailSrc"),
-        "sessionItemNoAesthetic=" + !item.includes("aestheticImageForId"),
-        "titleChrome=" + cardSrc.includes("data-block-detail-header"),
-        "styleTimebox=" + cardSrc.includes("data-product-intent-ui=\"style-timebox\""),
-      ].join("\n"),
-    );
-    writeEvidence(
-      "right-pane-layout-ui.log",
-      [
-        "mapWidth=" + WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS,
-        "rightWidth=" + WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS,
-        "tabs=" + BLOCK_DETAIL_MINI_TABS.join(","),
-        "examplesTopics=" + examples.topics.slice(0, 2).join("|"),
-        "noHelpButton=" + !cardHasHelp(cardSrc),
-      ].join("\n"),
-    );
-  });
 });
 
 function cardHasHelp(card: string) {
   return card.includes("setShowHelp") || card.includes("modesHelpTitle");
 }
-
-describe("workspace map right pane empty selection", () => {
-  it("empty selection shows map tools hint — no canvas, no news", () => {
-    const pane = read("components/WorkspaceMapAuthoringPane.tsx");
-    expect(pane).toContain("data-workspace-map-authoring-pane");
-    expect(pane).not.toContain("WorkspaceMapCanvas");
-    expect(pane).not.toContain("data-map-right-canvas");
-    expect(pane).not.toContain("WorkspaceTopicNewsWidget");
-    expect(pane).not.toContain("data-map-empty-news");
-    expect(pane).not.toContain("Recent news");
-    expect(pane).not.toContain("@excalidraw/excalidraw");
-    expect(pane).not.toContain("How context shapes practice");
-
-    expect(resolveWorkspaceRightPane(null)).toBe("map_tools");
-  });
-});

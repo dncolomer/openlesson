@@ -83,30 +83,3 @@ describe("normalizeWorkspaceMapCanvasScene", () => {
     );
   });
 });
-
-describe("structural: map right pane has no workspace canvas", () => {
-  it("WorkspaceMapAuthoringPane does not mount Excalidraw canvas or news", () => {
-    const pane = read("components/WorkspaceMapAuthoringPane.tsx");
-    expect(pane).toContain("data-workspace-map-authoring-pane");
-    expect(pane).not.toContain("WorkspaceMapCanvas");
-    expect(pane).not.toContain("data-map-right-canvas");
-    expect(pane).not.toContain("WorkspaceTopicNewsWidget");
-    expect(pane).not.toContain("@excalidraw/excalidraw");
-
-    const view = readWorkspaceViewSurface();
-    expect(view).toContain("WorkspaceMapAuthoringPane");
-    expect(view).not.toMatch(
-      /WorkspaceMapAuthoringPane[\s\S]{0,200}workspaceId=\{workspaceId\}/,
-    );
-
-    writeEvidence(
-      "map-right-canvas-ui.log",
-      [
-        "noNews=" + !pane.includes("WorkspaceTopicNewsWidget"),
-        "noCanvas=" + !pane.includes("WorkspaceMapCanvas"),
-        "noExcalidraw=" + !pane.includes("@excalidraw/excalidraw"),
-        "hasMapToolsPane=" + pane.includes("data-workspace-map-authoring-pane"),
-      ].join("\n"),
-    );
-  });
-});

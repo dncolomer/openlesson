@@ -21,7 +21,7 @@ export const AUTHOR_UNSYS_MODEL_SURFACE = "data-author-unsys-model";
 export const AUTHOR_UNSYS_MODEL_DRAWER_ID = "unsys_model";
 export const AUTHOR_UNSYS_MODEL_DRAWER_TITLE = "Unsys model";
 export const AUTHOR_UNSYS_STUDIO_SURFACE = "data-author-unsys-studio";
-export const AUTHOR_UNSYS_GENERATE_PATH = "/api/workspace/helios-unsys-seed-generate";
+export const AUTHOR_UNSYS_GENERATE_PATH = "/api/dashboard/protocols/unsys-seed";
 
 export type AuthorUnsysEdge = {
   toId: string;

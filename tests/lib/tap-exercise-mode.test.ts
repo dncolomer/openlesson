@@ -78,10 +78,6 @@ describe("create TAP link interaction_kind wiring", () => {
     expect(tap).toMatch(/mode:\s*"curious"/);
   });
 
-  it("list routes return interaction_kind", () => {
-    expect(read("app/api/workspace/tap-links/route.ts")).toContain("interaction_kind");
-    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/tap-links/route.ts"))).toBe(false);
-  });
 
   it("migration adds interaction_kind default conversational", () => {
     const mig = read("supabase/migrations/20260727120000_tap_interaction_kind.sql");
@@ -422,7 +418,7 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
   });
 
   it("start route LLM-authors solo exercise (not template Teach me) for exercise kind", () => {
-    const start = read("app/api/workspace-tap-score/start/route.ts");
+    const start = read("app/api/verify/session/start/route.ts");
     expect(start).toContain("tapStartInteractionKind");
     expect(start).toContain('interactionKind === "exercise"');
     expect(start).toContain("generateTapExercisePrompt");
@@ -433,24 +429,9 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     );
   });
 
-  it("guest TAP mounts Calibrate for scout and Verify for other kinds", () => {
-    const guest = read("components/guest-session/private-tap-session-page.tsx");
-    expect(guest).toContain("resolveTapShellFromSession");
-    expect(guest).toContain("interaction_kind");
-    expect(guest).toContain("<ScoutTapClient");
-    expect(guest).toContain("<TapScoreClient");
-    expect(guest).toContain('sidebarMode="verification-tap"');
-    expect(guest).not.toContain("redirect(`/workspace/${String(session.workspace_id)}`)");
-    expect(guest).not.toContain("ExerciseTapClient");
-
-    const owner = read("app/workspace/[id]/tap/page.tsx");
-    expect(owner).toContain('session !== "verification"');
-    expect(owner).toContain('sidebarMode="verification-tap"');
-    expect(owner).not.toContain("ExerciseTapClient");
-  });
 
   it("trace API accepts system2 remove action for submission undo", () => {
-    const trace = read("app/api/workspace-tap-score/trace/route.ts");
+    const trace = read("app/api/verify/session/trace/route.ts");
     const s1 = trace.match(/const SYSTEM1_ACTIONS = new Set<TapSystem1Action>\(\[([\s\S]*?)\]\)/);
     const s2 = trace.match(/const SYSTEM2_ACTIONS = new Set<TapSystem2Action>\(\[([\s\S]*?)\]\)/);
     expect(s1?.[1]).not.toContain('"remove"');

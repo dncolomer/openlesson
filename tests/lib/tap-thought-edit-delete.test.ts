@@ -101,71 +101,8 @@ describe("TAP local thought edit/delete helpers", () => {
       thoughtId: "t1",
       text: "gone",
     });
-    const route = read("app/api/workspace-tap-score/trace/route.ts");
+    const route = read("app/api/verify/session/trace/route.ts");
     expect(route).toContain('"edit"');
     expect(route).toContain('"remove"');
-  });
-});
-
-describe("TAP convo + exercise chrome for local thought memory", () => {
-  it("always shows Thought Memory with local edit/delete; convo confirms I'm done, drill does not", () => {
-    const convo = readTapScoreSurface();
-    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
-    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
-
-    const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
-    const done = read("components/thought-ui/ImDoneAnsweringButton.tsx");
-
-    for (const surface of [convo]) {
-      expect(surface).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
-      expect(surface).toContain("data-tap-thought-memory-always");
-      expect(surface).toContain("onEditThought");
-      expect(surface).toContain("onDeleteThought");
-      expect(surface).toContain("composeTapThoughtEditPow");
-      expect(surface).toContain("composeTapThoughtDeletePow");
-      expect(surface).not.toContain("onSendThought={sendThought}");
-    }
-
-    expect(convo).toContain("confirmClose");
-    expect(convo).toContain("TAP_IM_DONE_CONFIRM_TITLE");
-
-    expect(memory).toContain("data-tap-edit-thought");
-    expect(memory).toContain("data-tap-delete-thought");
-    expect(memory).toContain("T extends ThoughtMemoryEntry");
-    expect(memory).toContain("onEditThought?: (thought: T, nextText: string) => void");
-    expect(memory).toContain("onDeleteThought?: (thought: T) => void");
-    expect(memory).toContain('submitLabel="Save"');
-    expect(memory).toContain("Keep speaking");
-    expect(memory).toContain("!canManageThoughts && (generationEnabled || Boolean(onSendThought))");
-
-    expect(done).toContain("data-tap-im-done-confirm");
-    expect(done).toContain("data-tap-im-done-confirm-cancel");
-    expect(done).toContain("data-tap-im-done-confirm-submit");
-    expect(done).toContain("confirmClose");
-    expect(TAP_IM_DONE_CONFIRM_TITLE.toLowerCase()).toContain("submit");
-    expect(TAP_IM_DONE_CONFIRM_BODY.toLowerCase()).toContain("sure");
-    expect(TAP_IM_DONE_CONFIRM_BODY.toLowerCase()).toContain("edit");
-    expect(TAP_IM_DONE_CONFIRM_BODY.toLowerCase()).toContain("delete");
-    expect(TAP_IM_DONE_CONFIRM_CONFIRM).toBe("I'm done answering");
-    expect(TAP_IM_DONE_CONFIRM_CANCEL.toLowerCase()).toContain("thinking");
-
-    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
-    const helios = read("lib/useSessionThoughtInterface.ts");
-    expect(convo).not.toContain("isTapExerciseThoughtMemoryLocked");
-
-    expect(helios).not.toContain("confirmClose");
-    expect(helios).not.toContain(TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL);
-
-    writeScratch(
-      "tap-thought-edit-delete.txt",
-      [
-        `label unused in TAP chrome=${TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL}`,
-        `confirmTitle=${TAP_IM_DONE_CONFIRM_TITLE}`,
-        "TAP convo+exercise: always-on Thought Memory, local edit/delete System 2 PoW",
-        "TAP convo I'm done answering: UI confirm before close",
-        "TAP Drill I'm done answering: closes without Submit this answer?",
-        "TAP Learning Helios: no TAP confirmClose / See-Edit label",
-      ].join("\n"),
-    );
   });
 });

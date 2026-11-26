@@ -1,8 +1,4 @@
 import { describe, expect, it } from "vitest";
-import {
-  mapWorkspaceNodes,
-  type WorkspaceBlockApiNode,
-} from "@/components/workspace-view/types";
 import { buildGenerateMap, generateMapHighlightCells } from "@/lib/generate-map";
 import { chebyshevDist } from "@/lib/workspace-map-types";
 import {
@@ -115,31 +111,5 @@ describe("Generate Map builder", () => {
       ),
     ).toBe(false);
     expect(skipped.prompt).not.toContain("Modifier prompt:");
-  });
-
-  it("refreshes an AYCL clone with Explore forced on while drill and scout stay as stored", () => {
-    const [node] = mapWorkspaceNodes(
-      [
-        {
-          id: "spoke-1",
-          title: "Spoke",
-          description: "",
-          is_start: false,
-          next_block_ids: [],
-          status: "available",
-          practice_options: {
-            allow_explore: false,
-            allow_drill: true,
-            allow_scout: true,
-          },
-          creator_effects: null,
-        } as unknown as WorkspaceBlockApiNode,
-      ],
-      { ayclClone: true },
-    );
-    expect(node.practice_options?.allowExplore).toBe(true);
-    expect(node.practice_options?.allowDrill).toBe(true);
-    expect(node.practice_options?.allowScout).toBe(true);
-    expect(node.creator_effects).toBeTruthy();
   });
 });

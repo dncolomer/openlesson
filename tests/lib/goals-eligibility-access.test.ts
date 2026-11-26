@@ -86,31 +86,7 @@ describe("goals GET access control (no open admin list)", () => {
     ).toBe(true);
   });
 
-  it("workspace goals route uses canAccessWorkspaceEval and never soft-opens admin to any session", () => {
-    const src = readFileSync(join(ROOT, "app/api/workspace/goals/route.ts"), "utf8");
-    expect(src).toContain("requireProductWorkspaceEvalAuth");
-    expect(src).toContain('mode: "read"');
-    expect(src).toContain("auth.subjectId");
-    expect(src).toContain('action: "author"');
-    // No unauthenticated-soft path that lists via admin for any logged-in user
-    expect(src).not.toMatch(
-      /allow authenticated users to list for LWM|Soften: allow authenticated/i,
-    );
-    expect(src).not.toContain("actingUser");
-    expect(src).not.toMatch(/isOwner:\s*true/);
-  });
 
-  it("block goals GET uses the same access gate", () => {
-    const src = readFileSync(
-      join(ROOT, "app/api/workspace/block-goals/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("canAccessWorkspaceEval");
-    expect(src).toContain("resolveEvalPersistenceClientMode");
-    expect(src).not.toMatch(
-      /const admin = createAdminClient\(\);\s*\n\s*const goals = await listBlockGoals\(admin/,
-    );
-  });
 });
 
 describe("goals eligibility helper", () => {

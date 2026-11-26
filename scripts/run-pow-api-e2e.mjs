@@ -541,7 +541,7 @@ async function runIndividualIndirect(admin, regularJar) {
     ilePow.status === 201 ? ileBody.proof_of_work.id : `${ilePow.status} ${JSON.stringify(ileBody).slice(0, 100)}`,
   );
 
-  const tapStart = await fetch(`${baseUrl}/api/workspace-tap-score/start`, {
+  const tapStart = await fetch(`${baseUrl}/api/verify/session/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookieHeader(regularJar) },
     body: JSON.stringify({ workspaceId, blockId, minutes: 15 }),
@@ -556,7 +556,7 @@ async function runIndividualIndirect(admin, regularJar) {
   );
 
   if (tapSessionId) {
-    const tapComplete = await fetch(`${baseUrl}/api/workspace-tap-score/complete`, {
+    const tapComplete = await fetch(`${baseUrl}/api/verify/session/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookieHeader(regularJar) },
       body: JSON.stringify({

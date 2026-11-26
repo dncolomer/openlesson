@@ -75,13 +75,6 @@ describe("upgrade leftovers are gone", () => {
     }
   });
 
-  it("Knowledge panel no longer lists unmounted subview ids", () => {
-    const perf = read("components/WorkspacePerformancePanel.tsx");
-    expect(perf).not.toMatch(/"lwm"/);
-    expect(perf).not.toMatch(/"ranking"/);
-    expect(perf).not.toMatch(/"strengths_gaps"/);
-    expect(perf).toContain('"knowledge"');
-  });
 
   it("cookie-auth mint remains; headless session ingest is gone", () => {
     expect(existsSync(join(ROOT, "app/api/session/proof-of-work/route.ts"))).toBe(true);

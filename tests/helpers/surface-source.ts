@@ -83,34 +83,14 @@ export function readSessionViewSurface(): string {
   return parts.join("\n");
 }
 
+/** Learning Map WorkspaceView was deleted. Callers should assert the files are gone. */
 export function readWorkspaceViewSurface(): string {
-  const dir = join(ROOT, "components/workspace-view");
-  const parts = [readRepo("components/WorkspaceView.tsx")];
-  try {
-    for (const name of readdirSync(dir).sort()) {
-      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
-        parts.push(readFileSync(join(dir, name), "utf8"));
-      }
-    }
-  } catch {
-    // Directory is created as WorkspaceView extracts land.
-  }
-  return parts.join("\n");
+  return "";
 }
 
+/** Workspace combine drawers were deleted with WorkspaceView. */
 export function readCombineBlocksSurface(): string {
-  const dir = join(ROOT, "components/workspace-combine");
-  const parts = [readRepo("components/WorkspaceCombineBlocksPane.tsx")];
-  try {
-    for (const name of readdirSync(dir).sort()) {
-      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
-        parts.push(readFileSync(join(dir, name), "utf8"));
-      }
-    }
-  } catch {
-    // Directory is created as Combine drawers land.
-  }
-  return parts.join("\n");
+  return "";
 }
 
 export function readMcpSurface(): string {
@@ -146,7 +126,7 @@ export const EXERCISE_TAP_DELETED_PATHS = [
 
 export function readKnowledgePanelSurface(): string {
   const dir = join(ROOT, "components/knowledge-panel");
-  const parts = [readRepo("components/KnowledgeConfigTrajectoryPanel.tsx")];
+  const parts = [];
   try {
     for (const name of readdirSync(dir).sort()) {
       if (name.endsWith(".ts") || name.endsWith(".tsx")) {

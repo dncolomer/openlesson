@@ -217,11 +217,11 @@ describe("session page wiring (static)", () => {
     const { join } = await import("node:path");
     const root = join(__dirname, "../..");
     for (const rel of [
-      "app/api/workspace-tap-score/trace/route.ts",
-      "app/api/workspace-tap-score/chat/route.ts",
-      "app/api/workspace-tap-score/speech/route.ts",
-      "app/api/workspace-tap-score/idle/route.ts",
-      "app/api/workspace-tap-score/complete/route.ts",
+      "app/api/verify/session/trace/route.ts",
+      "app/api/verify/session/chat/route.ts",
+      "app/api/verify/session/speech/route.ts",
+      "app/api/verify/session/idle/route.ts",
+      "app/api/verify/session/complete/route.ts",
       "app/api/session/proof-of-work/route.ts",
       "app/api/workspace-learn/speech/route.ts",
       "app/api/workspace-learn/idle/route.ts",

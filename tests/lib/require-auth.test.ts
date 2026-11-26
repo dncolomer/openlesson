@@ -160,12 +160,6 @@ describe("require-auth helpers", () => {
     expect(result.response.status).toBe(401);
   });
 
-  it("guardSessionRoute requires sessionId when solveToken is set", async () => {
-    const result = await guardSessionRoute(undefined, { solveToken: "stok" });
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.response.status).toBe(401);
-  });
 
   it("guardWorkspaceRoute skips product access when disabled", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });

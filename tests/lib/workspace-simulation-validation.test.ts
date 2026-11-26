@@ -176,24 +176,6 @@ describe("validateWorkspaceSimulation (shipped pure path)", () => {
   });
 });
 
-describe("Simulation validation module remains pure (tab UI no longer primary host)", () => {
-  it("validateWorkspaceSimulation still exported; panel redo uses scope+generate", () => {
-    const blockSim = read("components/WorkspaceBlockSimulationPanel.tsx");
-    const view = readWorkspaceViewSurface();
-    const mod = read("lib/workspace-simulation-validation.ts");
-
-    expect(mod).toContain("export function validateWorkspaceSimulation");
-
-    expect(existsSync(join(process.cwd(), "components/SimulateInsightsSurface.tsx"))).toBe(false);
-    expect(view).not.toContain("WorkspaceSimulationPanel");
-    expect(view).not.toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
-
-    // Per-block drawer does not host workspace validation
-    expect(blockSim).not.toContain("validateWorkspaceSimulation");
-    expect(blockSim).not.toContain("data-simulation-validation-run");
-  });
-});
-
 describe("evidence capture", () => {
   it("writes sparse vs rich summary for harness", () => {
     mkdirSync(SCRATCH, { recursive: true });

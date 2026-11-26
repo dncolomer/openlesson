@@ -38,7 +38,7 @@ vi.mock("@/lib/xai-files", async (importOriginal) => {
 
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { POST } from "@/app/api/workspace-tap-score/trace/route";
+import { POST } from "@/app/api/verify/session/trace/route";
 import { TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
 
 const SCRATCH =
@@ -73,7 +73,7 @@ describe("TAP thought traces use the shared Files uploader", () => {
     });
 
     const res = await POST(
-      new NextRequest("http://localhost/api/workspace-tap-score/trace", {
+      new NextRequest("http://localhost/api/verify/session/trace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -160,88 +160,6 @@ describe("unsys generate material from Problem + files", () => {
     expect(guided.user).toContain("Keep the first ring on decoder failure modes.");
   });
 
-  it("uses the prepared Work canvas as Unsys generate source", () => {
-    const scene = serializeFlowOpeningCanvasScene({
-      elements: [
-        {
-          id: "board-text",
-          type: "text",
-          x: 8,
-          y: 8,
-          width: 280,
-          height: 40,
-          text: "Prepared board kernel",
-          originalText: "Prepared board kernel",
-          isDeleted: false,
-        },
-      ],
-      appState: {},
-      files: {},
-    });
-    const fromBoard = buildSessionBranchGenerateMaterial({
-      kind: "learn",
-      problem: "Leftover problem textarea",
-      artifacts: [ARTIFACT],
-      openingCanvasScene: scene,
-    });
-    expect(fromBoard.user).toContain("Prepared Work canvas:");
-    expect(fromBoard.user).toContain("Prepared board kernel");
-    expect(fromBoard.user).toContain("prepared Work canvas as the field");
-    expect(fromBoard.user).not.toContain("Leftover problem textarea");
-    expect(fromBoard.user).not.toContain(ARTIFACT.xaiFileId);
-    expect(fromBoard.fileIds).toEqual([]);
-    expect(fromBoard.user).not.toContain("Problem:\nLeftover");
-  });
-});
-
-describe("Helios and Manual map authoring", () => {
-  it("uses name + topic/problem for all three kinds and does not require questions", () => {
-    const catalog = heliosMapToolAwarenessText();
-    expect(catalog).toContain("flowName plus topic (the Problem)");
-    expect(catalog).toContain("Do not pass questions");
-    expect(catalog.toLowerCase()).not.toContain("goal+questions");
-
-    const prompt = buildHeliosMapBuilderSystemPrompt();
-    expect(prompt).toContain("Do not pass a question pool");
-    expect(prompt).toContain('"kind": "verification"');
-    expect(prompt).toContain('"kind": "content"');
-    expect(prompt).not.toContain('"kind": "solve"');
-    expect(prompt).not.toContain('"kind": "calibration"');
-
-    const created = heliosFlowCreateInput({
-      kind: "solve",
-      flowName: "Decoder",
-      problem: "Decode a distance-5 chain",
-      artifacts: [ARTIFACT],
-    });
-    expect(created).toMatchObject({
-      name: "Decoder",
-      challenge: "Decode a distance-5 chain",
-      artifacts: [ARTIFACT],
-      exactProblemOnCanvas: false,
-    });
-    expect(created).not.toHaveProperty("kind");
-    expect(
-      heliosFlowCreateInput({
-        kind: "solve",
-        flowName: "Decoder",
-        problem: "Decode a distance-5 chain",
-        exactProblemOnCanvas: true,
-      }).exactProblemOnCanvas,
-    ).toBe(true);
-
-    const addPane = read("components/WorkspaceAddBlockPane.tsx");
-    expect(addPane).toContain("FlowProblemFields");
-    expect(addPane).toContain("onExactProblemOnCanvasChange");
-    expect(addPane).toContain("data-map-block-flow-problem");
-    expect(addPane).toContain("problem:");
-    expect(addPane).toContain("artifacts");
-    expect(addPane).not.toContain("data-verification-flow-add-question");
-    expect(read("components/workspace-view/workspace-right-drawers.tsx")).toContain(
-      "artifacts: input.artifacts",
-    );
-    expect(read("lib/map-block-authoring.ts")).toContain("artifacts: input.artifacts");
-  });
 });
 
 describe("flow exact problem on canvas", () => {
@@ -392,8 +310,10 @@ describe("flow opening canvas", () => {
     expect(fields).toContain("data-flow-opening-canvas-open");
     expect(fields).toContain("FlowOpeningCanvasPreview");
     expect(fields).toContain("openingCanvasScene");
-    expect(wizard).toContain("FLOW_OPENING_CANVAS_LABEL");
     expect(wizard).toContain("FlowOpeningCanvasHost");
+    expect(read("components/product-flow/flow-publish-review.tsx")).toContain(
+      "FLOW_OPENING_CANVAS_LABEL",
+    );
     expect(wizard).toContain("openingCanvasScene={draft.openingCanvasScene}");
     expect(page).toContain("openingCanvasScene={openingCanvasScene}");
     expect(wizard).not.toContain("window.open");
@@ -440,40 +360,5 @@ describe("flow topic migration", () => {
     expect(sql).toContain("add column if not exists topic");
     expect(sql).toContain("questions -> 0 ->> 'text'");
     expect(sql).toContain("nullif(btrim(goal), '')");
-  });
-});
-
-describe("flow create/edit UI", () => {
-  it("shows a Problem textarea and multi-file control, without question-pool chrome", () => {
-    const wizard = read("components/product-flow/product-flow-wizard.tsx");
-    const page = read("components/product-flow/product-flow-page.tsx");
-    const fields = read("components/product-flow/flow-problem-fields.tsx");
-    expect(fields).toContain("data-flow-problem");
-    expect(fields).toContain('data-flow-problem-layout={split ? "split" : "stack"}');
-    expect(fields).toContain("lg:grid-cols-2");
-    expect(wizard).toContain('layout="split"');
-    expect(page).toContain('layout="split"');
-    expect(wizard).toContain("PRODUCT_CREATE_SHELL");
-    expect(wizard).not.toContain("max-w-3xl");
-    expect(fields).toContain("data-flow-exact-problem-on-canvas");
-    expect(fields).toContain("Exact problem on canvas");
-    expect(fields).toContain("data-flow-artifact-file");
-    expect(fields).toContain("data-flow-generate-from-artifacts");
-    expect(fields).toContain("PROTOCOL_CHALLENGE_LABEL");
-    expect(fields).toContain('type="file"');
-    expect(fields).toContain("multiple");
-    expect(wizard).toContain("FlowProblemFields");
-    expect(page).toContain("FlowProblemFields");
-    expect(page).toContain("problemReadOnly");
-    expect(fields).toContain("data-flow-problem-locked");
-    expect(page).toContain("FlowPublicLinks");
-    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
-    expect(read("app/api/workspace/verification-flows/route.ts")).toContain("artifacts: body.artifacts");
-    for (const src of [wizard, page, fields]) {
-      expect(src).not.toContain("data-verification-flow-add-question");
-      expect(src).not.toContain("data-calibration-flow-add-question");
-      expect(src).not.toContain("data-verification-generate-from-topic");
-      expect(src).not.toContain("data-calibration-generate-from-goal");
-    }
   });
 });

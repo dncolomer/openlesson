@@ -125,39 +125,9 @@ describe("author unsys seed studio", () => {
     const seed = authorUnsysSeedForPersist(four);
     expect(seed.model.rootId).toBe(four.rootId);
 
-    const studio = read("components/WorkspaceUnsysSeedStudio.tsx");
     const graph = read("components/WorkspaceUnsysSeedGraph.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const panel = read("components/WorkspaceBlockUnsysModelPanel.tsx");
-    const route = read("app/api/workspace/helios-unsys-seed-generate/route.ts");
+    const route = read("app/api/dashboard/protocols/unsys-seed/route.ts");
     const update = read("lib/workspace-grid-ops/update_block.ts");
-    const authoring = read("components/workspace-view/use-workspace-authoring.ts");
-    expect(view).toContain("WorkspaceUnsysSeedStudio");
-    expect(view).toMatch(/unsysStudioBlock && !shell\.playView/);
-    expect(view).toContain("onOpenUnsysStudio");
-    expect(panel).toContain("data-author-unsys-open");
-    expect(studio).toContain("Back to map");
-    expect(studio).toMatch(/onClose\?: \(\) => void/);
-    expect(studio).toContain("Generate sample");
-    expect(studio).toContain("Regenerate sample");
-    expect(studio).toContain("Delete seed");
-    expect(studio).toContain("Save seed");
-    expect(studio).toContain("AUTHOR_UNSYS_GENERATE_PATH");
-    expect(studio).not.toContain("WorkspaceBlockUnsysHeliosChat");
-    expect(studio).not.toContain("generateAuthorUnsysSample");
-    expect(studio).not.toContain("data-author-unsys-focus-card");
-    expect(studio).toContain("WorkspaceUnsysSeedInspector");
-    expect(studio).not.toContain("data-workspace-helios-mode-toggle");
-    expect(studio).not.toContain('data-helios-map-mode-option="helios"');
-    expect(studio).not.toContain("resolveWorkspaceHeliosColumnSurface");
-    expect(studio).toContain("data-author-unsys-generating");
-    expect(studio).toContain("backdrop-blur-[1px]");
-    expect(studio).not.toContain("backdrop-blur-sm");
-    expect(studio).not.toContain("blur-sm");
-    expect(studio).not.toContain("bg-black/45");
-    expect(studio).not.toContain("normalizeWorkspaceHeliosColumnMode");
-    expect(studio).not.toContain("onSelect={setFocusId}");
-    expect(studio).not.toContain("Generating with xAI");
     const inspector = read("components/WorkspaceUnsysSeedInspector.tsx");
     expect(inspector).toContain("data-author-unsys-action-price");
     expect(inspector).toContain("data-author-unsys-branch-title");
@@ -172,22 +142,16 @@ describe("author unsys seed studio", () => {
     expect(graph).toContain("data-author-unsys-action-lead");
     expect(inspector).not.toContain("data-author-unsys-action-lead-select");
     expect(inspector).toContain("data-author-unsys-edge-price");
-    expect(studio).not.toContain("data-author-unsys-catalogs");
     expect(graph).toContain("data-author-unsys-graph-infinite");
     expect(graph).toContain("data-author-unsys-graph-grid");
     expect(graph).toContain("data-author-unsys-diamond");
     expect(graph).toContain("graphDiamondEdge");
     expect(graph).not.toContain("rotate-45");
     expect(graph).toContain("seedAuthorUnsysPositions");
-    expect(studio).toContain("onGenerateDeeper");
-    expect(route).toContain("generateAuthorUnsysSessionField");
-    expect(route).toContain("expandAuthorUnsysSessionNode");
-    expect(route).toContain("parentId");
-    expect(route).toContain("guardWorkspaceRoute");
-    expect(AUTHOR_UNSYS_GENERATE_PATH).toBe("/api/workspace/helios-unsys-seed-generate");
-    expect(authoring).toContain("answers_model_seed: input.seed");
-    expect(authoring).toContain("serializeAuthorUnsysModelSeed(input.seed)");
-    expect(authoring).toMatch(/seed: AuthorUnsysModelSeed \| null/);
+    expect(route).toContain("runProductFlowUnsysGenerate");
+    expect(route).toContain("FLOW_UNSYS_SEED_PATH");
+    expect(route).toContain("requireAuthenticatedUser");
+    expect(AUTHOR_UNSYS_GENERATE_PATH).toBe("/api/dashboard/protocols/unsys-seed");
     expect(update).toContain("answers_model_seed");
     expect(update).toContain("serializeAuthorUnsysModelSeed(seed)");
 
@@ -198,7 +162,6 @@ describe("author unsys seed studio", () => {
         `rootEdges=${inspectAuthorUnsysFocus(four, "root")?.hiddenState.edges.length}`,
         `root=${JSON.stringify(root)}`,
         `r1=${JSON.stringify(r1)}`,
-        `viewStudio=${view.includes("WorkspaceUnsysSeedStudio")}`,
       ].join("\n"),
     );
     expect(existsSync(join(SCRATCH, "author-unsys-studio.log"))).toBe(true);

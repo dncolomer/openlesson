@@ -56,7 +56,7 @@ export function DashboardKnowledgeRegionsTab({
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-              Knowledge regions
+              Knowledge Regions
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
               Create a region by running a simulation of exploration strategies on your protocols.

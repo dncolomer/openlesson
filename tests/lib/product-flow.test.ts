@@ -37,6 +37,7 @@ import {
 import { definitionUnsysSeedFromBlocks } from "@/lib/definition-unsys-seed";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
+import { FlowPublishReview } from "@/components/product-flow/flow-publish-review";
 import {
   FLOW_COMPACT_GHOST_BTN,
   FLOW_COMPACT_PRIMARY_BTN,
@@ -297,7 +298,12 @@ describe("product flow owner_user_id", () => {
     expect(wizard).toContain('step === "model"');
     expect(wizard).toContain("answersModelSeed: accepted.answersModelSeed");
     expect(wizard).toContain("data-flow-unsys-step");
-    expect(wizard).toContain("data-flow-publish-unsys");
+    expect(wizard).toContain("FlowPublishReview");
+    const review = read("components/product-flow/flow-publish-review.tsx");
+    expect(review).toContain("data-flow-publish-unsys");
+    expect(review).toContain("data-flow-publish-review");
+    expect(review).toContain("WorkspaceUnsysSeedGraph");
+    expect(review).toContain("FlowOpeningCanvasPreview");
     expect(step).toContain('data-flow-unsys-reset=""');
     expect(step).toContain('data-flow-unsys-prompt=""');
     expect(step).toContain('data-flow-unsys-prompt-files=""');
@@ -544,5 +550,34 @@ describe("product flow owner_user_id", () => {
     expect(wizard).not.toContain("max-w-6xl");
     expect(host).not.toContain("SessionWorkSurface");
     expect(host).toContain("ExcalidrawCanvas");
+  });
+
+  it("reviews configured name, author source, channels, model, and visuals", () => {
+    const seed = authorUnsysSeedForPersist(exampleAuthorUnsysModel("Review"));
+    const html = renderToStaticMarkup(
+      createElement(FlowPublishReview, {
+        draft: {
+          ...emptyProductFlowDraft(),
+          name: "Limits protocol",
+          challenge: "Define a limit",
+          answersModelSeed: seed,
+          durationMinutes: 25,
+          canvasCapture: { enabled: true, everyActions: 8 },
+        },
+        problem: "Define a limit",
+        actions: null,
+      }),
+    );
+    expect(html).toContain("data-flow-publish-review");
+    expect(html).toContain("data-flow-publish-summary");
+    expect(html).toContain("Limits protocol");
+    expect(html).toContain("Write the protocol challenge");
+    expect(html).toContain("25 min");
+    expect(html).toContain("Audio");
+    expect(html).toContain("Capture Canvas every 8 actions");
+    expect(html).toContain("Define a limit");
+    expect(html).toContain("data-flow-publish-visuals");
+    expect(html).toContain("data-flow-publish-unsys-graph");
+    expect(html).toContain("hidden state");
   });
 });

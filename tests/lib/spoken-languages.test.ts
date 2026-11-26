@@ -208,7 +208,7 @@ describe("conversation language instruction for Explore/Drill model replies", ()
 
   it("TAP chat path threads conversationLanguage into Helios system prompt", () => {
     const chat = readFileSync(
-      path.join(process.cwd(), "app/api/workspace-tap-score/chat/route.ts"),
+      path.join(process.cwd(), "app/api/verify/session/chat/route.ts"),
       "utf8",
     );
     expect(chat).toContain("withConversationLanguageInstruction");
@@ -253,7 +253,7 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     );
 
     const start = readFileSync(
-      path.join(process.cwd(), "app/api/workspace-tap-score/start/route.ts"),
+      path.join(process.cwd(), "app/api/verify/session/start/route.ts"),
       "utf8",
     );
     expect(start).toContain("conversationLanguage");
@@ -264,7 +264,7 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     );
 
     const topics = readFileSync(
-      path.join(process.cwd(), "app/api/workspace-tap-score/topics/route.ts"),
+      path.join(process.cwd(), "app/api/verify/session/topics/route.ts"),
       "utf8",
     );
     expect(topics).toContain("conversationLanguage");

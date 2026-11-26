@@ -47,10 +47,6 @@ describe("shareable TAP Learning guest PoW wiring", () => {
     "utf8",
   );
   const sessionSource = readSessionViewSurface();
-  const perfSource = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspacePerformancePanel.tsx"),
-    "utf8",
-  );
   const middlewareSource = fs.readFileSync(path.join(REPO_ROOT, "middleware.ts"), "utf8");
 
   it("resolves TAP Learning private tokens in session PoW access helper", () => {
@@ -77,16 +73,6 @@ describe("shareable TAP Learning guest PoW wiring", () => {
     expect(sessionSource).toContain("ileToken ? { ileToken }");
   });
 
-  it("keeps TAP/TAP Learning guest links out of performance subviews (Settings surface)", () => {
-    // TAP&TAP Learning links moved out of the Knowledge/performance tab body; Eval tab removed.
-    expect(perfSource).not.toContain('activeSubview === "tap"');
-    expect(perfSource).toMatch(
-      /type PerformanceSubview =\s*"knowledge"\s*\|\s*"insights"/,
-    );
-    expect(perfSource).not.toContain('id: "pow"');
-    expect(perfSource).toMatch(/@deprecated TAP\/TAP Learning guest links live in Settings/);
-    expect(perfSource).not.toContain('id: "score"');
-  });
 
   it("treats flow-named session paths as public middleware routes", () => {
     expect(middlewareSource).toContain('"/ile/session"');

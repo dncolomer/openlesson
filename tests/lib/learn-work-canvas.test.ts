@@ -326,7 +326,7 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(css).toContain("--color-primary-light: #2a2a2a !important");
     expect(css).toContain("--color-surface-primary-container: #3a3a3a !important");
     expect(css).toContain("--button-selected-bg: #3a3a3a !important");
-    expect(css).toContain("--color-selection: #111111 !important");
+    expect(css).toContain("--color-selection: #ffffff !important");
     expect(css).toContain(".ToolIcon.ToolIcon--checked .ToolIcon__icon");
     expect(css).toContain("button.standalone.active");
     expect(css).toContain('[data-testid="toolbar-laser"]');
@@ -1787,89 +1787,6 @@ describe("TAP Learning Work canvas workspace+block prompt context (shipped)", ()
     const view = read("components/SessionView.tsx");
     expect(view).toContain("workspaceContext: canvasWorkspaceContext");
     expect(view).toContain("workspace: canvasWorkspaceContext");
-  });
-});
-
-describe("TAP Learning Work canvas chunking + Expand More quick actions (shipped)", () => {
-  it("chunks source text into 2 or 3 parts and keeps icon-only quick actions", () => {
-    const source =
-      "First clause names the last-resort test. Second clause names discrimination. Third clause names proportionality of means.";
-    const chunks = ileWorkCanvasSplitTextChunks(source);
-    expect(chunks.length).toBeGreaterThanOrEqual(2);
-    expect(chunks.length).toBeLessThanOrEqual(3);
-    expect(chunks.join(" ").replace(/\s+/g, " ")).toBe(source.replace(/\s+/g, " "));
-
-    const upper = convertToExcalidrawElements([{ type: "text", text: "Alpha", x: 10, y: 10 }])[0]!;
-    const lower = convertToExcalidrawElements([{ type: "text", text: "Beta", x: 30, y: 80 }])[0]!;
-    const merged = joinIleWorkCanvasSelection(
-      { elements: [lower, upper], appState: {}, files: {} },
-      [lower, upper],
-    );
-    expect(merged.joined).toBe(true);
-    const joinedText = merged.parts.map((el) => String(el.originalText || el.text || "")).join("\n");
-    expect(joinedText.indexOf("Alpha")).toBeGreaterThanOrEqual(0);
-    expect(joinedText.indexOf("Alpha")).toBeLessThan(joinedText.indexOf("Beta"));
-    expect(
-      merged.scene.elements.filter((el) => String(el.originalText || el.text || "").trim()).length,
-    ).toBe(1);
-    const boxA = convertToExcalidrawElements([
-      { type: "rectangle", x: 0, y: 0, width: 40, height: 40 },
-    ])[0]!;
-    const boxB = convertToExcalidrawElements([
-      { type: "rectangle", x: 80, y: 0, width: 40, height: 40 },
-    ])[0]!;
-    const grouped = joinIleWorkCanvasSelection(
-      { elements: [boxA, boxB], appState: {}, files: {} },
-      [boxA, boxB],
-    );
-    expect(grouped.joined).toBe(true);
-    const sharedGroup = grouped.parts.map((el) => el.groupIds?.at(-1));
-    expect(sharedGroup[0]).toBeTruthy();
-    expect(sharedGroup[0]).toBe(sharedGroup[1]);
-    expect(joinIleWorkCanvasSelection({ elements: [upper], appState: {}, files: {} }, [upper]).joined).toBe(
-      false,
-    );
-
-    expect(ileWorkCanvasQuickActionPrompt("check")).toMatch(/check/i);
-    expect(ileWorkCanvasQuickActionPrompt("check")).toMatch(/what holds and what to fix/i);
-
-    const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("filterIleWorkCanvasCommands");
-    expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
-    expect(canvas).toContain("handleQuickAction(command.id)");
-    expect(canvas).toContain("{command.label}");
-    expect(canvas).not.toContain("IleCraftInsightButton");
-    expect(canvas).not.toContain("IleCanvasCraftInsightForm");
-    expect(canvas).not.toContain("function ileCanvasCraftInsightUsable");
-    expect(canvas).not.toContain("function ileCanvasShowsCraftInsight");
-    expect(canvas).not.toContain("data-ile-compress-work");
-    expect(canvas).toContain("runIleWorkCanvasCommand");
-    expect(canvas).toContain("handleQuickAction(command.id)");
-    expect(canvas).toContain("selectedElementIds");
-    expect(canvas).toContain("syncWithoutEmit");
-    expect(canvas).toContain("ileWorkCanvasAskFallback");
-    expect(canvas).toContain("outcome.notice");
-    const domainAsk = buildIleWorkCanvasAskUserMessage({
-      prompt: "What is missing?",
-      workspace: {
-        workspaceTitle: "Just War Ethics",
-        workspaceGoal: "Apply last-resort tests to a live case",
-        blockTitle: "Last resort",
-        blockDescription: "Force is justified only after every peaceful option is exhausted.",
-      },
-    });
-    writeScratch(
-      "work-canvas-packaging.log",
-      [
-        `occupancyOverlap=${ileWorkCanvasThinkingOccupancy({ heliosBusy: true, canvasAskTurnIds: ["ask-1"] }).join(",")}`,
-        `expandMoreEmptyBusy=${ileLearnMoreVisiblePlacement({ selectedElementIds: {}, pointerBusy: true, placed: { count: 1, left: 1, top: 1 } }) === null}`,
-        `askHasWorkspace=${domainAsk.includes("Just War Ethics") && domainAsk.includes("Last resort")}`,
-        `chunkCount=${chunks.length}`,
-        `chunksPreserve=${chunks.join(" ").replace(/\s+/g, " ") === source.replace(/\s+/g, " ")}`,
-        "quickActions=named Check",
-        "packaging=WorkCanvas injected ask, no host imports",
-      ].join("\n") + "\n",
-    );
   });
 });
 

@@ -200,45 +200,6 @@ describe("lookupSessionPlanChaptersForRequest (guard / privileged client)", () =
     expect(result.ok).toBe(true);
   });
 
-  it("passes AYCL tokens to guard and reports empty vs failed from that client", async () => {
-    const emptyClient = createRecordingClient({ data: null, error: null });
-    const failClient = createRecordingClient({
-      data: null,
-      error: { message: "rls" },
-    });
-
-    const empty = await lookupSessionPlanChaptersForRequest(
-      { sessionId: "sess-aycl", ayclToken: "aycl-purchase-token" },
-      async (_sessionId, options) => {
-        expect(options?.ayclToken).toBe("aycl-purchase-token");
-        return {
-          ok: true,
-          principal: { kind: "aycl", subjectId: "aycl:p1" },
-          subjectId: "aycl:p1",
-          persistUserId: "owner-1",
-          supabase: emptyClient as never,
-        };
-      },
-    );
-    expect(empty.ok).toBe(true);
-    if (empty.ok) {
-      expect(empty.status).toBe("empty");
-      expect(empty.plan).toBeNull();
-    }
-
-    const failed = await lookupSessionPlanChaptersForRequest(
-      { sessionId: "sess-aycl", ayclToken: "aycl-purchase-token" },
-      async () => ({
-        ok: true,
-        principal: { kind: "aycl", subjectId: "aycl:p1" },
-        subjectId: "aycl:p1",
-        persistUserId: "owner-1",
-        supabase: failClient as never,
-      }),
-    );
-    expect(failed.ok).toBe(true);
-    if (failed.ok) expect(failed.status).toBe("failed");
-  });
 
   it("cookie-owner guard client still sees owner-attributed populated rows", async () => {
     const ownerClient = createRecordingClient({

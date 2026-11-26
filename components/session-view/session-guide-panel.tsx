@@ -156,7 +156,7 @@ export function SessionGuidePanel({
               onToggle={() => bridge?.pointer?.toggle()}
             />
           </div>
-          <div className="shrink-0 px-1.5 pt-1">
+          <div className="flex shrink-0 flex-col gap-1 px-1.5 pt-1">
             <AutoLayoutToggle
               enabled={Boolean(bridge?.autoLayout?.enabled)}
               disabled={!bridge?.autoLayout}

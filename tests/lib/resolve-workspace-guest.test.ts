@@ -145,7 +145,7 @@ describe("TAP/TAP Learning link reuse wiring", () => {
   });
 
   it("TAP start preserves multi-use private links", () => {
-    const src = readFileSync(join(root, "app/api/workspace-tap-score/start/route.ts"), "utf8");
+    const src = readFileSync(join(root, "app/api/verify/session/start/route.ts"), "utf8");
     expect(src).toContain("multi-use");
     expect(src).toContain("guest_user_id");
   });
@@ -157,18 +157,4 @@ describe("TAP/TAP Learning link reuse wiring", () => {
     expect(ile).toContain("assertReusableWorkspaceGuest");
   });
 
-  it("TAP/TAP Learning reissue helpers rotate token; guest links panel is absent", () => {
-    const tap = readFileSync(join(root, "lib/pow-api/create-tap-link.ts"), "utf8");
-    const ile = readFileSync(join(root, "lib/pow-api/create-learn-link.ts"), "utf8");
-    const tapRoute = readFileSync(join(root, "app/api/workspace/tap-links/route.ts"), "utf8");
-    const ileRoute = readFileSync(join(root, "app/api/workspace/learn-links/route.ts"), "utf8");
-
-    expect(tap).toContain("export async function reissueWorkspaceTapLink");
-    expect(ile).toContain("export async function reissueWorkspaceIleLink");
-    expect(tap).toContain('status: "pending"');
-    expect(ile).toContain('status: "pending"');
-    expect(tapRoute).toContain("reissueWorkspaceTapLink");
-    expect(ileRoute).toContain("reissueWorkspaceIleLink");
-    expect(existsSync(join(root, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
-  });
 });

@@ -166,10 +166,4 @@ describe("deriveBlockSimulation", () => {
     expect(exercises).toHaveLength(1);
   });
 
-  it("panel does not show pure seed as default Q/E list", () => {
-    const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    expect(existsSync(join(ROOT, "components/SimulateInsightsSurface.tsx"))).toBe(false);
-    expect(panel).not.toContain("SimulateInsightsSurface");
-    expect(panel).not.toContain("data-simulation-questions");
-  });
 });

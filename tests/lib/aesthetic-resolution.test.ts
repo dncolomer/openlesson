@@ -154,21 +154,4 @@ describe("high-resolution featured aesthetics", () => {
     );
   });
 
-  it("wires Home Featured hero and secondary to the high-res pool", () => {
-    const home = readRepo("components/dashboard/dashboard-browse-maps-tab.tsx");
-    expect(home).toContain("filterFeaturedAestheticPool");
-    expect(home).toContain("featuredStoredCoverUrl");
-    expect(home).toContain("featuredCoverPool");
-    const heroAt = home.indexOf("data-dashboard-home-hero");
-    const secondaryAt = home.indexOf("data-dashboard-home-secondary");
-    const gridAt = home.indexOf("data-dashboard-home-maps-grid");
-    expect(heroAt).toBeGreaterThan(-1);
-    expect(secondaryAt).toBeGreaterThan(heroAt);
-    expect(gridAt).toBeGreaterThan(secondaryAt);
-    expect(home.slice(heroAt, secondaryAt)).toContain("featuredCoverPool");
-    expect(home.slice(heroAt, secondaryAt)).toContain("featuredStoredCoverUrl");
-    expect(home.slice(secondaryAt, gridAt)).toContain("featuredImagePool={featuredCoverPool}");
-    expect(home).toContain("isHomeFeaturedMapId");
-    expect(home.slice(gridAt)).toContain("imagePool={coverImagePool}");
-  });
 });

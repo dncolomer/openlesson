@@ -464,8 +464,8 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
     const runtime = read("lib/tap-session-runtime.ts");
     expect(runtime).toContain("VERIFY_POW_API_PATHS");
     expect(runtime).toContain("tapSessionRuntimePaths");
-    expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "app/api/verify/session/canvas/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "app/api/calibrate/session/canvas/route.ts"))).toBe(false);
 
     writeScratch(
@@ -574,7 +574,7 @@ describe("TAP Work canvas workspace+block domain context (shipped)", () => {
     expect(ctx).toContain("Name the parent index.");
     expect(ctx).toMatch(/do not invent unrelated topics/i);
 
-    const route = read("app/api/workspace-tap-score/chat/route.ts");
+    const route = read("app/api/verify/session/chat/route.ts");
     expect(route).toContain("tapWorkCanvasTurnContextMessage");
     expect(route).toContain("tapScoreBriefToPromptWorkspaceInput");
     expect(route).toContain("assemblePromptWorkspaceContext");
@@ -742,7 +742,7 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
     expect(ctx).not.toContain("cursor-agent-77");
 
     const phases = read("components/tap-score/tap-score-phases.tsx");
-    const route = read("app/api/workspace-tap-score/chat/route.ts");
+    const route = read("app/api/verify/session/chat/route.ts");
     expect(phases).toContain("applyTapHeliosReplyToWorkCanvas");
     expect(route).toContain("tapWorkCanvasTurnContextMessage");
 

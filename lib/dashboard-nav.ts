@@ -48,7 +48,7 @@ export const DASHBOARD_HOME_NAV_ITEM: DashboardNavItem = {
 export const DASHBOARD_TOP_NAV_ITEMS: readonly DashboardNavItem[] = [
   DASHBOARD_HOME_NAV_ITEM,
   { id: "protocols", label: "Protocols" },
-  { id: "regions", label: "Knowledge regions" },
+  { id: "regions", label: "Knowledge Regions" },
 ];
 
 export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
@@ -84,28 +84,8 @@ export function isDashboardProductTab(value: unknown): value is DashboardProduct
   return value === "protocol";
 }
 
-export function isDashboardShopTab(value: unknown): value is never {
-  return false;
-}
-
-export function isDashboardMyMapsTab(value: unknown): value is never {
-  return false;
-}
-
 export function isDashboardRegionsTab(value: unknown): value is DashboardRegionsTab {
   return value === "regions";
-}
-
-export function isDashboardBrowseMapsTab(value: unknown): value is never {
-  return false;
-}
-
-export function isDashboardPracticeTab(value: unknown): value is never {
-  return false;
-}
-
-export function isDashboardPracticePerformanceTab(value: unknown): value is never {
-  return false;
 }
 
 export function dashboardNavGroupIdForTab(
@@ -132,12 +112,6 @@ export function clusterDashboardNavItems(
     }
   }
   return clusters;
-}
-
-export function dashboardRegionsProduct(
-  _tab: DashboardTab,
-): DashboardProductTab | null {
-  return null;
 }
 
 export function isDashboardNavTabItem(
@@ -172,16 +146,6 @@ export function parseDashboardTab(value: unknown): DashboardTab {
   if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
   return "home";
-}
-
-export function dashboardTypeFilterForTab(
-  _tab: DashboardTab,
-): DashboardProductTab | null {
-  return null;
-}
-
-export function dashboardListFilterForTab(_tab: DashboardTab): null {
-  return null;
 }
 
 export function dashboardHrefForTab(tab: DashboardTab): string {
@@ -219,7 +183,7 @@ export function dashboardCreateLabel(_kind?: DashboardProductTab | null): string
 
 export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "protocols") return "Protocols";
-  if (tab === "regions") return "Knowledge regions";
+  if (tab === "regions") return "Knowledge Regions";
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";

@@ -338,30 +338,4 @@ describe("shipped TAP Learning planner / Helios text names the user's anti-patte
     expect(ILE_CONTEXT_BODY).toMatch(/Do not invite Mark as Done after the first interaction/);
   });
 
-  it("wires mode into plan-create, session-chat, and SessionView persist paths", () => {
-    expect(read("app/api/workspace/preview-session/route.ts")).toContain(
-      "createSessionPlanLLM",
-    );
-    expect(read("lib/xai.ts")).toContain("createSessionPlanLLM");
-
-    const chatRoute = read("app/api/session-chat/route.ts");
-    expect(chatRoute).toContain("buildIleHeliosChatSystemPrompt(sessionMode)");
-    expect(chatRoute).toContain("ileChapterSuggestionPowFromCoachText");
-    expect(chatRoute).toContain("chapterSuggestion");
-
-    const xai = read("lib/xai.ts");
-    expect(xai).toContain("composeSessionPlanCreatePrompt");
-    expect(xai).toContain("sessionMode");
-    const update = read("lib/session-plan-update.ts");
-    expect(update).toContain("composeSessionPlanUpdatePrompt");
-    expect(read("lib/learn-chapter-depth.ts")).toContain("shouldOfferIleChapterDone");
-
-    const view = readSessionViewSurface();
-    expect(view).toContain("buildIleChapterAddPowToolData");
-    expect(chatRoute).toContain("chapter_suggest");
-    expect(view).toContain("postIleSessionChat");
-
-    const types = read("lib/domain/types.ts");
-    expect(types).toContain("chapter_suggest");
-  });
 });

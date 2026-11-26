@@ -349,7 +349,7 @@ describe("TAP score routes (shipped source integrity)", () => {
     for (const name of TAP_SCORE_ROUTES) {
       const filePath = path.join(
         process.cwd(),
-        "app/api/workspace-tap-score",
+        "app/api/verify/session",
         name,
         "route.ts",
       );

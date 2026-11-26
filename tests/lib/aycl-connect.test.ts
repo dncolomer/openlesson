@@ -50,18 +50,5 @@ describe("AYCL Stripe Connect helpers", () => {
     expect(merged.application_fee_amount).toBe(attached.platformFeeCents);
   });
 
-  it("wires Connect helpers into AYCL checkout", () => {
-    const src = readFileSync(join(ROOT, "app/api/stripe/create-checkout/route.ts"), "utf8");
-    expect(src).toContain("resolveAyclPayoutCheckout");
-    expect(src).toContain("attachAyclConnectPaymentIntent");
-    expect(src).toContain("stripe_connect_account_id");
-  });
 
-  it("exposes Connect onboarding for map authors", () => {
-    const onboard = readFileSync(join(ROOT, "app/api/stripe/connect/onboard/route.ts"), "utf8");
-    const panel = readFileSync(join(ROOT, "components/dashboard/stripe-connect-panel.tsx"), "utf8");
-    expect(onboard).toContain("accountLinks.create");
-    expect(onboard).toContain("tab=shop");
-    expect(panel).toContain("data-aycl-stripe-connect");
-  });
 });

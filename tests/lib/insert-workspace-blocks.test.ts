@@ -122,15 +122,3 @@ describe("insertGeneratedWorkspaceBlocks", () => {
     expect(update).toHaveBeenCalledWith({ next_block_ids: ["uuid-b", "uuid-c"] });
   });
 });
-
-describe("generate route wiring", () => {
-  it("uses insertGeneratedWorkspaceBlocks and rolls back empty workspaces", async () => {
-    const { readFileSync } = await import("fs");
-    const { join } = await import("path");
-    const src = readFileSync(join(process.cwd(), "app/api/workspace/generate/route.ts"), "utf8");
-    expect(src).toContain("insertGeneratedWorkspaceBlocks");
-    expect(src).toContain("extractGeneratedPlanNodes");
-    expect(src).toMatch(/delete\(\)\.eq\("id", plan\.id\)/);
-    expect(src).toContain("normalizeGeneratedPlanNodes");
-  });
-});

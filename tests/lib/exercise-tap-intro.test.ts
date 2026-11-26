@@ -47,23 +47,6 @@ describe("Exercise TAP briefing uses shared intro", () => {
 });
 
 describe("entry still resolves exercise client; briefing is intro path", () => {
-  it("guest TAP mounts Calibrate for scout and Verify for other kinds", () => {
-    expect(resolveTapShellFromSession({ interaction_kind: "exercise" })).toBe("exercise");
-    expect(resolveTapShellFromSession({})).toBe("conversational");
-
-    const guest = read("components/guest-session/private-tap-session-page.tsx");
-    expect(guest).toContain("resolveTapShellFromSession");
-    expect(guest).toContain('shell === "scout"');
-    expect(guest).toContain("<ScoutTapClient");
-    expect(guest).toContain("<TapScoreClient");
-    expect(guest).toContain('sidebarMode="verification-tap"');
-    expect(guest).not.toContain("redirect(`/workspace/${String(session.workspace_id)}`)");
-    expect(guest).not.toContain("ExerciseTapClient");
-
-    const owner = read("app/workspace/[id]/tap/page.tsx");
-    expect(owner).toContain('sidebarMode="verification-tap"');
-    expect(owner).not.toContain("ExerciseTapClient");
-  });
 
   it("resolveExercisePromptAfterIntro drives real start seeding", () => {
     const fromTopic = resolveExercisePromptAfterIntro({

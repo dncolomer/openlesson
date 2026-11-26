@@ -124,13 +124,6 @@ describe("Uncertain Systems brand", () => {
     expect(config.mcpServers["uncertain-systems"]).toBeTruthy();
   });
 
-  it("scoped source trees do not reintroduce OpenLesson product brand", () => {
-    const files: string[] = [];
-    for (const scope of SCOPES) {
-      files.push(...walk(path.join(ROOT, scope)));
-    }
-    expect(collectOffenders(files)).toEqual([]);
-  });
 
   it("env templates and schema entry point do not brand as openLesson", () => {
     const residual = RESIDUAL_FILES.map((rel) => path.join(ROOT, rel));

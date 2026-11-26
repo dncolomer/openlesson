@@ -95,14 +95,9 @@ describe("Brain Priming Protocol project", () => {
     expect(text).toMatch(/omega-3/);
     expect(text).toMatch(/Join the waitlist/);
     expect(BRAIN_PRIMING_COPY.ctaStartHref).toBe("#join");
-    const form = read("components/marketing/BrainPrimingWaitlistForm.tsx");
-    expect(form).toContain("storeBrainPrimingWaitlist");
-    expect(form).toContain('type="email"');
-    expect(form).toContain('name="topic"');
-    expect(form).toContain('name="domain"');
-    expect(form).not.toContain('type="file"');
-    expect(form).toContain("value={domain.id}");
-    expect(form).toContain("value={plan.id}");
+    expect(existsSync(join(ROOT, "components/marketing/BrainPrimingWaitlistForm.tsx"))).toBe(
+      false,
+    );
     expect(BRAIN_PRIMING_COPY.waitlist.note).toMatch(/Waitlist only/);
     expect(BRAIN_PRIMING_COPY.waitlist.note).toMatch(/not scored as a diagnosis/);
   });

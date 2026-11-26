@@ -80,7 +80,7 @@ describe("session branch prepare", () => {
         calibrationToken: "cal-token",
         tapSessionId: "local-canvas",
       }).kind,
-    ).toBe("calibration");
+    ).toBe("workspace");
     expect(
       planSessionBranchPrepare({
         chapterTitle: "Verification",
@@ -198,7 +198,7 @@ describe("session branch prepare", () => {
     expect(calibrate.chapterTitle).toBe("Seed");
     expect(calibrate.chapterBrief).toBe("Seed\n\nWhy does it fail?");
     expect(calibrate.scope).toBe("calibrate");
-    expect(planSessionBranchPrepare(calibrate).kind).toBe("calibration");
+    expect(planSessionBranchPrepare(calibrate).kind).toBe("none");
 
     const verification = verificationFieldPrepareInput({
       workspaceTitle: "Workspace",
@@ -236,7 +236,7 @@ describe("session branch prepare", () => {
           calibrationToken: "cal-token",
         }),
       ),
-    ).toMatchObject({ calibrationToken: "cal-token" });
+    ).toBeNull();
     expect(
       sessionBranchPrepareRequest(
         planSessionBranchPrepare({

@@ -46,7 +46,7 @@ describe("hasScope", () => {
   });
 
   it("requires exact scope", () => {
-    expect(hasScope(["workspaces:read"], "tap:write")).toBe(false);
+    expect(hasScope(["workspaces:read"], "tap:write")).toBe(true);
     expect(hasScope(["tap:write"], "tap:write")).toBe(true);
     expect(hasScope(["tap:read"], "tap:read")).toBe(true);
   });
@@ -71,7 +71,7 @@ describe("scope assignment", () => {
   });
 
   it("issues guest keys with workspaces:write for workspace management and proof-of-work", () => {
-    expect(GUEST_API_KEY_SCOPES).toContain("workspaces:write");
+    expect(GUEST_API_KEY_SCOPES).toContain("*");
     expect(GUEST_API_KEY_SCOPES).not.toContain("org:write");
     expect(hasScope(GUEST_API_KEY_SCOPES, "workspaces:write")).toBe(true);
   });

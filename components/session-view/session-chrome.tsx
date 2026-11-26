@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionPolicyProvider } from "@/components/session-view/session-policy-context";
+import { SessionPowLogOverlay } from "@/components/session-view/session-pow-log-overlay";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DialogFrame } from "@/components/ui/DialogFrame";
 import type { Tool } from "@/components/ToolsPanel";
@@ -288,6 +289,7 @@ export function SessionChrome({
         />
         <div data-ile-canvas-stage className="relative z-0 min-h-0 min-w-0 flex-1 overflow-hidden">
           <div className="absolute inset-0 min-h-0">{workCanvas}</div>
+          <SessionPowLogOverlay />
           {error && !showWelcomeModal ? (
             <div className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
               <span className="text-xs text-red-400">{error}</span>

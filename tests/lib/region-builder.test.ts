@@ -150,35 +150,9 @@ describe("region builder filters (shipped helpers)", () => {
 });
 
 describe("region builder UI + API surface", () => {
-  it("workspace Settings does not expose the region builder", () => {
-    const ui = readFileSync(join(ROOT, "components/CustomVerificationModelsPanel.tsx"), "utf8");
-    expect(ui).not.toContain("data-region-builder");
-    expect(ui).not.toContain("data-region-source-filter");
-    expect(ui).not.toContain("filterRegionBuilderSubjects");
-    expect(readFileSync(join(ROOT, "components/WorkspaceIntegrationPanel.tsx"), "utf8")).not.toContain(
-      "CustomVerificationModelsPanel",
-    );
-  });
 
   it("region-builder module exists", () => {
     expect(existsSync(join(ROOT, "lib/pow-api/region-builder.ts"))).toBe(true);
   });
 
-  it("listSubjectsWithKnowledgeConfig returns source_link_url and buildWorkspaceLinkUrlMap exists", () => {
-    const store = [
-      readFileSync(join(ROOT, "lib/pow-api/custom-verification-model-store.ts"), "utf8"),
-      readFileSync(join(ROOT, "lib/pow-api/custom-verification-model-crud.ts"), "utf8"),
-      readFileSync(join(ROOT, "lib/pow-api/custom-verification-model-eval.ts"), "utf8"),
-    ].join("\n");
-    expect(store).toContain("source_link_url");
-    expect(store).toContain("buildWorkspaceLinkUrlMap");
-    expect(store).not.toContain("buildTapbenchShareUrl");
-    expect(store).not.toContain("workspace_tapbench_links");
-    const route = readFileSync(
-      join(ROOT, "app/api/workspace/custom-knowledge-regions/route.ts"),
-      "utf8",
-    );
-    expect(route).toContain("baseUrl");
-    expect(route).toContain("listSubjectsWithKnowledgeConfig");
-  });
 });

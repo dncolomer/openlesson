@@ -151,7 +151,7 @@ describe("flow canvas capture", () => {
     expect(read("components/product-flow/flow-channels-fields.tsx")).toContain("data-flow-canvas-capture");
     expect(read("components/product-flow/flow-channels-fields.tsx")).toContain(">Capture Canvas<");
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("canvasCapture");
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("Capture Canvas every");
+    expect(read("components/product-flow/flow-publish-review.tsx")).toContain("Capture Canvas every");
     expect(read("lib/verification-flow-repository.ts")).toContain("canvas_capture");
     expect(read("lib/verification-flow-repository.ts")).toContain("withCanvasCaptureMetadata");
     expect(read("components/session-view/use-session-field.ts")).toContain(

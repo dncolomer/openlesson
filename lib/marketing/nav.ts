@@ -5,7 +5,7 @@ import {
   USE_CASES_PATH,
 } from "@/lib/marketing/paths";
 
-export const PLATFORM_NAV_LABEL = "Explore the Protocols" as const;
+export const PLATFORM_NAV_LABEL = "Explore the Protocol" as const;
 
 export const MAIN_NAV_PRODUCT_LINKS = [
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification Protocols" },

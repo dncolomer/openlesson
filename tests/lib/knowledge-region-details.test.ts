@@ -198,7 +198,7 @@ describe("knowledge region details", () => {
     expect(details?.realSessionCount).toBe(2);
     expect(details?.samples.find((row) => row.id === "human-1")?.pointKind).toBe("cohort");
     expect(details?.samples.find((row) => row.id === "human-2")?.pointKind).toBe("analysis");
-    expect(details?.regionPath).toBe("/verification/regions/parent");
+    expect(details?.regionPath).toBe("/regions/parent");
 
     const simulatedInspect = inspectKnowledgeRegionSample(
       details?.samples.find((row) => row.id === "sim-1"),

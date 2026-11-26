@@ -17,7 +17,7 @@ export function FlowOpeningCanvasPreview({
   onEdit,
 }: {
   scene: IleWorkCanvasScene;
-  onEdit: () => void;
+  onEdit?: () => void;
 }) {
   const prepared = authoringOpeningCanvasScene(scene);
   const signature = ileWorkCanvasPersistSignature(prepared);
@@ -44,40 +44,50 @@ export function FlowOpeningCanvasPreview({
     };
   }, [scene, signature]);
 
+  const frameClass =
+    "relative block w-full overflow-hidden border border-white/40 bg-[#0a0a0a] text-left";
+  const frame = src ? (
+    <img
+      src={src}
+      alt="Prepared Work canvas"
+      data-flow-opening-canvas-preview-img=""
+      className="mx-auto max-h-72 w-full object-contain"
+    />
+  ) : (
+    <div
+      className="flex min-h-48 items-center justify-center px-4 py-8"
+      data-flow-opening-canvas-preview-fallback=""
+    >
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-300">
+        {excerpt || "Canvas prepared"}
+      </p>
+    </div>
+  );
+
   return (
     <div className="space-y-2" data-flow-opening-canvas-preview="">
-      <button
-        type="button"
-        onClick={onEdit}
-        data-flow-opening-canvas-preview-open=""
-        className="relative block w-full overflow-hidden border border-white/40 bg-[#0a0a0a] text-left transition hover:border-white/70"
-      >
-        {src ? (
-          <img
-            src={src}
-            alt="Prepared Work canvas"
-            data-flow-opening-canvas-preview-img=""
-            className="mx-auto max-h-72 w-full object-contain"
-          />
-        ) : (
-          <div
-            className="flex min-h-48 items-center justify-center px-4 py-8"
-            data-flow-opening-canvas-preview-fallback=""
-          >
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-300">
-              {excerpt || "Canvas prepared"}
-            </p>
-          </div>
-        )}
-      </button>
-      <button
-        type="button"
-        className={`${FLOW_SECONDARY_BTN} w-full`}
-        onClick={onEdit}
-        data-flow-opening-canvas-open=""
-      >
-        Edit canvas
-      </button>
+      {onEdit ? (
+        <button
+          type="button"
+          onClick={onEdit}
+          data-flow-opening-canvas-preview-open=""
+          className={`${frameClass} transition hover:border-white/70`}
+        >
+          {frame}
+        </button>
+      ) : (
+        <div className={frameClass}>{frame}</div>
+      )}
+      {onEdit ? (
+        <button
+          type="button"
+          className={`${FLOW_SECONDARY_BTN} w-full`}
+          onClick={onEdit}
+          data-flow-opening-canvas-open=""
+        >
+          Edit canvas
+        </button>
+      ) : null}
     </div>
   );
 }

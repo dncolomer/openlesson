@@ -43,7 +43,8 @@ describe("use cases listing", () => {
     expect(nav).toContain("PLATFORM_NAV_LABEL");
     expect(nav).toContain("bg-white");
     expect(nav).toContain("text-black");
-    expect(nav).toContain("platform-menu");
+    expect(nav).toContain("PROTOCOL_NAV_HREF");
+    expect(nav).not.toContain("platform-menu");
   });
 
   it("ships a magazine page of three cases, connecting ideas, and a discovery close", () => {

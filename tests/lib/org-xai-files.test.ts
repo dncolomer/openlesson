@@ -90,7 +90,7 @@ describe("uploadOrgScopedXaiFile", () => {
 describe("live surfaces use the org-scoped Files path", () => {
 
   it("thought-trace still goes through the shared PoW uploader", () => {
-    expect(read("app/api/workspace-tap-score/trace/route.ts")).toContain(
+    expect(read("app/api/verify/session/trace/route.ts")).toContain(
       "uploadWorkspaceProofOfWork",
     );
     expect(read("lib/pow-api/mcp-tools/dispatch.ts")).not.toContain(

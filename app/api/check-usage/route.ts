@@ -19,6 +19,7 @@ import {
 import { flowSessionCreditCost } from "@/lib/credits/ledger";
 import { creditStoreFromClient, loadCreditSummary } from "@/lib/credits/account";
 import { orgLlmIsXai } from "@/lib/organization/org-backends";
+import { listOrganizationMemberIds } from "@/lib/organization/membership-store";
 import {
   billingEntityToUserProfile,
   resolveBillingEntity,
@@ -147,11 +148,7 @@ export async function GET() {
     let organizationSummary: OrgUsageSummary | null = null;
 
     if (entity.source === "organization" && profile.organization_id && periodStart) {
-      const { data: orgMembers } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("organization_id", profile.organization_id);
-      const memberIds = (orgMembers || []).map((member) => member.id);
+      const memberIds = await listOrganizationMemberIds(admin, profile.organization_id);
 
       if (memberIds.length > 0) {
         proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
@@ -185,11 +182,7 @@ export async function GET() {
     let apiMeteredInvoice: ReturnType<typeof estimateApiMeteredInvoice> | null = null;
     if (isApiMeteredPlan(userProfile.plan)) {
       if (entity.source === "organization" && profile.organization_id && periodStart) {
-        const { data: orgMembers } = await admin
-          .from("profiles")
-          .select("id")
-          .eq("organization_id", profile.organization_id);
-        const memberIds = (orgMembers || []).map((m) => m.id);
+        const memberIds = await listOrganizationMemberIds(admin, profile.organization_id);
         // Sum external/API PoW across members (created_by_api_key_id set — not TAP/TAP Learning internal PoW)
         for (const memberId of memberIds) {
           apiPowCallsUsed += await countPowApiSubmissions(admin, memberId, periodStart);

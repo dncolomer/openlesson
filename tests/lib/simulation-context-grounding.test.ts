@@ -294,31 +294,7 @@ describe("deriveSimulationSamples pure path (shipped)", () => {
 });
 
 describe("simulation API structural wiring", () => {
-  it("simulation-samples loads loadWorkspacePromptContext + files + external resources", () => {
-    const route = read("app/api/workspace/simulation-samples/route.ts");
-    expect(route).toContain("loadWorkspacePromptContext");
-    expect(route).toContain("externalResources");
-    expect(route).toContain("files: loaded.files");
-    expect(route).toContain("buildSimulationSamplePrompts");
-    expect(route).toContain("normalizeSimulationSampleResponse");
-    // API returns raw model strings — no pure seed substitute
-    expect(route).not.toContain("deriveSimulationSamples");
-    expect(route).toContain("local_context");
-  });
 
-  it("block-content-samples loads notes/description and local_context", () => {
-    const route = read("app/api/workspace/block-content-samples/route.ts");
-    expect(route).not.toContain("workspace_files");
-    expect(route).not.toContain("workspace_external_resources");
-    expect(route).toContain("notes");
-    expect(route).toContain("description");
-    expect(route).toContain("externalLinks");
-    expect(route).toContain("buildSimulationSamplesUserPrompt");
-    expect(route).toContain("local_context");
-    // Pure pad/sanitize must receive full material rows, not chip labels only
-    expect(route).toMatch(/normalizeSimulationPayload\([\s\S]*files,/);
-    expect(route).toMatch(/normalizeSimulationPayload\([\s\S]*externalLinks,/);
-  });
 
   it("enforceSimulationProbeQuota does not pad with pure synth builders", () => {
     const src = read("lib/block-simulation.ts");

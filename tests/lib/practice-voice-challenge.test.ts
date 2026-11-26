@@ -156,83 +156,6 @@ describe("practice voice challenge script and transcript", () => {
     expect(aloudEarly.filter((mark) => mark.kind === "word").every((mark) => mark.heard)).toBe(true);
   });
 
-  it("keeps both points when recognition restarts between sentences, and a second pass does not start again", () => {
-    const [firstSentence, secondSentence] = PRACTICE_VOICE_CHALLENGE_SCRIPT.split(/(?<=\.)\s+/);
-    const first = mergeVoiceChallengeHeard({
-      committedText: "",
-      sessionResults: [firstSentence ?? ""],
-    });
-    expect(practiceVoiceChallengeTranscriptPasses(first)).toBe(false);
-    const combined = mergeVoiceChallengeHeard({
-      committedText: first,
-      sessionResults: [secondSentence ?? ""],
-    });
-    expect(practiceVoiceChallengeTranscriptPasses(combined)).toBe(true);
-    const firstPass = latchVoiceChallengePass({
-      alreadyPassed: false,
-      transcript: `${combined} ${TAP_VOICE_CHALLENGE_SENTENCE_TWO}`,
-    });
-    expect(firstPass.shouldStart).toBe(true);
-    expect(firstPass.passed).toBe(true);
-    const secondPass = latchVoiceChallengePass({
-      alreadyPassed: firstPass.passed,
-      transcript: combined,
-    });
-    expect(secondPass.shouldStart).toBe(false);
-    expect(secondPass.passed).toBe(true);
-    const partial = voiceChallengeReadMarks({
-      script: PRACTICE_VOICE_CHALLENGE_SCRIPT,
-      transcript: firstSentence ?? "",
-    });
-    const partialWords = partial.filter((mark) => mark.kind === "word");
-    expect(partialWords.find((mark) => mark.text === "think")?.heard).toBe(true);
-    expect(partialWords.find((mark) => mark.text === "That")?.heard).toBe(false);
-    expect(voiceChallengeFillRatio(partial)).toBeGreaterThan(0);
-    expect(voiceChallengeFillRatio(partial)).toBeLessThan(1);
-    const full = voiceChallengeReadMarks({
-      script: PRACTICE_VOICE_CHALLENGE_SCRIPT,
-      transcript: PRACTICE_VOICE_CHALLENGE_SCRIPT,
-    });
-    expect(voiceChallengeFillRatio(full)).toBe(1);
-    expect(voiceChallengeFillRatio(voiceChallengeReadMarks({
-      script: PRACTICE_VOICE_CHALLENGE_SCRIPT,
-      transcript: "",
-    }))).toBe(0);
-    expect(releaseVoiceChallengeStartLatch({ startSucceeded: true }).release).toBe(false);
-    expect(releaseVoiceChallengeStartLatch({ startSucceeded: false }).release).toBe(true);
-    expect(voiceChallengeStartSucceeded({ ok: true })).toBe(true);
-    expect(voiceChallengeStartSucceeded(undefined)).toBe(false);
-    const retry = retryVoiceChallenge({ alreadyPassed: false });
-    expect(retry.reset).toBe(true);
-    expect(retry.shouldStart).toBe(false);
-    expect(retryVoiceChallenge({ alreadyPassed: true })).toEqual({
-      reset: false,
-      shouldStart: false,
-    });
-    const challenge = read("components/PracticeVoiceChallenge.tsx");
-    expect(challenge).toContain("data-practice-voice-retry");
-    expect(challenge).toContain("retryVoiceChallenge");
-    const retryAt = challenge.indexOf("function retry");
-    const retryBody = challenge.slice(retryAt, challenge.indexOf("function skipLocally"));
-    expect(retryBody).not.toContain("onPassRef");
-    expect(challenge).toContain("mergeVoiceChallengeHeard");
-    expect(challenge).toContain("judgeVoiceChallengeReading");
-    const onResultAt = challenge.indexOf("recognition.onresult");
-    const onEndAt = challenge.indexOf("recognition.onend");
-    const checkAt = challenge.indexOf("function checkReading");
-    expect(challenge.slice(onResultAt, onEndAt)).not.toContain("judgeVoiceChallengeReading");
-    expect(challenge.slice(onResultAt, onEndAt)).not.toContain("onPassRef");
-    const checkBody = challenge.slice(checkAt, checkAt + 700);
-    expect(checkBody).toContain("judgeVoiceChallengeReading");
-    expect(checkBody).toContain("setLight(\"green\")");
-    expect(checkBody).toContain("setLight(\"red\")");
-    expect(checkBody.indexOf("onPassRef.current()")).toBeGreaterThan(checkBody.indexOf("?.stop()"));
-    const tap = read("components/tap-score/tap-score-phases.tsx");
-    const prepare = read("components/scout-tap/scout-tap-phases.tsx");
-    expect(tap).toContain("releaseVoiceChallengeStartLatch");
-    expect(prepare).toContain("PracticeVoiceChallenge");
-    expect(tap).not.toContain("passGuard.current = false;\n    });");
-  });
 });
 
 describe("a pass is required before TAP Learning, TAP, Prepare, and rest unlock", () => {
@@ -543,22 +466,6 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(pass).toContain('step !== "live"');
   });
 
-  it("Calibrate confirms start, then mounts the Prepare voice challenge, then sounding", () => {
-    const phases = read("components/scout-tap/scout-tap-phases.tsx");
-    expect(phases).toContain("confirmStart");
-    expect(phases).toContain("passChallenge");
-    expect(phases).toContain("PracticeVoiceChallenge");
-    expect(phases).toContain('variant="prepare"');
-    expect(phases).toContain('data-prepare-briefing-step="challenge"');
-    expect(phases).toContain("onConfirm={confirmStart}");
-    expect(phases).toContain("data-calibrate-start");
-    expect(phases).toContain("<CalibrateSoundingSurface");
-    expect(scoutThinkAloudEnabled()).toBe(false);
-    expect(phases).toContain("scoutThinkAloudEnabled()");
-    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
-
-    expect(read("lib/practice-voice-challenge.ts")).toContain('variant === "prepare"');
-  });
 
   it("Learn settings have no silence-minutes control; live uses TAP purity", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");

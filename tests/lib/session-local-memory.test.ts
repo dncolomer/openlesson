@@ -104,24 +104,6 @@ describe("releaseSessionLocalMemory", () => {
     ).toBeUndefined();
   });
 
-  it("Learn, Calibrate, and Verify release after persist and on unmount", () => {
-    const phase = read("components/session-view/use-session-phase.ts");
-    const recording = read("components/session-view/use-session-recording.ts");
-    const stop = recording.slice(recording.indexOf("const stopRecording"));
-    const persistAt = stop.indexOf("await persistIleSessionRow");
-    const releaseAt = stop.indexOf("releaseSessionLocalMemory", persistAt);
-    expect(persistAt).toBeGreaterThan(-1);
-    expect(releaseAt).toBeGreaterThan(persistAt);
-    expect(phase).toContain("releaseSessionLocalMemory(sessionRef.current?.id)");
-    expect(phase).toContain("releaseSessionLocalMemory(next?.id ?? current?.id)");
-
-    const scout = read("components/scout-tap/ScoutTapClient.tsx");
-    expect(scout).toContain("releaseSessionLocalMemory(sessionId)");
-
-    const tap = read("components/tap-score/use-tap-score-flow.ts");
-    expect(tap).toContain("releaseSessionLocalMemory(s.sessionId)");
-    expect(tap).toContain("releaseSessionLocalMemory(sessionRef.current.sessionId)");
-  });
 
   it("removes local Gemma inference", () => {
     expect(() => read("lib/local-inference.ts")).toThrow();

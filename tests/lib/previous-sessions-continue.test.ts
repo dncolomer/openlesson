@@ -224,23 +224,6 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
   });
 });
 
-describe("continue uses chosen session id and does not insert", () => {
-  it("continue href is the existing session id; continue does not insert", () => {
-    expect(continueIleSessionHref("49f92e9d-1f5c-4191-ac11-85b61bc65e72")).toBe(
-      "/session?id=49f92e9d-1f5c-4191-ac11-85b61bc65e72&resume=1",
-    );
-    expect(ileLaunchInsertsNewSession("continue")).toBe(false);
-    expect(ileLaunchInsertsNewSession("new")).toBe(true);
-
-    const pane = read("components/WorkspaceLearnerBlockPane.tsx");
-    expect(pane).not.toContain("ileSessionListDisplayName");
-    expect(pane).not.toContain("data-previous-session-name");
-    expect(pane).not.toContain("continueIleSessionHref");
-    expect(pane).not.toContain("const continueSession");
-    expect(pane).toContain("onLaunchIntent");
-  });
-});
-
 describe("welcome branch continue vs new", () => {
   it("continue preview uses stored plan; Learn start has no size picker", () => {
     expect(ileWelcomeShowsContinuePreview("exists")).toBe(true);
@@ -256,16 +239,15 @@ describe("welcome branch continue vs new", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(welcome).not.toContain("ileWelcomeShowsSizePicker");
     expect(welcome).toContain("resumeSession");
-    expect(welcome).toContain("welcomeExtras");
-    expect(welcome).toContain("ileWelcomeShowsContinuePreview");
+    expect(welcome).not.toContain("ileWelcomeShowsContinuePreview");
     expect(welcome).not.toContain("ileWelcomeShowsRegenerate");
-    expect(welcome).toContain("data-ile-continue-welcome");
+    expect(welcome).not.toContain("data-ile-continue-welcome");
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("data-ile-silence-lock-minutes");
-    expect(welcome).toContain("capIleSessionChapters");
+    expect(welcome).not.toContain("capIleSessionChapters");
     const picker = read("components/InitialChaptersPicker.tsx");
     expect(picker).toContain("data-density-level");
     expect(picker).toContain("INITIAL_CHAPTERS_CATALOG");
@@ -276,8 +258,6 @@ describe("welcome branch continue vs new", () => {
     expect(picker).toContain("pickRandomMapType");
     expect(welcome).not.toContain("catalogStrip");
     expect(welcome).not.toContain('data-ile-map-type-align="aesthetics"');
-    const continueAt = welcome.indexOf("data-ile-continue-welcome");
-    expect(continueAt).toBeGreaterThan(-1);
   });
 });
 
@@ -295,7 +275,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(welcome).not.toContain("InitialChaptersPicker");
-    expect(welcome).toContain("data-ile-continue-chapter-count");
+    expect(welcome).not.toContain("data-ile-continue-chapter-count");
     const picker = read("components/InitialChaptersPicker.tsx");
     expect(picker).toContain("dummyDensityCells");
     expect(picker).toContain("dummy");
@@ -339,9 +319,8 @@ describe("dummy density occupancy + continue mini read-only", () => {
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(welcome).not.toContain("IleContinueMapPreview");
-    expect(welcome).toContain("data-ile-continue-welcome");
-    expect(welcome).toContain("capIleSessionChapters");
-    expect(welcome).toContain("sessionPlan?.steps");
+    expect(welcome).not.toContain("data-ile-continue-welcome");
+    expect(welcome).not.toContain("capIleSessionChapters");
     expect(
       existsSync(join(ROOT, "components/session-view/learn-continue-map-preview.tsx")),
     ).toBe(false);
@@ -358,177 +337,5 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("flex-1");
     expect(existsSync(join(ROOT, "components/AyclLandingClient.tsx"))).toBe(false);
-  });
-});
-
-describe("Practice drawer labels and previous-sessions UI", () => {
-  it("uses Start a New Session and has no Previous Sessions drawer", async () => {
-    const pane = read("components/WorkspaceLearnerBlockPane.tsx");
-    expect(SEE_PREVIOUS_SESSIONS_LABEL).toBe("See Previous Sessions");
-    expect(START_NEW_SESSION_LABEL).toBe("Start a New Session");
-    expect(pane).not.toContain("SEE_PREVIOUS_SESSIONS_LABEL");
-    expect(pane).toContain("START_NEW_SESSION_LABEL");
-    expect(pane).not.toContain("PREVIOUS_SESSIONS_DRAWER_ID");
-    expect(pane).not.toContain("previousSessionsDrawerShouldLoad");
-    expect(pane).not.toContain("fetchBlockPreviousSessions");
-    expect(pane).not.toContain("data-previous-sessions-drawer");
-    expect(pane).not.toContain("data-previous-session-row");
-    expect(pane).not.toContain("data-continue-session");
-    expect(previousSessionsDrawerShouldLoad(PREVIOUS_SESSIONS_DRAWER_ID)).toBe(
-      true,
-    );
-    expect(previousSessionsDrawerShouldLoad("practice")).toBe(false);
-    expect(previousSessionsDrawerShouldLoad(null)).toBe(false);
-
-    const card = read("components/BlockDetailCard.tsx");
-    expect(card).not.toContain("data-see-previous-sessions");
-    expect(card).not.toContain("onSeePreviousSessions");
-    expect(card).toContain("ileStartLabel");
-    expect(card).toContain("showStylePicker");
-    expect(card).toContain("`Start · ${durationMinutes} min`");
-
-    const route = read("app/api/workspace/block-sessions/route.ts");
-    expect(route).toContain("listBlockPreviousSessions");
-    expect(route).toContain("guardWorkspaceRoute");
-    expect(WORKSPACE_BLOCK_SESSIONS_PATH).toBe("/api/workspace/block-sessions");
-    expect(WORKSPACE_BLOCKS_WITH_SESSIONS_PATH).toBe(
-      "/api/workspace/blocks-with-sessions",
-    );
-
-    expect(
-      blockIdsWithSavedPreviousSessions(
-        [
-          { block_id: "b-saved", session_id: "s-saved" },
-          { block_id: "b-discard", session_id: "s-discard" },
-          { block_id: "b-saved", session_id: "s-other" },
-        ],
-        [
-          { id: "s-saved", metadata: { session_name: "Keep" } },
-          { id: "s-discard", metadata: { unsaved_exit: true } },
-          { id: "s-other", metadata: { unsaved_exit: true } },
-        ],
-      ),
-    ).toEqual(["b-saved"]);
-    expect(
-      workspaceTileShowsPreviousSessionsPickaxe({
-        blockId: "b-saved",
-        previousSessionBlockIds: new Set(["b-saved"]),
-      }),
-    ).toBe(true);
-    expect(
-      workspaceTileShowsPreviousSessionsPickaxe({
-        blockId: "b-other",
-        previousSessionBlockIds: new Set(["b-saved"]),
-      }),
-    ).toBe(false);
-
-    const mapClient = {
-      from(_table: string) {
-        const q = {
-          select() {
-            return q;
-          },
-          eq() {
-            return q;
-          },
-          not() {
-            return Promise.resolve({
-              data: [
-                { block_id: "b-saved", id: "s-saved" },
-                { block_id: "b-discard", id: "s-discard" },
-              ],
-              error: null,
-            });
-          },
-          in() {
-            return Promise.resolve({
-              data: [
-                { id: "s-saved", metadata: { session_name: "Keep" } },
-                { id: "s-discard", metadata: { unsaved_exit: true } },
-              ],
-              error: null,
-            });
-          },
-        };
-        return q;
-      },
-    };
-    await expect(
-      listWorkspaceBlockIdsWithPreviousSessions(mapClient, {
-        workspaceId: "ws-1",
-      }),
-    ).resolves.toEqual(["b-saved"]);
-
-    const grid = read("components/BlockSkillGrid.tsx");
-    const world =
-      read("components/block-skill-grid/map-world-layer.tsx") +
-      read("components/block-skill-grid/occupied-map-tile.tsx");
-    const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
-    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
-    const mapRoute = read("app/api/workspace/blocks-with-sessions/route.ts");
-    expect(grid).toContain("useWorkspacePreviousSessionBlockIds");
-    expect(grid).toContain("previousSessionBlockIds");
-    expect(grid).toContain("fetchAestheticPackages");
-    expect(world).toContain("PREVIOUS_SESSIONS_MAP_ICON");
-    expect(world).toContain("data-block-has-previous-sessions");
-    expect(world).toContain("data-block-session-aesthetic");
-    expect(world).toContain("hasPreviousSessions");
-    expect(world).toContain("tileAesthetic");
-    expect(world).toContain("hideIcon={Boolean(tileAesthetic)}");
-    expect(world).toContain("!hasPreviousSessions");
-    expect(world).toContain("hasPreviousSessions,");
-    expect(world).toContain("mapCellFreeformPreviousSessionsColors");
-    expect(world).not.toContain("BlockPreviousSessionsPickaxeBadge");
-    expect(glyph).toContain("Pickaxe");
-    expect(glyph).toContain('from "lucide-react"');
-    expect(glyph).toContain("data-block-previous-sessions-icon");
-    expect(badges).toContain("h-6 w-6");
-    expect(badges).toContain("isLucideStrokeMapIcon");
-    expect(badges).not.toContain("data-block-previous-sessions-pickaxe");
-    expect(badges).not.toMatch(/from "lucide-react"/);
-    expect(mapRoute).toContain("listWorkspaceBlockIdsWithPreviousSessions");
-    expect(mapRoute).toContain("guardWorkspaceRoute");
-
-    const view = readSessionViewSurface();
-    expect(view).not.toContain("ileWelcomeShowsSizePicker");
-    expect(read("components/session-view/session-welcome-modal.tsx")).not.toContain(
-      "ileWelcomeShowsRegenerate",
-    );
-    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
-      "ileWelcomeShowsRegenerate",
-    );
-    expect(view).not.toContain("data-ile-session-chapter-count");
-    expect(view).not.toContain("data-ile-session-insight-goal");
-    expect(view).not.toContain("data-ile-silence-lock-minutes");
-    const chrome = read("components/session-view/session-chrome.tsx");
-    const phase = read("components/session-view/use-session-phase.ts");
-    expect(chrome).not.toContain('testId="ile-save-exit-name"');
-    expect(chrome).not.toContain("data-ile-session-name");
-    expect(chrome).not.toContain('t("session.nameSessionTitle")');
-    expect(chrome).not.toContain('t("session.nameSessionDiscard")');
-    expect(chrome).not.toContain('tertiaryTestId="ile-exit-without-saving"');
-    expect(view).not.toContain("setShowSaveExitNameDialog");
-    expect(view).toContain("void pauseAndGoToDashboard()");
-    expect(phase).toContain("applyIleSessionNameToMetadata");
-    expect(phase).toContain("discardUnsavedIleSession");
-    expect(phase).toContain("async (");
-    expect(phase).toContain("persistSession");
-
-    writeScratch(
-      "previous-sessions-excerpts.txt",
-      [
-        `SEE_PREVIOUS_SESSIONS_LABEL=${SEE_PREVIOUS_SESSIONS_LABEL}`,
-        `START_NEW_SESSION_LABEL=${START_NEW_SESSION_LABEL}`,
-        `continueHref=${continueIleSessionHref("sess-1")}`,
-        `insertContinue=${ileLaunchInsertsNewSession("continue")}`,
-        `insertNew=${ileLaunchInsertsNewSession("new")}`,
-        `continueExists=${ileWelcomeShowsContinuePreview("exists")}`,
-        `continueEmpty=${ileWelcomeShowsContinuePreview("empty")}`,
-        `dummySparse=${dummyDensityOccupiedCount("random_sparse")}`,
-        `dummyDense=${dummyDensityOccupiedCount("random_dense")}`,
-        `dummyIslands=${dummyDensityOccupiedCount("islands")}`,
-        `miniInteractive=${miniMapInteractive()}`,
-      ].join("\n"),
-    );
   });
 });

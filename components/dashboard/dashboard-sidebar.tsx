@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
+import type { OrganizationMembership } from "@/lib/organization/membership";
 import {
   clusterDashboardNavItems,
   DASHBOARD_TOP_NAV_ITEMS,
@@ -83,7 +85,7 @@ export function DashboardSidebar({
         return (
           <nav
             key={group.id}
-            className="shrink-0 border-b border-white/20 px-2 py-2 last:border-b-0"
+            className="shrink-0 border-b border-white/20 px-2 py-2"
             data-dashboard-nav-group={group.id}
             aria-label={group.label}
           >
@@ -127,7 +129,91 @@ export function DashboardSidebar({
           </nav>
         );
       })}
+      <OrgSwitcher />
     </aside>
+  );
+}
+
+function OrgSwitcher() {
+  const router = useRouter();
+  const [organizations, setOrganizations] = useState<OrganizationMembership[]>([]);
+  const [activeId, setActiveId] = useState("");
+  const [switching, setSwitching] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/organization/memberships");
+        if (!response.ok) return;
+        const body = (await response.json()) as {
+          organizations?: OrganizationMembership[];
+          activeOrganizationId?: string | null;
+        };
+        if (cancelled) return;
+        const next = Array.isArray(body.organizations) ? body.organizations : [];
+        setOrganizations(next);
+        const active =
+          (typeof body.activeOrganizationId === "string" && body.activeOrganizationId) ||
+          next.find((org) => org.isActive)?.organizationId ||
+          next[0]?.organizationId ||
+          "";
+        setActiveId(active);
+      } catch {
+        // Switcher stays hidden until memberships load.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleChange(organizationId: string) {
+    if (!organizationId || organizationId === activeId) return;
+    const previous = activeId;
+    setActiveId(organizationId);
+    setSwitching(true);
+    try {
+      const response = await fetch("/api/organization/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizationId }),
+      });
+      if (!response.ok) {
+        setActiveId(previous);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setActiveId(previous);
+    } finally {
+      setSwitching(false);
+    }
+  }
+
+  if (organizations.length === 0) return null;
+
+  return (
+    <div className="mt-auto px-2 py-2" data-dashboard-org-switcher>
+
+      <div className="mb-1 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
+        Organization
+      </div>
+      <select
+        data-dashboard-org-switcher-select
+        aria-label="Organization"
+        disabled={switching}
+        value={activeId}
+        onChange={(event) => void handleChange(event.target.value)}
+        className="w-full rounded-none border border-white/40 bg-black px-2 py-1 text-[13px] leading-tight text-white focus:border-white/70 focus:outline-none disabled:opacity-50"
+      >
+        {organizations.map((org) => (
+          <option key={org.organizationId} value={org.organizationId}>
+            {org.name}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

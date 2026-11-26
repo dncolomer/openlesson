@@ -194,11 +194,11 @@ describe("TAP client wires purity UX", () => {
 
   it("trace route accepts auto_stash and complete flags session PoW impure", () => {
     const trace = fs.readFileSync(
-      path.join(ROOT, "app/api/workspace-tap-score/trace/route.ts"),
+      path.join(ROOT, "app/api/verify/session/trace/route.ts"),
       "utf8",
     );
     const complete = fs.readFileSync(
-      path.join(ROOT, "app/api/workspace-tap-score/complete/route.ts"),
+      path.join(ROOT, "app/api/verify/session/complete/route.ts"),
       "utf8",
     );
     expect(trace).toContain("auto_stash");

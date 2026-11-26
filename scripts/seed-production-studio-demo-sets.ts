@@ -141,39 +141,21 @@ async function seedSet(
 
   const flowId = randomUUID();
   const publicToken = `${set.publicTokenPrefix}-${flowId.slice(0, 8)}`;
-  if (set.product === "verification") {
-    await client.query(
-      `INSERT INTO public.verify_flows (
-         id, name, topic, questions, duration_minutes, action_catalog, public_token, owner_user_id
-       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
-      [
-        flowId,
-        set.flowName,
-        set.topic,
-        JSON.stringify(set.questions),
-        set.durationMinutes,
-        set.actionCatalog,
-        publicToken,
-        owner.userId,
-      ],
-    );
-  } else {
-    await client.query(
-      `INSERT INTO public.calibrate_flows (
-         id, name, goal, questions, duration_minutes, action_catalog, public_token, owner_user_id
-       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
-      [
-        flowId,
-        set.flowName,
-        set.goal,
-        JSON.stringify(set.questions),
-        set.durationMinutes,
-        set.actionCatalog,
-        publicToken,
-        owner.userId,
-      ],
-    );
-  }
+  await client.query(
+    `INSERT INTO public.verify_flows (
+       id, name, topic, questions, duration_minutes, action_catalog, public_token, owner_user_id
+     ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
+    [
+      flowId,
+      set.flowName,
+      set.topic || set.goal,
+      JSON.stringify(set.questions),
+      set.durationMinutes,
+      set.actionCatalog,
+      publicToken,
+      owner.userId,
+    ],
+  );
 
   const encoded = encodeStudioDemoRuns(set);
   const regions = buildStudioDemoRegions(set, encoded);
@@ -183,20 +165,9 @@ async function seedSet(
   for (const [index, run] of encoded.entries()) {
     const runId = randomUUID();
     const createdAt = new Date(now - (encoded.length - index) * 60_000).toISOString();
-    if (set.product === "verification") {
-      await client.query(
-        `INSERT INTO public.sessions (
-           id, user_id, problem, status, kind, verify_flow_id, identity, workspace_id, result, created_at
-         ) VALUES (
-           $1, $2, 'Verify', 'completed', 'verify', $3, $4, $5, $6::jsonb, $7
-         )`,
-        [
-          runId,
-          owner.userId,
-          flowId,
-          run.identity,
-          workspaceId,
-          JSON.stringify({
+    const result =
+      set.product === "verification"
+        ? {
             kind: "verify",
             projectedPolicy: null,
             knowledgeRegionId: null,
@@ -210,29 +181,25 @@ async function seedSet(
                 createdAt,
               },
             ],
-          }),
-          createdAt,
-        ],
-      );
-    } else {
-      await client.query(
-        `INSERT INTO public.sessions (
-           id, user_id, problem, status, kind, calibrate_flow_id, identity, workspace_id, result, guest_link, created_at
-         ) VALUES (
-           $1, $2, 'Calibrate', 'completed', 'calibrate', $3, $4, $5, $6::jsonb, $7::jsonb, $8
-         )`,
-        [
-          runId,
-          owner.userId,
-          flowId,
-          run.identity,
-          workspaceId,
-          JSON.stringify({ kind: "calibrate", legacyEvents: studioDemoCalibrationEvents(run) }),
-          JSON.stringify({ events: studioDemoCalibrationEvents(run), source: "calibration_proof" }),
-          createdAt,
-        ],
-      );
-    }
+          }
+        : { kind: "verify", legacyEvents: studioDemoCalibrationEvents(run) };
+    await client.query(
+      `INSERT INTO public.sessions (
+         id, user_id, problem, status, kind, verify_flow_id, identity, workspace_id, result, created_at
+       ) VALUES (
+         $1, $2, $3, 'completed', 'verify', $4, $5, $6, $7::jsonb, $8
+       )`,
+      [
+        runId,
+        owner.userId,
+        set.product === "verification" ? "Verify" : "Calibrate",
+        flowId,
+        run.identity,
+        workspaceId,
+        JSON.stringify(result),
+        createdAt,
+      ],
+    );
 
     await client.query(
       `INSERT INTO public.session_embeddings (

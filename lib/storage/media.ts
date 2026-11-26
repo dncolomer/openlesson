@@ -229,8 +229,6 @@ export async function saveSessionEEG(
   const sampleCount = Object.values(eegData.channels).reduce((sum, samples) => sum + samples.length, 0);
   const fileName = `${sessionId}_eeg_${idx}_${ts}.json`;
 
-  console.log("[saveSessionEEG] Saving:", { sessionId, fileName, deviceName, channels: Object.keys(eegData.channels) });
-
   const { uploadSessionFile } = await import("@/lib/session-files-client");
   const result = await uploadSessionFile({
     sessionId,
@@ -264,7 +262,6 @@ export async function saveSessionEEG(
       .eq("id", sessionId);
   }
 
-  console.log("[saveSessionEEG] Done!");
 }
 
 // ---- Screen Capture Storage ----
@@ -275,8 +272,6 @@ export async function saveScreenshot(
   timestamp: number
 ): Promise<string | null> {
   const fileName = `${sessionId}_screen_${timestamp}.png`;
-
-  console.log("[saveScreenshot] Saving:", { sessionId, fileName, size: screenshotBlob.size });
 
   const { uploadSessionFile } = await import("@/lib/session-files-client");
   const result = await uploadSessionFile({
@@ -293,7 +288,6 @@ export async function saveScreenshot(
     return null;
   }
 
-  console.log("[saveScreenshot] Done!");
   return result.xai_file_id || null;
 }
 
@@ -417,7 +411,6 @@ export async function deleteSessionScreenshots(sessionId: string): Promise<void>
     console.warn("[deleteSessionScreenshots] cleanup failed (non-critical):", e);
   }
 
-  console.log("[deleteSessionScreenshots] Proof of work for session is preserved:", sessionId);
 }
 
 // ---- Full Session Data Fetching (for Analytics) ----

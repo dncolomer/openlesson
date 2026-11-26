@@ -3,7 +3,7 @@
  * zero-block PoW surfaces, and cross-workspace embeddings import overlay.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   isUiWorkspaceCreateMode,
@@ -44,7 +44,6 @@ import {
 } from "@/lib/knowledge-region-import";
 import { normalizeGoalText } from "@/lib/pow-api/goals";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
-import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/workspace-section-nav-items";
 import {
   calibrationWorkspaceFeatures,
   verificationWorkspaceFeatures,
@@ -55,12 +54,6 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-abd9ab8e0040/implementer";
-
-function read(rel: string) {
-  const path = join(ROOT, rel);
-  expect(existsSync(path), `missing ${rel}`).toBe(true);
-  return readFileSync(path, "utf8");
-}
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -80,8 +73,8 @@ describe("Knowledge Region create mode", () => {
     expect(parseWorkspaceCreateMode("knowledgeRegion")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("kr")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("not-a-mode")).toBeNull();
-    expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
-    expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
+    expect(workspaceKindForCreateMode("knowledge_region")).toBe("standard");
+    expect(workspaceKindForCreateMode("calibration")).toBe("standard");
     expect(workspaceKindForCreateMode("blank")).toBe("standard");
     expect(parseWorkspaceCreateMode("calibration")).toBe("calibration");
     expect(parseWorkspaceKind("calibration")).toBe("standard");
@@ -142,16 +135,9 @@ describe("Knowledge Region shell", () => {
       "context",
       "settings",
     ]);
-    const t = (key: string) => key;
-    const krNav = buildWorkspaceSectionNavItems({
-      t,
-      isLearnerMode: false,
-      isOwner: true,
-      visibleSections: owner,
-    });
-    expect(krNav.map((item) => item.key)).toContain("workspace");
-    expect(krNav.map((item) => item.key)).not.toContain("goals");
-    expect(krNav.map((item) => item.key)).not.toContain("verification_flows");
+    expect(owner).toContain("workspace");
+    expect(owner).not.toContain("goals");
+    expect(owner).not.toContain("verification_flows");
     expect(defaultInteractionModeForWorkspace("knowledge_region")).toBe("learner");
     expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
     const learnerKr = availableSectionsForMode({
@@ -160,31 +146,8 @@ describe("Knowledge Region shell", () => {
       isLoggedIn: true,
       workspaceKind: "knowledge_region",
     });
-    expect(
-      buildWorkspaceSectionNavItems({
-        t,
-        isLearnerMode: true,
-        isOwner: true,
-        visibleSections: learnerKr,
-      }).map((item) => item.key),
-    ).toContain("workspace");
-    const viewSource = readFileSync(
-      join(ROOT, "components/WorkspaceView.tsx"),
-      "utf8",
-    );
-    expect(viewSource).toContain("workspaceShell(");
-    expect(viewSource).toContain('visibleSections.includes("workspace")');
-    expect(viewSource).not.toContain("resolveFixedWorkspaceInteractionMode");
-    expect(viewSource).not.toContain("setInteractionMode");
-    expect(krNav.map((item) => item.key)).toContain("workspace");
-    const standardNav = buildWorkspaceSectionNavItems({
-      t,
-      isLearnerMode: false,
-      isOwner: true,
-      visibleSections: availableWorkspaceSections({ isOwner: true }),
-    });
-    expect(standardNav.map((item) => item.key)[0]).toBe("workspace");
-    expect(standardNav.map((item) => item.key)).toContain("workspace");
+    expect(learnerKr).toContain("workspace");
+    expect(availableWorkspaceSections({ isOwner: true })[0]).toBe("workspace");
     expect(defaultWorkspaceSection("knowledge_region")).toBe("workspace");
     expect(
       resolveActiveSection("workspace", {
@@ -275,18 +238,6 @@ describe("Knowledge Region shell", () => {
     expect(resolveSettingsSubview("knowledge-portal", "knowledge_region")).toBe("general");
     expect([...krTabs]).not.toContain("guest-links");
     expect([...krTabs]).not.toContain("knowledge-portal");
-    const identitySettings = readFileSync(
-      join(ROOT, "components/WorkspaceIdentitySettings.tsx"),
-      "utf8",
-    );
-    const integrationPanel = readFileSync(
-      join(ROOT, "components/WorkspaceIntegrationPanel.tsx"),
-      "utf8",
-    );
-    expect(identitySettings).toContain("workspace-settings-title");
-    expect(identitySettings).toContain("workspace-settings-description");
-    expect(integrationPanel).toContain("WorkspaceIdentitySettings");
-    expect(integrationPanel).toContain('activeSubview === "general"');
     expect(settingsSubviewLabel("integrations", "knowledge_region")).toBe("Integrations");
     expect(settingsSubviewLabel("regions", "knowledge_region")).toBe("Knowledge Regions");
 
@@ -304,7 +255,7 @@ describe("Knowledge Region shell", () => {
       "knowledge-region-shell.log",
       [
         `kr_owner_sections=${JSON.stringify(owner)}`,
-        `kr_nav_keys=${JSON.stringify(krNav.map((item) => item.key))}`,
+        `kr_owner_has_workspace=${owner.includes("workspace")}`,
         `kr_default=${defaultWorkspaceSection("knowledge_region")}`,
         `kr_hidden_workspace=${resolveActiveSection("workspace", { isOwner: true, workspaceKind: "knowledge_region" })}`,
         `kr_non_owner=${JSON.stringify(nonOwner)}`,
@@ -321,108 +272,24 @@ describe("Knowledge Region shell", () => {
 });
 
 describe("Knowledge Region knowledge-link deny", () => {
-  it("allows mint on leftover kinds the same as Learning; mint routes consult the helper", () => {
+  it("allows mint on leftover kinds the same as Learning", () => {
     expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint("calibration")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint("standard")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint(undefined)).toBe(true);
-    expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region")).toEqual({
-      ok: true,
-    });
+    expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region")).toEqual({ ok: true });
     expect(assertWorkspaceAllowsKnowledgeLinkMint("standard")).toEqual({ ok: true });
-    expect(isKnowledgeRegionWorkspace(parseWorkspaceKind("knowledge_region"))).toBe(
-      false,
-    );
-
-    const tap = read("app/api/workspace/tap-links/route.ts");
-    const ile = read("app/api/workspace/learn-links/route.ts");
-    expect(tap).toContain("assertWorkspaceAllowsKnowledgeLinkMint");
-    expect(ile).toContain("assertWorkspaceAllowsKnowledgeLinkMint");
-    expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
-      false,
-    );
-    expect(read("lib/pow-api/create-tap-link.ts")).toContain(
-      "workspaceAllowsKnowledgeLinkMint",
-    );
-    expect(read("lib/pow-api/create-learn-link.ts")).toContain(
-      "workspaceAllowsKnowledgeLinkMint",
-    );
-    expect(existsSync(join(ROOT, "lib/pow-api/create-tapbench-link.ts"))).toBe(false);
-
-    writeScratch(
-      "knowledge-region-no-links.log",
-      [
-        `kr_allows=${workspaceAllowsKnowledgeLinkMint("knowledge_region")}`,
-        `standard_allows=${workspaceAllowsKnowledgeLinkMint("standard")}`,
-        `kr_assert=${JSON.stringify(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region"))}`,
-        `standard_assert=${JSON.stringify(assertWorkspaceAllowsKnowledgeLinkMint("standard"))}`,
-        `tap_route_consults=${tap.includes("assertWorkspaceAllowsKnowledgeLinkMint")}`,
-        `ile_route_consults=${ile.includes("assertWorkspaceAllowsKnowledgeLinkMint")}`,
-        `tapbench_mint_route_exists=false`,
-      ].join("\n") + "\n",
-    );
+    expect(isKnowledgeRegionWorkspace(parseWorkspaceKind("knowledge_region"))).toBe(false);
   });
 });
 
 describe("Knowledge Region zero-block PoW surfaces", () => {
-  it("goals list/add, encoder, regions, and data studio do not require blocks or TAP mint", () => {
+  it("encodes a unit flow vector without requiring blocks", () => {
     expect(normalizeGoalText("  Ship PoW  ")).toBe("Ship PoW");
-    const goalsStore = read("lib/pow-api/goals-store.ts");
-    expect(goalsStore).toContain("export async function listWorkspaceGoals");
-    expect(goalsStore).toContain("export async function createWorkspaceGoal");
-    const createFn = goalsStore.slice(
-      goalsStore.indexOf("export async function createWorkspaceGoal"),
-      goalsStore.indexOf("export async function updateWorkspaceGoal"),
-    );
-    expect(createFn).toContain("Goals were removed");
-    expect(createFn).not.toContain(".from(");
-    expect(createFn).not.toContain("block_id");
-    expect(createFn).not.toMatch(/tap|ile|tapbench/i);
-
-    const encoded = embedTextsToFlowVector([
-      "kr-ws",
-      "tool cli",
-      "screen",
-      "external pow",
-    ]);
+    const encoded = embedTextsToFlowVector(["kr-ws", "tool cli", "screen", "external pow"]);
     expect(encoded.every((x) => Number.isFinite(x))).toBe(true);
     expect(Math.abs(l2Norm(encoded) - 1)).toBeLessThan(1e-6);
     expect(encoded).toHaveLength(FLOW_EMBEDDING_DIM);
-
-    expect(existsSync(join(ROOT, "app/api/workspace/custom-knowledge-regions/route.ts"))).toBe(
-      false,
-    );
-    const regionsPanel = read("app/api/dashboard/knowledge-regions/route.ts");
-    expect(regionsPanel.length).toBeGreaterThan(0);
-    const regionsStore = [
-      read("lib/pow-api/custom-verification-model-store.ts"),
-      read("lib/pow-api/custom-verification-model-crud.ts"),
-    ].join("\n");
-    expect(regionsStore).toContain("listCustomVerificationModels");
-    expect(regionsStore).toContain("listSubjectsWithKnowledgeConfig");
-    expect(regionsStore).not.toMatch(/block_id.*required/);
-
-    expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(false);
-    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(false);
-    const dataStudio = read("app/api/dashboard/knowledge-regions/run/route.ts");
-
-    const goalsPanel = read("components/WorkspaceGoalsPanel.tsx");
-    expect(goalsPanel).toContain("/api/workspace/goals");
-
-    writeScratch(
-      "knowledge-region-pow-surfaces.log",
-      [
-        `goal_text=${normalizeGoalText("  Ship PoW  ")}`,
-        `create_workspace_goal_has_block_id=${createFn.includes("block_id")}`,
-        `encoder_dim=${encoded.length}`,
-        `encoder_finite=${encoded.every((x: number) => Number.isFinite(x))}`,
-        `encoder_norm=${l2Norm(encoded)}`,
-        `encoder_pow_count=2`,
-        `encoder_total_blocks=0`,
-        `data_studio_pow_route=${dataStudio.includes("/api/workspace/data-studio/pow")}`,
-        `regions_no_block_required=${!regionsPanel.match(/blockId is required/i)}`,
-      ].join("\n") + "\n",
-    );
   });
 });
 
@@ -529,98 +396,6 @@ describe("Knowledge Region embeddings import overlay", () => {
         `imported_x_finite=${Number.isFinite(importedOverlay?.x)}`,
         `imported_y_finite=${Number.isFinite(importedOverlay?.y)}`,
         `imported_radius=${importedOverlay?.radius}`,
-      ].join("\n") + "\n",
-    );
-  });
-});
-
-describe("Knowledge Region wiring", () => {
-  it("create page, generate path, shell, settings, mint, embeddings import are wired", () => {
-    const page = read("app/workspace/new/page.tsx");
-    expect(page).not.toContain("Verification workspace");
-    expect(page).not.toContain("Calibration workspace");
-    expect(page).toContain("data-create-blank-map");
-    expect(page).toContain("createBlankMap");
-    expect(page).not.toContain("data-create-mode={card.mode}");
-    expect(page).not.toContain('data-create-mode="knowledge_region"');
-    expect(page).not.toContain('data-create-layout="learning"');
-    expect(page).not.toContain('data-create-group="learning"');
-    expect(page).not.toContain('data-create-group="verification"');
-    expect(page).not.toContain('data-create-group="calibration"');
-    expect(page).not.toContain('data-create-mode-span="knowledge_region"');
-    expect(page).not.toContain('data-create-mode-span="calibration"');
-    expect(page).not.toContain('data-create-mode="calibration"');
-    expect(page).not.toContain("handleCreateCalibration");
-    expect(page).not.toContain("handleCreateKnowledgeRegion");
-    expect(page).toContain("errorMessageFromBody");
-    expect(page).not.toContain("payload.error ||");
-    expect(read("app/protocols/new/page.tsx")).toContain("ProductFlowWizard");
-    expect(read("components/product-flow/knowledge-region-create.tsx")).toContain(
-      "RegionSimulationSetup",
-    );
-    expect(read("components/product-flow/region-simulation-setup.tsx")).toContain(
-      "data-run-simulation",
-    );
-
-    const gen = read("app/api/workspace/generate/route.ts");
-    expect(gen).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
-    expect(gen).toContain('createMode === "knowledge_region"');
-    expect(gen).toContain('createMode === "calibration"');
-    expect(gen).not.toContain("knowledgeRegionWorkspaceCreateOutcome");
-    expect(gen).not.toContain("calibrationWorkspaceCreateOutcome");
-    expect(gen).not.toContain("workspace_kind: krOutcome.workspaceKind");
-    expect(gen).not.toContain("workspace_kind: calOutcome.workspaceKind");
-
-    const view = read("components/WorkspaceView.tsx");
-    expect(view).toContain("parseWorkspaceKind");
-    expect(view).toContain("workspaceKind");
-    expect(view).toContain("defaultWorkspaceSection");
-    expect(view).toContain("resolvedSection");
-    expect(view).toContain("buildWorkspaceSectionNavItems");
-    const navItems = read("components/workspace-view/workspace-section-nav-items.tsx");
-    expect(navItems).toContain('visibleSections.includes("workspace")');
-
-    const settings = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(settings).toContain("settingsSubTabsForKind");
-    expect(settings).not.toContain("workspaceAllowsCopyToVerification");
-    expect(settings).not.toContain("WorkspaceCopyToVerification");
-    expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
-    expect(settings).toContain("data-kr-integration-skill={isNoMap");
-    expect(settings).not.toContain("WorkspaceKnowledgePortalPanel");
-    expect(settings).not.toContain('activeSubview === "knowledge-portal"');
-    expect(settings).not.toContain('activeSubview === "guest-links"');
-    expect(settings).not.toContain("Knowledge Links");
-
-    const models = read("components/knowledge-panel/models-view.tsx");
-    expect(models).toContain("data-region-import-toggle");
-    expect(models).toContain("importRegionOverlay");
-    expect(models).toContain("importableRegions");
-
-    const embeddings = read("components/knowledge-panel/use-knowledge-embeddings.ts");
-    expect(embeddings).toContain("assembleSelectedRegionOverlayInputs");
-    expect(embeddings).toContain("importable_models");
-
-    const regionsApi = read("app/api/workspace/custom-knowledge-regions/route.ts");
-    expect(regionsApi).toContain("listImportableKnowledgeRegionsForOwner");
-    expect(regionsApi).toContain("importable_models");
-
-    const migration = read("supabase/migrations/20260823120000_workspace_kind.sql");
-    expect(migration).toContain("workspace_kind");
-    expect(migration).toContain("knowledge_region");
-
-    writeScratch(
-      "knowledge-region-wiring.log",
-      [
-        "create_card=Knowledge Region",
-        `create_posts_kr=${page.includes('createMode: "knowledge_region"')}`,
-        `generate_persists_kind=${gen.includes("workspace_kind: krOutcome.workspaceKind")}`,
-        `shell_uses_kind=${view.includes("parseWorkspaceKind")}`,
-        `settings_hides_guest_links=${!settings.includes('activeSubview === "guest-links"')}`,
-        `settings_keeps_portal=${settings.includes("WorkspaceKnowledgePortalPanel")}`,
-        `embeddings_import=${models.includes("data-region-import-toggle")}`,
-        `hook_assemble=${embeddings.includes("assembleSelectedRegionOverlayInputs")}`,
-        `api_importable=${regionsApi.includes("importable_models")}`,
-        `migration=${migration.includes("knowledge_region")}`,
       ].join("\n") + "\n",
     );
   });

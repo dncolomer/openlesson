@@ -51,11 +51,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setError(
-          payload?.error?.message === "duplicate"
-            ? "That identity is already used for this verification flow."
-            : payload?.error?.message || "Could not start",
-        );
+        setError(payload?.error?.message || "Could not start");
         return;
       }
       setClaimedIdentity(String(payload.identity || identity.trim()));

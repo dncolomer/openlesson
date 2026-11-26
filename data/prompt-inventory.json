@@ -480,7 +480,7 @@
     {
       "id": "app-api-workspace-tap-score-chat-route-ts::userMessage-1",
       "domainId": "tap-scoring",
-      "file": "app/api/workspace-tap-score/chat/route.ts",
+      "file": "app/api/verify/session/chat/route.ts",
       "symbol": "userMessage#1",
       "kind": "inline",
       "text": "Conversation so far:\\n${history || \"None\"}\\n\\nLatest submitted thought:\\n${latestThought}",

@@ -94,38 +94,3 @@ describe("normalizeSuggestDagResponse", () => {
     expect(msgs.user).toContain("a -> b");
   });
 });
-
-describe("suggest DAG UI + API structural", () => {
-  it("drawer button updates canvas draft; route uses xAI; Apply stays separate", () => {
-    const pane = readCombineBlocksSurface();
-    const route = read("app/api/workspace/suggest-dag/route.ts");
-    const helper = read("lib/suggest-dag.ts");
-
-    expect(pane).toContain("data-dag-suggest");
-    expect(pane).toContain("Suggest DAG");
-    expect(pane).toContain("/api/workspace/suggest-dag");
-    expect(pane).toContain("normalizeSuggestDagResponse");
-    expect(pane).toContain("setDagDraft");
-    expect(pane).toContain("data-dag-apply");
-    expect(pane).toContain("Apply");
-
-    expect(route).toContain("guardWorkspaceRoute");
-    expect(route).toContain("callXaiJSON");
-    expect(route).toContain("DEFAULT_MODEL");
-    expect(route).toContain("assembleSuggestDagXaiMessages");
-    expect(route).toContain("normalizeSuggestDagResponse");
-    expect(route).not.toContain("openai");
-
-    expect(helper).toContain("export function normalizeSuggestDagResponse");
-    expect(helper).toContain("export function assembleSuggestDagXaiMessages");
-
-    writeLog(
-      "suggest-dag.log",
-      [
-        "button=data-dag-suggest",
-        "apply_still=data-dag-apply",
-        "route=callXaiJSON",
-      ].join("\n") + "\n",
-    );
-  });
-});

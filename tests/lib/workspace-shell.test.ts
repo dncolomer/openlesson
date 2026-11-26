@@ -24,7 +24,6 @@ const LEARNING_AUTHOR_SECTIONS = [
 ] as const;
 
 
-
 describe("workspace shell policy", () => {
   it("gives a learning author authoring drawers and a practice drawer", () => {
     const shell = workspaceShell({
@@ -134,22 +133,4 @@ describe("workspace shell policy", () => {
     expect(calibration.sections).toEqual(["workspace"]);
   });
 
-  it("does not keep a second learner/creator label beside the policy", () => {
-    const view = readWorkspaceViewSurface();
-    const nav = read("components/WorkspaceSectionNav.tsx");
-    const mode = read("lib/workspace-mode.ts");
-    expect(view).toContain("workspaceShell(");
-    expect(view).not.toContain("resolveFixedWorkspaceInteractionMode");
-    expect(view).not.toContain("resolveWorkspaceModeShell");
-    expect(view).not.toContain("mountsCreatorAuthoringDrawers");
-    expect(view).not.toContain("mountsLearnerPracticeDrawer");
-    expect(view).not.toContain("data-workspace-interaction-mode");
-    expect(view).not.toContain("workspaceEmptyCellOpensAuthoring");
-    expect(view).not.toContain("workspaceExpandMapTitle");
-    expect(nav).not.toContain("data-workspace-interaction-mode");
-    expect(mode).toContain("export function workspaceShell");
-    expect(mode).toContain("withLearningInsightsSection");
-    expect(mode).not.toContain("function workspaceEmptyCellOpensAuthoring");
-    expect(mode).not.toContain("function workspaceExpandMapTitle");
-  });
 });

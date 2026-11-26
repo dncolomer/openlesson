@@ -7,6 +7,11 @@ import {
   uploadOrganizationLogo,
 } from "@/lib/organization/upload-logo";
 import { presentOrganizationRow } from "@/lib/organization/org-backends";
+import {
+  listOrganizationMemberIds,
+  listOrganizationMemberRows,
+  upsertOrganizationMembership,
+} from "@/lib/organization/membership-store";
 
 export const runtime = "nodejs";
 
@@ -76,25 +81,44 @@ export async function GET() {
     }> = [];
 
     if (profile.is_org_admin) {
-      // Get members
-      const { data: membersData } = await adminClient
-        .from("profiles")
-        .select("id, username, is_org_admin, created_at, plan, subscription_status")
-        .eq("organization_id", profile.organization_id)
-        .order("is_org_admin", { ascending: false })
-        .order("created_at", { ascending: true });
+      const memberRows = await listOrganizationMemberRows(
+        adminClient,
+        profile.organization_id,
+      );
+      const memberIds = memberRows.map((row) => row.userId);
+      const adminByUserId = new Map(
+        memberRows.map((row) => [row.userId, row.isOrgAdmin]),
+      );
 
-      // Get auth users for email info
-      const memberIds = (membersData || []).map(m => m.id);
+      const { data: membersData } =
+        memberIds.length > 0
+          ? await adminClient
+              .from("profiles")
+              .select("id, username, created_at, plan, subscription_status")
+              .in("id", memberIds)
+          : { data: [] as Array<{
+              id: string;
+              username: string | null;
+              created_at: string;
+              plan: string;
+              subscription_status: string;
+            }> };
+
       const { data: authUsers } = await adminClient.auth.admin.listUsers();
-      
-      members = (membersData || []).map(m => {
-        const authUser = authUsers.users.find(a => a.id === m.id);
-        return {
-          ...m,
-          email: authUser?.email || null,
-        };
-      });
+
+      members = (membersData || [])
+        .map((m) => {
+          const authUser = authUsers?.users?.find((a) => a.id === m.id);
+          return {
+            ...m,
+            is_org_admin: adminByUserId.get(m.id) === true,
+            email: authUser?.email || null,
+          };
+        })
+        .sort((a, b) => {
+          if (a.is_org_admin !== b.is_org_admin) return a.is_org_admin ? -1 : 1;
+          return String(a.created_at).localeCompare(String(b.created_at));
+        });
 
       // Get invites
       const { data: invitesData } = await adminClient
@@ -175,17 +199,18 @@ export async function POST(req: NextRequest) {
     }
 
     const baseSlug = slugify(typeof body.slug === "string" ? body.slug : name);
-    let slug = baseSlug;
-    for (let attempt = 1; attempt <= 5; attempt += 1) {
-      const { data: existing } = await adminClient
-        .from("organizations")
-        .select("id")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (!existing) break;
-      // Allow keeping same slug when updating own personal org
-      if (profile.organization_id && existing.id === profile.organization_id) break;
-      slug = `${baseSlug}-${attempt + 1}`;
+    async function uniqueSlug(allowId?: string | null) {
+      let next = baseSlug;
+      for (let attempt = 1; attempt <= 5; attempt += 1) {
+        const { data: existing } = await adminClient
+          .from("organizations")
+          .select("id")
+          .eq("slug", next)
+          .maybeSingle();
+        if (!existing || (allowId && existing.id === allowId)) return next;
+        next = `${baseSlug}-${attempt + 1}`;
+      }
+      return `${baseSlug}-${Date.now().toString(36)}`;
     }
 
     // Promote existing personal org (sole member) to named team org
@@ -195,16 +220,18 @@ export async function POST(req: NextRequest) {
         .select("id, kind")
         .eq("id", profile.organization_id)
         .single();
-      const { count: memberCount } = await adminClient
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", profile.organization_id);
+      const memberIds = await listOrganizationMemberIds(
+        adminClient,
+        profile.organization_id,
+      );
+      const memberCount = memberIds.length;
 
       if (
         currentOrg &&
-        (currentOrg.kind === "personal" || (memberCount ?? 0) <= 1) &&
+        (currentOrg.kind === "personal" || memberCount <= 1) &&
         profile.is_org_admin
       ) {
+        const slug = await uniqueSlug(profile.organization_id);
         const { data: organization, error: orgError } = await adminClient
           .from("organizations")
           .update({
@@ -233,6 +260,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        await upsertOrganizationMembership(adminClient, user.id, organization.id, true);
+
         await adminClient
           .from("agent_api_keys")
           .update({ organization_id: organization.id })
@@ -241,17 +270,16 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ organization: presentOrganizationRow(finalOrg as Record<string, unknown>), is_org_admin: true, promoted: true }, { status: 200 });
       }
-
-      return jsonError(409, "You already belong to a multi-member organization. Leave it before creating another.",);
     }
 
-    // No organization_id (should be rare post-migrate): create team org
+    // Create another team org (or the first, if the user has none yet)
     const billing = await resolveUserBilling(adminClient, user.id);
     const orgPlan =
       !("error" in billing) && billing.entity.source === "organization"
         ? billing.entity.plan
         : "inactive";
 
+    const slug = await uniqueSlug();
     const { data: organization, error: orgError } = await adminClient
       .from("organizations")
       .insert({
@@ -291,6 +319,8 @@ export async function POST(req: NextRequest) {
       console.error("Assign organization admin error:", updateError);
       return jsonError(500, "Failed to assign organization admin");
     }
+
+    await upsertOrganizationMembership(adminClient, user.id, organization.id, true);
 
     await adminClient
       .from("agent_api_keys")

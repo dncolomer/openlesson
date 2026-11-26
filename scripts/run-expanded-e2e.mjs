@@ -276,10 +276,10 @@ async function main() {
         `HTTP ${tapPage.res.status}`
       );
 
-      const tapList = await webFetch(`/api/workspace-tap-score?workspaceId=${regularWorkspaceId}`, regularJar);
+      const tapList = await webFetch(`/api/verify/session?workspaceId=${regularWorkspaceId}`, regularJar);
       record(
         "regular-web",
-        "GET /api/workspace-tap-score?workspaceId=…",
+        "GET /api/verify/session?workspaceId=…",
         tapList.res.status === 200,
         `HTTP ${tapList.res.status} sessions=${tapList.body?.tapSessions?.length ?? 0}`
       );
@@ -538,7 +538,7 @@ async function main() {
           const page = await fetch(`${baseUrl}/tap/session/${token}`);
           record("tap-flow", "private session page", page.status === 200, `HTTP ${page.status}`);
 
-          const chat = await fetch(`${baseUrl}/api/workspace-tap-score/chat`, {
+          const chat = await fetch(`${baseUrl}/api/verify/session/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -551,12 +551,12 @@ async function main() {
           const chatBody = await chat.json();
           record(
             "tap-flow",
-            "POST /api/workspace-tap-score/chat",
+            "POST /api/verify/session/chat",
             chat.status === 200 && !!chatBody?.message,
             chat.status === 200 ? `reply len=${String(chatBody.message).length}` : `${chat.status} ${JSON.stringify(chatBody)?.slice(0, 120)}`
           );
 
-          const complete = await fetch(`${baseUrl}/api/workspace-tap-score/complete`, {
+          const complete = await fetch(`${baseUrl}/api/verify/session/complete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -587,7 +587,7 @@ async function main() {
               !!completeBody?.workspaceId);
           record(
             "tap-flow",
-            "POST /api/workspace-tap-score/complete",
+            "POST /api/verify/session/complete",
             completed,
             completed
               ? `workspace=${completeBody?.workspaceId ?? workspaceId}`
@@ -675,7 +675,7 @@ async function main() {
                 `HTTP ${guestPage.status} len=${guestPageText.length}`
               );
 
-              const guestChat = await fetch(`${baseUrl}/api/workspace-tap-score/chat`, {
+              const guestChat = await fetch(`${baseUrl}/api/verify/session/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -692,7 +692,7 @@ async function main() {
                 guestChat.status === 200 ? `reply len=${String(guestChatBody.message).length}` : `${guestChat.status}`
               );
 
-              const guestComplete = await fetch(`${baseUrl}/api/workspace-tap-score/complete`, {
+              const guestComplete = await fetch(`${baseUrl}/api/verify/session/complete`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

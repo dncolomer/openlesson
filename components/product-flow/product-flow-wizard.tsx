@@ -36,14 +36,12 @@ import {
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import { FlowOpeningCanvasHost } from "@/components/product-flow/flow-opening-canvas-host";
 import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
+import { FlowPublishReview } from "@/components/product-flow/flow-publish-review";
 import {
-  FLOW_OPENING_CANVAS_LABEL,
   flowOpeningCanvasHasContent,
   flowShowsOpeningCanvas,
 } from "@/lib/flow-opening-canvas";
 import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
-import { FLOW_CHANNEL_IDS, FLOW_CHANNEL_LABELS } from "@/lib/flow-channels";
-import { flowAuthorShowsCanvasCapture } from "@/lib/flow-canvas-capture";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 function wizardDescription(step: ProductFlowWizardStep): string {
@@ -55,7 +53,7 @@ function wizardDescription(step: ProductFlowWizardStep): string {
     return "Audio, Muse (EEG), video, and screenshots this run requires. A required channel with no data flowing invalidates the session.";
   }
   if (step === "publish") {
-    return "Review, then publish. The public run asks for identification first.";
+    return "Review the name, author source, model, and channels, then publish. The public run asks for identification first.";
   }
   return `Choose one: write ${PROTOCOL_CHALLENGE_LABEL.toLowerCase()}, attach files (a problem is written when a learner opens), or prepare the board, and set the countdown.`;
 }
@@ -290,70 +288,7 @@ export function ProductFlowWizard() {
         ) : null}
 
         {!authoringCanvas && step === "publish" ? (
-          <FlowFormCard data-flow-publish-review="">
-            <div className="space-y-3">
-              <p className="text-lg font-medium tracking-[-0.4px] text-white" data-flow-name>
-                {draft.name}
-              </p>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-400">
-                {problem}
-              </p>
-              {draft.artifacts.length ? (
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                  {draft.artifacts.length} artifact{draft.artifacts.length === 1 ? "" : "s"}
-                </p>
-              ) : null}
-              {draft.exactProblemOnCanvas ? (
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                  Exact problem on canvas
-                </p>
-              ) : null}
-              {draft.generateProblemOnOpen ? (
-                <p
-                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                  data-flow-publish-generate-on-open=""
-                >
-                  Generate problem on open
-                </p>
-              ) : null}
-              {flowOpeningCanvasHasContent(draft.openingCanvasScene) ? (
-                <p
-                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                  data-flow-publish-opening-canvas=""
-                >
-                  {FLOW_OPENING_CANVAS_LABEL}
-                </p>
-              ) : null}
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                {draft.durationMinutes} min countdown
-              </p>
-              {draft.answersModelSeed ? (
-                <p
-                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                  data-flow-publish-unsys=""
-                >
-                  Unsys model
-                </p>
-              ) : null}
-              <p
-                className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                data-flow-publish-channels=""
-              >
-                {FLOW_CHANNEL_IDS.filter((id) => draft.enforcedChannels[id])
-                  .map((id) => FLOW_CHANNEL_LABELS[id])
-                  .join(" · ") || "Canvas only"}
-              </p>
-              {flowAuthorShowsCanvasCapture() && draft.canvasCapture.enabled ? (
-                <p
-                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
-                  data-flow-publish-canvas-capture=""
-                >
-                  Capture Canvas every {draft.canvasCapture.everyActions} actions
-                </p>
-              ) : null}
-            </div>
-            {actions}
-          </FlowFormCard>
+          <FlowPublishReview draft={draft} problem={problem} actions={actions} />
         ) : null}
       </div>
     </ProductSurface>

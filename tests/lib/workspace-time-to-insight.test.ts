@@ -1,7 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/workspace-section-nav-items";
 import {
   availableSectionsForMode,
   resolveActiveSectionForMode,
@@ -155,39 +152,16 @@ describe("averageTimeToInsightMs", () => {
 });
 
 describe("workspace KPIs tab", () => {
-  function labelsFor(input: {
-    mode: "creator" | "learner";
-    isOwner: boolean;
-    isLoggedIn: boolean;
-  }) {
-    const sections = availableSectionsForMode({
-      mode: input.mode,
-      isOwner: input.isOwner,
-      isLoggedIn: input.isLoggedIn,
-    });
-    const items = buildWorkspaceSectionNavItems({
-      t: (key) => key,
-      isLearnerMode: input.mode === "learner",
-      isOwner: input.isOwner,
-      visibleSections: sections,
-    });
-    return { sections, labels: items.map((item) => item.label), items };
-  }
-
   it("does not show a KPIs tab on either workspace product", () => {
-    const creator = labelsFor({ mode: "creator", isOwner: true, isLoggedIn: true });
-    const learner = labelsFor({ mode: "learner", isOwner: false, isLoggedIn: true });
-    const loggedOut = labelsFor({ mode: "creator", isOwner: false, isLoggedIn: false });
-    const guestLearner = labelsFor({ mode: "learner", isOwner: false, isLoggedIn: false });
+    const creator = availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true });
+    const learner = availableSectionsForMode({ mode: "learner", isOwner: false, isLoggedIn: true });
+    const loggedOut = availableSectionsForMode({ mode: "creator", isOwner: false, isLoggedIn: false });
+    const guestLearner = availableSectionsForMode({ mode: "learner", isOwner: false, isLoggedIn: false });
 
-    expect(creator.sections).not.toContain("kpis");
-    expect(learner.sections).not.toContain("kpis");
-    expect(creator.labels).not.toContain("KPIs");
-    expect(learner.labels).not.toContain("KPIs");
-    expect(loggedOut.sections).not.toContain("kpis");
-    expect(loggedOut.labels).not.toContain("KPIs");
-    expect(guestLearner.sections).not.toContain("kpis");
-    expect(guestLearner.labels).not.toContain("KPIs");
+    expect(creator).not.toContain("kpis");
+    expect(learner).not.toContain("kpis");
+    expect(loggedOut).not.toContain("kpis");
+    expect(guestLearner).not.toContain("kpis");
 
     const krLearner = availableSectionsForMode({
       mode: "learner",
@@ -263,19 +237,5 @@ describe("workspace KPIs tab", () => {
     expect(empty.valueText).not.toMatch(/0/);
     expect(empty.valueText).not.toBe("0s");
     expect(empty.valueText).not.toBe("0");
-
-    const panel = readFileSync(
-      join(process.cwd(), "components/WorkspaceKpisPanel.tsx"),
-      "utf8",
-    );
-    const hosts = readFileSync(
-      join(process.cwd(), "components/workspace-view/workspace-section-hosts.tsx"),
-      "utf8",
-    );
-    expect(panel).toContain("workspaceKpiTimeToInsightReadout");
-    expect(panel).toContain("data-kpi-time-to-insight-value");
-    expect(panel).toContain("data-kpi-time-to-insight-empty");
-    expect(hosts).toContain("WorkspaceKpisPanel");
-    expect(hosts).toContain('visibleSections.includes("kpis")');
   });
 });

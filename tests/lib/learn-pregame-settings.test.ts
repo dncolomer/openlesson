@@ -417,22 +417,25 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(startLoad).toContain("useState<readonly IleStartTipId[]>(ILE_START_TIP_IDS)");
     expect(startLoad).toContain("nextIleStartTipIndex");
     expect(startLoad).toContain("ILE_START_TIP_INTERVAL_MS");
-    expect(en.session.startLoading).toBe("Starting session");
-    expect(en.session.startTipsTitle).toBe("Tips & Tricks");
-    expect(ILE_START_TIP_IDS).toEqual(["actions", "selection", "commands", "dictate", "leave"]);
-    expect(shuffleIleStartTipIds(["actions", "dictate"], () => 0)).toEqual(["dictate", "actions"]);
+    expect(en.session.startLoading).toBe("Starting the protocol");
+    expect(en.session.startTipsTitle).toBe("This run");
+    expect(ILE_START_TIP_IDS).toEqual(["work", "speak", "commands", "dictate", "clock"]);
+    expect(shuffleIleStartTipIds(["work", "dictate"], () => 0)).toEqual(["dictate", "work"]);
     expect(nextIleStartTipIndex(4, 5)).toBe(0);
     expect(nextIleStartTipIndex(0, 5)).toBe(1);
     expect(ILE_START_TIP_INTERVAL_MS).toBe(12000);
-    expect(en.session.startTipActions).toMatch(/canvas/i);
-    expect(en.session.startTipActions).not.toMatch(/\bClose\b|\bKeep\b|\bDiscard\b|\bInsight\b/);
-    expect(en.session.startTipSelection).not.toMatch(/\bKeep\b|\bDiscard\b/);
+    expect(en.session.startTipWork).toMatch(/canvas/i);
+    expect(en.session.startTipWork).not.toMatch(/\bClose\b|\bKeep\b|\bDiscard\b|\bInsight\b/);
+    expect(en.session.startTipSpeak).toMatch(/speak/i);
+    expect(en.session.startTipClock).toMatch(/clock|End session/i);
     const tipCopy = ILE_START_TIP_IDS.map(
       (id) => en.session[ILE_START_TIP_LABEL_KEYS[id].replace("session.", "")],
     );
     for (const copy of tipCopy) {
       expect(copy).toBeTruthy();
-      expect(copy).not.toMatch(/\bboard\b|\bmap\b|\bstash\b|thought memory|\bend turn\b|\bunsys\b/i);
+      expect(copy).not.toMatch(
+        /\bboard\b|\bmap\b|\bstash\b|thought memory|\bend turn\b|\bunsys\b|\bpolicy\b|\bchapter\b|\blearn\b|\bcalibrate\b|\bregion\b|\bavenue\b/i,
+      );
     }
     const plate = renderToStaticMarkup(
       createElement(IleStartLoading, {

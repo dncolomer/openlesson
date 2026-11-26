@@ -35,20 +35,21 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav opens Explore the Protocols onto Embeddable Knowledge Verification Protocols, then Use cases, then Pricing", () => {
+  it("LandingNav opens Explore the Protocol onto Embeddable Knowledge Verification Protocols, then Use cases, then Pricing", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("USE_CASES_NAV_LINK");
     expect(nav).toContain("data-nav-products");
     expect(nav).toContain("PLATFORM_NAV_LABEL");
     expect(nav).toContain("bg-white");
     expect(nav).toContain("text-black");
-    expect(nav).toContain("platform-menu");
+    expect(nav).toContain("PROTOCOL_NAV_HREF");
+    expect(nav).not.toContain("platform-menu");
     expect(nav).not.toMatch(/<div className="console-copy flex items-stretch" data-nav-products>/);
     expect(nav).not.toMatch(/href=["']\/#products["']/);
     expect(nav).not.toMatch(/>\s*Products\s*</);
     expect(nav).not.toContain('href="/#platform"');
     expect(nav).toContain("MAIN_NAV_PRODUCT_LINKS");
-    expect(PLATFORM_NAV_LABEL).toBe("Explore the Protocols");
+    expect(PLATFORM_NAV_LABEL).toBe("Explore the Protocol");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual(["/verify-protocols"]);
     expect(USE_CASES_NAV_LINK).toEqual({ href: "/use-cases", label: "Use cases" });
     expect(nav).toContain("PRICING_NAV_LINKS");
@@ -163,10 +164,8 @@ describe("removed public route trees", () => {
     );
   });
 
-  it("agent shortcut no longer targets a product page", () => {
-    const agent = read("app/agent/page.tsx");
-    expect(agent).not.toContain("/products/");
-    expect(agent).toMatch(/redirect\(\s*["']\/["']\s*\)/);
+  it("agent shortcut page is gone", () => {
+    expect(existsSync(join(ROOT, "app/agent/page.tsx"))).toBe(false);
   });
 });
 

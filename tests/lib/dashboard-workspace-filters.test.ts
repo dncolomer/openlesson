@@ -126,19 +126,6 @@ describe("isDashboardWorkspaceTypeFilter", () => {
   });
 });
 
-describe("dashboard AYCL filter surface", () => {
-  it("wires the AYCL option into the workspace list filter", () => {
-    const dashSrc = readDashboardSurface();
-    expect(dashSrc).toContain('value="aycl"');
-    expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
-    expect(dashSrc).toContain("isDashboardWorkspaceListFilter");
-    expect(dashSrc).toContain("data-workspace-type-filter");
-    expect(dashSrc).toContain("data-dashboard-sidebar");
-    expect(dashSrc).toContain("isDashboardProductTab");
-    expect(dashSrc).toContain("workspaceMatchesDashboardTypeFilter");
-  });
-});
-
 describe("dashboard empty workspace CTA", () => {
   it("treats an empty list as first-run, not a filter miss", () => {
     expect(dashboardHasNoWorkspaces([])).toBe(true);
@@ -154,17 +141,4 @@ describe("dashboard empty workspace CTA", () => {
     ).toBe(false);
   });
 
-  it("renders a first-run create CTA instead of search/filter chrome", () => {
-    const dashSrc = readDashboardSurface();
-    expect(dashSrc).toContain("dashboardHasNoWorkspaces");
-    expect(dashSrc).toContain("data-dashboard-empty-workspaces");
-    expect(dashSrc).toContain("data-dashboard-empty-create");
-    expect(dashSrc).toContain('href="/workspace/new"');
-    expect(dashSrc).toContain("dashboard.emptyWorkspacesTitle");
-    expect(dashSrc).toContain("dashboard.emptyWorkspacesCta");
-    const emptyIdx = dashSrc.indexOf("data-dashboard-empty-workspaces");
-    const filterIdx = dashSrc.indexOf("data-workspace-visibility-filter");
-    expect(emptyIdx).toBeGreaterThan(0);
-    expect(filterIdx).toBeGreaterThan(emptyIdx);
-  });
 });

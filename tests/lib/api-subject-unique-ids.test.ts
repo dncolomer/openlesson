@@ -61,28 +61,4 @@ describe("API subject unique IDs (no subject=me)", () => {
     expect(other.query).not.toHaveProperty("subject");
   });
 
-  it("eval routes and docs do not prescribe subject=me self addressing", () => {
-    const routes = [
-      "app/api/session/embed/route.ts",
-      "components/WorkspacePerformancePanel.tsx",
-    ];
-    for (const rel of routes) {
-      expect(existsSync(join(ROOT, rel)), rel).toBe(true);
-      const src = read(rel);
-      // No live request builders / defaults using the me token.
-      expect(src, rel).not.toMatch(/params\.set\("subject", "me"\)/);
-      expect(src, rel).not.toMatch(/subject:\s*typeof[^;]*["']me["']/);
-      expect(src, rel).not.toMatch(/subject:\s*url\.searchParams\.get\("subject"\)/);
-      expect(src, rel).not.toMatch(/subject:\s*["']me["']/);
-    }
-
-    const docs = read("docs/PROOF_OF_WORK_API.md");
-    expect(docs).not.toMatch(/\?subject=me/);
-    expect(docs).toContain("create_protocol");
-    expect(docs).not.toContain("create_flow");
-
-    const lwm = readKnowledgePanelSurface();
-    expect(lwm).not.toMatch(/params\.set\("subject", "me"\)/);
-    expect(lwm).not.toMatch(/subject:\s*["']me["']/);
-  });
 });

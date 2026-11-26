@@ -413,59 +413,7 @@ describe("placeClusterAssignments isolation helper", () => {
 });
 
 describe("Cluster blocks structural wiring", () => {
-  it("multi-select pane exposes Cluster blocks drawer with count/auto/prompt/apply", () => {
-    const pane = readCombineBlocksSurface();
-    expect(pane).toContain("Cluster blocks");
-    expect(pane).toContain('drawerId="cluster"');
-    expect(pane).toContain("data-cluster-blocks-drawer");
-    expect(pane).toContain("data-cluster-blocks-pane");
-    expect(pane).toContain("data-cluster-count-auto");
-    expect(pane).toContain("data-cluster-count-input");
-    expect(pane).toContain("data-cluster-separation-input");
-    expect(pane).toContain("data-cluster-prompt");
-    expect(pane).toContain("data-cluster-apply");
-    expect(pane).toContain("onClusterBlocks");
-    expect(pane).toContain("onClusterProgress");
-    expect(pane).toContain("separation");
-    expect(pane).toContain("clusterBlocks");
-    expect(pane).toContain("Let the system decide");
-  });
 
-  it("WorkspaceView wires onClusterBlocks to grid-ops relocate and minimap progress", () => {
-    const view = readWorkspaceViewSurface();
-    expect(view).toContain("handleClusterBlocks");
-    expect(view).toContain("onClusterBlocks={handleClusterBlocks}");
-    expect(view).toContain("onClusterProgress={handleClusterProgress}");
-    expect(view).toContain("clusterMapJob");
-    expect(view).toContain('op: "relocate"');
-    expect(view).toContain("placements: input.placements");
-  });
-
-  it("cluster success clears filled multi-select, empty surface, and grid-local selection", () => {
-    const view = readWorkspaceViewSurface();
-    const grid = fs.readFileSync(
-      path.join(REPO_ROOT, "components/BlockSkillGrid.tsx"),
-      "utf8",
-    );
-    const sessionList = fs.readFileSync(
-      path.join(REPO_ROOT, "components/SessionList.tsx"),
-      "utf8",
-    );
-    // Isolate the relocate success handler body after handleClusterBlocks.
-    const start = view.indexOf("const handleClusterBlocks");
-    expect(start).toBeGreaterThanOrEqual(0);
-    const handler = view.slice(start, start + 2800);
-    expect(handler).toContain('op: "relocate"');
-    // Parent selection stores cleared only after successful relocate (not only on cancel).
-    expect(handler).toContain("applyMapSelectionResult");
-    expect(handler).toContain("nextWorkspaceMapSelection");
-    expect(handler).toContain('type: "clear"');
-    expect(handler).toContain("applyMapSelectionResult");
-    expect(view).not.toContain("mapSelectionClearNonce");
-    expect(sessionList).not.toContain("mapSelectionClearNonce");
-    expect(grid).not.toContain("mapSelectionClearNonce");
-    expect(grid).toContain("commitSelection");
-  });
 
   it("BlockSkillGrid shows cluster progress bar under minimap", () => {
     const grid = readMapGridSurface();
@@ -475,16 +423,6 @@ describe("Cluster blocks structural wiring", () => {
     expect(grid).toContain("data-map-cluster-progress-fill");
   });
 
-  it("grid-ops supports relocate op with validateRelocatePlacements", () => {
-    const route = readGridOpsSurface();
-    expect(route).toContain('"relocate"');
-    expect(route).toContain("handle_relocate");
-    expect(route).toContain("validateRelocatePlacements");
-    expect(route).toContain("position_x");
-    expect(route).toContain("position_y");
-    // content fields not bulk-rewritten on relocate
-    expect(route).toMatch(/Preserve span\/shape|position-only/i);
-  });
 
   it("pure module reuses minimap isolation constant", () => {
     const src = fs.readFileSync(

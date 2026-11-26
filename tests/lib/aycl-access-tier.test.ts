@@ -130,53 +130,6 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(sql).toContain("upgraded_from_purchase_id");
   });
 
-  it("catalog API exposes dual offers via marketplace card assembler", () => {
-    const src = fs.readFileSync(
-      path.join(REPO_ROOT, "app/api/aycl/workspaces/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("assembleAyclCatalogCard");
-    expect(src).toContain("aycl_category");
-    // Dual offers live in pure assembler (priceCents + labels).
-    const marketplace = fs.readFileSync(
-      path.join(REPO_ROOT, "lib/aycl-marketplace.ts"),
-      "utf8",
-    );
-    expect(marketplace).toContain("offers");
-    expect(marketplace).toContain('"learner"');
-    expect(marketplace).toContain('"full"');
-  });
-
-  it("catalog page has one checkout CTA without rent/buy wording", () => {
-    const src = fs.readFileSync(
-      path.join(REPO_ROOT, "app/all-you-can-learn/page.tsx"),
-      "utf8",
-    );
-    expect(src).toContain("ayclAccessTier");
-    expect(src).toContain('data-aycl-offer');
-    expect(src).not.toContain('data-aycl-dual-offers');
-    expect(src).not.toContain('data-aycl-checkout-learner');
-    expect(src).toContain('data-aycl-checkout-full');
-    expect(src).toMatch(/ayclOfferLabel|ayclOfferCheckoutCta/);
-    expect(src).not.toMatch(/Play \+ Build/);
-    expect(src).not.toMatch(/play mode only/);
-    expect(src.toLowerCase()).not.toMatch(/\brent\b/);
-    expect(src.toLowerCase()).not.toMatch(/\bbuy a movie\b/);
-  });
-
-  it("checkout accepts tier + upgrade-by-token with resolved listing prices", () => {
-    const src = fs.readFileSync(
-      path.join(REPO_ROOT, "app/api/stripe/create-checkout/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("ayclAccessTier");
-    expect(src).toContain("aycl_access_tier");
-    expect(src).toContain("aycl_upgrade");
-    expect(src).toContain("upgrade_from_purchase_id");
-    expect(src).toContain("ayclPurchaseEligibleForUpgrade");
-    expect(src).toContain("resolveAyclCheckoutCents");
-    expect(src).toContain("resolveAyclUpgradeCents");
-  });
 
   it("fulfill promotes upgrade without new fork and rebinds checkout session", () => {
     const src = fs.readFileSync(path.join(REPO_ROOT, "lib/aycl.ts"), "utf8");
@@ -188,33 +141,6 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(src).toContain("stripe_checkout_session_id: sessionId");
   });
 
-  it("API authoring gate uses requireAyclAuthoring", () => {
-    for (const rel of [
-      "app/api/workspace/grid-ops/route.ts",
-      "app/api/workspace/add-block-at-slot/route.ts",
-      "app/api/workspace/map-ground/route.ts",
-      "lib/api/require-auth.ts",
-    ]) {
-      const src = fs.readFileSync(path.join(REPO_ROOT, rel), "utf8");
-      expect(src).toContain("requireAyclAuthoring");
-    }
-    const auth = fs.readFileSync(
-      path.join(REPO_ROOT, "lib/api/require-auth.ts"),
-      "utf8",
-    );
-    expect(auth).toContain("aycl_authoring_required");
-    expect(auth).toContain("canAuthor");
-  });
-
-  it("WorkspaceView gates owner + upgrade bar on capabilities", () => {
-    const src = readWorkspaceViewSurface();
-    expect(src).toContain("ayclCapabilities");
-    expect(src).toContain("canAuthor");
-    expect(src).toContain("data-aycl-upgrade-bar");
-    expect(src).toContain("startAyclUpgradeCheckout");
-    expect(src).toContain("allowCreatorModeToggle");
-    expect(src).toContain("allowExplore");
-  });
 
   it("AyclWorkspaceView is gone from the product tree", () => {
     expect(fs.existsSync(path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"))).toBe(

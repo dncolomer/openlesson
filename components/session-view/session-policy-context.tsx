@@ -41,6 +41,12 @@ import {
 } from "@/lib/session-policy-infer";
 import { sessionPolicySnapshot } from "@/lib/session-policy-score";
 import type { SessionPolicyRecord } from "@/lib/session-policy-store";
+import {
+  appendSessionPowLog,
+  isSessionDeveloperModeShortcut,
+  sessionPowLogEntriesFromCanvas,
+  type SessionPowLogEntry,
+} from "@/lib/session-pow-log";
 import { SessionCommandBridgeProvider } from "@/components/session-view/session-command-bridge";
 import type { SessionMarkMode, SessionMarkState } from "@/lib/session-marks";
 
@@ -91,6 +97,21 @@ const InferenceContext = createContext<readonly SessionPolicyInference[]>([]);
 const SuggestionContext = createContext<string | null>(null);
 const RestoreContext = createContext<((record: SessionPolicyRecord) => void) | null>(null);
 
+export type SessionDeveloperHud = {
+  enabled: boolean;
+  entries: readonly SessionPowLogEntry[];
+  toggle: () => void;
+};
+
+const EMPTY_POW_LOG: readonly SessionPowLogEntry[] = [];
+function toggleDeveloperNowhere() {}
+const IDLE_DEVELOPER_HUD: SessionDeveloperHud = {
+  enabled: false,
+  entries: EMPTY_POW_LOG,
+  toggle: toggleDeveloperNowhere,
+};
+const DeveloperHudContext = createContext<SessionDeveloperHud | null>(null);
+
 export type SessionFieldReveal = {
   revealedIds: ReadonlySet<string> | null;
   currentIds: readonly string[];
@@ -129,6 +150,9 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [fieldReveal, setFieldReveal] = useState<SessionFieldReveal>(EMPTY_FIELD_REVEAL);
   const [proofVersion, setProofVersion] = useState(0);
+  const [developerMode, setDeveloperMode] = useState(false);
+  const [powLog, setPowLog] = useState<readonly SessionPowLogEntry[]>([]);
+  const powLogIdRef = useRef(0);
   const publishReveal = useCallback((next: SessionFieldReveal | null) => {
     setFieldReveal(next ?? EMPTY_FIELD_REVEAL);
   }, []);
@@ -176,8 +200,36 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
     if (!mapped.length) return;
     const pending = proofRef.current.concat(mapped);
     proofRef.current = pending.length > 200 ? pending.slice(-200) : pending;
+    const logged = sessionPowLogEntriesFromCanvas(events, {
+      fromId: powLogIdRef.current,
+    });
+    powLogIdRef.current = logged.nextId;
+    if (logged.entries.length) {
+      setPowLog((current) => appendSessionPowLog(current, logged.entries));
+    }
     setProofVersion((version) => version + 1);
   }, []);
+  const toggleDeveloperMode = useCallback(() => {
+    setDeveloperMode((on) => !on);
+  }, []);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isSessionDeveloperModeShortcut(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      toggleDeveloperMode();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [toggleDeveloperMode]);
+  const developerHud = useMemo<SessionDeveloperHud>(
+    () => ({
+      enabled: developerMode,
+      entries: powLog,
+      toggle: toggleDeveloperMode,
+    }),
+    [developerMode, powLog, toggleDeveloperMode],
+  );
   const publishPrepare = useCallback((body: Record<string, unknown> | null) => {
     prepareRef.current = body;
   }, []);
@@ -218,7 +270,9 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
                                 setInferences={setInferences}
                                 setSuggestion={setSuggestion}
                               />
+                              <DeveloperHudContext.Provider value={developerHud}>
                               <SessionCommandBridgeProvider>{children}</SessionCommandBridgeProvider>
+                              </DeveloperHudContext.Provider>
                                 </FieldRevealContext.Provider>
                               </FieldRevealPublishContext.Provider>
                             </SuggestionContext.Provider>
@@ -438,6 +492,11 @@ export function usePublishSessionProof(): (
   events: readonly { toolAction?: unknown; metadata?: unknown }[],
 ) => void {
   return useContext(ProofPublishContext) ?? publishProofNowhere;
+}
+
+/** Off and empty outside the provider. ⌘D / Ctrl+D and the canvas HUD read this. */
+export function useSessionDeveloperHud(): SessionDeveloperHud {
+  return useContext(DeveloperHudContext) ?? IDLE_DEVELOPER_HUD;
 }
 
 export function usePublishSessionPrepareRequest(): (body: Record<string, unknown> | null) => void {

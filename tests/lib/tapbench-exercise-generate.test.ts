@@ -170,7 +170,7 @@ describe("TAPBench exercise generator stays available without mint API", () => {
 
 describe("human TAP + TAP Learning also use LLM domain exercise author", () => {
   it("TAP start uses generateTapExercisePrompt for exercise kind", () => {
-    const start = read("app/api/workspace-tap-score/start/route.ts");
+    const start = read("app/api/verify/session/start/route.ts");
     expect(start).toContain("generateTapExercisePrompt");
     expect(start).toContain("generateTapOpeningQuestion");
   });

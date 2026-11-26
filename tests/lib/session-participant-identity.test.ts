@@ -77,12 +77,12 @@ describe("guest-link + map attribution wiring", () => {
     );
     expect(auth).toContain("user_id: access.guestUserId ? null : access.userId");
     const trace = fs.readFileSync(
-      path.join(ROOT, "app/api/workspace-tap-score/trace/route.ts"),
+      path.join(ROOT, "app/api/verify/session/trace/route.ts"),
       "utf8",
     );
     expect(trace).toContain("authContextFromTapAccess");
     const tapSpeech = fs.readFileSync(
-      path.join(ROOT, "app/api/workspace-tap-score/speech/route.ts"),
+      path.join(ROOT, "app/api/verify/session/speech/route.ts"),
       "utf8",
     );
     expect(tapSpeech).toMatch(/guestUserId \? null/);
@@ -95,21 +95,4 @@ describe("guest-link + map attribution wiring", () => {
     }
   });
 
-  it("TAP live chrome does not render the signed-in identity badge", () => {
-    const tap = readTapScoreSurface();
-    const scout = fs.readFileSync(
-      path.join(ROOT, "components/scout-tap/scout-tap-phases.tsx"),
-      "utf8",
-    );
-    const badge = fs.readFileSync(path.join(ROOT, "components/SessionIdentityBadge.tsx"), "utf8");
-    expect(badge).toContain("data-session-identity-badge");
-    expect(tap).not.toContain("SessionIdentityBadge");
-    expect(scout).not.toContain("SessionIdentityBadge");
-    expect(fs.existsSync(path.join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(
-      false,
-    );
-    expect(fs.existsSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
-    const helios = fs.readFileSync(path.join(ROOT, "lib/useSessionThoughtInterface.ts"), "utf8");
-    expect(helios).not.toContain("SessionIdentityBadge");
-  });
 });

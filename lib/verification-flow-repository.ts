@@ -327,13 +327,15 @@ async function persistCommand(
       prompt: value.result.prompt,
       createdAt: value.result.createdAt,
     };
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from("sessions")
       .select("id, result, user_id")
       .eq("kind", "verify")
       .eq("verify_flow_id", value.result.flowId)
       .eq("identity", value.result.identity)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const existing = existingRows?.[0] ?? null;
     const previous =
       existing?.result && typeof existing.result === "object"
         ? (existing.result as Record<string, unknown>)

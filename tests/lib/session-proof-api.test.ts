@@ -60,16 +60,16 @@ describe("session-scoped PoW and embeddings", () => {
   });
 
   it("TAP start/complete/chat write unified sessions and record PoW on tap session id", () => {
-    const start = read("app/api/workspace-tap-score/start/route.ts");
+    const start = read("app/api/verify/session/start/route.ts");
     expect(start).toContain("insertGuestSession");
     expect(start).toContain("updateGuestSession");
     expect(start).not.toContain(".from(write.table)");
     expect(start).not.toContain(".from(access.sessionTable)");
-    const complete = read("app/api/workspace-tap-score/complete/route.ts");
+    const complete = read("app/api/verify/session/complete/route.ts");
     expect(complete).toContain("insertGuestSession");
     expect(complete).toContain("updateGuestSession");
     expect(complete).toContain("tapProofSessionId");
-    const chat = read("app/api/workspace-tap-score/chat/route.ts");
+    const chat = read("app/api/verify/session/chat/route.ts");
     expect(chat).toContain("updateGuestSession");
     expect(chat).toContain("tapProofSessionId");
     expect(chat).not.toContain('jsonError(400, "workspaceId is required")');

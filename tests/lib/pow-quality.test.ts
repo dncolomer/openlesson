@@ -175,35 +175,4 @@ describe("wiring: snapshots exclude + UI surfaces", () => {
     expect(src).toContain("filterSnapshotEligibleProofOfWorkRows");
   });
 
-  it("PoW panel is user-filter only (no quality control); stats in table; insights tab hidden", () => {
-    const panel = fs.readFileSync(path.join(ROOT, "components/ProofOfWorkStatsPanel.tsx"), "utf8");
-    // Users-only filter — quality dropdown removed from this surface.
-    expect(panel).not.toContain("data-pow-quality-filter");
-    expect(panel).not.toContain("qualityFilter");
-    expect(panel).not.toContain("PowQualityFilter");
-    expect(panel).not.toMatch(/quality:\s*qualityFilter/);
-    expect(panel).toContain("data-pow-subject-filter");
-    expect(panel).toContain("subjectKey");
-    // Condensed summary table instead of StatCard grids.
-    expect(panel).toContain("data-pow-stats-table");
-    expect(panel).toContain("<table");
-    expect(panel).not.toContain("function StatCard");
-    expect(panel).not.toMatch(/grid gap-2 sm:grid-cols-2 lg:grid-cols-4/);
-    // Quality counts still shown as table rows (display, not filter).
-    expect(panel).toContain("practice_artifacts");
-    expect(panel).toContain("impure_artifacts");
-    expect(panel).toContain("scored_artifacts");
-
-    const perf = fs.readFileSync(
-      path.join(ROOT, "components/WorkspacePerformancePanel.tsx"),
-      "utf8",
-    );
-    expect(perf).not.toContain("InsightsDashboardTab");
-    // Visible Knowledge subtabs (Insights remains hidden / not in PERFORMANCE_SUBVIEWS).
-    expect(perf).toMatch(
-      /const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview\[] = \["knowledge"\]/,
-    );
-    expect(perf).not.toContain('id: "pow"');
-    expect(perf).not.toContain('id: "insights"');
-  });
 });

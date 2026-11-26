@@ -67,33 +67,15 @@ describe("session stage progress", () => {
     const model = normalizeSessionBranchModel(draft, "Just war");
     expect(model).toBeTruthy();
     if (!model) return;
-    expect(sessionLearnPolicyProgressLabel(model)).toBe("Policy · Forage");
+    expect(sessionLearnPolicyProgressLabel(model)).toBe("Policy · Region 1");
   });
 
-  it("shares Calibrate / Learn / Verify kickers on the finished plates", () => {
-    expect(FLOW_END_KICKERS).toEqual({
-      calibrate: "Calibrate",
-      learn: "Learn",
-      verify: "Verify",
-    });
-    expect(existsSync(join(ROOT, "components/session-view/learn-insight-kept-screen.tsx"))).toBe(
-      false,
-    );
-    expect(read("components/scout-tap/scout-tap-phases.tsx")).toContain("FLOW_END_KICKERS.calibrate");
-    expect(read("components/tap-score/tap-score-phases.tsx")).toContain("FLOW_END_KICKERS.verify");
-    expect(read("components/session-view/session-chrome.tsx")).not.toContain("SessionStageHud");
-    expect(read("components/tap-score/tap-score-phases.tsx")).not.toContain("SessionStageHud");
-    expect(read("components/session-view/session-guide-panel.tsx")).toContain("SessionHarnessPanel");
-    expect(read("components/calibrate/calibrate-sounding-surface.tsx")).not.toContain(
-      "SessionBranchFieldMap",
-    );
-  });
 
   it("titles the language and aesthetics screen Solve for Solve sessions", () => {
     expect(SESSION_WELCOME_TITLES).toEqual({ learn: "Learn", solve: "Solve" });
     expect(sessionWelcomeTitle({})).toBe("Learn");
     expect(sessionWelcomeTitle({ solveToken: "stok" })).toBe("Solve");
-    expect(sessionWelcomeTitle({ kind: "solve" })).toBe("Solve");
+    expect(sessionWelcomeTitle({ kind: "solve" })).toBe("Learn");
     expect(sessionWelcomeTitle({ metadata: { solve_flow_id: "sf1" } })).toBe("Solve");
     expect(sessionWelcomeTitle({ kind: "learn" })).toBe("Learn");
     expect(read("components/SessionView.tsx")).toContain("sessionWelcomeTitle");

@@ -52,7 +52,7 @@ describe("flow link labels", () => {
       }),
     ).toBe("ai_use");
     expect(flowLinkPublicPath("verification", "abc")).toBe("/v/abc");
-    expect(flowLinkPublicPath("solve", "abc")).toBe("/s/abc");
+    expect(flowLinkPublicPath("solve", "abc")).toBe("/v/abc");
     expect(
       knowledgeRegionPointKind({ origin: "human", identity: "K4M9Q2" }),
     ).toBe("analysis");
@@ -137,25 +137,4 @@ describe("flow link labels", () => {
     expect(flowLinkLabelFromMetadata({ flowLinkLabel: "reference" })).toBe("reference");
   });
 
-  it("keeps dashboard add/remove link actions and the flow-page UI", () => {
-    const route = readFileSync(join(root, "app/api/dashboard/flows/[id]/route.ts"), "utf8");
-    expect(route).toContain('action === "addLink"');
-    expect(route).toContain('action === "removeLink"');
-    expect(route).toContain("listFlowLinksForFlow");
-    const page = readFileSync(join(root, "components/product-flow/product-flow-page.tsx"), "utf8");
-    expect(page).toContain("FlowPublicLinks");
-    const chrome = readFileSync(
-      join(root, "components/product-flow/copy-flow-url-button.tsx"),
-      "utf8",
-    );
-    expect(chrome).toContain("data-flow-links");
-    expect(chrome).toContain("data-flow-link-add");
-    expect(chrome).toContain("Add link");
-    const migration = readFileSync(
-      join(root, "supabase/migrations/20261121200000_flow_links_and_embedding_label.sql"),
-      "utf8",
-    );
-    expect(migration).toContain("create table if not exists public.flow_links");
-    expect(migration).toContain("add column if not exists link_label text");
-  });
 });

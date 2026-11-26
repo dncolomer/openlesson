@@ -67,19 +67,19 @@ describe("workspace create modes", () => {
     expect(parseWorkspaceCreateMode("knowledge_region")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("knowledge-region")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("knowledgeRegion")).toBe("knowledge_region");
-    expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
+    expect(workspaceKindForCreateMode("knowledge_region")).toBe("standard");
     expect(assertApiCreateMode("knowledge_region").ok).toBe(false);
-    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
+    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/protocols");
   });
 
   it("calibration create is a UI mode, yields zero blocks, and persists the calibration kind", () => {
     expect(parseWorkspaceCreateMode("calibration")).toBe("calibration");
     expect(parseWorkspaceCreateMode("calibrate")).toBe("calibration");
     expect(parseWorkspaceCreateMode("calibration_workspace")).toBe("calibration");
-    expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
-    expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
+    expect(workspaceKindForCreateMode("calibration")).toBe("standard");
+    expect(workspaceKindForCreateMode("knowledge_region")).toBe("standard");
     expect(assertApiCreateMode("calibration").ok).toBe(false);
-    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
+    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/protocols");
   });
 
   it("template path composes topic resources + starting size into generate input", () => {

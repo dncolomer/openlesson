@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
+import { SessionPowLogOverlay } from "@/components/session-view/session-pow-log-overlay";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 
 function useNarrowViewport(enabled: boolean): boolean {
@@ -74,6 +75,7 @@ export function SessionWorkSurface({
         className={`relative z-0 min-h-0 min-w-0 overflow-hidden ${stacked ? "order-1 h-[58%] w-full flex-none" : "order-2 flex-1"}`}
       >
         <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col">{stage}</div>
+        <SessionPowLogOverlay />
       </div>
     </div>
   );

@@ -184,10 +184,10 @@ describe("Practice topic language structural wiring", () => {
   });
 
   it("topics + start API routes pass conversationLanguage into Practice generators", () => {
-    const topics = read("app/api/workspace-tap-score/topics/route.ts");
+    const topics = read("app/api/verify/session/topics/route.ts");
     expect(topics).toMatch(/generateTapStartingTopics\([\s\S]*conversationLanguage/);
 
-    const start = read("app/api/workspace-tap-score/start/route.ts");
+    const start = read("app/api/verify/session/start/route.ts");
     expect(start).toMatch(/generateTapOpeningQuestion\([\s\S]*practice[\s\S]*conversationLanguage/);
     expect(start).toMatch(/generateTapExercisePrompt\([\s\S]*conversationLanguage/);
   });

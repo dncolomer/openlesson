@@ -413,14 +413,6 @@ describe("custom aesthetic surfaces", () => {
     expect(migration).toContain("org-aesthetics");
   });
 
-  it("WorkspaceView selects its image with selectSurfaceAestheticImages from the org-aware listing", () => {
-    const workspace = read("components/workspace-view/use-workspace-load.ts");
-    expect(workspace).toContain("fetchAestheticPackages");
-    expect(workspace).toContain("selectSurfaceAestheticImages");
-    expect(workspace).toContain("aestheticImageForId(workspaceId, selection.images)");
-    expect(workspace).not.toMatch(/aestheticImageForId\(workspaceId\)/);
-    expect(workspace).not.toContain("public/aesthetics");
-  });
 
   it("the session stage is the work canvas and does not mount an end-turn board", () => {
     const view = read("components/SessionView.tsx");
@@ -473,58 +465,4 @@ describe("custom aesthetic surfaces", () => {
     }
   });
 
-  it("takes session, workspace, and skill-grid images from the org-aware aesthetics source", () => {
-    const sessionChrome = read("components/session-view/use-aesthetic-packages.ts");
-    const workspace = read("components/workspace-view/use-workspace-load.ts");
-    const skillGrid = read("components/BlockSkillGrid.tsx");
-    const sessionView = read("components/session-view/use-session-field.ts");
-    const aestheticsApi = read("app/api/aesthetics/route.ts");
-    const covers = read("lib/workspace-image.ts");
-
-    for (const source of [sessionChrome, workspace, skillGrid]) {
-      expect(source).toContain("fetchAestheticPackages");
-      expect(source).not.toContain("public/aesthetics");
-    }
-
-    const dock = read("components/session-view/learn-work-dock-bar.tsx");
-    const map = read("components/block-skill-grid/map-world-layer.tsx");
-    expect(existsSync(join(ROOT, "components/session-view/learn-turn-insight-craft.tsx"))).toBe(
-      false,
-    );
-    expect(workspace).toContain("selectSurfaceAestheticImages");
-    expect(workspace).toContain("aestheticImageForId(workspaceId, selection.images)");
-    expect(workspace).not.toMatch(/aestheticImageForId\(workspaceId\)/);
-    expect(dock).toContain("useSurfaceAestheticImages");
-    expect(dock).toContain('surface.source === "fallback"');
-    expect(dock).toContain("FALLBACK_AESTHETIC_IMAGES");
-    expect(map).toContain("useSurfaceAestheticImages");
-    expect(map).not.toContain("FALLBACK_AESTHETIC_IMAGES");
-    expect(map).not.toContain("public/aesthetics");
-
-    expect(sessionView).toContain("assignIleWorkAestheticImages");
-    expect(sessionView).toContain("chromeSelectedAesthetic?.images");
-    expect(sessionView).not.toContain("public/aesthetics");
-
-    expect(aestheticsApi).toContain("decideActiveAestheticPool");
-    expect(aestheticsApi).toContain("aestheticPackageFromCustomUrls");
-    expect(aestheticsApi).toContain('path.join(process.cwd(), "public", "aesthetics")');
-    expect(aestheticsApi).toContain('decision.source === "custom"');
-
-    expect(covers).toContain("decideActiveAestheticPool");
-    expect(covers).toContain("pickWorkspaceCoverFromPool");
-
-    const dashboard = readDashboardSurface();
-    expect(dashboard).toContain("fetchAestheticPackages");
-    expect(dashboard).toContain("coverImagePool={workspaceCoverPool}");
-    expect(dashboard).toContain("imagePool={coverImagePool}");
-    expect(dashboard).toContain("featuredCoverPool");
-    expect(read("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain("public/aesthetics");
-    // No new control that chooses a named pack versus the custom set.
-    expect(covers).not.toContain("Greco-futurism");
-    expect(sessionChrome).toContain("selectedAestheticId");
-    expect(sessionChrome).toContain("pickRandomAestheticPackage");
-    expect(read("components/session-view/session-welcome-modal.tsx")).not.toContain("AestheticPicker");
-    expect(read("components/AestheticPicker.tsx")).not.toContain("custom versus");
-    expect(read("components/OrganizationDashboardTab.tsx")).not.toContain("Greco-futurism");
-  });
 });

@@ -36,26 +36,7 @@ describe("Goals workspace section registry", () => {
   });
 });
 
-describe("Settings identity has no goal field", () => {
-  it("WorkspaceIdentitySettings does not expose workspace_goal editor", () => {
-    const src = readFileSync(
-      join(ROOT, "components/WorkspaceIdentitySettings.tsx"),
-      "utf8",
-    );
-    expect(src).not.toContain("data-workspace-goal-settings");
-    expect(src).not.toContain("workspace-settings-goal");
-    expect(src).not.toContain("editGoal");
-    expect(src).not.toContain("workspace_goal:");
-  });
-});
-
 describe("Goals tab + block goals drawer", () => {
-  it("WorkspaceGoalsPanel ships with CRUD data attributes", () => {
-    expect(existsSync(join(ROOT, "components/WorkspaceGoalsPanel.tsx"))).toBe(true);
-    const src = readFileSync(join(ROOT, "components/WorkspaceGoalsPanel.tsx"), "utf8");
-    expect(src).toContain("data-workspace-goals-panel");
-    expect(src).toContain("/api/workspace/goals");
-  });
 
   it("WorkspaceView does not mount Goals tab panel", () => {
     const view = readWorkspaceViewSurface();
@@ -63,21 +44,6 @@ describe("Goals tab + block goals drawer", () => {
     expect(view).not.toContain("data-workspace-goals-host");
   });
 
-  it("block-detail manual drawers do not mount a Goals drawer", () => {
-    const pane = readFileSync(
-      join(ROOT, "components/WorkspaceBlockDetailPane.tsx"),
-      "utf8",
-    );
-    expect(pane).not.toContain("BlockGoalsPanel");
-    expect(pane).not.toContain('drawerId="goals"');
-    expect(pane).not.toContain("data-block-goals-drawer");
-    const addPane = readFileSync(
-      join(ROOT, "components/WorkspaceAddBlockPane.tsx"),
-      "utf8",
-    );
-    expect(addPane).not.toContain("BlockGoalsPanel");
-    expect(addPane).not.toContain('drawerId="goals"');
-  });
 });
 
 describe("Knowledge embeddings surface", () => {

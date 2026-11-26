@@ -96,7 +96,7 @@ describe("structural dual history + wider shell", () => {
   });
 
   it("trace route allowlists system2 remove", () => {
-    const route = read("app/api/workspace-tap-score/trace/route.ts");
+    const route = read("app/api/verify/session/trace/route.ts");
     // Extract only the SYSTEM1_ACTIONS set block
     const s1 = route.match(/const SYSTEM1_ACTIONS = new Set<TapSystem1Action>\(\[([\s\S]*?)\]\)/);
     const s2 = route.match(/const SYSTEM2_ACTIONS = new Set<TapSystem2Action>\(\[([\s\S]*?)\]\)/);

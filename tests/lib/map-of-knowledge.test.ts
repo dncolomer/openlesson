@@ -680,30 +680,4 @@ describe("map-of-knowledge product surfaces", () => {
     expect(groups[1].regions.map((r) => r.name)).toEqual(["Quantum"]);
   });
 
-  it("removes group toggle UX and public fork gates from shipped surfaces", () => {
-    const access = readFileSync(join(root, "components/WorkspaceAccessSettings.tsx"), "utf8");
-    const identity = readFileSync(join(root, "components/WorkspaceIdentityPanel.tsx"), "utf8");
-    const view = readWorkspaceViewSurface();
-    const sessionItem = readFileSync(join(root, "components/SessionItem.tsx"), "utf8");
-    const groupRoute = readFileSync(join(root, "app/api/workspaces/[id]/group/route.ts"), "utf8");
-    const groupStart = readFileSync(
-      join(root, "app/api/group-workspace/start-session/route.ts"),
-      "utf8",
-    );
-
-    expect(access).not.toContain("makeGroupPlan");
-    expect(access).not.toContain("is_group");
-    expect(access).not.toContain("/group");
-    expect(identity).not.toContain("makeGroupPlan");
-    expect(identity).not.toContain("showGroupParticipant");
-    expect(identity).not.toContain("GitBranch");
-    expect(view).not.toContain("needsFork");
-    expect(view).not.toContain("makeGroupPlan");
-    expect(view).not.toContain("group-workspace/start-session");
-    expect(view).not.toContain("PublicWorkspaceFork");
-    expect(sessionItem).not.toContain("PublicWorkspaceForkCallout");
-    expect(sessionItem).not.toContain("group-workspace/start-session");
-    expect(groupRoute).toContain("410");
-    expect(groupStart).toContain("410");
-  });
 });

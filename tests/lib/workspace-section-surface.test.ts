@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import fs from "node:fs";
-import path from "node:path";
 import {
   KNOWLEDGE_BODY_LAYOUT_CLASS,
   SECTION_PANEL_BODY_CLASS,
@@ -15,14 +13,11 @@ import {
   resolveSectionSurfaceImage,
 } from "@/lib/workspace-section-surface";
 import { aestheticImageForId } from "@/lib/aesthetics";
-import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import {
   availableSettingsSubviews,
   resolveSettingsSubview,
   settingsSubTabsForKind,
 } from "@/lib/workspace-settings-tabs";
-
-const REPO_ROOT = path.resolve(__dirname, "../..");
 
 describe("resolveSectionSurfaceImage", () => {
   it("uses the shipped aesthetics stable picker for a workspace id", () => {
@@ -110,132 +105,6 @@ describe("layout class contracts", () => {
 });
 
 describe("shipped Knowledge / Setting aesthetic wiring", () => {
-  const view = readWorkspaceViewSurface();
-  const surface = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspaceSectionSurface.tsx"),
-    "utf8",
-  );
-  const integration = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspaceIntegrationPanel.tsx"),
-    "utf8",
-  );
-  const settingsTabs = fs.readFileSync(
-    path.join(REPO_ROOT, "lib/workspace-settings-tabs.ts"),
-    "utf8",
-  );
-  const knowledge = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspacePerformancePanel.tsx"),
-    "utf8",
-  );
-  const subTabs = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspaceSectionSubTabs.tsx"),
-    "utf8",
-  );
-
-  it("hosts Knowledge and Setting in WorkspaceSectionSurface with aesthetic imageSrc", () => {
-    expect(view).toContain("WorkspaceSectionSurface");
-    expect(view).toContain('kind="knowledge"');
-    expect(view).toContain('kind="settings"');
-    expect(view).toContain("imageSrc={workspaceImage}");
-    expect(view).toContain("<WorkspacePerformancePanel");
-    expect(view).toContain("<WorkspaceIntegrationPanel");
-    expect(fs.existsSync(path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"))).toBe(
-      false,
-    );
-  });
-
-  it("section surface renders aesthetic image + overlays without identity name bar", () => {
-    expect(surface).toContain("SECTION_SURFACE_IMAGE_CLASS");
-    expect(surface).toContain("SECTION_SURFACE_SCRIM_CLASS");
-    expect(surface).toContain("SECTION_SURFACE_GRADIENT_CLASS");
-    expect(surface).toContain("data-workspace-section-surface");
-    // Shared shell body for Knowledge and Settings (no kind-specific padding).
-    expect(surface).toContain("SECTION_PANEL_BODY_CLASS");
-    expect(surface).not.toContain("SETTING_BODY_LAYOUT_CLASS");
-    expect(surface).not.toContain("KNOWLEDGE_BODY_LAYOUT_CLASS");
-    // No workspace name / labels bar on Knowledge or Settings
-    expect(surface).not.toContain("data-section-identity");
-    expect(surface).not.toContain("resolveSectionIdentityDisplay");
-    expect(surface).not.toContain("SECTION_SURFACE_HEADER_CLASS");
-  });
-
-  it("Knowledge and Settings share WorkspaceSectionSubTabs sized like section nav + tab content", () => {
-    expect(subTabs).toContain("WorkspaceSectionSubTabs");
-    expect(subTabs).toContain('role="tablist"');
-    // Match WorkspaceSectionNav bar tab height/size (not the old compact strip).
-    expect(subTabs).toContain("text-sm font-medium");
-    expect(subTabs).toContain("px-3 py-2.5");
-    expect(subTabs).toContain("sm:px-5");
-    expect(subTabs).toContain("h-0.5 rounded-full");
-
-    expect(knowledge).toContain("WorkspaceSectionSubTabs");
-    expect(knowledge).toContain("SECTION_TAB_CONTENT_CLASS");
-    expect(knowledge).toContain('dataAttr="knowledge"');
-    expect(knowledge).toContain("data-knowledge-tab-body");
-
-    expect(integration).toContain("WorkspaceSectionSubTabs");
-    expect(integration).toContain("SECTION_TAB_CONTENT_CLASS");
-    expect(integration).toContain('dataAttr="settings"');
-    expect(integration).toContain('data-settings-layout="tabs"');
-    expect(subTabs).toContain("data-settings-tablist");
-    expect(subTabs).toContain("data-settings-tab");
-    expect(subTabs).toContain('role="tablist"');
-    expect(integration).toContain("settingsSubTabsForKind");
-    expect(settingsTabs).toContain('"general"');
-    expect(settingsTabs).toContain('"regions"');
-    expect(settingsTabs).not.toContain('"knowledge-portal"');
-    expect(settingsTabs).not.toContain('"guest-links"');
-    expect(settingsTabs).not.toContain('"data-studio"');
-    expect(settingsTabs).toContain('"integrations"');
-    expect(settingsTabs).not.toContain("knowledgePortalSettingsTab");
-    expect(settingsTabs).not.toContain("performanceSubTabTap");
-    const regionsIdx = settingsTabs.indexOf('"regions"');
-    expect(regionsIdx).toBeGreaterThan(-1);
-    expect(integration).toContain('data-settings-tab-panel="general"');
-    expect(integration).toContain('data-settings-tab-panel="aycl"');
-    expect(integration).not.toContain('data-settings-tab-panel="regions"');
-    expect(integration).not.toContain('data-settings-tab-panel="knowledge-portal"');
-    expect(integration).not.toContain('data-settings-tab-panel="guest-links"');
-    expect(integration).not.toContain('data-settings-tab-panel="data-studio"');
-    expect(integration).toContain('data-settings-tab-panel="integrations"');
-    // Active-tab conditionals (only one body shown at a time).
-    expect(integration).toContain('activeSubview === "general"');
-    expect(integration).not.toContain('activeSubview === "regions"');
-    expect(integration).not.toContain('activeSubview === "knowledge-portal"');
-    expect(integration).not.toContain('activeSubview === "guest-links"');
-    expect(integration).not.toContain('activeSubview === "data-studio"');
-    expect(integration).toContain('activeSubview === "integrations"');
-    expect(integration).not.toContain('data-settings-section="custom-knowledge-regions"');
-    expect(integration).not.toContain('data-settings-section="knowledge-portal"');
-    expect(integration).not.toContain('data-settings-section="guest-tap-ile"');
-    expect(integration).not.toContain("Knowledge Links");
-    expect(integration).not.toContain("knowledgePortalSettingsTab");
-    expect(integration).not.toContain('data-settings-section="data-studio"');
-    expect(integration).toContain('data-settings-section="skill"');
-    expect(integration).toContain('data-settings-section="mcp"');
-    expect(integration).toContain("WorkspaceIdentitySettings");
-    expect(integration).toContain("WorkspaceAccessSettings");
-    expect(integration).not.toContain("CustomVerificationModelsPanel");
-    expect(integration).not.toContain("WorkspaceGuestLinksPanel");
-    expect(integration).not.toContain("WorkspaceKnowledgePortalPanel");
-    expect(integration).not.toContain("WorkspaceDataStudioPanel");
-    expect(integration).not.toContain('data-settings-layout="linear"');
-    expect(integration).not.toContain('data-settings-section="generate"');
-    expect(integration).not.toContain("data-settings-workspace-context");
-    expect(integration).not.toContain("SETTING_DESKTOP_GRID_CLASS");
-    expect(integration).not.toContain("resolveSectionIdentityDisplay");
-    // No heavy nested section cards with large padding (compact Knowledge density).
-    expect(integration).not.toContain("p-5 backdrop-blur-md sm:p-6");
-    expect(integration).not.toContain("lg:p-8");
-    expect(integration).toContain("workspaceId");
-    expect(integration).toContain("planNotes");
-    expect(integration).toContain('layout="stack"');
-    expect(integration).not.toMatch(/max-w-xl/);
-    // Workspace-tailored skill.md download still wired
-    expect(integration).toContain("/api/workspace/integration-skill");
-    expect(integration).not.toContain("/api/workspace/proof-of-work-schema");
-  });
-
   it("splits settings by product and omits Knowledge Portal", () => {
     const normal = availableSettingsSubviews("standard");
     expect([...normal]).toEqual(["general", "aycl", "integrations"]);

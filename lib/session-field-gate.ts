@@ -27,10 +27,10 @@ export function sessionActionPricesVisible(mode: SessionMarkMode | string | null
 }
 
 const FIELD_LOAD_STAGES = [
-  { at: 0, label: "Reading the session material." },
-  { at: 4_000, label: "Writing the regions." },
-  { at: 12_000, label: "Writing the avenues." },
-  { at: 24_000, label: "Writing the inquiries." },
+  { at: 0, label: "Reading the protocol." },
+  { at: 4_000, label: "Opening the canvas." },
+  { at: 12_000, label: "Preparing the run." },
+  { at: 24_000, label: "Almost ready." },
 ] as const;
 
 /** Progress while the single field request is in flight. Ready is 100. Failed names the refusal. */
@@ -40,7 +40,7 @@ export function sessionFieldLoadProgress(input: {
   error?: string | null;
 }): { percent: number; label: string } {
   if (input.status === "ready") {
-    return { percent: 100, label: "The field is ready." };
+    return { percent: 100, label: "The run is ready." };
   }
   if (input.status === "failed") {
     const label = input.error?.trim() || "The field could not be prepared.";

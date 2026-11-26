@@ -51,6 +51,20 @@ describe("verification flow memory shared by public routes", () => {
     expect(repository).toContain("globalThis");
     expect(repository).toContain("__openlessonVerificationFlowRepository");
     expect(repository).not.toMatch(/^let memory = emptyVerificationState\(\);/m);
+    expect(repository).toContain('.order("created_at", { ascending: false })');
+    expect(repository).toContain(".limit(1)");
+    expect(repository).not.toContain(
+      '.eq("identity", value.result.identity)\n      .maybeSingle()',
+    );
+
+    const identityForm = readFileSync(
+      join(root, "components/product-flow/product-flow-identity-form.tsx"),
+      "utf8",
+    );
+    expect(identityForm).toContain("You can run it again with the same identity.");
+    expect(identityForm).not.toContain("A duplicate does not start.");
+    const runner = readFileSync(join(root, "components/VerificationFlowRunner.tsx"), "utf8");
+    expect(runner).not.toContain("That identity is already used");
 
     const flow = readFileSync(join(root, "components/tap-score/use-tap-score-flow.ts"), "utf8");
     const localEnd = flow.slice(

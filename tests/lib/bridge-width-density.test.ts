@@ -79,24 +79,4 @@ describe("bridge independent width + density", () => {
     expect(selectCorridorByDensity(candidates, spine, 100)).toHaveLength(4);
   });
 
-  it("UI exposes two range inputs (width + density)", () => {
-    const pane = readCombineBlocksSurface();
-    expect(pane).toContain("data-bridge-width-input");
-    expect(pane).toContain("data-bridge-density-input");
-    expect(pane).toContain("setBridgeWidth");
-    expect(pane).toContain("setBridgeDensity");
-    expect(pane).toMatch(/width:\s*bridgeWidth/);
-    expect(pane).toMatch(/density:\s*bridgeDensity/);
-
-    mkdirSync(SCRATCH, { recursive: true });
-    writeFileSync(
-      join(SCRATCH, "bridge-width-density.log"),
-      [
-        "bridge-width-density",
-        "width_input=" + pane.includes("data-bridge-width-input"),
-        "density_input=" + pane.includes("data-bridge-density-input"),
-        "resolve_independent=true",
-      ].join("\n") + "\n",
-    );
-  });
 });

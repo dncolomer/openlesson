@@ -12,7 +12,6 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
-import { WorkspaceLoading } from "@/components/workspace-view/workspace-chrome";
 import { ConsolePage } from "@/components/ui/console-frame";
 import { ILE_WORK_CANVAS_STROKE_COLOR } from "@/lib/learn-work-canvas";
 
@@ -178,7 +177,7 @@ describe("console theme shells", () => {
     expect(html.indexOf("Kicker")).toBeLessThan(html.indexOf("Finished title"));
   });
 
-  it("renders the public marketing shell and the workspace loading shell as dark square frames", () => {
+  it("renders the public marketing shell as a dark square frame", () => {
     const publicHtml = renderToStaticMarkup(
       createElement(MarketingPageShell, null, createElement("h1", null, "Public title")),
     );
@@ -190,29 +189,12 @@ describe("console theme shells", () => {
     expect(publicHtml).toContain("data-console-frame-label");
     expect(publicHtml).not.toMatch(/rounded-full/);
 
-    const workspaceHtml = renderToStaticMarkup(
-      createElement(WorkspaceLoading, { message: "Loading workspace" }),
-    );
-    expectConsoleChrome(workspaceHtml);
-    expect(workspaceHtml).toContain("data-workspace-shell");
-    expect(workspaceHtml).toContain("Loading workspace");
-
     const home = read("app/page.tsx");
-    const workspace = read("components/WorkspaceView.tsx");
-    const chrome = read("components/workspace-view/workspace-chrome.tsx");
-    expect(chrome).not.toContain("data-verification-workspace-shell");
-    expect(chrome).not.toContain("data-calibration-workspace-shell");
-    expect(chrome).toContain('data-workspace-product-shell="learning"');
     expect(read("components/marketing/landing-heroes.tsx")).toContain("<PublicConsoleWash />");
     expect(read("components/marketing/MarketingChrome.tsx")).toContain("<PublicConsoleWash />");
     expect(home).toContain("border-white/40");
     expect(home).not.toContain("rounded-full");
     expect(home).not.toContain("14,116,144");
-    expect(workspace).toContain('data-console-frame=""');
-    expect(workspace).toContain("SessionConsoleMarks");
-    expect(workspace).toContain("border-white/40");
-    expect(workspace).not.toContain("rounded-full");
-    expect(workspace).not.toContain("14,116,144");
   });
 
   it("renders an auth-style page shell with the console frame and its title", () => {
@@ -268,10 +250,11 @@ describe("console theme shells", () => {
     expect(shell).not.toContain("data-console-frame-label");
     expect(shell).not.toContain("dashboardFrameLabel");
 
+    expect(read("app/community/page.tsx")).toContain("RetiredProductPage");
+    expect(read("app/community-events/page.tsx")).toContain("MarketingPageShell");
     for (const rel of [
       "app/pricing/page.tsx",
       "app/legal/page.tsx",
-      "app/community/page.tsx",
       "app/pricing/success/page.tsx",
       "components/ScienceWhitepaperPage.tsx",
       "app/invite/[token]/page.tsx",
@@ -298,24 +281,6 @@ describe("console theme shells", () => {
     ]) {
       expect(existsSync(join(ROOT, rel)), rel).toBe(false);
     }
-  });
-
-  it("sits workspace tabs flush under the navbar", () => {
-    const view = read("components/WorkspaceView.tsx");
-    expect(view).not.toContain("left-3 top-2");
-    const chrome = read("components/workspace-view/workspace-chrome.tsx");
-    const mapLabelAt = chrome.lastIndexOf("data-console-frame-label");
-    const mapLabel = chrome.slice(mapLabelAt, chrome.indexOf("</p>", mapLabelAt));
-    expect(mapLabel).toContain("absolute left-3 top-3");
-    expect(mapLabel).toContain("Map");
-    expect(mapLabel).not.toContain("px-4 pt-2 sm:px-6");
-    expect(mapLabel).not.toContain("shrink-0");
-    expect(chrome).not.toContain("<Navbar");
-    expect(chrome).toContain("data-workspace-back-dashboard");
-    expect(chrome).toContain("WorkspaceDashboardLink");
-    expect(chrome).not.toContain("border-b border-neutral-800 bg-neutral-950 px-4 py-1.5");
-    expect(chrome).toContain("<WorkspaceSectionNav");
-    expect(read("components/WorkspaceSectionNav.tsx")).toContain("data-workspace-section-nav");
   });
 
   it("leaves insight flags, the listening dot, and stored canvas ink alone", () => {

@@ -119,8 +119,8 @@ const FILE_MAP = {
   "app/api/rabbit-hole/continue/route.ts": "Rabbit Hole plan generator user prompt (not in rg.log)",
   "app/api/v3/pow/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
   "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
-  "app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
+  "app/api/verify/session/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
+  "app/api/verify/session/complete/route.ts": "TAP complete scoring system + user prompts",
   "lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
   "lib/tap-score-traces.ts": "buildTraceScoringInstructions",
   "lib/pow-api/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
@@ -577,7 +577,7 @@ parts.push(
   block(
     "TAP complete proof-of-work upload",
     {
-      File: "`app/api/workspace-tap-score/complete/route.ts`",
+      File: "`app/api/verify/session/complete/route.ts`",
       "Call chain": "`POST /api/workspace-tap-score/complete`",
       Purpose: "Upload tap-transcript proof of work and mark TAP session completed (no inline scoring)",
       "User-overridable": "No",

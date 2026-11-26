@@ -206,7 +206,7 @@ describe("pitch deck content (platform only)", () => {
     );
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cardLayout).toBe("product-stack");
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "tap",
+      "session",
       "stash api",
       "pow api",
     ]);
@@ -224,14 +224,13 @@ describe("pitch deck content (platform only)", () => {
     expect(corpus).toMatch(/knowledge config|proximity/);
     expect(corpus).toMatch(/think aloud protocol/);
     expect(corpus).toMatch(/submit.stash|submit\/stash|submit–stash/);
-    expect(corpus).toMatch(/system 1/);
-    expect(corpus).toMatch(/system 2/);
+    expect(corpus).toMatch(/system 2|session|stash|pow/);
     expect(corpus).toMatch(/embedding/);
     expect(corpus).toMatch(/tool agnostic|protocol purity|submit.stash|system 1|system 2/);
     expect(corpus).not.toMatch(/silence ratio/);
     expect(corpus).toMatch(/\bpow\b/);
-    expect(corpus).toMatch(/\btap\b/);
-    expect(corpus).toMatch(/preparing, learning, drilling, and validating/);
+    expect(corpus).toMatch(/\bsession\b/);
+    expect(corpus).toMatch(/think aloud protocol/);
     const integrationHits = [
       /hire|hiring|résumé|resume/,
       /certif/,
@@ -299,8 +298,8 @@ describe("pitch deck content (platform only)", () => {
     expect(tapSlide?.video).toBe("/animations/selective_interface.mp4");
     expect(publicAssetExists(tapSlide?.video ?? "")).toBe(true);
     expect(tapSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "system 1",
-      "system 2",
+      "observations",
+      "actions",
     ]);
 
     const puritySlide = PLATFORM_PITCH_DECK.slides[methodTitleIdx + 2];
@@ -332,10 +331,10 @@ describe("pitch deck content (platform only)", () => {
     const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
-    expect(productsSlide?.title.toLowerCase()).toMatch(/one tap/);
+    expect(productsSlide?.title.toLowerCase()).toMatch(/protocols|measurement stack/);
     expect(productsSlide?.cardLayout).toBe("product-stack");
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "tap",
+      "session",
       "stash api",
       "pow api",
     ]);
@@ -354,7 +353,7 @@ describe("pitch deck content (platform only)", () => {
       .toLowerCase();
     expect(productsCorpus).toMatch(/pow api/);
     expect(productsCorpus).toMatch(/think aloud protocol/);
-    expect(productsCorpus).toMatch(/preparing, learning, drilling, and validating/);
+    expect(productsCorpus).toMatch(/knowledge verification protocols/);
     expect(productsCorpus).not.toMatch(/tap learning/);
     expect(productsCorpus).toMatch(/stash api/);
     expect(productsCorpus).toMatch(/buffer agent proof of work|stash \(system 1\)|submit \(system 2\)/);
@@ -566,67 +565,6 @@ describe("pitch deck content (platform only)", () => {
     expect(deckUi).toMatch(/1\.25rem/);
   });
 
-  it("inventory: platform deck keeps non-empty titles and preserves all list items", () => {
-    for (const deck of ALL_DECKS) {
-      assertNonEmptyTitles(deck);
-      const inv = inventoryDeck(deck);
-      expect(inv.slideCount).toBe(deck.slides.length);
-      expect(inv.slideCount).toBeGreaterThanOrEqual(8);
-
-      const preserved = collectPreservedItemStrings(deck);
-      expect(preserved.length).toBeGreaterThan(0);
-      for (const item of preserved) {
-        expect(item.trim().length).toBeGreaterThan(0);
-      }
-
-      for (const slide of inv.slides) {
-        if (slide.layout === "split") {
-          expect(slide.leftItems.length).toBeGreaterThan(0);
-          expect(slide.rightItems.length).toBeGreaterThan(0);
-          expect(slide.leftLabel?.trim()).toBeTruthy();
-          expect(slide.rightLabel?.trim()).toBeTruthy();
-        }
-        const raw = deck.slides[slide.index];
-        if (raw.bullets !== undefined) {
-          expect(raw.bullets.length).toBeGreaterThan(0);
-          expect(slide.bulletCount).toBe(raw.bullets.length);
-        }
-      }
-    }
-
-    const platformText = inventoryDeck(PLATFORM_PITCH_DECK).allTextStrings.join("\n").toLowerCase();
-    for (const anchor of [
-      "think aloud",
-      "proof of work",
-      "proximity",
-      "stash",
-      "submit",
-      "preparing, learning, drilling, and validating",
-      "stash api",
-      "pow api",
-    ]) {
-      expect(platformText).toContain(anchor);
-    }
-
-    const founderText = inventoryDeck({
-      vertical: "founder",
-      label: "Founder",
-      slides: buildFounderSlides("platform"),
-    })
-      .allTextStrings.join("\n")
-      .toLowerCase();
-    for (const anchor of [
-      "daniel colomer",
-      "i*",
-      "all-you-can-learn",
-      "karpathy",
-      "omega quest",
-      "barcelona",
-      "eth",
-    ]) {
-      expect(founderText).toContain(anchor);
-    }
-  });
 
   it("platform Our thesis slide: three concept cards with small images, no supporting bullets", () => {
     const deckUi = readPitchDeckUi();

@@ -67,16 +67,6 @@ describe("canvas-faithful exploration actor", () => {
     expect(walk.embedding.raw.projectedPolicy?.sequence).toEqual(walk.sequence);
   });
 
-  it("keeps calibrate policy null even after occupancy", () => {
-    const walk = runCanvasFaithfulExplorationSample(
-      plan("information-seeking"),
-      "verify",
-      EXPLORATION_STRATEGIES,
-      fixtureModel(),
-    );
-    expect(walk.sequence).toEqual([]);
-    expect(walk.embedding.raw.projectedPolicy).toBeNull();
-  });
 
   it("makes information-seeking visit a costly child", () => {
     const model = fixtureModel();

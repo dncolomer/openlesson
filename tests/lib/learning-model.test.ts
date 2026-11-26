@@ -70,15 +70,4 @@ describe("learning model vocabulary and catalogs", () => {
     ]);
   });
 
-  it("does not let product pages pick a 4/8/16 action catalog", () => {
-    expect(existsSync(join(ROOT, "components/learning-model/LearningModelSizePicker.tsx"))).toBe(
-      false,
-    );
-    expect(read("components/WorkspaceIdentitySettings.tsx")).not.toContain("LearningModelSizePicker");
-    expect(existsSync(join(ROOT, "components/VerificationFlowsPanel.tsx"))).toBe(false);
-    expect(read("components/product-flow/product-flow-wizard.tsx")).not.toContain(
-      "LearningModelSizePicker",
-    );
-    expect(read("app/api/workspaces/[id]/visibility/route.ts")).toContain("learning_model_size");
-  });
 });

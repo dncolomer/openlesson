@@ -286,24 +286,6 @@ describe("stretch settle sequence (preview then commit on end only)", () => {
 });
 
 describe("stretch map UI chrome (structural)", () => {
-  it("sole-select mounts edge and corner stretch targets; multi/unselected omit", () => {
-    const grid = readMapGridSurface();
-    expect(grid).toContain("data-stretch-handle");
-    expect(grid).toContain("stretchBlockFromHandle");
-    // All 8 handles referenced
-    for (const h of STRETCH_HANDLES) {
-      expect(grid).toContain(`"${h}"`);
-    }
-    // Sole-selection gate
-    expect(grid).toMatch(/selectedBlockIds\.length\s*===\s*1|soleStretch|stretchHandles/);
-    // Persist path on pointer up
-    expect(grid).toMatch(/op:\s*"resize"|op:\s*'resize'/);
-    // Move path still present
-    expect(grid).toMatch(/op:\s*"move"|op:\s*'move'/);
-    // No right-pane resize form
-    const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).not.toMatch(/resize|stretch/i);
-  });
 
   it("move/resize settle optimistically with quiet minimap save (no full-map freeze)", () => {
     const grid = readMapGridSurface();

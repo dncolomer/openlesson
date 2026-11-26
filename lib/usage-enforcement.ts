@@ -19,6 +19,7 @@ import {
   loadUsageProfile,
   type UsageProfileRow,
 } from "@/lib/usage-metrics";
+import { listOrganizationMemberIds } from "@/lib/organization/membership-store";
 
 const ORG_BILLING_SELECT =
   "id, plan, subscription_status, current_period_end, extra_lessons, billing_mode, kind, archived_at";
@@ -105,11 +106,7 @@ export async function checkProofOfWorkSubmissionAllowance(
 
   if (entity.source === "organization" && profile.organization_id && periodStart) {
     const admin = createAdminClient();
-    const { data: orgMembers } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("organization_id", profile.organization_id);
-    const memberIds = (orgMembers || []).map((member) => member.id);
+    const memberIds = await listOrganizationMemberIds(admin, profile.organization_id);
     if (memberIds.length > 0) {
       proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
     }

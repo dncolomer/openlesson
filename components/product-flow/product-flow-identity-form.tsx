@@ -28,14 +28,14 @@ export function ProductFlowIdentityForm({
         </p>
         <h1 className="font-serif text-2xl">Identify yourself</h1>
         <p className="text-sm text-neutral-400">
-          Enter a unique string for this protocol. A duplicate does not start.
+          Enter an identity for this protocol. You can run it again with the same identity.
         </p>
         <input
           value={identity}
           onChange={(event) => onIdentityChange(event.target.value)}
           data-verification-identity-input=""
           className="border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
-          placeholder="Unique identity"
+          placeholder="Identity"
           autoComplete="off"
         />
         {error ? <p className="text-sm text-red-300">{error}</p> : null}

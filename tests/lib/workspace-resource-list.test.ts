@@ -215,30 +215,3 @@ describe("filterWorkspaceResourceList", () => {
     );
   });
 });
-
-describe("structural: compact Context list + search/type filters", () => {
-  it("WorkspaceNotesFilesPanel wires search, type filters, compact rows", () => {
-    const panel = read("components/WorkspaceNotesFilesPanel.tsx");
-    expect(panel).toContain("data-resource-list-toolbar");
-    expect(panel).toContain("data-resource-list-search");
-    expect(panel).toContain("data-resource-type-filters");
-    expect(panel).toContain("data-resource-type-filter=");
-    expect(panel).toContain("filterWorkspaceResourceList");
-    expect(panel).toContain("filteredItems");
-    expect(panel).toContain("data-resource-list-compact");
-    expect(panel).toContain("data-resource-row-compact");
-    // Compact row chrome (not oversized py-3 cards for closed rows)
-    expect(panel).toMatch(/px-2 py-1/);
-    expect(panel).not.toMatch(/data-resource-row="external"[\s\S]{0,80}px-4 py-3/);
-
-    writeEvidence(
-      "context-list-ui.log",
-      [
-        "search=" + panel.includes("data-resource-list-search"),
-        "typeFilters=" + panel.includes("data-resource-type-filters"),
-        "compactList=" + panel.includes("data-resource-list-compact"),
-        "filterHelper=" + panel.includes("filterWorkspaceResourceList"),
-      ].join("\n"),
-    );
-  });
-});

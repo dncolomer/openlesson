@@ -159,10 +159,7 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
 
   // Start screen capture
   const start = async (): Promise<boolean> => {
-    console.log("[ScreenCapture] start() called, isActive:", isActive);
-    
     if (isActive) {
-      console.log("[ScreenCapture] Already active, returning true");
       return true;
     }
 
@@ -171,7 +168,6 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
       if (!resolved.mediaDevices) {
         return false;
       }
-      console.log("[ScreenCapture] Requesting getDisplayMedia...", resolved.source);
       const mediaStream = await resolved.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: "monitor", // Prefer full screen
@@ -181,7 +177,6 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
       });
       stream = mediaStream;
       streamOwner = "opener";
-      console.log("[ScreenCapture] Got stream:", stream, "owner:", streamOwner);
 
       // Handle stream ending (user clicked "Stop sharing")
       stream.getVideoTracks()[0].addEventListener("ended", () => {
@@ -198,13 +193,9 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
       }
 
       isActive = true;
-      console.log("[ScreenCapture] Capture started successfully, calling onStatusChange(true)");
       onStatusChange?.(true);
 
-      // Start interval for periodic screenshots
       if (onScreenshotCaptured) {
-        console.log("[ScreenCapture] Setting up screenshot interval");
-        // Take first screenshot after a short delay to ensure video is ready
         setTimeout(takeScreenshot, 1000);
 
         // Then take screenshots at regular intervals

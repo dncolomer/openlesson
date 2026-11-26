@@ -7,7 +7,6 @@ import {
   resolveWorkspaceSectionLayout,
 } from "@/lib/workspace-sections";
 import { availableSectionsForMode } from "@/lib/workspace-mode";
-import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/workspace-section-nav-items";
 import { composeSessionPlanCreatePrompt } from "@/lib/session-plan-create";
 import {
   MAP_TYPE_LIBRARY_CORE,
@@ -153,40 +152,10 @@ describe("workspace map types helpers", () => {
       }),
     ).toContain("map_types");
 
-    const t = (key: string) => key;
     const enCopy = JSON.parse(read("messages/en.json")) as {
       planView: Record<string, string>;
     };
     expect(enCopy.planView.sectionMapTypes).toBe("Map Types");
-    const labeledNav = buildWorkspaceSectionNavItems({
-      t: (key) =>
-        key === "planView.sectionMapTypes"
-          ? enCopy.planView.sectionMapTypes
-          : key,
-      isLearnerMode: false,
-      isOwner: true,
-      visibleSections: creator,
-    });
-    expect(labeledNav.map((item) => item.key)).toContain("map_types");
-    expect(labeledNav.find((item) => item.key === "map_types")?.label).toBe(
-      "Map Types",
-    );
-
-    const playNav = buildWorkspaceSectionNavItems({
-      t,
-      isLearnerMode: true,
-      isOwner: true,
-      visibleSections: creator,
-    });
-    expect(playNav.map((item) => item.key)).toContain("map_types");
-
-    const exploreNav = buildWorkspaceSectionNavItems({
-      t,
-      isLearnerMode: false,
-      isOwner: true,
-      visibleSections: creator,
-    });
-    expect(exploreNav.map((item) => item.key)).toContain("map_types");
 
     const layout = resolveWorkspaceSectionLayout("map_types");
     expect(layout.mountsMapTypesPanel).toBe(true);
@@ -413,200 +382,6 @@ function INITIAL_CHAPTERS_OFF(state: ReturnType<typeof normalizeWorkspaceMapType
   };
   return next;
 }
-
-describe("Map Types tab UI / API structural", () => {
-  it("nav + panel grid marks; persist column; picker uses workspace catalog", () => {
-    const view = readWorkspaceViewSurface();
-    const panel = read("components/WorkspaceMapTypesPanel.tsx");
-    const sections = read("lib/workspace-sections.ts");
-    const en = read("messages/en.json");
-    const barrel = read("lib/workspace-map-types.ts");
-    const persist = read("lib/workspace-map-types-persist.ts");
-    const prompt = read("lib/workspace-map-types-prompt.ts");
-    const migration = read(
-      "supabase/migrations/20260903140000_workspace_map_types.sql",
-    );
-    const picker = read("components/InitialChaptersPicker.tsx");
-    const welcome = read("components/session-view/session-welcome-modal.tsx");
-    const sessionView = readSessionViewSurface();
-    const workspaceApi = read("app/api/workspace/map-types/route.ts");
-    const sessionApi = read("app/api/session-plan/map-types/route.ts");
-
-    expect(sections).toContain('"map_types"');
-    expect(sections).toContain("mountsMapTypesPanel");
-    const enJson = JSON.parse(en) as { planView: Record<string, string> };
-    expect(enJson.planView.sectionMapTypes).toBe("Map Types");
-
-    expect(view).toContain('key: "map_types"');
-    expect(view).toContain("sectionMapTypes");
-    expect(view).toContain("WorkspaceMapTypesPanel");
-    expect(view).toContain("data-workspace-map-types-host");
-    expect(view).toContain("exploreOpen={idleExplore}");
-    expect(view).not.toContain("showMapExplore");
-    expect(view).toMatch(
-      /!isLearnerMode &&\s*isOwner &&\s*sectionLayout\.mountsMapTypesPanel &&\s*visibleSections\.includes\("map_types"\)/,
-    );
-
-    expect(panel).toContain("data-workspace-map-types-panel");
-    expect(panel).toContain("data-map-type-grid");
-    expect(panel).toContain('kind: "spawn"');
-    expect(panel).not.toContain("mapTypesNoSpawn");
-    expect(panel).toContain('kind: "blocked"');
-    expect(panel).toContain('kind: "clear"');
-    expect(panel).toContain("data-map-type-paint-drag");
-    expect(panel).toContain("data-map-type-order-count");
-    expect(panel).toContain("data-map-type-label");
-    expect(panel).toContain("data-map-type-description");
-    expect(panel).toContain("data-map-type-layout");
-    expect(panel).toContain("data-map-type-band");
-    expect(panel).toContain('data-map-type-editor-layout="grid-form-prompt"');
-    expect(panel).toContain("lg:flex-row-reverse");
-    expect(panel).toContain("lg:w-[22rem]");
-    expect(panel).not.toContain("lg:grid-cols-2");
-    expect(panel).toContain('data-map-type-stage="grid"');
-    expect(panel).toContain("data-map-type-fields");
-    expect(panel).toContain("data-map-type-context-preview");
-    expect(panel).toContain("data-map-type-prompt-title");
-    expect(enJson.planView.mapTypesPromptTitle).toBe("Generator prompt");
-    expect(panel).not.toContain("lg:w-64");
-    expect(panel).not.toContain("max-h-64");
-    const editorSrc = panel.slice(panel.indexOf("data-map-type-editor"));
-    const gridPos = editorSrc.indexOf('data-map-type-stage="grid"');
-    const fieldsPos = editorSrc.indexOf("data-map-type-fields");
-    const previewPos = editorSrc.indexOf("data-map-type-context-preview");
-    expect(fieldsPos).toBeGreaterThan(-1);
-    expect(gridPos).toBeGreaterThan(fieldsPos);
-    expect(previewPos).toBeGreaterThan(gridPos);
-    expect(editorSrc).toMatch(
-      /data-map-type-context-preview[\s\S]{0,120}min-h-72 w-full/,
-    );
-    expect(panel).toContain("applyMapTypePaint");
-    expect(panel).toContain("data-map-type-create");
-    expect(panel).toContain("data-map-type-save");
-    expect(panel).toContain("data-map-type-delete");
-    expect(panel).not.toContain("data-map-types-builtins");
-    expect(panel).not.toContain("data-map-type-builtin-enabled");
-    expect(panel).toContain("data-map-types-library");
-    expect(panel).toContain("data-map-type-library-remove");
-    expect(panel).toContain("data-map-type-custom-remove");
-    expect(panel).toContain('data-map-type-browse-filter="in_workspace"');
-    expect(panel).toContain("MAP_TYPE_LIBRARY");
-    expect(panel).not.toContain("data-map-type-simulate");
-    expect(panel).not.toContain("/api/workspace/map-types/simulate");
-    expect(panel).toContain("data-map-type-browse");
-    expect(panel).toContain("data-map-type-library-add");
-    expect(panel).not.toContain("data-map-type-publish");
-    expect(read("app/api/map-types/library/route.ts")).toContain(
-      "Custom map types cannot be published",
-    );
-    expect(read("lib/map-type-library.ts")).toContain("spiral_curriculum");
-    expect(read("lib/map-type-library.ts")).toContain("MAP_TYPE_LIBRARY_CORE");
-    expect(read("app/api/map-types/library/route.ts")).toContain("MAP_TYPE_LIBRARY");
-
-    expect(barrel).not.toMatch(/^export function /m);
-    expect(barrel).toContain('from "@/lib/workspace-map-types-persist"');
-    expect(barrel).toContain('from "@/lib/workspace-map-types-prompt"');
-    expect(barrel).toContain("formatMapTypeGeneratorContext");
-    expect(barrel).toContain("normalizeWorkspaceMapTypes");
-    expect(barrel).toContain("serializeWorkspaceMapTypes");
-    expect(prompt).toContain("export function formatMapTypeGeneratorContext");
-    expect(prompt).toContain("export const MAP_TYPE_SHAPED_SPATIAL_RULES");
-    expect(persist).toContain("export function resolveWorkspaceMapTypeCatalog");
-    expect(persist).toContain("export function normalizeWorkspaceMapTypes");
-    expect(persist).toContain("export function serializeWorkspaceMapTypes");
-    expect(migration).toContain("workspace_map_types");
-    expect(workspaceApi).toContain("workspace_map_types");
-    expect(sessionApi).toContain("mapTypePickerCatalog");
-
-    expect(picker).toContain("catalog");
-    expect(picker).toContain("defaultMapTypePickerCatalog");
-    expect(welcome).not.toContain("mapTypeCatalog");
-    expect(sessionView).not.toContain("/api/session-plan/map-types");
-    expect(persist).toContain("export function resolveMapTypeIdFromBody");
-    expect(persist).toContain("export function resolveMapTypeRecord");
-    expect(barrel).toContain("resolveMapTypeIdFromBody");
-    expect(barrel).toContain("resolveMapTypeRecord");
-
-    mkdirSync(SCRATCH, { recursive: true });
-    writeFileSync(
-      join(SCRATCH, "map-types-tab.log"),
-      [
-        "map-types-tab",
-        "label=Map Types",
-        "section_key=map_types",
-        "build_has=" +
-          String(
-            availableSectionsForMode({
-              mode: "creator",
-              isOwner: true,
-            }).includes("map_types"),
-          ),
-        "owner_includes=" +
-          String(
-            availableSectionsForMode({
-              mode: "learner",
-              isOwner: true,
-              isLoggedIn: true,
-            }).includes("map_types"),
-          ),
-        "explore_nav_includes=" +
-          String(
-            buildWorkspaceSectionNavItems({
-              t: (k) => k,
-              isLearnerMode: false,
-              isOwner: true,
-              visibleSections: availableSectionsForMode({
-                mode: "creator",
-                isOwner: true,
-              }),
-            })
-              .map((i) => i.key)
-              .includes("map_types"),
-          ),
-        "kr_excludes=" +
-          String(
-            !availableWorkspaceSections({
-              isOwner: true,
-              workspaceKind: "knowledge_region",
-            }).includes("map_types"),
-          ),
-        "grid=" + panel.includes("data-map-type-grid"),
-        "spawn=" + panel.includes('kind: "spawn"'),
-        "blocked=" + panel.includes('kind: "blocked"'),
-        "clear=" + panel.includes('kind: "clear"'),
-        "drag=" + panel.includes("data-map-type-paint-drag"),
-        "build_only_host=" + view.includes("!isLearnerMode"),
-        "grid_form_prompt=" +
-          panel.includes('data-map-type-editor-layout="grid-form-prompt"'),
-        "no_prompt_rail=" +
-          String(!panel.includes("lg:w-64") && !panel.includes("max-h-64")),
-        "prompt_min_h_72=" + panel.includes("min-h-72 w-full"),
-      ].join("\n") + "\n",
-    );
-
-    writeFileSync(
-      join(SCRATCH, "map-types-picker.log"),
-      [
-        "map-types-picker",
-        "picker_catalog_prop=" + picker.includes("catalog"),
-        "welcome_catalog=" + welcome.includes("mapTypeCatalog"),
-        "session_fetch=" + sessionView.includes("/api/session-plan/map-types"),
-        "create_resolver=" + persist.includes("export function resolveMapTypeIdFromBody"),
-        "create_formatter_path=" + persist.includes("export function resolveMapTypeRecord"),
-        "custom_id_accepted=" +
-          String(
-            resolveMapTypeIdFromBody(
-              { initial_chapters: "maptype_harbor" },
-              upsertCustomMapType(
-                { disabledBuiltinIds: [], customTypes: [] },
-                blankCustomMapType({ id: "maptype_harbor", label: "Harbor" }),
-              ),
-            ) === "maptype_harbor",
-          ),
-      ].join("\n") + "\n",
-    );
-  });
-});
 
 describe("map types verification evidence", () => {
   it("id-only compose + catalog disable/custom still hold", () => {

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { upsertOrganizationMembership } from "@/lib/organization/membership-store";
 
 function slugify(input: string): string {
   return input
@@ -32,7 +33,7 @@ export async function ensurePersonalOrganization(
   const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select(
-      "id, username, organization_id, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id"
+      "id, username, organization_id, is_org_admin, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id"
     )
     .eq("id", userId)
     .single();
@@ -42,6 +43,12 @@ export async function ensurePersonalOrganization(
   }
 
   if (profile.organization_id) {
+    await upsertOrganizationMembership(
+      admin,
+      userId,
+      profile.organization_id,
+      profile.is_org_admin === true,
+    ).catch(() => {});
     return { organizationId: profile.organization_id, created: false };
   }
 
@@ -85,7 +92,7 @@ export async function ensurePersonalOrganization(
         // Another concurrent ensure may have won — re-read
         const { data: again } = await admin
           .from("profiles")
-          .select("organization_id")
+          .select("organization_id, is_org_admin")
           .eq("id", userId)
           .single();
         if (again?.organization_id) {
@@ -96,11 +103,18 @@ export async function ensurePersonalOrganization(
               .update({ archived_at: new Date().toISOString() })
               .eq("id", org.id);
           }
+          await upsertOrganizationMembership(
+            admin,
+            userId,
+            again.organization_id,
+            again.is_org_admin === true,
+          );
           return { organizationId: again.organization_id, created: false };
         }
         throw new Error(linkError.message);
       }
 
+      await upsertOrganizationMembership(admin, userId, org.id, true);
       return { organizationId: org.id, created: true };
     }
 

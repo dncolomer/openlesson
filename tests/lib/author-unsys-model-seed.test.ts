@@ -123,7 +123,9 @@ describe("author unsys model seed", () => {
       "utf8",
     );
     expect(route).toContain("authorSeedBlockIdFromPreparePlan");
-    expect(route).toContain("sessionPrepareBlockId");
+    expect(readFileSync(join(__dirname, "../../lib/session-branch-prepare.ts"), "utf8")).toContain(
+      "sessionPrepareBlockId",
+    );
     expect(route).toContain("studentSessionModelFromAuthorSeed");
     expect(route).not.toMatch(/studentSessionModelFromAuthorSeed\([\s\S]*catalogSize/);
     expect(route).toContain("answers_model_seed");
@@ -222,6 +224,6 @@ describe("author unsys model seed", () => {
         chapterTitle: "Limits",
         chapterBrief: "",
       }),
-    ).toEqual({ kind: "solve", token: "stok-live" });
+    ).toBeNull();
   });
 });

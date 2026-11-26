@@ -396,21 +396,21 @@ export function ileMapTypeSessionExplanation(input: {
 }
 
 export const ILE_START_TIP_IDS = [
-  "actions",
-  "selection",
+  "work",
+  "speak",
   "commands",
   "dictate",
-  "leave",
+  "clock",
 ] as const;
 
 export type IleStartTipId = (typeof ILE_START_TIP_IDS)[number];
 
 export const ILE_START_TIP_LABEL_KEYS: Record<IleStartTipId, string> = {
-  actions: "session.startTipActions",
-  selection: "session.startTipSelection",
+  work: "session.startTipWork",
+  speak: "session.startTipSpeak",
   commands: "session.startTipCommands",
   dictate: "session.startTipDictate",
-  leave: "session.startTipLeave",
+  clock: "session.startTipClock",
 };
 
 export const ILE_START_TIP_INTERVAL_MS = 12000;

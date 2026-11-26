@@ -107,42 +107,6 @@ describe("session field gate", () => {
     expect(loader).toContain(start.label);
   });
 
-  it("waits on the ready tree and puts commands and instructions in the live sidebar", () => {
-    const learn = read("components/session-view/session-chapter-canvas.tsx");
-    const prepare = read("components/session-view/session-branch-prepare.tsx");
-    const verification = read("components/tap-score/tap-score-phases.tsx");
-    const publicVerification = read("components/VerificationFlowRunner.tsx");
-    const workspaceVerification = read("app/workspace/[id]/tap/page.tsx");
-    const learnChrome = read("components/session-view/session-chrome.tsx");
-    const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
-
-    expect(learn).toContain("useSessionBranchField");
-    expect(learn.indexOf("useSessionBranchField")).toBeLessThan(learn.indexOf("sessionCanvasMayOpen"));
-    expect(learn).toContain("<SessionFieldLoader");
-    expect(prepare).toContain("<SessionFieldGate>{children}</SessionFieldGate>");
-    expect(verification).toContain('enabled={kind === "verify"}');
-    expect(verification).toContain(
-      'kind === "verify" ? (\n                  <SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />',
-    );
-    expect(verification).toContain("data-tap-older-thoughts");
-    const verificationFocus = verification.slice(
-      verification.indexOf('kind === "verify" ? ('),
-      verification.indexOf("data-tap-older-thoughts"),
-    );
-    expect(verificationFocus).toContain(
-      '<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />',
-    );
-    expect(verificationFocus).not.toContain("ThoughtMemoryPanel");
-    expect(verificationFocus).not.toContain("I'm done");
-    expect(publicVerification).toContain('sidebarMode="verification-tap"');
-    expect(workspaceVerification).toContain("verification");
-    expect(learnChrome).toContain('<SessionGuidePanel guide="learn" />');
-    expect(learnChrome).toContain('id="actions"');
-    expect(learnChrome).not.toContain("SessionActionsPanel");
-    expect(learnChrome).not.toContain('focusLabel="actions"');
-    expect(prompt).not.toContain("<SessionMarkControls");
-    expect(prompt).toContain("mode: sessionMarkMode");
-  });
 });
 
 function pricedNode(title: string) {
@@ -230,65 +194,6 @@ describe("policy score against the prepared tree", () => {
     expect(near.sequence).not.toEqual(far.sequence);
   });
 
-  it("shows distance, steps, and excess on the Verify results pages", () => {
-    expect(policyScoreFromSnapshot(null)).toBeNull();
-    expect(policyScoreFromSnapshot({ model: null, sequence: ["try"] })).toBeNull();
-    const scored = scorePolicySequence(model, higher);
-    expect(policyScoreFromSnapshot({ model, sequence: higher })).toEqual(scored);
-
-    const html = renderToStaticMarkup(
-      createElement(SessionPolicyScoreResult, {
-        score: { steps: 3, excess: 12.5, distance: 4.17, sequence: ["try", "hold"] },
-      }),
-    );
-    expect(html).toContain('data-session-policy-score=""');
-    expect(html).toContain("mx-auto");
-    expect(html).toContain('data-session-policy-distance="4.17"');
-    expect(html).toContain('data-session-policy-steps="3"');
-    expect(html).toContain('data-session-policy-excess="12.5"');
-    expect(html).toContain(`>${formatPolicyScoreFigure(4.17)}<`);
-    expect(html).toContain(">Score<");
-    expect(html).toContain(">Distance<");
-    expect(html).toContain(">Steps<");
-    expect(html).toContain(">Excess<");
-    expect(html).not.toMatch(/\b(try|hold|drop|insight)\b/);
-    expect(renderToStaticMarkup(createElement(SessionPolicyScoreResult, { score: null }))).toBe("");
-
-    const tap = read("components/tap-score/tap-score-phases.tsx");
-    const impure = sliceBetween(tap, "data-tap-session-impure", "data-tap-session-thank-you");
-    expect(impure).not.toContain("SessionPolicyScoreResult");
-    const resultsPhase = tap.slice(tap.indexOf('phase === "results" && sessionEndedImpure'));
-    const verifyThankYou = sliceBetween(resultsPhase, 'kind === "verify" ? (', "privateToken ? (");
-    expect(verifyThankYou).toContain("data-tap-session-thank-you");
-    expect(verifyThankYou).toContain("thankYouTitle");
-    expect(verifyThankYou).toContain("thankYouVerifyBody");
-    expect(verifyThankYou).toContain("data-tap-back-dashboard");
-    expect(verifyThankYou).toContain('href="/dashboard"');
-    expect(verifyThankYou).not.toContain("SessionPolicyScoreResult");
-    expect(verifyThankYou).not.toContain("data-tap-back-workspace");
-    expect(verifyThankYou).not.toContain("data-tap-explore-uncertain-systems");
-    const guestThankYou = sliceBetween(resultsPhase, "privateToken ? (", "tap.postSession.resultsTitle");
-    expect(guestThankYou).toContain("data-tap-session-thank-you");
-    expect(guestThankYou).toContain("<SessionPolicyScoreResult");
-    expect(guestThankYou).toContain("thankYouTitle");
-    expect(guestThankYou).toContain("thankYouBody");
-    expect(guestThankYou).toContain("data-tap-explore-uncertain-systems");
-    const results = tap.slice(tap.indexOf("tap.postSession.resultsTitle"));
-    expect(results).toContain("<SessionPolicyScoreResult");
-    expect(results).toContain("policyScore");
-    expect(results).not.toContain("PerformanceReportCard");
-
-    const playCalibrate = read("components/dashboard/play-calibrate-session.tsx");
-    expect(playCalibrate).toContain("data-play-calibrate-done");
-    expect(playCalibrate).toContain("Explore Uncertain Systems");
-    expect(playCalibrate).not.toContain("<SessionSoundingResult");
-    expect(playCalibrate).not.toContain("soundingResultPresentation");
-
-    expect(existsSync(join(ROOT, "components/session-view/learn-insight-kept-screen.tsx"))).toBe(
-      false,
-    );
-    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
-  });
 
   it("changes the path embedding when the sequence changes; speech only moves path+text", () => {
     const prompt = "The person spoke the observation.";

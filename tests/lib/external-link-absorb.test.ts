@@ -214,16 +214,6 @@ describe("structural wiring: attach + prompt assembly", () => {
     expect(src).toContain("enrichShapeOptionsWithLinkBodies");
   });
 
-  it("create APIs fetch link bodies for selected externals", () => {
-    const slot = read("app/api/workspace/add-block-at-slot/route.ts");
-    const ops = readGridOpsSurface();
-    const fetchLib = read("lib/fetch-link-body.ts");
-    expect(fetchLib).toContain("export async function fetchLinkBodyText");
-    expect(slot).toContain("fetchLinkBodyText");
-    expect(slot).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
-    expect(ops).toContain("fetchLinkBodyText");
-    expect(ops).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
-  });
 
   it("prompt-workspace-context injects buildExternalUrlJitBiasSnippet", () => {
     const src = read("lib/prompt-workspace-context.ts");

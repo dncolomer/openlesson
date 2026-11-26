@@ -192,7 +192,7 @@ describe("TAPBench exercise uses improved framer", () => {
 
 describe("wiring: richer context on start + brief + prompt surfaces", () => {
   it("start route LLM-authors exercise mode via generateTapExercisePrompt", () => {
-    const start = read("app/api/workspace-tap-score/start/route.ts");
+    const start = read("app/api/verify/session/start/route.ts");
     expect(start).toContain("generateTapExercisePrompt");
     expect(start).toContain("brief.files");
     expect(start).toContain("workspaceGoal");

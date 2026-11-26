@@ -289,9 +289,9 @@ describe("TAP session auth brief vs participant", () => {
   it("chat/start/topics routes load brief via loadTapScoreBriefForAccess (not access.userId)", () => {
     const root = process.cwd();
     const routes = [
-      "app/api/workspace-tap-score/chat/route.ts",
-      "app/api/workspace-tap-score/start/route.ts",
-      "app/api/workspace-tap-score/topics/route.ts",
+      "app/api/verify/session/chat/route.ts",
+      "app/api/verify/session/start/route.ts",
+      "app/api/verify/session/topics/route.ts",
     ];
 
     for (const rel of routes) {

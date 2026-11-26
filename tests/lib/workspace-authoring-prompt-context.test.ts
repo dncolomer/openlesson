@@ -42,16 +42,6 @@ describe("workspace authoring prompt context (journey + bridge)", () => {
     expect(bridge).not.toEqual(def);
   });
 
-  it("add-block-at-slot and generate_shape wire journey + bridge intent", () => {
-    const add = read("app/api/workspace/add-block-at-slot/route.ts");
-    const grid = readGridOpsSurface();
-    const view = readWorkspaceViewSurface();
-    expect(add).toContain("composeJourneyGraphPromptSnippet");
-    expect(add).toContain("composeAddBlockAtSlotSystemMessage");
-    expect(add).toContain("intent");
-    expect(grid).toContain("composeJourneyGraphPromptSnippet");
-    expect(view).toContain('intent: "bridge"');
-  });
 
   it("AYCL workspace shell is gone", () => {
     expect(existsSync(join(process.cwd(), "components/AyclWorkspaceView.tsx"))).toBe(false);

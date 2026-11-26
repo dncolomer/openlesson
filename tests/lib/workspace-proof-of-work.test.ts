@@ -154,7 +154,7 @@ describe("surfaces share the exported type list", () => {
   });
 
   it("thought traces use the shared xAI Files uploader", () => {
-    const src = readFileSync(join(ROOT, "app/api/workspace-tap-score/trace/route.ts"), "utf8");
+    const src = readFileSync(join(ROOT, "app/api/verify/session/trace/route.ts"), "utf8");
     expect(src).toContain("uploadWorkspaceProofOfWork");
     expect(src).toContain("TAP_TRACE_TOOL_NAME");
     expect(src).not.toContain("insertWorkspaceProofOfWorkRow");

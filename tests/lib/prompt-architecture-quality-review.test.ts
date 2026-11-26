@@ -192,7 +192,7 @@ describe("prompt architecture: TAP call path (shipped builders)", () => {
 
   it("TAP chat route wires selective thought system prompt", () => {
     const route = readFileSync(
-      join(ROOT, "app/api/workspace-tap-score/chat/route.ts"),
+      join(ROOT, "app/api/verify/session/chat/route.ts"),
       "utf8",
     );
     expect(route).toContain("buildTapScoreInstructions");

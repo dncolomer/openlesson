@@ -56,11 +56,6 @@ describe("create TAP/TAP Learning link wiring", () => {
     expect(ile).toMatch(/show_end_session:\s*showEndSession/);
   });
 
-  it("list routes return show_end_session", () => {
-    expect(read("app/api/workspace/tap-links/route.ts")).toContain("show_end_session");
-    expect(read("app/api/workspace/learn-links/route.ts")).toContain("show_end_session");
-    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/tap-links/route.ts"))).toBe(false);
-  });
 
   it("migration adds show_end_session default true", () => {
     const mig = read("supabase/migrations/20260724130000_guest_link_show_end_session.sql");
@@ -114,20 +109,4 @@ describe("TAP Learning UI gate", () => {
     expect(guest).toContain("SessionView");
   });
 
-  it("SessionView and live TAP surfaces hide end controls when showEndSession is false", () => {
-    const view = readSessionViewSurface();
-    expect(view).toContain("showEndSession");
-    expect(view).toContain("allowEndSession");
-    expect(view).toMatch(/allowEndSession\s*\?\s*\([\s\S]*ConfirmDialog/);
-    expect(view).toMatch(/allowEndSession\s*\?\s*t\(["']sessionEnd\.returnToWorkspace["']\)/);
-
-    const tap = readTapScoreSurface();
-    const prepare = read("components/scout-tap/scout-tap-phases.tsx");
-    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
-
-    expect(tap).toMatch(/showEndSession\s*\?\s*\([\s\S]*End session/);
-    expect(prepare).toMatch(/showEndSession\s*\?\s*\([\s\S]*End session/);
-    expect(tap).not.toContain("data-session-end-control");
-    expect(prepare).not.toContain("data-session-end-control");
-  });
 });

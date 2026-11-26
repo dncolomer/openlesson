@@ -14,19 +14,12 @@ function readRepoFile(relativePath: string): string {
 /** Full-page / primary gate screens that must use the shared CREATING WORKSPACE treatment. */
 const GATE_FILES = [
   "app/dashboard/page.tsx",
-  "app/workspaces/page.tsx",
   "app/organization/page.tsx",
   "app/invite/[token]/page.tsx",
-  "app/labs/layout.tsx",
   "app/session/page.tsx",
   "app/session/analytics/page.tsx",
-  "app/learn/[token]/session/page.tsx",
   "app/login/page.tsx",
-  "app/all-you-can-learn/success/page.tsx",
-  "app/all-you-can-learn/page.tsx",
-  "app/workspace/new/page.tsx",
   "components/SessionView.tsx",
-  "components/workspace-view/workspace-chrome.tsx",
 ] as const;
 
 describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {

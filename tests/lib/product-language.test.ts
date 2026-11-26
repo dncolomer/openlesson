@@ -61,7 +61,6 @@ const LIVE_SURFACES = [
   "components/tap-score/tap-score-phases.tsx",
   "components/tap-score/use-tap-score-flow.ts",
   "components/SessionItem.tsx",
-  "components/workspace-view/use-workspace-learner.ts",
   "components/CustomVerificationModelsPanel.tsx",
 ];
 
@@ -152,40 +151,6 @@ describe("retired product language is gone from shipped prose", () => {
     }
   });
 
-  it("lineup copy is knowledge verification protocols", () => {
-    const tapWord = /\bTAP\b/;
-    const lineupFiles = [
-      "app/layout.tsx",
-      "app/skill-verification/SkillVerificationLanding.tsx",
-      "app/docs/proof-of-work-api/page.tsx",
-      "lib/marketing/verification-product.ts",
-      "lib/seo/platform-page.ts",
-      "lib/seo/product-page.ts",
-      "lib/seo/products.ts",
-      "lib/seo/use-case-page.ts",
-      "lib/sales/platform-pitch-deck.ts",
-      "lib/sales/verification-pitch-deck.ts",
-      "lib/sales/augmentation-pitch-deck.ts",
-      "lib/sales/optimization-pitch-deck.ts",
-      "components/ProductTable.tsx",
-      "components/SeoSolutionPage.tsx",
-      "docs/pitch/build-product-pitch.mjs",
-      "lib/prompt-kernel/ontology.ts",
-      "lib/prompt-kernel/surfaces/learn.ts",
-      "lib/prompts.ts",
-      "lib/prompt-workspace-context.ts",
-      "app/api/stripe/webhook/route.ts",
-      "public/skill.md",
-    ];
-    for (const rel of lineupFiles) {
-      const text = stripComments(read(rel));
-      expect(text.toLowerCase(), rel).toMatch(/protocol/);
-      expect(text, rel).not.toContain("TAP Learning");
-      expect(text, rel).not.toMatch(tapWord);
-    }
-    expect(read("lib/learn-tim-chapter-complete.ts")).toContain("upload_ile_chapter_done");
-    expect(read("app/api/stripe/webhook/route.ts")).toContain("ileSessions");
-  });
 
   it("Verify session chrome names Verify instead of TAP", () => {
     const tapWord = /\bTAP\b/;

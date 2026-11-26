@@ -134,44 +134,6 @@ describe("learner self-lock for LWM + Embeddings", () => {
     );
   });
 
-  it("learner Knowledge path locks pickers; creator still inspects", () => {
-    const panel = read("components/KnowledgeConfigTrajectoryPanel.tsx");
-    const perf = read("components/WorkspacePerformancePanel.tsx");
-    const view = readWorkspaceViewSurface();
-
-    expect(panel).toContain("resolveModelsTabCanInspectOthers");
-    expect(panel).toContain("lockSubjectToSelf");
-    expect(panel).toContain("data-knowledge-lock-subject-to-self");
-    expect(panel).toContain("data-knowledge-can-inspect-others");
-    // canInspect derived from pure helper — not bare isOwner alone
-    expect(panel).toMatch(
-      /canInspectOthers\s*=\s*resolveModelsTabCanInspectOthers/,
-    );
-    expect(panel).toContain("lockSubjectToSelf");
-
-    // Performance panel threads lock for LWM + Embeddings (not ranking)
-    expect(perf).toContain("lockSubjectToSelf={lwmEmbeddingsOnly}");
-    expect(perf).toContain('panelView="models"');
-    expect(perf).not.toContain('panelView="lwm"');
-    // Creator ranking path does not force lock via lwmEmbeddingsOnly
-    expect(view).toContain("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}");
-
-    // UserPicker / multi: disabled self when !canInspectOthers
-    expect(panel).toContain("if (!canInspectOthers)");
-    expect(panel).toContain("disabled");
-    expect(panel).toContain("data-embeddings-user-multiselect=\"false\"");
-
-    writeEvidence(
-      "learner-lwm-emb-ui.log",
-      [
-        "panel_lock_prop=true",
-        "panel_resolve_can_inspect=true",
-        "perf_lockSubjectToSelf=lwmEmbeddingsOnly",
-        "view_shell_flag=true",
-        "disabled_picker_when_locked=true",
-      ].join("\n"),
-    );
-  });
 });
 
 describe("resolveModelsTabScope", () => {

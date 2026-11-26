@@ -87,12 +87,6 @@ describe("Knowledge distance surfaces", () => {
     ).toBe(false);
   });
 
-  it("workspace cookie route exposes knowledge_distance action", () => {
-    const src = read("app/api/workspace/custom-knowledge-regions/route.ts");
-    expect(src).toContain("knowledge_distance");
-    expect(src).toContain("computeKnowledgeDistanceForSubject");
-    expect(src).not.toMatch(/knowledge_distance[\s\S]{0,80}runVerticalScore/);
-  });
 
   it("Embeddings overlay UI shows Knowledge distance (not Settings region cards)", () => {
     const embeddings = readKnowledgePanelSurface();

@@ -4,7 +4,7 @@ import { drainRegionSimulationJobs } from "@/lib/region-simulation-jobs";
 import { regionSimulationCronSecret } from "@/lib/region-simulation-flags";
 
 export const runtime = "nodejs";
-// Literal 60 matches REGION_SIM_TICK_MAX_DURATION; Next cannot analyze an import.
+// Next.js segment config requires a numeric literal here (same as REGION_SIM_TICK_MAX_DURATION).
 export const maxDuration = 60;
 
 function authorized(req: NextRequest): boolean {

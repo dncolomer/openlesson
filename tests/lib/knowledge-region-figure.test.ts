@@ -227,17 +227,24 @@ describe("knowledge region figure", () => {
     expect(parseKnowledgeRegionFigureMode("individual")).toBe("individual");
     expect(parseKnowledgeRegionFigureMode("quadrant")).toBe("quadrant");
     expect(parseKnowledgeRegionFigureMode("quadrant-path")).toBe("quadrant-path");
+    expect(parseKnowledgeRegionFigureMode("ai_use")).toBe("ai_use");
+    expect(parseKnowledgeRegionFigureMode("ai_use-path")).toBe("ai_use-path");
     expect(parseKnowledgeRegionFigureMode("nope")).toBe("individual");
     expect(parseKnowledgeRegionFigureSpace("quadrant")).toBe("quadrant");
     expect(parseKnowledgeRegionFigureSpace("full")).toBe("full");
+    expect(parseKnowledgeRegionFigureSpace("ai_use")).toBe("ai_use");
     expect(parseKnowledgeRegionFigureTrack("path")).toBe("path");
     expect(parseKnowledgeRegionFigureTrack("individual")).toBe("individual");
     expect(knowledgeRegionFigureMode("full", "individual")).toBe("individual");
     expect(knowledgeRegionFigureMode("full", "path")).toBe("path");
     expect(knowledgeRegionFigureMode("quadrant", "individual")).toBe("quadrant");
     expect(knowledgeRegionFigureMode("quadrant", "path")).toBe("quadrant-path");
+    expect(knowledgeRegionFigureMode("ai_use", "individual")).toBe("ai_use");
+    expect(knowledgeRegionFigureMode("ai_use", "path")).toBe("ai_use-path");
     expect(knowledgeRegionFigureSpace("quadrant-path")).toBe("quadrant");
+    expect(knowledgeRegionFigureSpace("ai_use-path")).toBe("ai_use");
     expect(knowledgeRegionFigureTrack("quadrant-path")).toBe("path");
+    expect(knowledgeRegionFigureTrack("ai_use-path")).toBe("path");
     expect(clampKnowledgeRegionFigureZoom(0)).toBe(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT);
     expect(knowledgeRegionFigureZoomOut(KNOWLEDGE_REGION_FIGURE_ZOOM_FIT)).toBe(
       KNOWLEDGE_REGION_FIGURE_ZOOM_FIT,
@@ -581,6 +588,8 @@ describe("knowledge region figure", () => {
     expect(page).toContain("knowledgeRegionAnalysisPointLabel");
     expect(page).toContain("cohort");
     expect(page).toContain("lg:grid-cols-[7fr_3fr]");
+    expect(page).toContain("PRODUCT_CREATE_SHELL");
+    expect(page).not.toContain("max-w-5xl");
     expect(page).toContain("<details");
     expect(page).toContain("KnowledgeRegionInspect");
     expect(page).toContain("presentKnowledgeRegionClusterDistances");
@@ -597,6 +606,7 @@ describe("knowledge region figure", () => {
     expect(page).toContain("data-knowledge-region-figure-space");
     expect(page).toContain('data-knowledge-region-figure-space-option="full"');
     expect(page).toContain('data-knowledge-region-figure-space-option="quadrant"');
+    expect(page).toContain('data-knowledge-region-figure-space-option="ai_use"');
     expect(page).toContain("data-knowledge-region-figure-track");
     expect(page).toContain('data-knowledge-region-figure-track-option="individual"');
     expect(page).toContain('data-knowledge-region-figure-track-option="path"');

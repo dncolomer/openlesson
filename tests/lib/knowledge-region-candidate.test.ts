@@ -213,6 +213,50 @@ describe("knowledge region candidate render", () => {
     expect(audioPayload.pairwise.matrix[0]?.[1]).toBeGreaterThan(0);
   });
 
+  it("keeps public nearest on exploration clusters when an AI-use cluster is closer", () => {
+    const exploit = stored({
+      id: "sim-1",
+      identity: "Simulated · Exploit-heavy",
+      source: "simulated",
+      createdAt: "2026-03-01T00:00:00.000Z",
+    });
+    const aiCentroid = stored({
+      id: "ai-centroid",
+      identity: "AI · Claude Sonnet · high",
+      source: "simulated",
+      createdAt: "2026-03-01T00:00:00.000Z",
+    });
+    const human = stored({
+      id: "o1",
+      identity: "ada",
+      createdAt: "2026-03-01T12:00:00.000Z",
+    });
+    human.vector = aiCentroid.vector.map((n, i) => (i === 0 ? n + 0.0001 : n));
+    const payload = presentKnowledgeRegionCandidate({
+      knowledgeRegionId: "parent",
+      candidateId: "ada",
+      space: "path",
+      parent: { ...parent, centroid: exploit.vector, cosine_threshold: 0 },
+      clusters: [
+        { ...clusters[0]!, centroid: exploit.vector },
+        {
+          id: "c-ai",
+          name: "Limits styles · Claude Sonnet · high",
+          description: "region-simulation-cluster:ai-use:claude-sonnet-high",
+          product: "verification",
+          cosine_threshold: 0.1,
+          centroid: aiCentroid.vector,
+        },
+      ],
+      embeddings: [human, exploit, { ...aiCentroid, link_label: "ai-use" }],
+      kind: "verification",
+    });
+    expect(payload.observations[0]?.cluster_distances.map((row) => row.cluster_id)).toEqual([
+      "c-exploit",
+    ]);
+    expect(payload.observations[0]?.cluster_distances[0]?.nearest).toBe(true);
+  });
+
   it("ships the public route and MCP tool", () => {
     const route = join(
       ROOT,

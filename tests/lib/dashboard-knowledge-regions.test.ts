@@ -182,6 +182,12 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("app/api/dashboard/region-simulation/route.ts")).toContain(
       "runRegionSimulation",
     );
+    expect(readRepo("app/api/dashboard/region-simulation/route.ts")).toContain(
+      "publicAiUseCatalog",
+    );
+    expect(readRepo("app/api/dashboard/region-simulation/route.ts")).toContain(
+      "AI_USE_DEFAULT_CHECKED",
+    );
     expect(readRepo("components/knowledge-panel/models-view.tsx")).toContain(
       "Overlay regions on the right.",
     );
@@ -248,6 +254,9 @@ describe("dashboard knowledge regions", () => {
     expect(detailsPage).toContain("data-knowledge-region-summary");
     expect(detailsPage).toContain("<details");
     expect(detailsPage).toContain("lg:grid-cols-[7fr_3fr]");
+    expect(detailsPage).toContain("PRODUCT_CREATE_SHELL");
+    expect(detailsPage).not.toContain("max-w-5xl");
+    expect(detailsPage).not.toContain("max-w-3xl");
     expect(detailsPage).toContain("data-knowledge-region-clusters");
     expect(detailsPage).toContain("data-knowledge-region-controls");
     expect(detailsPage).not.toContain("data-knowledge-region-samples");
@@ -259,14 +268,19 @@ describe("dashboard knowledge regions", () => {
     expect(detailsPage).toContain("data-knowledge-region-figure-mode");
     expect(detailsPage).toContain('data-knowledge-region-figure-mode-option="quadrant"');
     expect(detailsPage).toContain('data-knowledge-region-figure-space-option="quadrant"');
+    expect(detailsPage).toContain('data-knowledge-region-figure-space-option="ai_use"');
     expect(detailsPage).toContain('data-knowledge-region-figure-track-option="path"');
     expect(detailsPage).toContain("data-knowledge-region-section");
     expect(detailsPage).toContain("data-knowledge-region-identity");
     expect(detailsPage).toContain("data-knowledge-region-identity-focus");
     expect(detailsPage).toContain("KnowledgeRegionInspect");
+    expect(detailsPage).toContain("DASHBOARD_REGION_SIMULATION_JOBS_PATH");
     expect(detailsPage).toContain("inspectStudioEmbedding");
     expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
       "data-knowledge-region-inspect",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      "data-knowledge-region-inspect-ai-use-nearest",
     );
     expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
       "DataStudioInspectFields",

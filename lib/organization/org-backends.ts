@@ -33,6 +33,7 @@ export const ORG_SECRET_COLUMNS = [
   "xai_api_key_ciphertext",
   "llm_api_key_ciphertext",
   "blob_api_key_ciphertext",
+  "openrouter_api_key_ciphertext",
 ] as const;
 
 export type OrgBackendRecord = {
@@ -47,6 +48,8 @@ export type OrgBackendRecord = {
   blob_base_url?: string | null;
   blob_api_key_ciphertext?: string | null;
   blob_api_key_last_four?: string | null;
+  openrouter_api_key_ciphertext?: string | null;
+  openrouter_api_key_last_four?: string | null;
 };
 
 export type OrgBackendStored = {
@@ -61,6 +64,8 @@ export type OrgBackendStored = {
   blob_base_url: string | null;
   blob_api_key_ciphertext: string | null;
   blob_api_key_last_four: string | null;
+  openrouter_api_key_ciphertext: string | null;
+  openrouter_api_key_last_four: string | null;
 };
 
 export type OrgBackendEndpointPublic = {
@@ -72,9 +77,15 @@ export type OrgBackendEndpointPublic = {
   lastFour: string | null;
 };
 
+export type OrgOpenRouterPublic = {
+  configured: boolean;
+  lastFour: string | null;
+};
+
 export type OrgBackendPublic = {
   llm: OrgBackendEndpointPublic;
   blob: OrgBackendEndpointPublic;
+  openrouter: OrgOpenRouterPublic;
   llmIsXai: boolean;
   sessionCreditCost: number;
 };
@@ -119,6 +130,10 @@ export type OrgBackendPatchInput = {
     apiKey?: string;
     clearKey?: boolean;
   };
+  openrouter?: {
+    apiKey?: string;
+    clearKey?: boolean;
+  };
 };
 
 export type ParsedOrgBackendMutation = {
@@ -134,6 +149,10 @@ export type ParsedOrgBackendMutation = {
     mode: OrgBackendMode;
     provider: OrgBackendProvider | null;
     baseUrl: string | null;
+    apiKey: string | null;
+    clearKey: boolean;
+  };
+  openrouter?: {
     apiKey: string | null;
     clearKey: boolean;
   };
@@ -188,6 +207,8 @@ export function emptyOrgBackendStored(): OrgBackendStored {
     blob_base_url: null,
     blob_api_key_ciphertext: null,
     blob_api_key_last_four: null,
+    openrouter_api_key_ciphertext: null,
+    openrouter_api_key_last_four: null,
   };
 }
 
@@ -206,6 +227,14 @@ export function readOrgBackendStored(row: OrgBackendRecord | null | undefined): 
     blob_base_url: typeof row.blob_base_url === "string" && row.blob_base_url.trim() ? trimSlash(row.blob_base_url.trim()) : null,
     blob_api_key_ciphertext: typeof row.blob_api_key_ciphertext === "string" && row.blob_api_key_ciphertext ? row.blob_api_key_ciphertext : null,
     blob_api_key_last_four: typeof row.blob_api_key_last_four === "string" && row.blob_api_key_last_four.trim() ? row.blob_api_key_last_four.trim() : null,
+    openrouter_api_key_ciphertext:
+      typeof row.openrouter_api_key_ciphertext === "string" && row.openrouter_api_key_ciphertext
+        ? row.openrouter_api_key_ciphertext
+        : null,
+    openrouter_api_key_last_four:
+      typeof row.openrouter_api_key_last_four === "string" && row.openrouter_api_key_last_four.trim()
+        ? row.openrouter_api_key_last_four.trim()
+        : null,
   };
 }
 
@@ -344,6 +373,10 @@ export function presentOrgBackends(
       configured: Boolean(stored.blob_api_key_ciphertext || stored.blob_api_key_last_four),
       lastFour: stored.blob_api_key_last_four,
     },
+    openrouter: {
+      configured: Boolean(stored.openrouter_api_key_ciphertext || stored.openrouter_api_key_last_four),
+      lastFour: stored.openrouter_api_key_last_four,
+    },
     llmIsXai,
     sessionCreditCost: flowSessionCreditCost(undefined, { llmIsXai }),
   };
@@ -444,6 +477,7 @@ export function parseOrgBackendMutation(
   if (
     typeof raw.llm_api_key_ciphertext === "string" ||
     typeof raw.blob_api_key_ciphertext === "string" ||
+    typeof raw.openrouter_api_key_ciphertext === "string" ||
     typeof raw.xai_api_key_ciphertext === "string"
   ) {
     return { ok: false, error: "Sealed keys cannot be written from the client", status: 400 };
@@ -452,10 +486,33 @@ export function parseOrgBackendMutation(
   if (llm && "error" in llm) return { ok: false, error: llm.error, status: 400 };
   const blob = parseEndpoint(raw.blob, "blob");
   if (blob && "error" in blob) return { ok: false, error: blob.error, status: 400 };
-  if (!llm && !blob) {
-    return { ok: false, error: "llm or blob is required", status: 400 };
+  const openrouter = parseOpenRouter(raw.openrouter);
+  if (openrouter && "error" in openrouter) return { ok: false, error: openrouter.error, status: 400 };
+  if (!llm && !blob && !openrouter) {
+    return { ok: false, error: "llm, blob, or openrouter is required", status: 400 };
   }
-  return { ok: true, value: { llm, blob } };
+  return { ok: true, value: { llm, blob, openrouter } };
+}
+
+function parseOpenRouter(
+  raw: unknown,
+): ParsedOrgBackendMutation["openrouter"] | { error: string } | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { error: "openrouter must be an object" };
+  }
+  const body = raw as Record<string, unknown>;
+  if (
+    "api_key_ciphertext" in body ||
+    "ciphertext" in body ||
+    "openrouter_api_key_ciphertext" in body
+  ) {
+    return { error: "Sealed keys cannot be written from the client" };
+  }
+  return {
+    apiKey: asOptionalString(body.apiKey),
+    clearKey: body.clearKey === true,
+  };
 }
 
 export function applyOrgBackendMutation(
@@ -522,6 +579,16 @@ export function applyOrgBackendMutation(
         next.blob_api_key_ciphertext = seal(apiKey);
         next.blob_api_key_last_four = secretLastFour(apiKey);
       }
+    }
+  }
+
+  if (input.openrouter) {
+    if (input.openrouter.clearKey && !input.openrouter.apiKey) {
+      next.openrouter_api_key_ciphertext = null;
+      next.openrouter_api_key_last_four = null;
+    } else if (input.openrouter.apiKey) {
+      next.openrouter_api_key_ciphertext = seal(input.openrouter.apiKey);
+      next.openrouter_api_key_last_four = secretLastFour(input.openrouter.apiKey);
     }
   }
 

@@ -27,13 +27,10 @@ import {
   uploadIleScreenshot,
 } from "@/lib/learn-proof-of-work-client";
 import {
-  buildIleCanvasUploadItem,
   buildIleEegUploadItem,
   buildIleFacialUploadItem,
   buildIleToolEventUploadItem,
-  hashIlePowContent,
   ILE_POW_DEBOUNCE_MS,
-  meetsCanvasUploadThreshold,
   meetsEegUploadThreshold,
   meetsFacialUploadThreshold,
   totalIleEegSamples,
@@ -445,19 +442,11 @@ const tryUploadPendingEegChunk = useCallback(
 );
 
 const uploadCanvasPowNow = useCallback(
-  (force = false) => {
-    const currentSession = sessionRef.current;
-    const data = whiteboardDataRef.current;
-    if (!currentSession || !data || !powSessionEnabledRef.current) return;
-    if (!meetsCanvasUploadThreshold(data.length, force)) return;
-
-    const hash = hashIlePowContent(data);
-    if (hash === lastUploadedCanvasHashRef.current) return;
-    lastUploadedCanvasHashRef.current = hash;
-
-    void uploadPowItem(buildIleCanvasUploadItem(currentSession.id, data), "tools");
+  (_force = false) => {
+    // PNG/JSON canvas snapshots stay off. Opt-in mermaid documents upload
+    // from classified canvas actions (FlowCanvasCaptureClock).
   },
-  [uploadPowItem],
+  [],
 );
 
 const scheduleCanvasPowUpload = useCallback(() => {

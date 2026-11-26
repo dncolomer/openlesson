@@ -13,6 +13,7 @@
     "test:e2e": "node scripts/run-expanded-e2e.mjs",
     "test:e2e:pow-api": "node scripts/run-pow-api-e2e.mjs",
     "check:locales": "node scripts/check-locale-parity.mjs",
+    "check:openrouter-catalog": "vite-node --config vitest.config.ts scripts/check-openrouter-catalog.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run check:locales",
     "import:think-aloud-pow": "vite-node --config vitest.config.ts utilities/import-think-aloud-pow/main.ts",
     "generate:prompt-inventory": "node scripts/discover-llm-prompts.mjs && node scripts/generate-prompt-inventory.mjs",

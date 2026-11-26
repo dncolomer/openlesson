@@ -47,6 +47,7 @@ import {
 } from "@/lib/flow-opening-canvas";
 import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
 import { FLOW_CHANNEL_IDS, FLOW_CHANNEL_LABELS } from "@/lib/flow-channels";
+import { flowAuthorShowsCanvasCapture } from "@/lib/flow-canvas-capture";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): string {
@@ -126,6 +127,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           durationMinutes: accepted.durationMinutes,
           answersModelSeed: accepted.answersModelSeed,
           enforcedChannels: accepted.enforcedChannels,
+          canvasCapture: accepted.canvasCapture,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -338,6 +340,8 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
             <FlowChannelsFields
               value={draft.enforcedChannels}
               onChange={(enforcedChannels) => patch({ enforcedChannels })}
+              canvasCapture={draft.canvasCapture}
+              onCanvasCaptureChange={(canvasCapture) => patch({ canvasCapture })}
             />
             {actions}
           </FlowFormCard>
@@ -399,6 +403,14 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
                   {FLOW_CHANNEL_IDS.filter((id) => draft.enforcedChannels[id])
                     .map((id) => FLOW_CHANNEL_LABELS[id])
                     .join(" · ") || "Canvas only"}
+                </p>
+              ) : null}
+              {flowAuthorShowsCanvasCapture(kind) && draft.canvasCapture.enabled ? (
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-publish-canvas-capture=""
+                >
+                  Capture Canvas every {draft.canvasCapture.everyActions} actions
                 </p>
               ) : null}
             </div>

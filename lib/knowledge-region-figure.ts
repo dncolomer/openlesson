@@ -14,8 +14,11 @@ import {
 import { recoverFlowEmbeddingRaw } from "@/lib/flow-embedding";
 import type { RegionCentroidInput } from "@/lib/knowledge-config";
 import { l2Distance } from "@/lib/knowledge-config/math";
-import { flowLinkDefinesReference, normalizeFlowLinkLabel } from "@/lib/flow-links";
-import type { StudioEmbeddingOrigin } from "@/lib/region-simulation";
+import { flowLinkDefinesReference, flowLinkIsAiUse, normalizeFlowLinkLabel } from "@/lib/flow-links";
+import {
+  isAiUseIdentity,
+  type StudioEmbeddingOrigin,
+} from "@/lib/region-simulation";
 
 export const KNOWLEDGE_REGION_CLUSTER_COLORS = [
   "#b7d6f4",
@@ -25,7 +28,7 @@ export const KNOWLEDGE_REGION_CLUSTER_COLORS = [
 
 export const KNOWLEDGE_REGION_ANALYSIS_FILL = "#cbb8a0";
 
-export type KnowledgeRegionPointKind = "simulated" | "cohort" | "analysis";
+export type KnowledgeRegionPointKind = "simulated" | "cohort" | "analysis" | "ai_use";
 
 export const KNOWLEDGE_REGION_MAP_SIZE = 480;
 export const KNOWLEDGE_REGION_MAP_CENTER = { x: 240, y: 240 };
@@ -37,12 +40,20 @@ export type KnowledgeRegionGlyphKind =
   | "diamond"
   | "open-diamond";
 
-export type KnowledgeRegionFigureSpace = "full" | "quadrant";
+export type KnowledgeRegionFigureSpace = "full" | "quadrant" | "ai_use";
 export type KnowledgeRegionFigureTrack = "individual" | "path";
-export type KnowledgeRegionFigureMode = "individual" | "path" | "quadrant" | "quadrant-path";
+export type KnowledgeRegionFigureMode =
+  | "individual"
+  | "path"
+  | "quadrant"
+  | "quadrant-path"
+  | "ai_use"
+  | "ai_use-path";
 
 export function parseKnowledgeRegionFigureSpace(value: unknown): KnowledgeRegionFigureSpace {
-  return value === "quadrant" ? "quadrant" : "full";
+  if (value === "quadrant") return "quadrant";
+  if (value === "ai_use") return "ai_use";
+  return "full";
 }
 
 export function parseKnowledgeRegionFigureTrack(value: unknown): KnowledgeRegionFigureTrack {
@@ -50,11 +61,13 @@ export function parseKnowledgeRegionFigureTrack(value: unknown): KnowledgeRegion
 }
 
 export function knowledgeRegionFigureSpace(mode: KnowledgeRegionFigureMode): KnowledgeRegionFigureSpace {
-  return mode === "quadrant" || mode === "quadrant-path" ? "quadrant" : "full";
+  if (mode === "quadrant" || mode === "quadrant-path") return "quadrant";
+  if (mode === "ai_use" || mode === "ai_use-path") return "ai_use";
+  return "full";
 }
 
 export function knowledgeRegionFigureTrack(mode: KnowledgeRegionFigureMode): KnowledgeRegionFigureTrack {
-  return mode === "path" || mode === "quadrant-path" ? "path" : "individual";
+  return mode === "path" || mode === "quadrant-path" || mode === "ai_use-path" ? "path" : "individual";
 }
 
 export function knowledgeRegionFigureMode(
@@ -62,6 +75,7 @@ export function knowledgeRegionFigureMode(
   track: KnowledgeRegionFigureTrack,
 ): KnowledgeRegionFigureMode {
   if (space === "quadrant") return track === "path" ? "quadrant-path" : "quadrant";
+  if (space === "ai_use") return track === "path" ? "ai_use-path" : "ai_use";
   return track === "path" ? "path" : "individual";
 }
 
@@ -69,6 +83,8 @@ export function parseKnowledgeRegionFigureMode(value: unknown): KnowledgeRegionF
   if (value === "path") return "path";
   if (value === "quadrant") return "quadrant";
   if (value === "quadrant-path") return "quadrant-path";
+  if (value === "ai_use") return "ai_use";
+  if (value === "ai_use-path") return "ai_use-path";
   return "individual";
 }
 
@@ -331,10 +347,10 @@ export type KnowledgeRegionIdentityOption = {
 
 export type KnowledgeRegionFigureLegendItem = {
   id: string;
-  kind: "cluster" | "simulated" | "cohort" | "analysis";
+  kind: "cluster" | "simulated" | "cohort" | "analysis" | "ai_use";
   label: string;
   color: string;
-  toggle: "cluster" | "simulated" | "cohort" | "analysis" | null;
+  toggle: "cluster" | "simulated" | "cohort" | "analysis" | "ai_use" | null;
   on: boolean;
 };
 
@@ -414,6 +430,7 @@ export function knowledgeRegionPointKindLabel(
 ): string {
   if (pointKind === "simulated") return "Simulated";
   if (pointKind === "cohort") return "Reference";
+  if (pointKind === "ai_use") return "AI use";
   return knowledgeRegionAnalysisPointLabel(productKind);
 }
 
@@ -433,8 +450,15 @@ export function knowledgeRegionPointKind(input: {
     label?: unknown;
   }[] | null;
 }): KnowledgeRegionPointKind {
-  if (input.origin === "simulated") return "simulated";
   const linkLabel = normalizeFlowLinkLabel(input.linkLabel);
+  if (
+    input.origin === "simulated" &&
+    (isAiUseIdentity(input.identity) || flowLinkIsAiUse(linkLabel))
+  ) {
+    return "ai_use";
+  }
+  if (isAiUseIdentity(input.identity) || flowLinkIsAiUse(linkLabel)) return "ai_use";
+  if (input.origin === "simulated") return "simulated";
   if (flowLinkDefinesReference(linkLabel)) return "cohort";
   if (linkLabel && linkLabel.toLowerCase() === "test") return "analysis";
   const identity = subjectText(input.identity);
@@ -1059,6 +1083,110 @@ export function placeKnowledgeRegionQuadrantPoints(input: {
   return { placed, sections, spokes };
 }
 
+export function nearestAiUseClusterDistance(input: {
+  vector: number[] | null | undefined;
+  clusters: readonly { id: string; strategyName: string; vector?: number[] | null }[];
+}): { clusterId: string; label: string; distance: number; formatted: string } | null {
+  const vector = Array.isArray(input.vector) ? input.vector : [];
+  let best: { clusterId: string; label: string; distance: number } | null = null;
+  for (const cluster of input.clusters) {
+    const centroid = cluster.vector;
+    if (!Array.isArray(centroid) || centroid.length !== vector.length || !vector.length) continue;
+    const distance = l2Distance(vector, centroid);
+    if (!Number.isFinite(distance)) continue;
+    if (!best || distance < best.distance) {
+      best = { clusterId: cluster.id, label: cluster.strategyName, distance };
+    }
+  }
+  if (!best) return null;
+  return { ...best, formatted: formatStudioHighDimDistance(best.distance) };
+}
+
+export function placeKnowledgeRegionAiUsePoints(input: {
+  points: readonly KnowledgeRegionFigurePoint[];
+  clusters: readonly { id: string; strategyName: string; vector?: number[] | null }[];
+  threshold: number;
+  map: { cx: number; cy: number; radius: number };
+}): {
+  placed: Map<
+    string,
+    { x: number; y: number; clusterId: string | null; unsysDistance: number | null; angle: number; radius: number }
+  >;
+  sections: KnowledgeRegionQuadrantSection[];
+  spokes: KnowledgeRegionPolarGrid["spokes"];
+} {
+  const { cx, cy, radius } = input.map;
+  const closeStart = Math.PI / 2;
+  const farStart = -Math.PI / 2;
+  const sections: KnowledgeRegionQuadrantSection[] = [
+    {
+      clusterId: "ai-use-close",
+      label: "Close",
+      color: "#c48b6a",
+      startAngle: closeStart,
+      endAngle: closeStart + Math.PI,
+      midAngle: closeStart + Math.PI / 2,
+      path: pieSlicePath(cx, cy, radius, closeStart, closeStart + Math.PI),
+    },
+    {
+      clusterId: "ai-use-far",
+      label: "Far",
+      color: "#6ea8de",
+      startAngle: farStart,
+      endAngle: farStart + Math.PI,
+      midAngle: farStart + Math.PI / 2,
+      path: pieSlicePath(cx, cy, radius, farStart, farStart + Math.PI),
+    },
+  ];
+  const spokes: KnowledgeRegionPolarGrid["spokes"] = sections.map((section) => ({
+    x1: cx,
+    y1: cy,
+    x2: cx + Math.cos(section.startAngle) * radius,
+    y2: cy + Math.sin(section.startAngle) * radius,
+  }));
+  const scored = input.points
+    .map((point) => point.unsysDistance)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const maxDistance = scored.length ? Math.max(...scored) : 0;
+  const inner = radius * 0.12;
+  const outer = radius * 0.86;
+  const placed = new Map<
+    string,
+    { x: number; y: number; clusterId: string | null; unsysDistance: number | null; angle: number; radius: number }
+  >();
+  for (const point of input.points) {
+    if (point.pointKind === "ai_use") continue;
+    const nearest = nearestAiUseClusterDistance({ vector: point.vector, clusters: input.clusters });
+    const close = nearest ? nearest.distance <= input.threshold : false;
+    const section = close ? sections[0]! : sections[1]!;
+    const unsysDistance =
+      typeof point.unsysDistance === "number" && Number.isFinite(point.unsysDistance)
+        ? Math.max(0, point.unsysDistance)
+        : null;
+    const t =
+      unsysDistance == null ? 0.5 : maxDistance > 1e-9 ? Math.min(1, unsysDistance / maxDistance) : 0;
+    const r = inner + t * (outer - inner);
+    const jitter = (unitHash(point.id) - 0.5) * Math.PI * 0.45;
+    const angle = section.midAngle + jitter;
+    placed.set(point.id, {
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r,
+      clusterId: section.clusterId,
+      unsysDistance,
+      angle,
+      radius: r,
+    });
+  }
+  return { placed, sections, spokes };
+}
+
+export function defaultAiUseThreshold(distances: readonly number[]): number {
+  const values = distances.filter((value) => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
+  if (!values.length) return 0.35;
+  const mid = values[Math.floor(values.length / 2)]!;
+  return mid;
+}
+
 export function presentKnowledgeRegionFigure(input: {
   points: readonly KnowledgeRegionFigurePoint[];
   clusters: readonly { id: string; strategyName: string; vector?: number[] | null }[];
@@ -1071,6 +1199,8 @@ export function presentKnowledgeRegionFigure(input: {
   visibleClusterIds?: readonly string[] | null;
   selectedPointId?: string | null;
   mode?: KnowledgeRegionFigureMode | string | null;
+  aiUseClusters?: readonly { id: string; strategyName: string; vector?: number[] | null }[];
+  aiUseThreshold?: number | null;
 }): KnowledgeRegionFigureView {
   const visiblePointKinds = new Set<KnowledgeRegionPointKind>(
     input.visiblePointKinds
@@ -1113,6 +1243,15 @@ export function presentKnowledgeRegionFigure(input: {
       colorIndex: index,
     }))
     .filter((cluster) => clusterVisibleInKnowledgeRegion(cluster.id, visibleClusterIds));
+  const aiUseClusters = input.aiUseClusters ?? [];
+  const classifiedForThreshold = visible.filter((point) => point.pointKind !== "ai_use");
+  const thresholdDistances = classifiedForThreshold
+    .map((point) => nearestAiUseClusterDistance({ vector: point.vector, clusters: aiUseClusters })?.distance)
+    .filter((value): value is number => typeof value === "number");
+  const aiUseThreshold =
+    typeof input.aiUseThreshold === "number" && Number.isFinite(input.aiUseThreshold)
+      ? input.aiUseThreshold
+      : defaultAiUseThreshold(thresholdDistances);
   const quadrant =
     space === "quadrant"
       ? placeKnowledgeRegionQuadrantPoints({
@@ -1120,14 +1259,21 @@ export function presentKnowledgeRegionFigure(input: {
           clusters: wedgeClusters,
           map,
         })
-      : null;
+      : space === "ai_use"
+        ? placeKnowledgeRegionAiUsePoints({
+            points: visible,
+            clusters: aiUseClusters,
+            threshold: aiUseThreshold,
+            map,
+          })
+        : null;
   const grid = quadrant
     ? {
         ...knowledgeRegionPolarGrid({
           cx: map.cx,
           cy: map.cy,
           radius: map.radius,
-          spokes: Math.max(4, wedgeClusters.length),
+          spokes: Math.max(4, space === "ai_use" ? 2 : wedgeClusters.length),
         }),
         spokes: quadrant.spokes,
       }
@@ -1353,6 +1499,14 @@ export function presentKnowledgeRegionFigure(input: {
       color: KNOWLEDGE_REGION_ANALYSIS_FILL,
       toggle: "analysis",
       on: visiblePointKinds.has("analysis"),
+    },
+    {
+      id: "ai_use",
+      kind: "ai_use",
+      label: "AI use",
+      color: "#c48b6a",
+      toggle: "ai_use",
+      on: visiblePointKinds.has("ai_use"),
     },
   ];
 

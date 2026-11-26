@@ -667,11 +667,12 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(canvas).toContain("handleQuickAction(command.id)");
     expect(canvas).toContain("handleQuickAction(draft.exactId)");
 
-    const ile = read("components/SessionView.tsx");
+    const ile = read("components/session-view/use-session-field.ts");
+    const ileView = read("components/SessionView.tsx");
     expect(ile).toContain("handleCanvasPowActions");
-    expect(ile).toContain("onCanvasPowActions={handleCanvasPowActions}");
+    expect(ileView).toContain("onCanvasPowActions={handleCanvasPowActions}");
     expect(ile).toContain('logTool("canvas", event.toolAction as ToolAction, event.metadata)');
-    expect(ile).toContain("shouldLogIleSidebarToolSwitch");
+    expect(ileView).toContain("shouldLogIleSidebarToolSwitch");
     expect(ile).not.toContain("lastExcalidrawPowKeyRef");
     expect(ile).not.toContain("mapExcalidrawToolToIlePow");
 
@@ -680,7 +681,7 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(tap).toContain("buildTapWorkCanvasActionUploadItem");
     expect(tap).toContain("uploadTapWorkCanvasPow");
     expect(tap).toContain("onCanvasPowActions={handleCanvasPowActions}");
-    expect(tap).toContain("tapWorkCanvasElementContentFingerprint");
+    expect(tap).toContain("buildCanvasMermaidDocumentUploadItem");
     expect(tap).not.toContain("lastExcalidrawPowKeyRef");
     expect(tap).not.toContain("buildTapExcalidrawToolUploadItem");
 

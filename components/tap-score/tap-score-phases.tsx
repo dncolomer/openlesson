@@ -44,6 +44,12 @@ import { SessionStartBackButton } from "@/components/session-view/session-start-
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { TapProductKind } from "@/lib/tap-session-runtime";
 import type { FlowEnforcedChannels } from "@/lib/flow-channels";
+import {
+  buildCanvasMermaidDocumentUploadItem,
+  FlowCanvasCaptureClock,
+  parseFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
 import type { FlowChannelLive } from "@/lib/flow-channel-purity";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
@@ -58,18 +64,15 @@ import {
   applyTapAssistantTurnsToWorkCanvas,
   applyTapHeliosReplyToWorkCanvas,
   tapWorkCanvasOpeningLiveSeed,
-  buildTapCanvasSnapshotUploadItem,
   buildTapWorkCanvasActionUploadItem,
   emptyTapWorkCanvasScene,
   serializeTapWorkCanvasScene,
   tapHeliosCanvasBusy,
   tapWorkCanvasBoardId,
-  tapWorkCanvasElementContentFingerprint,
   tapWorkCanvasShouldAcceptSceneUpdate,
   uploadTapWorkCanvasPow,
 } from "@/lib/tap-work-canvas";
 import type { IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
-import { ILE_POW_DEBOUNCE_MS } from "@/lib/learn-realtime-pow";
 import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
   ileWorkCanvasLiveApply,
@@ -101,6 +104,7 @@ export function TapScorePhases(props: {
   canvasProblem?: string | null;
   audioEnforced?: boolean;
   enforcedChannels?: FlowEnforcedChannels;
+  canvasCapture?: FlowCanvasCapture;
   onChannelLive?: (live: FlowChannelLive) => void;
   getLiveTranscript?: () => string;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
@@ -250,6 +254,7 @@ export function TapScorePhases(props: {
     onImDoneBusyChange,
     audioEnforced = true,
     enforcedChannels,
+    canvasCapture: canvasCaptureProp,
     onChannelLive,
     getLiveTranscript,
   } = props;
@@ -266,8 +271,6 @@ export function TapScorePhases(props: {
   const [canvasSeedNonce, setCanvasSeedNonce] = useState(0);
   const sceneRef = useRef(workCanvasScene);
   const appliedAssistantIdsRef = useRef<Set<string>>(new Set());
-  const lastCanvasPowHashRef = useRef("");
-  const canvasPowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const syncScene = useCallback(
     (next: IleWorkCanvasScene) => {
@@ -422,10 +425,14 @@ export function TapScorePhases(props: {
     syncScene,
   ]);
 
+  const canvasCaptureClockRef = useRef(new FlowCanvasCaptureClock());
+  canvasCaptureClockRef.current.setCapture(parseFlowCanvasCapture(canvasCaptureProp));
+
   const handleCanvasPowActions = useCallback(
     (events: IleWorkCanvasPowEvent[]) => {
       const sessionKey = String(tapSessionId || sessionId || "").trim();
       if (!sessionKey) return;
+      // Classified canvas events always upload for Unsys, even when capture is off.
       for (const event of events) {
         const item = buildTapWorkCanvasActionUploadItem(sessionKey, {
           ...event,
@@ -444,9 +451,29 @@ export function TapScorePhases(props: {
           item,
         });
       }
+      const clock = canvasCaptureClockRef.current;
+      if (!clock.note(events.length)) return;
+      const stats = clock.stats();
+      const documentItem = buildCanvasMermaidDocumentUploadItem(
+        sessionKey,
+        sceneRef.current,
+        stats,
+      );
+      void uploadTapWorkCanvasPow({
+        workspaceId,
+        blockId,
+        sessionId,
+        privateToken,
+        tapSessionId,
+        entryQueryParams,
+        practice: false,
+        kind,
+        item: documentItem,
+      });
     },
     [
       blockId,
+      canvasCaptureProp,
       entryQueryParams,
       kind,
       privateToken,
@@ -463,37 +490,8 @@ export function TapScorePhases(props: {
       sceneRef.current = scene;
       workCanvasSceneRef.current = scene;
       setWorkCanvasScene(scene);
-      const sessionKey = String(tapSessionId || sessionId || "").trim();
-      if (!sessionKey) return;
-      const fingerprint = tapWorkCanvasElementContentFingerprint(scene);
-      if (!fingerprint || fingerprint === lastCanvasPowHashRef.current) return;
-      if (canvasPowTimerRef.current) clearTimeout(canvasPowTimerRef.current);
-      canvasPowTimerRef.current = setTimeout(() => {
-        lastCanvasPowHashRef.current = fingerprint;
-        const item = buildTapCanvasSnapshotUploadItem(sessionKey, JSON.stringify(scene));
-        void uploadTapWorkCanvasPow({
-          workspaceId,
-          blockId,
-          sessionId,
-          privateToken,
-          tapSessionId,
-          entryQueryParams,
-          practice: false,
-          kind,
-          item,
-        });
-      }, ILE_POW_DEBOUNCE_MS);
     },
-    [
-      blockId,
-      entryQueryParams,
-      kind,
-      privateToken,
-      sessionId,
-      tapSessionId,
-      workCanvasSceneRef,
-      workspaceId,
-    ],
+    [workCanvasSceneRef],
   );
 
   const handleAskSelected = useCallback(

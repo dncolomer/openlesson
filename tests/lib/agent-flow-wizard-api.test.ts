@@ -45,6 +45,7 @@ describe("public flow create/update matches the dashboard wizard", () => {
       expect(properties).toHaveProperty("uncertainty_model");
       expect(properties).toHaveProperty("generate_unsys");
       expect(properties).toHaveProperty("enforced_channels");
+      expect(properties).toHaveProperty("canvas_capture");
       expect(properties).toHaveProperty("duration_minutes");
     }
     expect(create?.inputSchema.required).toEqual(["kind"]);
@@ -79,10 +80,12 @@ describe("public flow create/update matches the dashboard wizard", () => {
     expect(src).toContain("generateProblemOnOpen: accepted.generateProblemOnOpen");
     expect(src).toContain("answersModelSeed: accepted.answersModelSeed");
     expect(src).toContain("enforcedChannels: accepted.enforcedChannels");
+    expect(src).toContain("canvasCapture: accepted.canvasCapture");
     expect(src).toContain("resolveFlowArtifactsFromBody");
     expect(src).toContain("generateFlowUnsysSeedFromBody");
     expect(src).toContain("exact_problem_on_canvas");
     expect(src).toContain("enforced_channels");
+    expect(src).toContain("canvas_capture");
     expect(src).toContain("answers_model_seed");
   });
 

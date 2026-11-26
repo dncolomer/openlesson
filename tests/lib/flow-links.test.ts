@@ -42,6 +42,15 @@ describe("flow link labels", () => {
     expect(flowLinkDefinesReference("test")).toBe(false);
     expect(flowLinkDefinesReference("reference")).toBe(true);
     expect(flowLinkDefinesReference("alumni")).toBe(true);
+    expect(flowLinkLabelKind("ai-use")).toBe("ai_use");
+    expect(flowLinkDefinesReference("ai-use")).toBe(false);
+    expect(
+      knowledgeRegionPointKind({
+        origin: "simulated",
+        identity: "AI · Claude Sonnet · high",
+        linkLabel: "ai-use",
+      }),
+    ).toBe("ai_use");
     expect(flowLinkPublicPath("verification", "abc")).toBe("/v/abc");
     expect(flowLinkPublicPath("solve", "abc")).toBe("/s/abc");
     expect(

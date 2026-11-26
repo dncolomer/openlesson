@@ -45,6 +45,11 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import {
+  nextFlowCanvasCapture,
+  parseFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
 
 export const VERIFICATION_WORKSPACE_LABEL = "Verification Workspace";
 
@@ -70,6 +75,7 @@ export type VerificationFlow = {
   actionCatalog: LearningModelSize;
   answersModelSeed?: AuthorUnsysModelSeed | null;
   enforcedChannels: FlowEnforcedChannels;
+  canvasCapture: FlowCanvasCapture;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -544,6 +550,7 @@ export type VerificationCommand =
       actionCatalog?: number;
       answersModelSeed?: unknown;
       enforcedChannels?: unknown;
+      canvasCapture?: unknown;
       id?: string;
       publicToken?: string;
     }
@@ -564,6 +571,7 @@ export type VerificationCommand =
       actionCatalog?: number;
       answersModelSeed?: unknown;
       enforcedChannels?: unknown;
+      canvasCapture?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | {
@@ -630,6 +638,7 @@ export function applyVerificationCommand(
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
       enforcedChannels: parseFlowEnforcedChannels(command.enforcedChannels),
+      canvasCapture: parseFlowCanvasCapture(command.canvasCapture),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -685,6 +694,7 @@ export function applyVerificationCommand(
         current.enforcedChannels,
         command.enforcedChannels,
       ),
+      canvasCapture: nextFlowCanvasCapture(current.canvasCapture, command.canvasCapture),
       updatedAt: nowIso(),
     };
     return {

@@ -21,6 +21,7 @@ import {
   parseFlowEmbeddingSpace,
   type FlowEmbeddingChannelVectors,
 } from "@/lib/flow-embedding-space";
+import { isCanvasContentPowRow } from "@/lib/flow-canvas-capture";
 
 export {
   FLOW_EMBEDDING_SPACE_EXTRA_WEIGHT as FLOW_EMBEDDING_PATH_TEXT_TEXT_WEIGHT,
@@ -189,7 +190,9 @@ function compactGenModel(model: SessionBranchModel | null | undefined): FlowGenM
 }
 
 function compactPow(rows: readonly FlowPowRow[] | null | undefined): FlowPowRow[] {
-  const compacted = (rows ?? []).map((row, index) => ({
+  const compacted = (rows ?? [])
+    .filter((row) => !isCanvasContentPowRow(row))
+    .map((row, index) => ({
     type: textOf(row.type) || "tool",
     tool_name: textOf(row.tool_name) || null,
     tool_action: textOf(row.tool_action) || null,

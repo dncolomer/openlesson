@@ -30,6 +30,7 @@ export async function GET(
     exactProblemOnCanvas: flow.exactProblemOnCanvas,
     openingCanvasScene: flow.openingCanvasScene,
     enforcedChannels: flow.enforcedChannels,
+    canvasCapture: flow.canvasCapture,
     questionCount: flow.questions.length,
     durationMinutes: flow.durationMinutes,
     actionCatalog: flow.actionCatalog,
@@ -70,6 +71,7 @@ export async function POST(
     exactProblemOnCanvas: claimed.flow.exactProblemOnCanvas,
     openingCanvasScene: claimed.flow.openingCanvasScene,
     enforcedChannels: claimed.flow.enforcedChannels,
+    canvasCapture: claimed.flow.canvasCapture,
   });
   } catch (error) {
     const credits = insufficientCreditsResponse(error);

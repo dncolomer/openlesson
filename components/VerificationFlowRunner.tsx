@@ -11,6 +11,11 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import {
+  DEFAULT_FLOW_CANVAS_CAPTURE,
+  parseFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { ltiIdentityForPublicToken } from "@/lib/lti/auto-claim";
@@ -28,6 +33,9 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [durationMinutes, setDurationMinutes] = useState(15);
   const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
     DEFAULT_FLOW_ENFORCED_CHANNELS,
+  );
+  const [canvasCapture, setCanvasCapture] = useState<FlowCanvasCapture>(
+    DEFAULT_FLOW_CANVAS_CAPTURE,
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,6 +85,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       setOpeningCanvasScene(parseFlowOpeningCanvasScene(payload.openingCanvasScene));
       setDurationMinutes(flowCountdownMinutes(payload.durationMinutes));
       setEnforcedChannels(parseFlowEnforcedChannels(payload.enforcedChannels));
+      setCanvasCapture(parseFlowCanvasCapture(payload.canvasCapture));
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -132,6 +141,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           openingCanvasScene={openingCanvasScene}
           canvasProblem={topic}
           enforcedChannels={enforcedChannels}
+          canvasCapture={canvasCapture}
           initialMinutes={durationMinutes}
           lockDuration
           onLocalProof={storeProof}

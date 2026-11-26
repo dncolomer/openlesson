@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { readLtiLaunchSession } from "@/lib/lti/request-session";
 import { bindContextRegion, organizationAdminUserId } from "@/lib/lti/store";
@@ -13,6 +13,24 @@ import {
   REGION_SIMULATION_MAX_SAMPLES,
   REGION_SIMULATION_MIN_SAMPLES,
 } from "@/lib/region-simulation";
+import {
+  AI_USE_DEFAULT_CHECKED,
+  clampSamplesPerAiUse,
+  parseAiUseCatalogIds,
+  publicAiUseCatalog,
+  REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE,
+  REGION_SIMULATION_MAX_SAMPLES_PER_AI_USE,
+  REGION_SIMULATION_MIN_SAMPLES_PER_AI_USE,
+} from "@/lib/region-simulation-ai-use-catalog";
+import {
+  enqueueRegionSimulation,
+  jobsPublicPayload,
+  REGION_SIM_TICK_MAX_DURATION,
+  tickRegionSimulationJob,
+} from "@/lib/region-simulation-jobs";
+import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
+import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
+import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import { problemsForSimulationFlow, runRegionSimulation } from "@/lib/region-simulation-run";
 import {
   getVerificationFlowById,
@@ -26,6 +44,7 @@ import {
 import { getSolveFlowById, listSolveFlowsForOwnerUserId } from "@/lib/solve-flow-repository";
 
 export const runtime = "nodejs";
+export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
 
 function simulationKind(value: unknown): ProductFlowKind {
   return parseProductFlowKind(value) || "verification";
@@ -96,6 +115,11 @@ export async function GET(req: NextRequest) {
       defaultSamplesPerStrategy: REGION_SIMULATION_DEFAULT_SAMPLES,
       minSamplesPerStrategy: REGION_SIMULATION_MIN_SAMPLES,
       maxSamplesPerStrategy: REGION_SIMULATION_MAX_SAMPLES,
+      aiUseCatalog: publicAiUseCatalog(),
+      defaultChecked: AI_USE_DEFAULT_CHECKED,
+      defaultSamplesPerAiUse: REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE,
+      minSamplesPerAiUse: REGION_SIMULATION_MIN_SAMPLES_PER_AI_USE,
+      maxSamplesPerAiUse: REGION_SIMULATION_MAX_SAMPLES_PER_AI_USE,
       flows: listed,
     });
   } catch (error) {
@@ -128,6 +152,7 @@ export async function POST(req: NextRequest) {
       name: string;
       workspaceId: string | null;
       problems: string[];
+      answersModelSeed?: unknown;
     }> = [];
     for (const flowId of flowIds) {
       const flow =
@@ -142,6 +167,45 @@ export async function POST(req: NextRequest) {
         name: flow.name,
         workspaceId: flow.workspaceId || null,
         problems: problemsForSimulationFlow(flow),
+        answersModelSeed: flow.answersModelSeed ?? null,
+      });
+    }
+    const aiUseCatalogIds = parseAiUseCatalogIds(body.aiUseCatalogIds);
+    const samplesPerAiUse = clampSamplesPerAiUse(body.samplesPerAiUse);
+    if (aiUseCatalogIds.length) {
+      const openRouterKey = await loadOpenRouterApiKeyForOwnerUser(auth.ownerUserId);
+      if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
+    }
+    if (regionSimulationJobsEnabled()) {
+      const job = await enqueueRegionSimulation({
+        ownerUserId: auth.ownerUserId,
+        family: "exploration",
+        name,
+        kind,
+        flows: aiUseCatalogIds.length ? flows.slice(0, 1) : flows,
+        strategies,
+        samplesPerStrategy,
+        includeHumanData,
+        followUp: aiUseCatalogIds.length
+          ? { family: "ai_use", catalogIds: aiUseCatalogIds, samplesPerAiUse }
+          : null,
+      });
+      const ticked = await tickRegionSimulationJob(job.id);
+      if (ticked.shouldContinue) after(() => tickRegionSimulationJob(job.id));
+      const followUpId = ticked.followUpJobId;
+      if (followUpId) after(() => tickRegionSimulationJob(followUpId));
+      if (ticked.job.region_id && auth.session.contextId) {
+        await bindContextRegion({
+          platformId: auth.session.platformId,
+          deploymentId: auth.session.deploymentId,
+          contextId: auth.session.contextId,
+          knowledgeRegionId: ticked.job.region_id,
+        });
+      }
+      return NextResponse.json({
+        ...jobsPublicPayload(ticked.job),
+        explorationJobId: job.id,
+        aiUseJobId: ticked.followUpJobId,
       });
     }
     const encoder = new TextEncoder();

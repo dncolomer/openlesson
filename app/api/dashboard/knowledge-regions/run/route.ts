@@ -22,6 +22,7 @@ import {
   type DataStudioInspectPayload,
 } from "@/lib/data-studio-view";
 import { getOrgScopedFileContentResponse, organizationIdFromUser, organizationIdFromWorkspace } from "@/lib/organization/org-xai-files";
+import { applyProofOfWorkRunIdFilter } from "@/lib/region-simulation-persist";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
       .limit(400);
     if (workspaceId) query = query.eq("workspace_id", workspaceId);
     if (runId) {
-      query = query.or(`session_id.eq.${runId},metadata->>tap_session_id.eq.${runId}`);
+      query = applyProofOfWorkRunIdFilter(query, runId);
     }
     const { data, error } = await query;
     if (error) {

@@ -77,16 +77,24 @@ export function normalizeFlowLinkLabel(value: unknown): string | null {
 
 export function flowLinkLabelKind(
   label: string | null | undefined,
-): "test" | "reference" | "custom" {
+): "test" | "reference" | "ai_use" | "custom" {
   const normalized = normalizeFlowLinkLabel(label);
   if (!normalized || normalized.toLowerCase() === "test") return "test";
   if (normalized.toLowerCase() === "reference") return "reference";
+  if (normalized.toLowerCase() === "ai-use" || normalized.toLowerCase() === "ai_use") {
+    return "ai_use";
+  }
   return "custom";
 }
 
 /** Non-test labels (reference and any custom tag) are Reference, not Test. */
 export function flowLinkDefinesReference(label: string | null | undefined): boolean {
-  return flowLinkLabelKind(label) !== "test";
+  const kind = flowLinkLabelKind(label);
+  return kind !== "test" && kind !== "ai_use";
+}
+
+export function flowLinkIsAiUse(label: string | null | undefined): boolean {
+  return flowLinkLabelKind(label) === "ai_use";
 }
 
 export function flowLinkPublicPath(kind: ProductFlowKind, token: string): string {

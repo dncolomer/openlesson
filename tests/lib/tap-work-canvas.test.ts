@@ -381,7 +381,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(phases).toContain("<WorkCanvas");
     expect(phases).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
     expect(phases).toContain("buildTapWorkCanvasActionUploadItem");
-    expect(phases).toContain("buildTapCanvasSnapshotUploadItem");
+    expect(phases).toContain("buildCanvasMermaidDocumentUploadItem");
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("heliosBusy");
     expect(canvas).toContain("showHeliosThinking");
@@ -456,7 +456,8 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
 
     const live = readTapScoreSurface();
     expect(live).toContain("buildTapWorkCanvasActionUploadItem");
-    expect(live).toContain("buildTapCanvasSnapshotUploadItem");
+    expect(live).toContain("buildCanvasMermaidDocumentUploadItem");
+    expect(live).not.toContain("buildTapCanvasSnapshotUploadItem");
     expect(live).toContain("uploadTapWorkCanvasPow");
     expect(live).toContain("onCanvasPowActions");
     const preparePhases = read("components/scout-tap/scout-tap-phases.tsx");
@@ -476,7 +477,7 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
       [
         `tool=${tool?.toolName}/${tool?.toolAction}`,
         `snap=${snap.toolName}/${snap.toolAction}`,
-        "live wires buildTapWorkCanvasActionUploadItem + buildTapCanvasSnapshotUploadItem",
+        "live wires buildTapWorkCanvasActionUploadItem + mermaid documents",
         "path=/api/calibrate/session/canvas",
       ].join("\n") + "\n",
     );

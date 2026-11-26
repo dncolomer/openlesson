@@ -11,15 +11,20 @@ import {
   isCustomExplorationStrategyId,
   isSimulatedEmbedding,
   matchSimulationFlows,
+  nextRegionSimulationWizardStep,
   nearestStrategyCluster,
   parseCustomExplorationStrategy,
   parseSimulationStrategies,
+  parseRegionSimulationWizardStep,
   parseSimulationStrategiesWithRecovered,
   planRegionSimulationSamples,
+  previousRegionSimulationWizardStep,
   regionSimulationFlowIds,
   REGION_SIMULATION_DEFAULT_SAMPLES,
   REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_SOURCE,
+  REGION_SIMULATION_WIZARD_STEPS,
+  regionSimulationWizardCanAdvance,
   runRegionSimulationSample,
   seededSimulationTree,
   simulatedIdentityLabel,
@@ -234,11 +239,18 @@ describe("region simulation", () => {
     expect(create).not.toContain("LegacyKnowledgeRegionCreate");
     const setup = read("components/product-flow/region-simulation-setup.tsx");
     expect(setup).toContain("PRODUCT_CREATE_SHELL");
-    expect(setup).toContain("lg:grid-cols-2");
+    expect(setup).toContain("FlowWizardSteps");
+    expect(setup).toContain("data-region-simulation-wizard");
+    expect(setup).toContain("REGION_SIMULATION_WIZARD_STEPS");
+    expect(setup).toContain("md:grid-cols-2");
+    expect(setup).not.toContain("lg:grid-cols-2");
     expect(setup).not.toContain("max-w-3xl");
+    expect(setup).not.toContain("max-w-5xl");
+    expect(setup).not.toContain("max-w-[96rem]");
     expect(setup).toContain("data-region-kind");
     expect(setup).toContain("data-run-simulation");
     expect(setup).toContain("data-region-simulation-setup");
+    expect(setup).toContain("data-region-simulation-review");
     expect(setup).toContain("data-region-simulation-result");
     expect(setup).toContain("Include data from real humans in these flows");
     expect(setup).toContain("Run simulation");
@@ -249,11 +261,17 @@ describe("region simulation", () => {
     expect(setup).not.toContain("productRegionStudioPath");
     expect(setup).not.toContain("Open in Data Studio");
     expect(setup).toContain("data-region-simulation-progress");
+    expect(setup).toContain("data-region-simulation-progress-overall");
+    expect(setup).toContain("regionSimulationProgressOverall");
     expect(setup).toContain("data-region-simulation-flow-search");
     expect(setup).toContain("data-region-simulation-flow-matches");
     expect(setup).toContain("data-region-simulation-add-custom");
     expect(setup).toContain("data-region-simulation-custom-name");
     expect(setup).toContain("data-region-simulation-custom-instructions");
+    expect(setup).toContain("data-region-simulation-ai-use");
+    expect(setup).toContain("setAiUseCatalogIds([])");
+    expect(setup).toContain("DASHBOARD_REGION_SIMULATION_JOBS_PATH");
+    expect(setup).not.toContain("/api/dashboard/region-simulation/jobs");
     expect(setup).toContain("customStrategies");
     expect(setup).toContain("REGION_SIMULATION_FLOW_MATCH_LIMIT");
     expect(setup).toContain("kind=${kind}");
@@ -261,6 +279,8 @@ describe("region simulation", () => {
     expect(route).toContain("customStrategies: body.customStrategies");
     expect(route).toContain("parseSimulationStrategies");
     expect(route).toContain("runRegionSimulation");
+    expect(route).toContain("enqueueRegionSimulation");
+    expect(route).toContain("defaultChecked: AI_USE_DEFAULT_CHECKED");
     expect(route).toContain("requireAuthenticatedUser");
     expect(route).toContain("listSolveFlowsForOwnerUserId");
     expect(route).toContain("listCalibrationFlowsForOwnerUserId");
@@ -270,6 +290,63 @@ describe("region simulation", () => {
     expect(read("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
     expect(read("app/calibration/regions/new/page.tsx")).toContain('kind="calibration"');
     expect(read("app/solve/regions/new/page.tsx")).toContain('kind="solve"');
+  });
+
+  it("advances create-region wizard steps with the same chrome as flow create", () => {
+    expect([...REGION_SIMULATION_WIZARD_STEPS]).toEqual([
+      "name",
+      "flows",
+      "explore",
+      "ai-use",
+      "run",
+    ]);
+    expect(parseRegionSimulationWizardStep("explore")).toBe("explore");
+    expect(parseRegionSimulationWizardStep("nope")).toBe("name");
+    expect(nextRegionSimulationWizardStep("name")).toBe("flows");
+    expect(nextRegionSimulationWizardStep("run")).toBe("run");
+    expect(previousRegionSimulationWizardStep("flows")).toBe("name");
+    expect(previousRegionSimulationWizardStep("name")).toBe("name");
+    expect(
+      regionSimulationWizardCanAdvance("name", { name: "", flowIds: [], strategyIds: [] }),
+    ).toBe(false);
+    expect(
+      regionSimulationWizardCanAdvance("name", { name: "Limits", flowIds: [], strategyIds: [] }),
+    ).toBe(true);
+    expect(
+      regionSimulationWizardCanAdvance("flows", {
+        name: "Limits",
+        flowIds: [],
+        strategyIds: ["balanced"],
+      }),
+    ).toBe(false);
+    expect(
+      regionSimulationWizardCanAdvance("flows", {
+        name: "Limits",
+        flowIds: ["flow-1"],
+        strategyIds: [],
+      }),
+    ).toBe(true);
+    expect(
+      regionSimulationWizardCanAdvance("explore", {
+        name: "Limits",
+        flowIds: ["flow-1"],
+        strategyIds: [],
+      }),
+    ).toBe(false);
+    expect(
+      regionSimulationWizardCanAdvance("ai-use", {
+        name: "Limits",
+        flowIds: ["flow-1"],
+        strategyIds: ["balanced"],
+      }),
+    ).toBe(true);
+    expect(
+      regionSimulationWizardCanAdvance("run", {
+        name: "Limits",
+        flowIds: ["flow-1"],
+        strategyIds: ["balanced"],
+      }),
+    ).toBe(true);
   });
 
   it("stores Solve simulations on solve embeddings", async () => {

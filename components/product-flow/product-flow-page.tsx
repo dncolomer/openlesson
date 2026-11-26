@@ -37,6 +37,11 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import {
+  flowAuthorShowsCanvasCapture,
+  parseFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import { FlowPublicLinks } from "@/components/product-flow/copy-flow-url-button";
 
@@ -55,6 +60,7 @@ type LoadedFlow = {
   workspaceId: string;
   answersModelSeed?: AuthorUnsysModelSeed | null;
   enforcedChannels?: FlowEnforcedChannels;
+  canvasCapture?: FlowCanvasCapture;
 };
 
 
@@ -77,6 +83,9 @@ export function ProductFlowPage({
   const [answersModelSeed, setAnswersModelSeed] = useState<AuthorUnsysModelSeed | null>(null);
   const [enforcedChannels, setEnforcedChannels] = useState<FlowEnforcedChannels>(
     () => parseFlowEnforcedChannels(null),
+  );
+  const [canvasCapture, setCanvasCapture] = useState<FlowCanvasCapture>(() =>
+    parseFlowCanvasCapture(null),
   );
   const [minutes, setMinutes] = useState(15);
   const [publicUrl, setPublicUrl] = useState("");
@@ -104,6 +113,7 @@ export function ProductFlowPage({
     setGenerateProblemOnOpen(Boolean(next.generateProblemOnOpen));
     setAnswersModelSeed(parseFlowUnsysSeed(next.answersModelSeed));
     setEnforcedChannels(parseFlowEnforcedChannels(next.enforcedChannels));
+    setCanvasCapture(parseFlowCanvasCapture(next.canvasCapture));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setPublicUrl(String(payload.publicUrl || ""));
     const extra = Array.isArray(payload.links) ? payload.links : [];
@@ -142,6 +152,7 @@ export function ProductFlowPage({
           enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
             ? enforcedChannels
             : undefined,
+          canvasCapture: flowAuthorShowsCanvasCapture(kind) ? canvasCapture : undefined,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -352,7 +363,14 @@ export function ProductFlowPage({
 
           {flowAuthorShowsEnforcedChannels(kind) ? (
             <section className="space-y-3" data-flow-channels-editor="">
-              <FlowChannelsFields value={enforcedChannels} onChange={setEnforcedChannels} />
+              <FlowChannelsFields
+                value={enforcedChannels}
+                onChange={setEnforcedChannels}
+                canvasCapture={flowAuthorShowsCanvasCapture(kind) ? canvasCapture : undefined}
+                onCanvasCaptureChange={
+                  flowAuthorShowsCanvasCapture(kind) ? setCanvasCapture : undefined
+                }
+              />
             </section>
           ) : null}
 

@@ -28,6 +28,7 @@ import {
 } from "@/lib/dashboard-knowledge-regions";
 import { productFlowEmbeddingKind } from "@/lib/product-flow";
 import {
+  isAiUseEmbedding,
   simulatedIdentityLabel,
   studioEmbeddingOrigin,
 } from "@/lib/region-simulation";
@@ -266,6 +267,7 @@ export function presentKnowledgeRegionCandidate(input: {
     const row = clusterRows.find((item) => text(item.id) === cluster.id);
     const members = (input.embeddings ?? []).filter((embedding) => {
       if (studioEmbeddingOrigin(embedding) !== "simulated") return false;
+      if (isAiUseEmbedding(embedding)) return false;
       return text(embedding.identity) === simulatedIdentityLabel(cluster.strategyName);
     });
     const mixed = members

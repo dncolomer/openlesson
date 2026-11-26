@@ -21,6 +21,12 @@ import {
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import {
+  DEFAULT_FLOW_CANVAS_CAPTURE,
+  flowAuthorShowsCanvasCapture,
+  serializeFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
+import {
   flowOpeningCanvasHasContent,
   flowShowsOpeningCanvas,
   parseFlowOpeningCanvasScene,
@@ -63,6 +69,8 @@ export type ProductFlowDraft = {
   answersModelSeed: AuthorUnsysModelSeed | null;
   /** Channels the run requires. Audio off leaves the microphone optional. */
   enforcedChannels: FlowEnforcedChannels;
+  /** Solve / Verification: mermaid documents of the Work canvas every N actions. Default off. */
+  canvasCapture: FlowCanvasCapture;
 };
 
 /** Solve and Verification author enforced sensors. Calibration sounding does not. */
@@ -282,6 +290,7 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     enforcedChannels: flowAuthorShowsEnforcedChannels(kind)
       ? parseFlowEnforcedChannels(null)
       : { ...OPTIONAL_FLOW_ENFORCED_CHANNELS },
+    canvasCapture: { ...DEFAULT_FLOW_CANVAS_CAPTURE },
   };
 }
 
@@ -377,6 +386,7 @@ export type AcceptedProductFlowPublish =
       generateProblemOnOpen: boolean;
       answersModelSeed: AuthorUnsysModelSeed | null;
       enforcedChannels: FlowEnforcedChannels;
+      canvasCapture: FlowCanvasCapture;
     }
   | { ok: false; reason: string };
 
@@ -427,6 +437,9 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
   const enforcedChannels = flowAuthorShowsEnforcedChannels(draft.kind)
     ? serializeFlowEnforcedChannels(draft.enforcedChannels)
     : { ...OPTIONAL_FLOW_ENFORCED_CHANNELS };
+  const canvasCapture = flowAuthorShowsCanvasCapture(draft.kind)
+    ? serializeFlowCanvasCapture(draft.canvasCapture)
+    : { ...DEFAULT_FLOW_CANVAS_CAPTURE };
   if (draft.kind === "calibration") {
     return {
       ok: true,
@@ -443,6 +456,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       generateProblemOnOpen: persistGenerate,
       answersModelSeed,
       enforcedChannels,
+      canvasCapture: { ...DEFAULT_FLOW_CANVAS_CAPTURE },
     };
   }
   if (draft.kind === "solve") {
@@ -461,6 +475,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       generateProblemOnOpen: persistGenerate,
       answersModelSeed,
       enforcedChannels,
+      canvasCapture,
     };
   }
   return {
@@ -478,6 +493,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     generateProblemOnOpen: persistGenerate,
     answersModelSeed,
     enforcedChannels,
+    canvasCapture,
   };
 }
 

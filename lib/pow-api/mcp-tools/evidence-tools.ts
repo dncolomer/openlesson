@@ -117,6 +117,17 @@ const FLOW_WRITE_PROPERTIES = {
     description: "Optional prompt used when generate_unsys is true.",
   },
   enforced_channels: ENFORCED_CHANNELS_SCHEMA,
+  canvas_capture: {
+    type: "object",
+    description:
+      "Solve / Verification: store mermaid documents of the Work canvas every N actions. Default off. Documents land on the stored record, never in the embedding. Calibration ignores this.",
+    properties: {
+      enabled: { type: "boolean" },
+      every_actions: { type: "integer", minimum: 2, maximum: 48 },
+      everyActions: { type: "integer", minimum: 2, maximum: 48 },
+    },
+    additionalProperties: false,
+  },
   workspace_id: { type: "string" },
 } as const;
 

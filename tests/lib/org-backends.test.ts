@@ -46,11 +46,14 @@ describe("Organization tab BYOK surface", () => {
     expect(dashboard).toContain('data-org-backends');
     expect(dashboard).toContain('data-org-llm-backend');
     expect(dashboard).toContain('data-org-blob-backend');
+    expect(dashboard).toContain('data-org-openrouter-backend');
+    expect(dashboard).toContain('data-org-openrouter-api-key');
     expect(dashboard).toContain('data-org-llm-mode="platform"');
     expect(dashboard).toContain('data-org-backends-save');
     expect(dashboard).toContain('fetch("/api/organization/backends"');
     expect(dashboard).toContain('method: "PUT"');
     expect(dashboard).toContain("handleSaveBackends");
+    expect(dashboard).toContain("openrouter:");
     expect(dashboard).toContain("isOrgAdmin");
     expect(dashboard).toContain('t("organization.llmBackendPlatform")');
     expect(dashboard).toContain('t("organization.blobBackendPlatform")');
@@ -61,6 +64,7 @@ describe("Organization tab BYOK surface", () => {
     expect(route).toContain("applyOrgBackendMutation");
     expect(route).toContain("sealString");
     expect(route).toContain("presentOrgBackends");
+    expect(route).toContain("openrouter_api_key_ciphertext");
 
     const orgGet = read("app/api/organization/route.ts");
     expect(orgGet).toContain("presentOrganizationRow");
@@ -78,6 +82,16 @@ describe("Organization tab BYOK surface", () => {
     expect(migration).toContain("llm_backend");
     expect(migration).toContain("blob_backend");
 
+    const openrouterMigration = read(
+      "supabase/migrations/20261125120000_organization_openrouter.sql",
+    );
+    expect(openrouterMigration).toContain("openrouter_api_key_ciphertext");
+    expect(openrouterMigration).toContain("openrouter_api_key_last_four");
+
+    const envExample = read(".env.local.example");
+    expect(envExample).not.toMatch(/OPENROUTER_API_KEY=/);
+    expect(envExample).toContain("OPENROUTER_JOB_MAX_USD");
+
     const en = JSON.parse(read("messages/en.json")) as {
       organization: Record<string, string>;
     };
@@ -88,6 +102,9 @@ describe("Organization tab BYOK surface", () => {
       "blobBackendPlatform",
       "saveBackends",
       "xaiCreditNote",
+      "openrouterBackend",
+      "openrouterApiKey",
+      "openrouterClearKey",
     ]) {
       expect(en.organization[key]?.trim().length).toBeGreaterThan(0);
     }
@@ -130,6 +147,9 @@ describe("org backend mutation and presenter", () => {
         provider: "xai",
         apiKey: "xai-customer-files-key",
       },
+      openrouter: {
+        apiKey: "sk-or-live-org-key",
+      },
     });
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -143,16 +163,23 @@ describe("org backend mutation and presenter", () => {
     expect(applied.next.llm_api_key_ciphertext).not.toContain("sk-live-customer-llm-key");
     expect(applied.next.llm_api_key_last_four).toBe("sk-live-customer-llm-key".slice(-4));
     expect(applied.next.blob_api_key_last_four).toBe("xai-customer-files-key".slice(-4));
+    expect(applied.next.openrouter_api_key_ciphertext).toBeTruthy();
+    expect(applied.next.openrouter_api_key_ciphertext).not.toContain("sk-or-live-org-key");
+    expect(applied.next.openrouter_api_key_last_four).toBe("sk-or-live-org-key".slice(-4));
 
     const presented = presentOrgBackends(applied.next);
     const json = JSON.stringify(presented);
     expect(json).not.toContain("sk-live-customer-llm-key");
     expect(json).not.toContain("xai-customer-files-key");
+    expect(json).not.toContain("sk-or-live-org-key");
     expect(json).not.toContain(applied.next.llm_api_key_ciphertext);
     expect(json).not.toContain(applied.next.blob_api_key_ciphertext);
+    expect(json).not.toContain(applied.next.openrouter_api_key_ciphertext);
     expect(presented.llm.configured).toBe(true);
     expect(presented.llm.lastFour).toBe("sk-live-customer-llm-key".slice(-4));
     expect(presented.blob.configured).toBe(true);
+    expect(presented.openrouter.configured).toBe(true);
+    expect(presented.openrouter.lastFour).toBe("sk-or-live-org-key".slice(-4));
 
     const row = presentOrganizationRow({
       id: "org-1",
@@ -160,12 +187,14 @@ describe("org backend mutation and presenter", () => {
       xai_api_key_ciphertext: "platform-provisioned-ciphertext",
       llm_api_key_ciphertext: applied.next.llm_api_key_ciphertext,
       blob_api_key_ciphertext: applied.next.blob_api_key_ciphertext,
+      openrouter_api_key_ciphertext: applied.next.openrouter_api_key_ciphertext,
       llm_api_key_last_four: applied.next.llm_api_key_last_four,
       llm_backend: "custom",
     });
     expect(row).not.toHaveProperty("xai_api_key_ciphertext");
     expect(row).not.toHaveProperty("llm_api_key_ciphertext");
     expect(row).not.toHaveProperty("blob_api_key_ciphertext");
+    expect(row).not.toHaveProperty("openrouter_api_key_ciphertext");
     expect(JSON.stringify(row)).not.toContain("platform-provisioned-ciphertext");
     expect(JSON.stringify(omitOrgSecretColumns({ xai_api_key_ciphertext: "secret" }))).not.toContain(
       "secret",
@@ -178,12 +207,43 @@ describe("org backend mutation and presenter", () => {
       llm: { mode: "custom", provider: "xai", apiKey: "xai-1" },
     });
     expect(rejected.ok).toBe(false);
+
+    const openrouterRejected = parseOrgBackendMutation({
+      openrouter: { apiKey: "sk-or-1", openrouter_api_key_ciphertext: "sneak" },
+    });
+    expect(openrouterRejected.ok).toBe(false);
+  });
+
+  it("seals and clears an OpenRouter key without touching LLM backends", () => {
+    const parsed = parseOrgBackendMutation({
+      openrouter: { apiKey: "sk-or-only" },
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const applied = applyOrgBackendMutation(null, parsed.value, (plain) =>
+      sealString(plain, SEAL_SECRET),
+    );
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    expect(applied.next.llm_backend).toBe("platform");
+    expect(applied.next.openrouter_api_key_last_four).toBe("only");
+
+    const cleared = applyOrgBackendMutation(
+      applied.next,
+      { openrouter: { apiKey: null, clearKey: true } },
+      (plain) => sealString(plain, SEAL_SECRET),
+    );
+    expect(cleared.ok).toBe(true);
+    if (!cleared.ok) return;
+    expect(cleared.next.openrouter_api_key_ciphertext).toBeNull();
+    expect(cleared.next.openrouter_api_key_last_four).toBeNull();
   });
 
   it("defaults an empty org to platform xAI", () => {
     const presented = presentOrgBackends(null);
     expect(presented.llm.mode).toBe("platform");
     expect(presented.blob.mode).toBe("platform");
+    expect(presented.openrouter.configured).toBe(false);
     expect(presented.llmIsXai).toBe(true);
     expect(presented.sessionCreditCost).toBe(flowSessionCreditCost(undefined, { llmIsXai: true }));
   });

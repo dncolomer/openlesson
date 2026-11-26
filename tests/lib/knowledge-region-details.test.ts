@@ -10,6 +10,7 @@ import {
 import {
   inspectKnowledgeRegionSample,
   parseRegionSimulationDescription,
+  presentKnowledgeRegionClusters,
   presentKnowledgeRegionDetails,
 } from "@/lib/knowledge-region-details";
 
@@ -226,6 +227,80 @@ describe("knowledge region details", () => {
     expect(realInspect?.run_id).toBe("human-1");
     expect(realInspect?.pow.length).toBeGreaterThan(0);
     expect(realInspect).toEqual(studioReal);
+  });
+
+  it("keeps AI-use samples when only exploration clusters exist and hides ai-use clusters by default", () => {
+    const simulated = embeddingRow({
+      id: "sim-1",
+      identity: "Simulated · Exploit-heavy",
+      source: "simulated",
+      prompt: "agent walk",
+    });
+    const aiUse = {
+      ...embeddingRow({
+        id: "ai-1",
+        identity: "AI · Claude Sonnet · high",
+        source: "simulated",
+        prompt: "model walk",
+      }),
+      link_label: "ai-use",
+    };
+    const parent = {
+      id: "parent",
+      name: "Limits styles",
+      description: "region-simulation: 1 flows · Exploit-heavy · 3/strategy · 0 real",
+      product: "verification",
+      owner_user_id: "me",
+      workspace_id: "ws-1",
+      verify_flow_id: "flow-a",
+      centroid: simulated.vector,
+      cosine_threshold: 0.5,
+    };
+    const explorationCluster = {
+      id: "c-exploit",
+      name: "Limits styles · Exploit-heavy",
+      description: "region-simulation-cluster:exploit-heavy",
+      product: "verification",
+      subject_count: 1,
+      centroid: simulated.vector,
+      cosine_threshold: 0.5,
+    };
+    const aiUseCluster = {
+      id: "c-ai",
+      name: "Limits styles · Claude Sonnet · high",
+      description: "region-simulation-cluster:ai-use:claude-sonnet-high",
+      product: "verification",
+      subject_count: 1,
+      centroid: aiUse.vector,
+      cosine_threshold: 0.5,
+    };
+    const withoutAiCluster = presentKnowledgeRegionDetails({
+      kind: "verification",
+      flowNames: { "flow-a": "Limits" },
+      parent,
+      clusters: [explorationCluster],
+      embeddings: [simulated, aiUse],
+    });
+    expect(withoutAiCluster?.samples.map((row) => row.id).sort()).toEqual(["ai-1", "sim-1"]);
+    expect(withoutAiCluster?.samples.find((row) => row.id === "ai-1")?.pointKind).toBe("ai_use");
+    expect(withoutAiCluster?.clusters.map((row) => row.id)).toEqual(["c-exploit"]);
+
+    const withAiCluster = presentKnowledgeRegionDetails({
+      kind: "verification",
+      flowNames: { "flow-a": "Limits" },
+      parent,
+      clusters: [explorationCluster, aiUseCluster],
+      embeddings: [simulated, aiUse],
+    });
+    expect(withAiCluster?.samples.find((row) => row.id === "ai-1")?.clusterId).toBe("c-ai");
+    expect(presentKnowledgeRegionClusters(parent, [explorationCluster, aiUseCluster]).map((row) => row.id)).toEqual([
+      "c-exploit",
+    ]);
+    expect(
+      presentKnowledgeRegionClusters(parent, [explorationCluster, aiUseCluster], { family: "ai_use" }).map(
+        (row) => row.id,
+      ),
+    ).toEqual(["c-ai"]);
   });
 
   it("presents Solve regions without falling through to verification", () => {

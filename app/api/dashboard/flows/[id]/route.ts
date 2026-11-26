@@ -14,6 +14,7 @@ import { flowProblemFromUnknown, parseFlowArtifacts } from "@/lib/flow-artifacts
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { requestHasUnsysSeed, unsysSeedFromRequestBody } from "@/lib/unsys-tree-spec";
 import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
+import { parseFlowCanvasCapture } from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
@@ -256,6 +257,10 @@ export async function POST(
       body.enforcedChannels === undefined && body.enforced_channels === undefined
         ? undefined
         : parseFlowEnforcedChannels(body.enforcedChannels ?? body.enforced_channels);
+    const canvasCapture =
+      body.canvasCapture === undefined && body.canvas_capture === undefined
+        ? undefined
+        : parseFlowCanvasCapture(body.canvasCapture ?? body.canvas_capture);
 
     if (loaded.kind === "solve") {
       const updated = await runSolveCommand({
@@ -273,6 +278,7 @@ export async function POST(
         actionCatalog: body.actionCatalog as number | undefined,
         answersModelSeed,
         enforcedChannels,
+        canvasCapture,
       });
       if (!updated.ok) return jsonError(400, updated.reason);
       return NextResponse.json({ flow: updated.flow, name: updated.flow?.name });
@@ -311,6 +317,7 @@ export async function POST(
       actionCatalog: body.actionCatalog as number | undefined,
       answersModelSeed,
       enforcedChannels,
+      canvasCapture,
     });
     if (!updated.ok) return jsonError(400, updated.reason);
     return NextResponse.json({ flow: updated.flow, name: updated.flow?.name });

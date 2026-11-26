@@ -49,6 +49,12 @@ import {
   type IleWorkCanvasWorkspaceInput,
 } from "@/lib/learn-work-canvas";
 import { type IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
+import {
+  buildCanvasMermaidDocumentUploadItem,
+  FlowCanvasCaptureClock,
+  sessionCanvasCapture,
+} from "@/lib/flow-canvas-capture";
+import { uploadIleEvidenceItem } from "@/lib/learn-proof-of-work-client";
 import type { ChapterWorkspace } from "@/components/session/sessionViewHelpers";
 import type { IleSessionContextMap } from "@/lib/learn-session-global-context";
 import type { GuestAccessKind, IlePromptMaterials } from "@/components/session-view/types";
@@ -158,6 +164,8 @@ export function useSessionField(input: SessionFieldInput) {
   useEffect(() => {
     whiteboardSceneDataRef.current = whiteboardSceneData;
   }, [whiteboardSceneData]);
+  const canvasCaptureClockRef = useRef(new FlowCanvasCaptureClock());
+  canvasCaptureClockRef.current.setCapture(sessionCanvasCapture(session?.metadata));
   const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
   const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>([]);
   const [canvasApplyFiles, setCanvasApplyFiles] = useState<IleWorkCanvasFiles>({});
@@ -410,11 +418,30 @@ export function useSessionField(input: SessionFieldInput) {
 
   const handleCanvasPowActions = useCallback(
     (events: IleWorkCanvasPowEvent[]) => {
+      // Classified canvas events always record for Unsys, even when capture is off.
       for (const event of events) {
         void logTool("canvas", event.toolAction as ToolAction, event.metadata);
       }
+      const clock = canvasCaptureClockRef.current;
+      if (!clock.note(events.length)) return;
+      const currentSession = sessionRef.current;
+      if (!currentSession) return;
+      const stats = clock.stats();
+      const item = buildCanvasMermaidDocumentUploadItem(
+        currentSession.id,
+        whiteboardSceneDataRef.current,
+        stats,
+      );
+      void uploadIleEvidenceItem(
+        workspaceId,
+        currentSession.id,
+        item,
+        ileToken,
+        undefined,
+        solveToken,
+      );
     },
-    [logTool],
+    [ileToken, logTool, sessionRef, solveToken, workspaceId],
   );
 
   const handleAskCanvasSelection = useCallback(

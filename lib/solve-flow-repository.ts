@@ -24,6 +24,11 @@ import {
   serializeFlowEnforcedChannels,
   withEnforcedChannelsMetadata,
 } from "@/lib/flow-channels";
+import {
+  parseFlowCanvasCapture,
+  serializeFlowCanvasCapture,
+  withCanvasCaptureMetadata,
+} from "@/lib/flow-canvas-capture";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
@@ -101,6 +106,7 @@ function memorySolveSessionRow(input: {
           : {}),
         ...(input.flow.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
         enforcedChannels: serializeFlowEnforcedChannels(input.flow.enforcedChannels),
+        canvasCapture: serializeFlowCanvasCapture(input.flow.canvasCapture),
       },
       { id: input.flowLinkId, label: input.flowLinkLabel },
     ),
@@ -152,6 +158,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     actionCatalog: parseLearningModelSize(row.action_catalog),
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
     enforcedChannels: parseFlowEnforcedChannels(row.enforced_channels),
+    canvasCapture: parseFlowCanvasCapture(row.canvas_capture),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -213,6 +220,7 @@ async function persistCommand(
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
       enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
+      canvas_capture: serializeFlowCanvasCapture(value.flow.canvasCapture),
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -232,6 +240,7 @@ async function persistCommand(
       action_catalog: value.flow.actionCatalog,
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
       enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
+      canvas_capture: serializeFlowCanvasCapture(value.flow.canvasCapture),
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -274,20 +283,23 @@ async function persistCommand(
         kind: "solve",
         projectedPolicy: null,
       },
-      metadata: withEnforcedChannelsMetadata(
-        withFlowLinkMetadata(
-          {
-            title: topic,
-            solve_flow_id: command.flowId,
-            ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-            ...(mapped?.openingCanvasScene
-              ? { openingCanvasScene: mapped.openingCanvasScene }
-              : {}),
-            ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
-          },
-          { id: command.flowLinkId, label: command.flowLinkLabel },
+      metadata: withCanvasCaptureMetadata(
+        withEnforcedChannelsMetadata(
+          withFlowLinkMetadata(
+            {
+              title: topic,
+              solve_flow_id: command.flowId,
+              ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+              ...(mapped?.openingCanvasScene
+                ? { openingCanvasScene: mapped.openingCanvasScene }
+                : {}),
+              ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
+            },
+            { id: command.flowLinkId, label: command.flowLinkLabel },
+          ),
+          parseFlowEnforcedChannels(mapped?.enforcedChannels),
         ),
-        parseFlowEnforcedChannels(mapped?.enforcedChannels),
+        parseFlowCanvasCapture(mapped?.canvasCapture),
       ),
     });
     if (error) {
@@ -320,6 +332,7 @@ async function writeSolveFlow(
       "generate_problem_on_open",
       "answers_model_seed",
       "enforced_channels",
+      "canvas_capture",
     ],
   );
 }

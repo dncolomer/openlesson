@@ -13,6 +13,7 @@ import {
   FLOW_FORM_TEXTAREA,
   FLOW_GHOST_BTN,
   FLOW_PRIMARY_BTN,
+  PRODUCT_CREATE_SHELL,
   FlowFormCard,
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
@@ -61,6 +62,7 @@ import {
   parseKnowledgeRegionFigureMode,
   parseKnowledgeRegionFigureSpace,
   parseKnowledgeRegionFigureTrack,
+  nearestAiUseClusterDistance,
   presentKnowledgeRegionClusterDistances,
   presentKnowledgeRegionFigure,
   resolveKnowledgeRegionPointKind,
@@ -80,6 +82,7 @@ import {
   dashboardKnowledgeRegionSimulationPath,
 } from "@/lib/dashboard-knowledge-regions";
 import {
+  DASHBOARD_REGION_SIMULATION_JOBS_PATH,
   EXPLORATION_STRATEGIES,
   explorationStrategyFromSimulatedEmbedding,
   parseCustomExplorationStrategy,
@@ -88,6 +91,11 @@ import {
   REGION_SIMULATION_MIN_SAMPLES,
   type ExplorationStrategyId,
 } from "@/lib/region-simulation";
+import {
+  clampSamplesPerAiUse,
+  publicAiUseCatalog,
+  REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE,
+} from "@/lib/region-simulation-ai-use-catalog";
 import {
   type KnowledgeRegionDetails,
   type KnowledgeRegionDetailsSample,
@@ -111,6 +119,7 @@ const ZOOM_BTN =
   "h-7 min-w-7 border border-white/25 bg-black/70 px-2 font-mono text-[10px] uppercase tracking-[0.14em] text-white hover:border-white hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40";
 const POINT_KIND_IDS: readonly KnowledgeRegionPointKind[] = [
   "simulated",
+  "ai_use",
   "cohort",
   "analysis",
 ];
@@ -163,6 +172,9 @@ export function KnowledgeRegionPage({
     Array<{ id: ExplorationStrategyId; name: string; instructions: string }>
   >([]);
   const [addSamples, setAddSamples] = useState(REGION_SIMULATION_DEFAULT_SAMPLES);
+  const [addAiUseIds, setAddAiUseIds] = useState<string[]>([]);
+  const [addAiUseSamples, setAddAiUseSamples] = useState(REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE);
+  const [aiUseThreshold, setAiUseThreshold] = useState<number | null>(null);
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState("");
   const figureSpace = knowledgeRegionFigureSpace(figureMode);
@@ -362,6 +374,12 @@ export function KnowledgeRegionPage({
         strategyName: cluster.strategyName,
         vector: details.regions.find((region) => region.id === cluster.id)?.centroid ?? null,
       })),
+      aiUseClusters: (details.aiUseClusters ?? []).map((cluster) => ({
+        id: cluster.id,
+        strategyName: cluster.strategyName,
+        vector: details.regions.find((region) => region.id === cluster.id)?.centroid ?? null,
+      })),
+      aiUseThreshold,
       parent: {
         id: details.id,
         name: details.name,
@@ -375,7 +393,7 @@ export function KnowledgeRegionPage({
       selectedPointId: selectedSampleId,
       mode: figureMode,
     });
-  }, [details, figureMode, projection, selectedSampleId, visibleClusterIds, visiblePointKinds]);
+  }, [aiUseThreshold, details, figureMode, projection, selectedSampleId, visibleClusterIds, visiblePointKinds]);
 
   const pathIds = useMemo(
     () => new Set((figure?.path?.steps ?? []).map((step) => step.id)),
@@ -533,6 +551,25 @@ export function KnowledgeRegionPage({
     setCustomInstructions("");
   }
 
+  async function pollSimulationJob(jobId: string): Promise<Record<string, unknown>> {
+    for (let i = 0; i < 180; i += 1) {
+      const status = await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}`);
+      const payload = (await status.json().catch(() => ({}))) as Record<string, unknown>;
+      const jobStatus = String(payload.status || "");
+      if (jobStatus === "done") return payload;
+      if (jobStatus === "failed") {
+        throw new Error(String(payload.error || "Simulation job failed"));
+      }
+      if (jobStatus === "queued" || jobStatus === "running") {
+        await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`, {
+          method: "POST",
+        }).catch(() => null);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    throw new Error("Simulation job timed out");
+  }
+
   async function mutateSimulation(body: Record<string, unknown>): Promise<void> {
     setSimBusy(true);
     setSimError("");
@@ -545,6 +582,12 @@ export function KnowledgeRegionPage({
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(errorMessageFromBody(payload, "Could not add simulated samples"));
+      }
+      if (payload.type === "jobs") {
+        const jobId = String(payload.jobId || payload.explorationJobId || "");
+        const done = jobId ? await pollSimulationJob(jobId) : payload;
+        const follow = String(done.followUpJobId || payload.aiUseJobId || "");
+        if (follow) await pollSimulationJob(follow);
       }
       loadDetails();
     } catch (err) {
@@ -585,7 +628,7 @@ export function KnowledgeRegionPage({
       activeTab={dashboardTabForProductSurface(kind, "region")}
     >
       <div
-        className="mx-auto min-h-[32rem] w-full max-w-5xl space-y-6"
+        className={`${PRODUCT_CREATE_SHELL} min-h-[32rem]`}
         data-knowledge-region-details={kind}
         data-knowledge-region-mode={mode}
       >
@@ -783,9 +826,45 @@ export function KnowledgeRegionPage({
                       className={FLOW_FORM_INPUT}
                     />
                   </label>
+                  <fieldset className="space-y-2" data-knowledge-region-add-ai-use="">
+                    <legend className={FLOW_FORM_LABEL}>AI-use models</legend>
+                    {publicAiUseCatalog().map((row) => (
+                      <label
+                        key={row.id}
+                        className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={addAiUseIds.includes(row.id)}
+                          onChange={() => setAddAiUseIds(toggleId(addAiUseIds, row.id))}
+                          data-knowledge-region-add-ai-use={row.id}
+                        />
+                        <span>
+                          <span className="block">{row.displayName}</span>
+                          <span className="block text-xs text-neutral-400">
+                            {row.thinkingLabel} · training {row.training}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                    <label className="block space-y-1">
+                      <span className={FLOW_FORM_LABEL}>Samples per AI-use model</span>
+                      <input
+                        type="number"
+                        min={3}
+                        max={12}
+                        value={addAiUseSamples}
+                        onChange={(event) =>
+                          setAddAiUseSamples(clampSamplesPerAiUse(event.target.value))
+                        }
+                        data-knowledge-region-add-ai-use-samples=""
+                        className={FLOW_FORM_INPUT}
+                      />
+                    </label>
+                  </fieldset>
                   <button
                     type="button"
-                    disabled={simBusy || !addStrategyIds.length}
+                    disabled={simBusy || (!addStrategyIds.length && !addAiUseIds.length)}
                     data-knowledge-region-add-simulation=""
                     className={FLOW_PRIMARY_BTN}
                     onClick={() =>
@@ -796,6 +875,8 @@ export function KnowledgeRegionPage({
                           ...customStrategies,
                         ].filter((row) => addStrategyIds.includes(row.id)),
                         samplesPerStrategy: addSamples,
+                        aiUseCatalogIds: addAiUseIds,
+                        samplesPerAiUse: addAiUseSamples,
                       })
                     }
                   >
@@ -1279,6 +1360,24 @@ export function KnowledgeRegionPage({
                           >
                             Quadrants
                           </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={figureSpace === "ai_use"}
+                            aria-disabled={!details.aiUseClusters?.length}
+                            className={figureSpace === "ai_use" ? MODE_ON : MODE_OFF}
+                            data-knowledge-region-figure-space-option="ai_use"
+                            title={
+                              details.aiUseClusters?.length
+                                ? "AI use"
+                                : "Run AI-use simulation first."
+                            }
+                            onClick={() => {
+                              if (details.aiUseClusters?.length) setSpace("ai_use");
+                            }}
+                          >
+                            AI use
+                          </button>
                         </div>
                       </div>
                       <div className="mt-2" data-knowledge-region-figure-track="">
@@ -1346,7 +1445,23 @@ export function KnowledgeRegionPage({
                       </button>
                       </div>
                     ) : null}
-                    {figureSpace === "quadrant" ? null : (
+                    {figureSpace === "ai_use" ? (
+                      <label className="flex min-w-0 w-full flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                          L2 to nearest AI use
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          value={aiUseThreshold ?? 0.35}
+                          data-knowledge-region-ai-use-threshold=""
+                          onChange={(event) => setAiUseThreshold(Number(event.target.value))}
+                        />
+                      </label>
+                    ) : null}
+                    {figureSpace === "quadrant" || figureSpace === "ai_use" ? null : (
                     <label className="flex min-w-0 w-full flex-col gap-0.5">
                       <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                         Project
@@ -1408,7 +1523,9 @@ export function KnowledgeRegionPage({
                               ? knowledgeRegionAnalysisPointLabel(details.kind)
                               : id === "cohort"
                                 ? "Reference"
-                                : "Simulated",
+                                : id === "ai_use"
+                                  ? "AI use"
+                                  : "Simulated",
                         }))}
                         selected={visiblePointKinds}
                         onChange={(ids) =>
@@ -1441,6 +1558,20 @@ export function KnowledgeRegionPage({
                       : null
                   }
                   unsysDistance={knowledgeRegionUnsysDistance(selectedSample.embedding.raw)}
+                  aiUseNearest={
+                    details.aiUseClusters?.length
+                      ? nearestAiUseClusterDistance({
+                          vector: selectedSample.embedding.vector,
+                          clusters: details.aiUseClusters.map((cluster) => ({
+                            id: cluster.id,
+                            strategyName: cluster.strategyName,
+                            vector:
+                              details.regions.find((region) => region.id === cluster.id)?.centroid ??
+                              null,
+                          })),
+                        })
+                      : null
+                  }
                   mode={figureMode}
                   productKind={details.kind}
                   identityLabel={knowledgeRegionIdentityLabel(

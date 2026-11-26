@@ -27,6 +27,7 @@ export type StoredRecordFileKind =
   | "eeg"
   | "transcript"
   | "canvas"
+  | "document"
   | "tool"
   | "person_media"
   | "other";
@@ -109,6 +110,7 @@ export function storedRecordFileKind(row: StoredRecordPowRow): StoredRecordFileK
   if (tool === "transcript" || tool === "speech-segment" || tool === "tap-speech-segment") {
     return "transcript";
   }
+  if (action === "canvas_document" || mimeOf(row).startsWith("text/markdown")) return "document";
   if (tool === "canvas") return "canvas";
   if (type === "tool" || tool) return "tool";
   return "other";

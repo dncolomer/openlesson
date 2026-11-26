@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   parseProductFlowKind,
@@ -18,23 +19,36 @@ import {
   FLOW_FORM_TEXTAREA,
   FLOW_GHOST_BTN,
   FLOW_PRIMARY_BTN,
+  FLOW_SECONDARY_BTN,
   PRODUCT_CREATE_SHELL,
   FlowField,
   FlowFormCard,
   FlowFormHeader,
+  FlowWizardSteps,
 } from "@/components/product-flow/product-flow-form";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import {
+  DASHBOARD_REGION_SIMULATION_JOBS_PATH,
   DASHBOARD_REGION_SIMULATION_PATH,
   matchSimulationFlows,
+  nextRegionSimulationWizardStep,
   parseCustomExplorationStrategy,
+  previousRegionSimulationWizardStep,
   REGION_SIMULATION_DEFAULT_SAMPLES,
   REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_MAX_SAMPLES,
   REGION_SIMULATION_MIN_SAMPLES,
+  REGION_SIMULATION_WIZARD_STEPS,
+  regionSimulationWizardCanAdvance,
+  regionSimulationProgressOverall,
   type ExplorationStrategyId,
   type RegionSimulationProgress,
+  type RegionSimulationWizardStep,
 } from "@/lib/region-simulation";
+import {
+  clampSamplesPerAiUse,
+  REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE,
+} from "@/lib/region-simulation-ai-use-catalog";
 import type {
   RegionSimulationClusterResult,
   RegionSimulationRunResult,
@@ -57,8 +71,38 @@ type SetupStrategy = {
   custom?: boolean;
 };
 
+type SetupAiUse = {
+  id: string;
+  displayName: string;
+  thinkingLabel: string;
+  imageInput: boolean;
+  training: "denied" | "allowed";
+};
+
 function toggleId<T extends string>(current: readonly T[], id: T): T[] {
   return current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+}
+
+function wizardHeading(step: RegionSimulationWizardStep): string {
+  if (step === "name") return "Name this knowledge region";
+  if (step === "flows") return "Pick flows";
+  if (step === "explore") return "Choose exploration strategies";
+  if (step === "ai-use") return "Add AI-use models";
+  return "Run the simulation";
+}
+
+function wizardDescription(step: RegionSimulationWizardStep, productLabel: string): string {
+  if (step === "name") return "A short name for the dashboard list.";
+  if (step === "flows") {
+    return `Required. Search and pick the ${productLabel.toLowerCase()} flows that supply the problems the agents will solve.`;
+  }
+  if (step === "explore") {
+    return "Clusters describe exploration styles, not a person's ability or worth. Add a custom strategy to use its prompt as the agent instructions.";
+  }
+  if (step === "ai-use") {
+    return "Optional. None are selected by default. Picking a model uses a single seed flow.";
+  }
+  return `Review the setup, then run. Agents solve the selected ${productLabel.toLowerCase()} problems and the result is an annotated region.`;
 }
 
 async function readSimulationStream(
@@ -110,7 +154,9 @@ export function RegionSimulationSetup({
   apiPath?: string;
   detailsBasePath?: string;
 }) {
+  const router = useRouter();
   const [kind, setKind] = useState<ProductFlowKind>(lockedKind ?? "solve");
+  const [step, setStep] = useState<RegionSimulationWizardStep>("name");
   const productLabel = productFlowKindLabel(kind);
   const [flows, setFlows] = useState<SetupFlow[]>([]);
   const [strategies, setStrategies] = useState<SetupStrategy[]>([]);
@@ -122,6 +168,9 @@ export function RegionSimulationSetup({
   const [customInstructions, setCustomInstructions] = useState("");
   const [samplesPerStrategy, setSamplesPerStrategy] = useState(REGION_SIMULATION_DEFAULT_SAMPLES);
   const [includeHumanData, setIncludeHumanData] = useState(false);
+  const [aiUseCatalog, setAiUseCatalog] = useState<SetupAiUse[]>([]);
+  const [aiUseCatalogIds, setAiUseCatalogIds] = useState<string[]>([]);
+  const [samplesPerAiUse, setSamplesPerAiUse] = useState(REGION_SIMULATION_DEFAULT_SAMPLES_PER_AI_USE);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<RegionSimulationProgress[]>([]);
@@ -159,6 +208,19 @@ export function RegionSimulationSetup({
         );
         const samples = Number(payload.defaultSamplesPerStrategy);
         if (Number.isFinite(samples)) setSamplesPerStrategy(samples);
+        const catalog = Array.isArray(payload.aiUseCatalog) ? payload.aiUseCatalog : [];
+        setAiUseCatalog(
+          catalog.map((row: SetupAiUse) => ({
+            id: String(row.id || ""),
+            displayName: String(row.displayName || row.id),
+            thinkingLabel: String(row.thinkingLabel || ""),
+            imageInput: Boolean(row.imageInput),
+            training: row.training === "allowed" ? "allowed" : "denied",
+          })),
+        );
+        setAiUseCatalogIds([]);
+        const aiSamples = Number(payload.defaultSamplesPerAiUse);
+        if (Number.isFinite(aiSamples)) setSamplesPerAiUse(clampSamplesPerAiUse(aiSamples));
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load simulation setup");
@@ -173,6 +235,7 @@ export function RegionSimulationSetup({
     setFlowQuery("");
     setCustomName("");
     setCustomInstructions("");
+    setStep("name");
   }, [kind]);
 
   const selectedFlows = useMemo(
@@ -198,8 +261,28 @@ export function RegionSimulationSetup({
   }, [includeHumanData, showHumanOption]);
 
   function addFlow(id: string) {
-    setFlowIds((current) => (current.includes(id) ? current : [...current, id]));
+    setFlowIds((current) => {
+      if (aiUseCatalogIds.length) return [id];
+      return current.includes(id) ? current : [...current, id];
+    });
     setFlowQuery("");
+  }
+
+  async function pollJob(jobId: string, onProgress: (progress: RegionSimulationProgress[]) => void) {
+    for (let i = 0; i < 180; i += 1) {
+      const status = await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}`);
+      const payload = (await status.json().catch(() => ({}))) as Record<string, unknown>;
+      if (Array.isArray(payload.progress)) onProgress(payload.progress as RegionSimulationProgress[]);
+      const jobStatus = String(payload.status || "");
+      if (jobStatus === "done" || jobStatus === "failed") return payload;
+      if (jobStatus === "queued" || jobStatus === "running") {
+        await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`, { method: "POST" }).catch(
+          () => null,
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    throw new Error("Simulation job timed out");
   }
 
   function removeFlow(id: string) {
@@ -271,14 +354,49 @@ export function RegionSimulationSetup({
             })),
           samplesPerStrategy,
           includeHumanData: showHumanOption && includeHumanData,
+          aiUseCatalogIds,
+          samplesPerAiUse,
         }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(errorMessageFromBody(payload, "Could not run simulation"));
       }
-      const next = await readSimulationStream(response, setProgress);
-      setResult(next);
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const payload = (await response.json()) as Record<string, unknown>;
+        if (payload.type === "jobs") {
+          const jobId = String(payload.jobId || payload.explorationJobId || "");
+          if (jobId && apiPath === DASHBOARD_REGION_SIMULATION_PATH) {
+            const done = await pollJob(jobId, setProgress);
+            const follow = String(done.followUpJobId || payload.aiUseJobId || "");
+            if (follow) await pollJob(follow, setProgress);
+          }
+          setResult({
+            persisted: true,
+            id: String(payload.regionId || ""),
+            regionPath: "",
+            parentName: name.trim(),
+            clusters: [],
+            summary: {
+              name: name.trim(),
+              flows: selectedFlows.map((flow) => ({ id: flow.id, name: flow.name })),
+              strategies: strategies.filter((row) => strategyIds.includes(row.id)),
+              samplesPerStrategy,
+              simulatedCount: 0,
+              realSessionCount: 0,
+            },
+            progress: Array.isArray(payload.progress)
+              ? (payload.progress as RegionSimulationProgress[])
+              : progress,
+          });
+        } else {
+          setResult(payload as unknown as RegionSimulationRunResult);
+        }
+      } else {
+        const next = await readSimulationStream(response, setProgress);
+        setResult(next);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not run simulation");
     } finally {
@@ -288,21 +406,81 @@ export function RegionSimulationSetup({
 
   const summary: RegionSimulationSummary | null = result?.summary ?? null;
   const clusters: RegionSimulationClusterResult[] = result?.clusters ?? [];
+  const canAdvance = regionSimulationWizardCanAdvance(step, {
+    name,
+    flowIds,
+    strategyIds,
+  });
+  const selectedStrategies = strategies.filter((row) => strategyIds.includes(row.id));
+  const selectedAiUse = aiUseCatalog.filter((row) => aiUseCatalogIds.includes(row.id));
+
+  const actions = (
+    <div className="flex flex-wrap gap-3 pt-2">
+      {step !== "name" ? (
+        <button
+          type="button"
+          className={FLOW_SECONDARY_BTN}
+          disabled={busy}
+          onClick={() => setStep(previousRegionSimulationWizardStep(step))}
+        >
+          Back
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={FLOW_SECONDARY_BTN}
+          onClick={() => router.push(productRegionDashboardPath())}
+        >
+          Cancel
+        </button>
+      )}
+      {step === "run" ? (
+        <button
+          type="button"
+          disabled={busy || !canAdvance}
+          onClick={() => void run()}
+          data-run-simulation=""
+          className={FLOW_PRIMARY_BTN}
+        >
+          {busy ? "Running simulation…" : "Run simulation"}
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={busy || !canAdvance}
+          onClick={() => setStep(nextRegionSimulationWizardStep(step))}
+          className={FLOW_PRIMARY_BTN}
+        >
+          Continue
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <ProductSurface
       label={`${productLabel} knowledge region`}
       activeTab={dashboardTabForProductSurface(kind, "region")}
     >
-      <div className={PRODUCT_CREATE_SHELL} data-knowledge-region-create={kind}>
+      <div
+        className={PRODUCT_CREATE_SHELL}
+        data-knowledge-region-create={kind}
+        data-region-simulation-wizard=""
+        data-region-simulation-wizard-step={result ? "result" : step}
+      >
         <FlowFormHeader
           backHref={productRegionDashboardPath()}
           backLabel="Back to knowledge regions"
-          title={result ? result.parentName : "Create knowledge region"}
+          kicker={
+            result ? undefined : (
+              <FlowWizardSteps steps={REGION_SIMULATION_WIZARD_STEPS} current={step} />
+            )
+          }
+          title={result ? result.parentName : wizardHeading(step)}
           description={
             result
               ? `Simulated exploration styles on the selected ${productLabel.toLowerCase()} flows. Clusters describe how agents searched, not a person's ability.`
-              : `Creating a region means configuring and running a simulation. Pick ${productLabel.toLowerCase()} flows and exploration strategies; agents solve those problems and the result is an annotated region.`
+              : wizardDescription(step, productLabel)
           }
         />
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -362,36 +540,26 @@ export function RegionSimulationSetup({
           </FlowFormCard>
         ) : (
           <FlowFormCard data-region-simulation-setup="">
-            <FlowField label="Type">
-              <select
-                className={FLOW_FORM_INPUT}
-                value={kind}
-                disabled={Boolean(lockedKind)}
-                data-region-kind=""
-                onChange={(event) => {
-                  const next = parseProductFlowKind(event.target.value);
-                  if (next) setKind(next);
-                }}
-              >
-                {PRODUCT_FLOW_KINDS.map((item) => (
-                  <option key={item} value={item}>
-                    {productFlowKindLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </FlowField>
-            {flows.length === 0 ? (
-              <Link
-                href={productFlowNewPath(kind)}
-                data-create-flow-first=""
-                className={FLOW_PRIMARY_BTN}
-              >
-                Create a Flow
-              </Link>
-            ) : (
-              <>
-                <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-                <div className="space-y-5">
+            {step === "name" ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                <FlowField label="Type">
+                  <select
+                    className={FLOW_FORM_INPUT}
+                    value={kind}
+                    disabled={Boolean(lockedKind)}
+                    data-region-kind=""
+                    onChange={(event) => {
+                      const next = parseProductFlowKind(event.target.value);
+                      if (next) setKind(next);
+                    }}
+                  >
+                    {PRODUCT_FLOW_KINDS.map((item) => (
+                      <option key={item} value={item}>
+                        {productFlowKindLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </FlowField>
                 <FlowField label="Region name">
                   <input
                     value={name}
@@ -401,14 +569,23 @@ export function RegionSimulationSetup({
                     className={FLOW_FORM_INPUT}
                   />
                 </FlowField>
+              </div>
+            ) : null}
 
+            {step === "flows" ? (
+              flows.length === 0 ? (
+                <Link
+                  href={productFlowNewPath(kind)}
+                  data-create-flow-first=""
+                  className={FLOW_PRIMARY_BTN}
+                >
+                  Create a Flow
+                </Link>
+              ) : (
                 <fieldset className="space-y-2" data-region-simulation-flows="">
                   <legend className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                     {productLabel} flows
                   </legend>
-                  <p className="text-xs text-neutral-500">
-                    Required. Search and pick the flows that supply the problems the agents will solve.
-                  </p>
                   {selectedFlows.length ? (
                     <ul className="flex flex-wrap gap-2" data-region-simulation-flow-selected="">
                       {selectedFlows.map((flow) => (
@@ -468,17 +645,15 @@ export function RegionSimulationSetup({
                     </p>
                   )}
                 </fieldset>
-                </div>
+              )
+            ) : null}
 
-                <div className="space-y-5">
+            {step === "explore" ? (
+              <>
                 <fieldset className="space-y-2" data-region-simulation-strategies="">
                   <legend className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                     Exploration strategies
                   </legend>
-                  <p className="text-xs text-neutral-500">
-                    Clusters describe exploration styles, not a person's ability or worth. Add a custom
-                    strategy to use its prompt as the agent instructions for the simulation.
-                  </p>
                   {catalogStrategies.map((strategy) => (
                     <label
                       key={strategy.id}
@@ -556,7 +731,6 @@ export function RegionSimulationSetup({
                     </button>
                   </div>
                 </fieldset>
-
                 <FlowField label="Samples per strategy">
                   <input
                     type="number"
@@ -578,7 +752,96 @@ export function RegionSimulationSetup({
                     className={FLOW_FORM_INPUT}
                   />
                 </FlowField>
+              </>
+            ) : null}
 
+            {step === "ai-use" ? (
+              <fieldset className="space-y-2" data-region-simulation-ai-use="">
+                <legend className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                  AI-use models
+                </legend>
+                {aiUseCatalog.map((row) => (
+                  <label
+                    key={row.id}
+                    className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={aiUseCatalogIds.includes(row.id)}
+                      onChange={() => {
+                        const next = toggleId(aiUseCatalogIds, row.id);
+                        setAiUseCatalogIds(next);
+                        if (next.length && flowIds.length > 1) setFlowIds(flowIds.slice(0, 1));
+                      }}
+                      data-region-simulation-ai-use={row.id}
+                    />
+                    <span>
+                      <span className="block">{row.displayName}</span>
+                      <span className="block text-xs text-neutral-400">
+                        {row.thinkingLabel} · training {row.training}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+                <FlowField label="Samples per AI-use model">
+                  <input
+                    type="number"
+                    min={3}
+                    max={12}
+                    value={samplesPerAiUse}
+                    onChange={(event) =>
+                      setSamplesPerAiUse(clampSamplesPerAiUse(event.target.value))
+                    }
+                    data-region-simulation-ai-use-samples=""
+                    className={FLOW_FORM_INPUT}
+                  />
+                </FlowField>
+              </fieldset>
+            ) : null}
+
+            {step === "run" ? (
+              <>
+                <dl
+                  className="grid gap-3 text-sm text-neutral-300 sm:grid-cols-2"
+                  data-region-simulation-review=""
+                >
+                  <div>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Name</dt>
+                    <dd className="mt-1 text-white">{name.trim() || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Type</dt>
+                    <dd className="mt-1 text-white">{productLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Flows</dt>
+                    <dd className="mt-1 text-white">
+                      {selectedFlows.map((flow) => flow.name).join(", ") || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                      Strategies
+                    </dt>
+                    <dd className="mt-1 text-white">
+                      {selectedStrategies.map((row) => row.name).join(", ") || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                      Samples per strategy
+                    </dt>
+                    <dd className="mt-1 text-white">{samplesPerStrategy}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                      AI-use models
+                    </dt>
+                    <dd className="mt-1 text-white">
+                      {selectedAiUse.map((row) => row.displayName).join(", ") || "None"}
+                    </dd>
+                  </div>
+                </dl>
                 {showHumanOption ? (
                   <label
                     className="flex cursor-pointer items-start gap-3 border border-white/20 px-3 py-2 text-sm text-white"
@@ -597,34 +860,63 @@ export function RegionSimulationSetup({
                     </span>
                   </label>
                 ) : null}
-                </div>
-                </div>
-
                 {busy && progress.length > 0 ? (
-                  <ul className="space-y-2" data-region-simulation-progress="">
-                    {progress.map((row) => (
-                      <li
-                        key={row.strategyId}
-                        className="text-sm text-neutral-300"
-                        data-region-simulation-progress-row={row.strategyId}
-                      >
-                        {row.strategyName}: {row.done} / {row.total}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-4" data-region-simulation-progress="">
+                    {(() => {
+                      const overall = regionSimulationProgressOverall(progress);
+                      return (
+                        <div data-region-simulation-progress-overall="">
+                          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                              Run
+                            </span>
+                            <span className="font-mono text-[10px] text-neutral-400">
+                              {overall.done} / {overall.total}
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/10">
+                            <div
+                              className="h-1.5 bg-white transition-[width] duration-300"
+                              style={{ width: `${overall.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <ul className="space-y-3">
+                      {progress.map((row) => {
+                        const percent =
+                          row.total > 0
+                            ? Math.min(100, Math.round((row.done / row.total) * 100))
+                            : 0;
+                        return (
+                          <li
+                            key={row.strategyId}
+                            className="space-y-1.5"
+                            data-region-simulation-progress-row={row.strategyId}
+                          >
+                            <div className="flex items-baseline justify-between gap-3 text-sm text-neutral-300">
+                              <span>{row.strategyName}</span>
+                              <span className="font-mono text-[10px] text-neutral-400">
+                                {row.done} / {row.total}
+                              </span>
+                            </div>
+                            <div className="h-1 w-full bg-white/10">
+                              <div
+                                className="h-1 bg-white/80 transition-[width] duration-300"
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 ) : null}
-
-                <button
-                  type="button"
-                  disabled={busy || !name.trim() || !flowIds.length || !strategyIds.length}
-                  onClick={() => void run()}
-                  data-run-simulation=""
-                  className={FLOW_PRIMARY_BTN}
-                >
-                  {busy ? "Running simulation…" : "Run simulation"}
-                </button>
               </>
-            )}
+            ) : null}
+
+            {actions}
           </FlowFormCard>
         )}
       </div>

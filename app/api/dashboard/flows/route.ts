@@ -22,6 +22,7 @@ import { parseFlowArtifacts, flowProblemFromUnknown } from "@/lib/flow-artifacts
 import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { unsysSeedFromRequestBody } from "@/lib/unsys-tree-spec";
 import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
+import { parseFlowCanvasCapture } from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
@@ -180,6 +181,7 @@ export async function POST(req: NextRequest) {
       enforcedChannels: parseFlowEnforcedChannels(
         body.enforcedChannels ?? body.enforced_channels,
       ),
+      canvasCapture: parseFlowCanvasCapture(body.canvasCapture ?? body.canvas_capture),
     };
     const accepted = acceptProductFlowPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
@@ -199,6 +201,7 @@ export async function POST(req: NextRequest) {
         actionCatalog: accepted.actionCatalog,
         answersModelSeed: accepted.answersModelSeed,
         enforcedChannels: accepted.enforcedChannels,
+        canvasCapture: accepted.canvasCapture,
       });
       if (!created.ok || !created.flow) {
         return jsonError(400, created.ok ? "create_failed" : created.reason);
@@ -256,6 +259,7 @@ export async function POST(req: NextRequest) {
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
       enforcedChannels: accepted.enforcedChannels,
+      canvasCapture: accepted.canvasCapture,
     });
     if (!created.ok || !created.flow) {
       return jsonError(400, created.ok ? "create_failed" : created.reason);

@@ -16,10 +16,14 @@ import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embeddin
 import {
   deleteFlowEmbeddings,
   listFlowEmbeddingsForOwner,
-  persistCompletedFlowEmbedding,
   type StoredFlowEmbedding,
 } from "@/lib/flow-embedding-store";
 import { flowLinkDefinesReference } from "@/lib/flow-links";
+import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
+import { runCanvasFaithfulExplorationSample } from "@/lib/region-simulation-actor";
+import { regionSimulationCanvasFaithfulEnabled } from "@/lib/region-simulation-flags";
+import { persistRegionSimulationSample } from "@/lib/region-simulation-persist";
+import { AI_USE_CATALOG, aiUseCatalogById } from "@/lib/region-simulation-ai-use-catalog";
 import {
   isRegionSimulationClusterRow,
   parseRegionSimulationClusterStrategyId,
@@ -32,16 +36,19 @@ import {
 } from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  aiUseClusterDescription,
   clampSamplesPerStrategy,
   collectRegionSimulationStrategies,
   emptySimulationProgress,
+  isAiUseClusterDescription,
+  isAiUseEmbedding,
   isSimulatedEmbedding,
   isSimulationStrategyClusterName,
+  parseAiUseCatalogIdFromClusterDescription,
   parseSimulationStrategies,
   parseSimulationStrategiesWithRecovered,
   planRegionSimulationSamples,
   regionSimulationFlowIds,
-  REGION_SIMULATION_SOURCE,
   regionSimulationClusterDescription,
   regionSimulationParentDescription,
   runRegionSimulationSample,
@@ -60,6 +67,7 @@ export type RegionSimulationFlowInput = {
   name: string;
   workspaceId?: string | null;
   problems: readonly string[];
+  answersModelSeed?: unknown;
 };
 
 export type RegionSimulationClusterResult = {
@@ -305,18 +313,18 @@ export async function runRegionSimulation(input: {
 
   const simulated: StoredFlowEmbedding[] = [];
   for (const plan of plans) {
-    const walk = runRegionSimulationSample(plan, flowKind, strategies);
     const strategy = strategyById.get(plan.strategyId);
     if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
     const flow = input.flows.find((row) => row.id === plan.flowId);
-    const stored = await persistCompletedFlowEmbedding({
+    const walk = walkSimulationPlan(plan, flowKind, strategies, flow);
+    const stored = await persistRegionSimulationSample({
       ownerUserId,
       workspaceId: flow?.workspaceId || undefined,
       flowKind,
       flowId: plan.flowId,
       runId: simulationSampleRunId(plan),
       identity: simulatedIdentityLabel(strategy.name),
-      source: REGION_SIMULATION_SOURCE,
+      family: "exploration",
       model: walk.model,
       sequence: walk.sequence,
       pow: walk.pow,
@@ -479,6 +487,19 @@ function strategiesFromSimulatedEmbeddings(
   return collectRegionSimulationStrategies(rows);
 }
 
+function walkSimulationPlan(
+  plan: import("@/lib/region-simulation").RegionSimulationSamplePlan,
+  flowKind: import("@/lib/flow-embedding").FlowKind,
+  strategies: readonly ExplorationStrategy[],
+  flow?: RegionSimulationFlowInput,
+) {
+  const seedModel = studentSessionModelFromAuthorSeed(flow?.answersModelSeed);
+  if (regionSimulationCanvasFaithfulEnabled()) {
+    return runCanvasFaithfulExplorationSample(plan, flowKind, strategies, seedModel);
+  }
+  return runRegionSimulationSample(plan, flowKind, strategies, seedModel);
+}
+
 function groupSimulatedByStrategy(
   rows: readonly StoredFlowEmbedding[],
   strategies: readonly ExplorationStrategy[],
@@ -486,7 +507,7 @@ function groupSimulatedByStrategy(
   const byStrategy = new Map<ExplorationStrategyId, StoredFlowEmbedding[]>();
   for (const strategy of strategies) byStrategy.set(strategy.id, []);
   for (const row of rows) {
-    if (!isSimulatedEmbedding(row)) continue;
+    if (!isSimulatedEmbedding(row) || isAiUseEmbedding(row)) continue;
     const strategy = strategies.find((item) =>
       simulatedEmbeddingMatchesStrategy(row, item),
     );
@@ -494,6 +515,22 @@ function groupSimulatedByStrategy(
     byStrategy.get(strategy.id)?.push(row);
   }
   return byStrategy;
+}
+
+function groupSimulatedByAiUseCatalog(
+  rows: readonly StoredFlowEmbedding[],
+): Map<string, StoredFlowEmbedding[]> {
+  const byCatalog = new Map<string, StoredFlowEmbedding[]>();
+  for (const row of rows) {
+    if (!isAiUseEmbedding(row)) continue;
+    const identity = String(row.identity || "");
+    const catalog = AI_USE_CATALOG.find((item) => identity === `AI · ${item.displayName}`);
+    const id = catalog?.id || parseAiUseCatalogIdFromClusterDescription(identity) || "model";
+    const list = byCatalog.get(id) ?? [];
+    list.push(row);
+    byCatalog.set(id, list);
+  }
+  return byCatalog;
 }
 
 function detailsRowFromSpec(input: {
@@ -598,6 +635,7 @@ async function loadOwnedSimulationClusters(input: {
   const out: LoadedSimulationCluster[] = [];
   for (const row of data || []) {
     if (!isRegionSimulationClusterRow(row)) continue;
+    if (isAiUseClusterDescription(row.description)) continue;
     const name = String(row.name || "").trim();
     if (!isSimulationStrategyClusterName(input.parentName, name)) continue;
     const strategyId = parseRegionSimulationClusterStrategyId(row.description);
@@ -606,6 +644,159 @@ async function loadOwnedSimulationClusters(input: {
     out.push({ id, strategyId, name });
   }
   return out;
+}
+
+async function loadOwnedAiUseClusters(input: {
+  ownerUserId: string;
+  kind: ProductFlowKind;
+  parentName: string;
+}): Promise<LoadedSimulationCluster[]> {
+  if (!supabaseConfigured()) return [];
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("knowledge_regions")
+    .select("id, name, description, embedding_model_id, product")
+    .eq("owner_user_id", input.ownerUserId)
+    .eq("product", input.kind);
+  if (error) throw new Error(error.message);
+  const out: LoadedSimulationCluster[] = [];
+  for (const row of data || []) {
+    if (!isAiUseClusterDescription(row.description)) continue;
+    const name = String(row.name || "").trim();
+    if (!isSimulationStrategyClusterName(input.parentName, name)) continue;
+    const catalogId = parseAiUseCatalogIdFromClusterDescription(row.description);
+    const id = String(row.id || "").trim();
+    if (!id || !catalogId) continue;
+    out.push({ id, strategyId: catalogId, name });
+  }
+  return out;
+}
+
+export async function refreshSimulationFamilyClusters(input: {
+  ownerUserId: string;
+  regionId: string;
+  family: "exploration" | "ai_use";
+  name: string;
+  kind: ProductFlowKind;
+  flows: readonly RegionSimulationFlowInput[];
+  strategies?: readonly ExplorationStrategy[];
+}): Promise<{ id: string; persisted: boolean }> {
+  const flowKind = productFlowEmbeddingKind(input.kind);
+  const flowIds = input.flows.map((flow) => flow.id);
+  const owned = await listFlowEmbeddingsForOwner({
+    ownerUserId: input.ownerUserId,
+    flowKind,
+  });
+  const onFlows = embeddingsOnFlows(owned, flowIds);
+  const humans = humanEmbeddingsForFlows(onFlows, flowIds);
+  if (input.family === "ai_use") {
+    const byCatalog = groupSimulatedByAiUseCatalog(onFlows);
+    const existing = await loadOwnedAiUseClusters({
+      ownerUserId: input.ownerUserId,
+      kind: input.kind,
+      parentName: input.name,
+    });
+    const exploration = await loadOwnedSimulationClusters({
+      ownerUserId: input.ownerUserId,
+      kind: input.kind,
+      parentName: input.name,
+    });
+    const explorationRows = groupSimulatedByStrategy(
+      onFlows,
+      input.strategies?.length ? input.strategies : collectRegionSimulationStrategies(onFlows),
+    );
+    const records = await refreshRegionSimulationRecords({
+      ownerUserId: input.ownerUserId,
+      regionId: input.regionId,
+      name: input.name,
+      kind: input.kind,
+      flows: input.flows,
+      strategies: input.strategies?.length
+        ? input.strategies
+        : collectRegionSimulationStrategies(onFlows),
+      simulatedByStrategy: explorationRows,
+      humans,
+      existingClusters: exploration,
+    });
+    await refreshAiUseClusters({
+      ownerUserId: input.ownerUserId,
+      parentId: records.id,
+      name: input.name,
+      kind: input.kind,
+      flows: input.flows,
+      byCatalog,
+      existing,
+    });
+    return { id: records.id, persisted: records.persisted };
+  }
+  const strategies =
+    input.strategies?.length ? input.strategies : collectRegionSimulationStrategies(onFlows);
+  const existing = await loadOwnedSimulationClusters({
+    ownerUserId: input.ownerUserId,
+    kind: input.kind,
+    parentName: input.name,
+  });
+  const records = await refreshRegionSimulationRecords({
+    ownerUserId: input.ownerUserId,
+    regionId: input.regionId,
+    name: input.name,
+    kind: input.kind,
+    flows: input.flows,
+    strategies,
+    simulatedByStrategy: groupSimulatedByStrategy(onFlows, strategies),
+    humans,
+    existingClusters: existing,
+  });
+  const aiUseExisting = await loadOwnedAiUseClusters({
+    ownerUserId: input.ownerUserId,
+    kind: input.kind,
+    parentName: input.name,
+  });
+  if (aiUseExisting.length) {
+    await refreshAiUseClusters({
+      ownerUserId: input.ownerUserId,
+      parentId: records.id,
+      name: input.name,
+      kind: input.kind,
+      flows: input.flows,
+      byCatalog: groupSimulatedByAiUseCatalog(onFlows),
+      existing: aiUseExisting,
+    });
+  }
+  return { id: records.id, persisted: records.persisted };
+}
+
+async function refreshAiUseClusters(input: {
+  ownerUserId: string;
+  parentId: string;
+  name: string;
+  kind: ProductFlowKind;
+  flows: readonly RegionSimulationFlowInput[];
+  byCatalog: Map<string, StoredFlowEmbedding[]>;
+  existing: readonly LoadedSimulationCluster[];
+}): Promise<void> {
+  const workspaceId = input.flows.find((flow) => flow.workspaceId)?.workspaceId || null;
+  const primaryFlowId = input.flows[0]?.id || null;
+  const existingById = new Map(input.existing.map((row) => [row.strategyId, row] as const));
+  for (const [catalogId, rows] of input.byCatalog) {
+    if (!rows.length) continue;
+    const catalog = aiUseCatalogById(catalogId);
+    const displayName = catalog?.displayName || catalogId;
+    const clusterName = simulationClusterRegionName(input.name, displayName);
+    const spec = specFromEmbeddings(clusterName, rows);
+    const existing = existingById.get(catalogId);
+    await persistKnowledgeRegion({
+      id: existing?.id,
+      ownerUserId: input.ownerUserId,
+      workspaceId,
+      name: spec.name,
+      description: aiUseClusterDescription(catalogId),
+      spec,
+      flowId: primaryFlowId,
+      createdBy: input.ownerUserId,
+      kind: input.kind,
+    });
+  }
 }
 
 async function refreshRegionSimulationRecords(input: {
@@ -877,18 +1068,18 @@ export async function addRegionSimulationSamples(input: {
   const progress = emptySimulationProgress(adding, samplesPerStrategy);
   const addedSampleIds: string[] = [];
   for (const plan of plans) {
-    const walk = runRegionSimulationSample(plan, flowKind, adding);
     const strategy = adding.find((row) => row.id === plan.strategyId);
     if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
     const flow = ctx.flows.find((row) => row.id === plan.flowId);
-    const stored = await persistCompletedFlowEmbedding({
+    const walk = walkSimulationPlan(plan, flowKind, adding, flow);
+    const stored = await persistRegionSimulationSample({
       ownerUserId,
       workspaceId: flow?.workspaceId || undefined,
       flowKind,
       flowId: plan.flowId,
       runId: simulationSampleRunId(plan),
       identity: simulatedIdentityLabel(strategy.name),
-      source: REGION_SIMULATION_SOURCE,
+      family: "exploration",
       model: walk.model,
       sequence: walk.sequence,
       pow: walk.pow,

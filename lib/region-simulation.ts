@@ -7,7 +7,12 @@
  * strategy as its instructions, producing a proof-of-work trace.
  */
 
-import { completeFlowEmbedding, type FlowEmbeddingRecord, type FlowPowRow } from "@/lib/flow-embedding";
+import {
+  completeFlowEmbedding,
+  type FlowEmbeddingRecord,
+  type FlowKind,
+  type FlowPowRow,
+} from "@/lib/flow-embedding";
 import { cosineSimilarity, hashUnit } from "@/lib/knowledge-config/math";
 import {
   normalizeSessionBranchModel,
@@ -22,6 +27,54 @@ export const REGION_SIMULATION_MIN_SAMPLES = 3;
 export const REGION_SIMULATION_MAX_SAMPLES = 48;
 export const REGION_SIMULATION_FLOW_MATCH_LIMIT = 4;
 export const DASHBOARD_REGION_SIMULATION_PATH = "/api/dashboard/region-simulation";
+export const DASHBOARD_REGION_SIMULATION_JOBS_PATH = "/api/dashboard/region-simulation/jobs";
+
+export const REGION_SIMULATION_WIZARD_STEPS = [
+  "name",
+  "flows",
+  "explore",
+  "ai-use",
+  "run",
+] as const;
+export type RegionSimulationWizardStep = (typeof REGION_SIMULATION_WIZARD_STEPS)[number];
+
+export type RegionSimulationWizardDraft = {
+  name: string;
+  flowIds: readonly string[];
+  strategyIds: readonly string[];
+};
+
+export function parseRegionSimulationWizardStep(value: unknown): RegionSimulationWizardStep {
+  return REGION_SIMULATION_WIZARD_STEPS.includes(value as RegionSimulationWizardStep)
+    ? (value as RegionSimulationWizardStep)
+    : "name";
+}
+
+export function nextRegionSimulationWizardStep(
+  step: RegionSimulationWizardStep,
+): RegionSimulationWizardStep {
+  const index = REGION_SIMULATION_WIZARD_STEPS.indexOf(step);
+  return REGION_SIMULATION_WIZARD_STEPS[Math.min(index + 1, REGION_SIMULATION_WIZARD_STEPS.length - 1)]!;
+}
+
+export function previousRegionSimulationWizardStep(
+  step: RegionSimulationWizardStep,
+): RegionSimulationWizardStep {
+  const index = REGION_SIMULATION_WIZARD_STEPS.indexOf(step);
+  return REGION_SIMULATION_WIZARD_STEPS[Math.max(index - 1, 0)]!;
+}
+
+export function regionSimulationWizardCanAdvance(
+  step: RegionSimulationWizardStep,
+  draft: RegionSimulationWizardDraft,
+): boolean {
+  const name = String(draft.name || "").trim();
+  if (step === "name") return Boolean(name);
+  if (step === "flows") return draft.flowIds.length > 0;
+  if (step === "explore") return draft.strategyIds.length > 0;
+  if (step === "ai-use") return true;
+  return Boolean(name) && draft.flowIds.length > 0 && draft.strategyIds.length > 0;
+}
 
 export const EXPLORATION_STRATEGY_IDS = [
   "exploit-heavy",
@@ -108,7 +161,20 @@ export type RegionSimulationProgress = {
   strategyName: string;
   done: number;
   total: number;
+  family?: "exploration" | "ai_use";
+  id?: string;
+  costUsd?: number;
 };
+
+export function regionSimulationProgressOverall(
+  rows: readonly RegionSimulationProgress[] | null | undefined,
+): { done: number; total: number; percent: number } {
+  const list = Array.isArray(rows) ? rows : [];
+  const done = list.reduce((sum, row) => sum + Math.max(0, Number(row.done) || 0), 0);
+  const total = list.reduce((sum, row) => sum + Math.max(0, Number(row.total) || 0), 0);
+  const percent = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  return { done, total, percent };
+}
 
 export type RegionSimulationWalk = {
   model: SessionBranchModel;
@@ -230,7 +296,7 @@ export function collectRegionSimulationStrategies(
   const seen = new Set<string>();
   const out: ExplorationStrategy[] = [];
   for (const row of embeddings) {
-    if (!isSimulatedEmbedding(row)) continue;
+    if (!isSimulatedEmbedding(row) || isAiUseEmbedding(row)) continue;
     const strategy = explorationStrategyFromSimulatedEmbedding(row);
     if (!strategy || seen.has(strategy.id)) continue;
     seen.add(strategy.id);
@@ -304,16 +370,64 @@ export function isSimulatedStudioIdentity(identity: unknown): boolean {
   return /^simulated(\s|·|:|-)/i.test(text(identity));
 }
 
+export function isAiUseIdentity(identity: unknown): boolean {
+  return /^ai(\s|·|:|-)/i.test(text(identity));
+}
+
+export function isAiUseLinkLabel(label: unknown): boolean {
+  const value = text(label).toLowerCase();
+  return value === "ai-use" || value === "ai_use";
+}
+
+export function isAiUseEmbedding(row: {
+  source?: unknown;
+  identity?: unknown;
+  link_label?: unknown;
+  linkLabel?: unknown;
+}): boolean {
+  return (
+    isAiUseIdentity(row.identity) ||
+    isAiUseLinkLabel(row.link_label) ||
+    isAiUseLinkLabel(row.linkLabel)
+  );
+}
+
 export function isSimulatedEmbedding(row: {
   source?: unknown;
   identity?: unknown;
+  link_label?: unknown;
+  linkLabel?: unknown;
 }): boolean {
-  return isSimulatedStudioSource(row.source) || isSimulatedStudioIdentity(row.identity);
+  return (
+    isSimulatedStudioSource(row.source) ||
+    isSimulatedStudioIdentity(row.identity) ||
+    isAiUseEmbedding(row)
+  );
 }
 
 export function simulatedIdentityLabel(strategyName: string): string {
   const name = text(strategyName) || "agent";
   return `Simulated · ${name}`;
+}
+
+export function aiUseIdentityLabel(displayName: string): string {
+  const name = text(displayName) || "model";
+  return `AI · ${name}`;
+}
+
+export const AI_USE_CLUSTER_DESCRIPTION_PREFIX = "region-simulation-cluster:ai-use:" as const;
+
+export function aiUseClusterDescription(catalogId: string): string {
+  return `${AI_USE_CLUSTER_DESCRIPTION_PREFIX}${text(catalogId) || "model"}`;
+}
+
+export function parseAiUseCatalogIdFromClusterDescription(description: unknown): string | null {
+  const match = text(description).match(/region-simulation-cluster:ai-use:([a-z0-9-]+)/i);
+  return match?.[1] || null;
+}
+
+export function isAiUseClusterDescription(description: unknown): boolean {
+  return /region-simulation-cluster:ai-use:/i.test(text(description));
 }
 
 export function simulationClusterRegionName(parentName: string, strategyName: string): string {
@@ -635,7 +749,7 @@ export function regionSimulationPow(input: {
 }): FlowPowRow[] {
   return [
     {
-      type: "speech",
+      type: "tool",
       tool_name: REGION_SIMULATION_SOURCE,
       tool_action: input.strategy.id,
       timestamp_ms: 1,
@@ -668,19 +782,22 @@ export function regionSimulationPow(input: {
 
 export function runRegionSimulationSample(
   plan: RegionSimulationSamplePlan,
-  flowKind: "verify" | "calibrate" | "solve" = "verify",
+  flowKind: FlowKind = "verify",
   catalog: readonly ExplorationStrategy[] = EXPLORATION_STRATEGIES,
+  referenceModel?: SessionBranchModel | null,
 ): RegionSimulationWalk {
   const strategy =
     catalog.find((row) => row.id === plan.strategyId) ?? explorationStrategyById(plan.strategyId);
   if (!strategy) {
     throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
   }
-  const model = seededSimulationTree({
-    problem: plan.problem,
-    seed: plan.seed,
-    strategyId: strategy.id,
-  });
+  const model = referenceModel
+    ? { ...referenceModel, focusId: referenceModel.rootId }
+    : seededSimulationTree({
+        problem: plan.problem,
+        seed: plan.seed,
+        strategyId: strategy.id,
+      });
   const sequence = walkExplorationStrategy({ model, strategy, seed: plan.seed });
   const pow = regionSimulationPow({
     strategy,

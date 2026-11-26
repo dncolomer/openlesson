@@ -88,6 +88,9 @@ describe("flow enforced channels", () => {
     expect(read("components/product-flow/flow-channels-fields.tsx")).toContain(
       "data-flow-channel",
     );
+    expect(read("components/product-flow/flow-channels-fields.tsx")).toContain(
+      "data-flow-canvas-capture",
+    );
     expect(
       existsSync(join(root, "supabase/migrations/20261117120000_flow_enforced_channels.sql")),
     ).toBe(true);

@@ -20,7 +20,7 @@ type BackendProfile = {
 };
 
 const BACKEND_SELECT =
-  "llm_backend, llm_provider, llm_base_url, llm_api_key_ciphertext, llm_api_key_last_four, llm_model, blob_backend, blob_provider, blob_base_url, blob_api_key_ciphertext, blob_api_key_last_four";
+  "llm_backend, llm_provider, llm_base_url, llm_api_key_ciphertext, llm_api_key_last_four, llm_model, blob_backend, blob_provider, blob_base_url, blob_api_key_ciphertext, blob_api_key_last_four, openrouter_api_key_ciphertext, openrouter_api_key_last_four";
 
 async function loadProfile(userId: string, supabase: { from: (table: string) => any }) {
   const { data: profile, error } = await supabase

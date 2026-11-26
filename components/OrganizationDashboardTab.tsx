@@ -103,6 +103,8 @@ export function OrganizationDashboardTab() {
   const [blobProvider, setBlobProvider] = useState<"xai" | "openai-compatible">("xai");
   const [blobBaseUrl, setBlobBaseUrl] = useState("");
   const [blobApiKey, setBlobApiKey] = useState("");
+  const [openrouterApiKey, setOpenrouterApiKey] = useState("");
+  const [openrouterClearKey, setOpenrouterClearKey] = useState(false);
   const [savingBackends, setSavingBackends] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
 
@@ -118,6 +120,8 @@ export function OrganizationDashboardTab() {
     setBlobProvider(next.blob.provider === "openai-compatible" ? "openai-compatible" : "xai");
     setBlobBaseUrl(next.blob.baseUrl || "");
     setBlobApiKey("");
+    setOpenrouterApiKey("");
+    setOpenrouterClearKey(false);
   };
 
   useEffect(() => {
@@ -336,6 +340,10 @@ export function OrganizationDashboardTab() {
             provider: blobProvider,
             baseUrl: blobBaseUrl,
             apiKey: blobApiKey,
+          },
+          openrouter: {
+            apiKey: openrouterApiKey,
+            clearKey: openrouterClearKey,
           },
         }),
       });
@@ -709,6 +717,45 @@ export function OrganizationDashboardTab() {
                     </p>
                   </label>
                 </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6" data-org-openrouter-backend>
+            <p className={labelClass}>{t("organization.openrouterBackend")}</p>
+            <p className="mt-2 max-w-xl text-xs text-neutral-500">
+              {t("organization.openrouterHelper")}
+            </p>
+            <div className="mt-4 max-w-xl space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs text-neutral-500">
+                  {t("organization.openrouterApiKey")}
+                </span>
+                <input
+                  data-org-openrouter-api-key
+                  type="password"
+                  autoComplete="off"
+                  className={inputClass}
+                  value={openrouterApiKey}
+                  onChange={(e) => setOpenrouterApiKey(e.target.value)}
+                  placeholder={t("organization.llmApiKeyPlaceholder")}
+                />
+                <p className="mt-1 text-xs text-neutral-500">
+                  {backends?.openrouter?.configured && backends.openrouter.lastFour
+                    ? t("organization.keyConfigured", { lastFour: backends.openrouter.lastFour })
+                    : t("organization.keyNotConfigured")}
+                </p>
+              </label>
+              {backends?.openrouter?.configured && (
+                <label className="flex items-center gap-2 text-sm text-neutral-300">
+                  <input
+                    type="checkbox"
+                    data-org-openrouter-clear
+                    checked={openrouterClearKey}
+                    onChange={(e) => setOpenrouterClearKey(e.target.checked)}
+                  />
+                  {t("organization.openrouterClearKey")}
+                </label>
               )}
             </div>
           </div>

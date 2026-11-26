@@ -40,6 +40,11 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import {
+  DEFAULT_FLOW_CANVAS_CAPTURE,
+  parseFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasSceneForKind } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import {
@@ -92,6 +97,8 @@ export type PresentedAgentFlow = {
   answers_model_seed: Record<string, unknown> | null;
   /** Channels the run requires. Calibration is always all-off. */
   enforced_channels: FlowEnforcedChannels;
+  /** Solve / Verification: mermaid documents of the Work canvas. Default off. */
+  canvas_capture: FlowCanvasCapture;
   public_token: string;
   workspace_id: string | null;
   owner_user_id: string | null;
@@ -137,6 +144,7 @@ function presentWizardFields(flow: {
   openingCanvasScene?: unknown;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
+  canvasCapture?: unknown;
 }): Pick<
   PresentedAgentFlow,
   | "authoring_source"
@@ -145,6 +153,7 @@ function presentWizardFields(flow: {
   | "opening_canvas_scene"
   | "answers_model_seed"
   | "enforced_channels"
+  | "canvas_capture"
 > {
   const artifacts = parseFlowArtifacts(flow.artifacts);
   const openingCanvasScene = parseFlowOpeningCanvasSceneForKind(
@@ -172,6 +181,10 @@ function presentWizardFields(flow: {
       flow.kind === "calibration"
         ? { ...OPTIONAL_FLOW_ENFORCED_CHANNELS }
         : parseFlowEnforcedChannels(flow.enforcedChannels),
+    canvas_capture:
+      flow.kind === "calibration"
+        ? { ...DEFAULT_FLOW_CANVAS_CAPTURE }
+        : parseFlowCanvasCapture(flow.canvasCapture),
   };
 }
 
@@ -186,6 +199,7 @@ function presentSolve(flow: {
   generateProblemOnOpen?: boolean;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
+  canvasCapture?: unknown;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
@@ -264,6 +278,7 @@ function presentVerification(flow: {
   generateProblemOnOpen?: boolean;
   answersModelSeed?: unknown;
   enforcedChannels?: unknown;
+  canvasCapture?: unknown;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
@@ -460,6 +475,7 @@ export async function createAgentFlow(
     enforcedChannels: parseFlowEnforcedChannels(
       body.enforced_channels ?? body.enforcedChannels,
     ),
+    canvasCapture: parseFlowCanvasCapture(body.canvas_capture ?? body.canvasCapture),
   };
   const accepted = acceptProductFlowPublish(draft);
   if (!accepted.ok) throw new Error(publishReason(accepted.reason));
@@ -479,6 +495,7 @@ export async function createAgentFlow(
       actionCatalog: accepted.actionCatalog,
       answersModelSeed: accepted.answersModelSeed,
       enforcedChannels: accepted.enforcedChannels,
+      canvasCapture: accepted.canvasCapture,
     });
     if (!created.ok || !created.flow) {
       throw new Error(created.ok ? "create_failed" : created.reason);
@@ -521,6 +538,7 @@ export async function createAgentFlow(
     actionCatalog: accepted.actionCatalog,
     answersModelSeed: accepted.answersModelSeed,
     enforcedChannels: accepted.enforcedChannels,
+    canvasCapture: accepted.canvasCapture,
   });
   if (!created.ok || !created.flow) {
     throw new Error(created.ok ? "create_failed" : created.reason);
@@ -584,6 +602,10 @@ export async function updateAgentFlow(
     body.enforced_channels === undefined && body.enforcedChannels === undefined
       ? undefined
       : parseFlowEnforcedChannels(body.enforced_channels ?? body.enforcedChannels);
+  const canvasCapture =
+    body.canvas_capture === undefined && body.canvasCapture === undefined
+      ? undefined
+      : parseFlowCanvasCapture(body.canvas_capture ?? body.canvasCapture);
 
   if (existing.kind === "solve") {
     const updated = await runSolveCommand({
@@ -601,6 +623,7 @@ export async function updateAgentFlow(
       actionCatalog,
       answersModelSeed,
       enforcedChannels,
+      canvasCapture,
     });
     if (!updated.ok || !updated.flow) {
       throw new Error(updated.ok ? "update_failed" : updated.reason);
@@ -645,6 +668,7 @@ export async function updateAgentFlow(
     actionCatalog,
     answersModelSeed,
     enforcedChannels,
+    canvasCapture,
   });
   if (!updated.ok || !updated.flow) {
     throw new Error(updated.ok ? "update_failed" : updated.reason);

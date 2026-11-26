@@ -64,6 +64,10 @@ import {
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
 import {
+  parseFlowCanvasCapture,
+  type FlowCanvasCapture,
+} from "@/lib/flow-canvas-capture";
+import {
   anySensorChannelEnforced,
   emptyFlowChannelLive,
   enforcedSensorChannelsMissing,
@@ -124,6 +128,7 @@ interface TapScoreClientProps {
   openingCanvasScene?: IleWorkCanvasScene | null;
   canvasProblem?: string | null;
   enforcedChannels?: FlowEnforcedChannels | null;
+  canvasCapture?: FlowCanvasCapture | null;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -156,8 +161,10 @@ export function TapScoreClient({
   openingCanvasScene = null,
   canvasProblem = null,
   enforcedChannels: enforcedChannelsProp = null,
+  canvasCapture: canvasCaptureProp = null,
 }: TapScoreClientProps) {
   const enforcedChannels = parseFlowEnforcedChannels(enforcedChannelsProp);
+  const canvasCapture = parseFlowCanvasCapture(canvasCaptureProp);
   const enforcedChannelsKey = flowEnforcedChannelsKey(enforcedChannels);
   const enforcedChannelsRef = useRef(enforcedChannels);
   enforcedChannelsRef.current = enforcedChannels;
@@ -964,6 +971,7 @@ export function TapScoreClient({
       canvasProblem={canvasProblem}
       audioEnforced={enforcedChannels.audio}
       enforcedChannels={enforcedChannels}
+      canvasCapture={canvasCapture}
       onChannelLive={(live) => {
         channelLiveRef.current = live;
       }}

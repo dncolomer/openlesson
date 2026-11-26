@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { openSealedString } from "@/lib/crypto/seal";
 import { getPlatformChatConfig } from "@/lib/ai/chat";
 import { enterXaiContext, runWithXaiContext } from "@/lib/xai-context";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   platformBlobConfigFromEnv,
   readOrgBackendStored,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/organization/org-backends";
 
 const ORG_BACKEND_SELECT =
-  "llm_backend, llm_provider, llm_base_url, llm_api_key_ciphertext, llm_api_key_last_four, llm_model, blob_backend, blob_provider, blob_base_url, blob_api_key_ciphertext, blob_api_key_last_four";
+  "llm_backend, llm_provider, llm_base_url, llm_api_key_ciphertext, llm_api_key_last_four, llm_model, blob_backend, blob_provider, blob_base_url, blob_api_key_ciphertext, blob_api_key_last_four, openrouter_api_key_ciphertext, openrouter_api_key_last_four";
 
 function openCustomerSecret(ciphertext: string | null | undefined): string | null {
   const sealed = String(ciphertext || "").trim();
@@ -100,6 +101,46 @@ export async function bindOrgBackendContext(
   const runtime = await loadOrgBackendRuntime(admin, organizationId);
   bindOrgBackendRuntime(organizationId, runtime);
   return runtime;
+}
+
+let openRouterApiKeyForTests: string | null | undefined;
+
+/** `undefined` restores DB lookup. `null` simulates a missing org key. */
+export function setOrgOpenRouterApiKeyForTests(key: string | null | undefined): void {
+  openRouterApiKeyForTests = key;
+}
+
+export function openOrgOpenRouterApiKey(org: OrgBackendRecord | null | undefined): string | null {
+  const stored = readOrgBackendStored(org);
+  return openCustomerSecret(stored.openrouter_api_key_ciphertext);
+}
+
+export async function loadOpenRouterApiKeyForOwner(
+  admin: SupabaseClient,
+  userId: string | null | undefined,
+): Promise<string | null> {
+  if (openRouterApiKeyForTests !== undefined) return openRouterApiKeyForTests;
+  const id = String(userId || "").trim();
+  if (!id) return null;
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", id)
+    .maybeSingle();
+  const org = await loadOrgBackendRecord(admin, profile?.organization_id);
+  return openOrgOpenRouterApiKey(org);
+}
+
+export async function loadOpenRouterApiKeyForOwnerUser(
+  userId: string | null | undefined,
+): Promise<string | null> {
+  if (openRouterApiKeyForTests !== undefined) return openRouterApiKeyForTests;
+  try {
+    return loadOpenRouterApiKeyForOwner(createAdminClient(), userId);
+  } catch (err) {
+    console.error("[org-backends] OpenRouter key lookup failed:", err);
+    return null;
+  }
 }
 
 export async function bindOrgBackendContextForUser(

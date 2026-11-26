@@ -1,7 +1,7 @@
 /**
  * Owner dashboard: add simulated samples on an existing region.
  */
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { parseDashboardKnowledgeRegionKind } from "@/lib/dashboard-knowledge-regions";
@@ -27,11 +27,22 @@ import {
   addRegionSimulationSamples,
   problemsForSimulationFlow,
 } from "@/lib/region-simulation-run";
+import { clampSamplesPerAiUse, parseAiUseCatalogIds } from "@/lib/region-simulation-ai-use-catalog";
+import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
+import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
+import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
+import {
+  enqueueRegionSimulation,
+  jobsPublicPayload,
+  REGION_SIM_TICK_MAX_DURATION,
+  tickRegionSimulationJob,
+} from "@/lib/region-simulation-jobs";
 import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
 import { getSolveFlowById } from "@/lib/solve-flow-repository";
 import { getVerificationFlowById } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
+export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
 
 async function ownedSimulationFlow(
   kind: ProductFlowKind,
@@ -42,6 +53,7 @@ async function ownedSimulationFlow(
   name: string;
   workspaceId: string | null;
   problems: string[];
+  answersModelSeed?: unknown;
 } | null> {
   const flow =
     kind === "calibration"
@@ -55,6 +67,7 @@ async function ownedSimulationFlow(
     name: flow.name,
     workspaceId: flow.workspaceId || null,
     problems: problemsForSimulationFlow(flow),
+    answersModelSeed: flow.answersModelSeed ?? null,
   };
 }
 
@@ -192,7 +205,15 @@ export async function POST(
       customStrategies: body.customStrategies,
       embeddings,
     });
-    if (!strategies.length) return jsonError(400, "Select at least one exploration strategy");
+    const aiUseCatalogIds = parseAiUseCatalogIds(body.aiUseCatalogIds);
+    const samplesPerAiUse = clampSamplesPerAiUse(body.samplesPerAiUse);
+    if (aiUseCatalogIds.length) {
+      const openRouterKey = await loadOpenRouterApiKeyForOwnerUser(loaded.userId);
+      if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
+    }
+    if (!strategies.length && !aiUseCatalogIds.length) {
+      return jsonError(400, "Select at least one exploration strategy");
+    }
     const requestedFlowIds = Array.isArray(body.flowIds)
       ? body.flowIds.map((flowId) => String(flowId || "").trim()).filter(Boolean)
       : [];
@@ -205,6 +226,42 @@ export async function POST(
       requestedFlowIds,
     });
     if (!flows.length) return jsonError(400, "Select at least one flow");
+    if (regionSimulationJobsEnabled()) {
+      if (strategies.length) {
+        const job = await enqueueRegionSimulation({
+          ownerUserId: loaded.userId,
+          family: "exploration",
+          name: loaded.name,
+          kind,
+          flows: aiUseCatalogIds.length ? flows.slice(0, 1) : flows,
+          strategies,
+          samplesPerStrategy: clampSamplesPerStrategy(body.samplesPerStrategy),
+          regionId: id,
+          followUp: aiUseCatalogIds.length
+            ? { family: "ai_use", catalogIds: aiUseCatalogIds, samplesPerAiUse }
+            : null,
+        });
+        const ticked = await tickRegionSimulationJob(job.id);
+        if (ticked.shouldContinue) after(() => tickRegionSimulationJob(job.id));
+        const followUpId = ticked.followUpJobId;
+        if (followUpId) after(() => tickRegionSimulationJob(followUpId));
+        return NextResponse.json(jobsPublicPayload(ticked.job));
+      }
+      const job = await enqueueRegionSimulation({
+        ownerUserId: loaded.userId,
+        family: "ai_use",
+        name: loaded.name,
+        kind,
+        flows: flows.slice(0, 1),
+        catalogIds: aiUseCatalogIds,
+        samplesPerAiUse,
+        regionId: id,
+      });
+      const ticked = await tickRegionSimulationJob(job.id);
+      if (ticked.shouldContinue) after(() => tickRegionSimulationJob(job.id));
+      return NextResponse.json(jobsPublicPayload(ticked.job));
+    }
+    if (!strategies.length) return jsonError(400, "Select at least one exploration strategy");
     const result = await addRegionSimulationSamples({
       ownerUserId: loaded.userId,
       regionId: id,

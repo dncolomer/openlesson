@@ -22,9 +22,13 @@ import {
   type DashboardKnowledgeRegionKind,
 } from "@/lib/dashboard-knowledge-regions";
 import {
+  aiUseIdentityLabel,
   explorationStrategyById,
+  isAiUseClusterDescription,
+  isAiUseEmbedding,
   isExplorationStrategyId,
   isSimulationStrategyClusterName,
+  parseAiUseCatalogIdFromClusterDescription,
   simulatedIdentityLabel,
   studioEmbeddingOrigin,
   type ExplorationStrategyId,
@@ -71,6 +75,7 @@ export type KnowledgeRegionDetails = {
   analysisCount: number;
   realSessionCount: number;
   clusters: KnowledgeRegionDetailsCluster[];
+  aiUseClusters: KnowledgeRegionDetailsCluster[];
   samples: KnowledgeRegionDetailsSample[];
   embeddings: DataStudioEmbeddingRow[];
   regions: RegionCentroidInput[];
@@ -226,10 +231,14 @@ function strategyNameFromCluster(row: KnowledgeRegionDetailsRow, parentName: str
   return name;
 }
 
+export type KnowledgeRegionClusterFamily = "exploration" | "ai_use";
+
 export function presentKnowledgeRegionClusters(
   parent: KnowledgeRegionDetailsRow,
   rows: readonly KnowledgeRegionDetailsRow[],
+  options?: { family?: KnowledgeRegionClusterFamily },
 ): KnowledgeRegionDetailsCluster[] {
+  const family = options?.family ?? "exploration";
   const parentName = text(parent.name);
   const parentId = text(parent.id);
   const out: KnowledgeRegionDetailsCluster[] = [];
@@ -238,18 +247,39 @@ export function presentKnowledgeRegionClusters(
     const name = text(row.name);
     if (!id || !name || id === parentId) continue;
     if (!isRegionSimulationClusterRow(row)) continue;
+    const aiUse = isAiUseClusterDescription(row.description);
+    if (family === "exploration" && aiUse) continue;
+    if (family === "ai_use" && !aiUse) continue;
     if (!isSimulationStrategyClusterName(parentName, name)) continue;
     const strategyId = parseRegionSimulationClusterStrategyId(row.description);
     const subjectCount = Number(row.subject_count);
+    const catalogId = parseAiUseCatalogIdFromClusterDescription(row.description);
     out.push({
       id,
       name,
-      strategyId,
+      strategyId: family === "ai_use" ? catalogId : strategyId,
       strategyName: strategyNameFromCluster(row, parentName),
       sampleCount: Number.isFinite(subjectCount) ? subjectCount : 0,
     });
   }
   return out.sort((a, b) => a.strategyName.localeCompare(b.strategyName));
+}
+
+function clusterForSimulatedEmbedding(
+  embedding: { identity?: unknown; link_label?: unknown },
+  clusters: readonly KnowledgeRegionDetailsCluster[],
+): KnowledgeRegionDetailsCluster | null {
+  const identity = text(embedding.identity);
+  if (isAiUseEmbedding(embedding)) {
+    return (
+      clusters.find(
+        (row) =>
+          identity === aiUseIdentityLabel(row.strategyName) ||
+          identity === `AI · ${row.strategyName}`,
+      ) ?? null
+    );
+  }
+  return clusters.find((row) => identity === simulatedIdentityLabel(row.strategyName)) ?? null;
 }
 
 function embeddingFlowKind(kind: ProductFlowKind): string {
@@ -280,10 +310,15 @@ export function presentKnowledgeRegionDetails(input: {
   const parsed = parseRegionSimulationDescription(input.parent.description);
   const subjects = parseRegionSubjects(input.parent.subjects);
   const clusters = presentKnowledgeRegionClusters(input.parent, input.clusters ?? []);
+  const aiUseClusters = presentKnowledgeRegionClusters(input.parent, input.clusters ?? [], {
+    family: "ai_use",
+  });
   const clusterByStrategyName = new Map(clusters.map((cluster) => [cluster.strategyName, cluster]));
   const clusterCentroids = (input.clusters ?? [])
     .map((row) => {
-      const presented = clusters.find((cluster) => cluster.id === text(row.id));
+      const presented =
+        clusters.find((cluster) => cluster.id === text(row.id)) ||
+        aiUseClusters.find((cluster) => cluster.id === text(row.id));
       const centroid = regionCentroid(row);
       if (!presented || !centroid) return null;
       return { ...centroid, strategyId: presented.strategyId, strategyName: presented.strategyName };
@@ -371,10 +406,10 @@ export function presentKnowledgeRegionDetails(input: {
 
   for (const embedding of rows) {
     if (studioEmbeddingOrigin(embedding) !== "simulated") continue;
-    const identity = text(embedding.identity);
-    const cluster =
-      clusters.find((row) => identity === simulatedIdentityLabel(row.strategyName)) ?? null;
-    if (clusters.length && !cluster) continue;
+    const cluster = isAiUseEmbedding(embedding)
+      ? clusterForSimulatedEmbedding(embedding, aiUseClusters)
+      : clusterForSimulatedEmbedding(embedding, clusters);
+    if (clusters.length && !cluster && !isAiUseEmbedding(embedding)) continue;
     if (hasIncludedFlows) {
       if (!onIncludedFlow(embedding)) continue;
     } else if (hasGeometry) {
@@ -459,6 +494,7 @@ export function presentKnowledgeRegionDetails(input: {
     analysisCount,
     realSessionCount,
     clusters,
+    aiUseClusters,
     samples,
     embeddings,
     regions,

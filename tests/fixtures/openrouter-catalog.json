@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "openai/gpt-4o-mini",
+      "supported_parameters": ["tools", "tool_choice", "temperature", "max_tokens"]
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.5",
+      "supported_parameters": ["tools", "tool_choice", "temperature", "max_tokens"]
+    },
+    {
+      "id": "google/gemini-2.5-flash",
+      "supported_parameters": ["tools", "tool_choice", "temperature", "max_tokens"]
+    },
+    {
+      "id": "x-ai/grok-4.5",
+      "supported_parameters": ["tools", "tool_choice", "temperature", "max_tokens"]
+    }
+  ]
+}

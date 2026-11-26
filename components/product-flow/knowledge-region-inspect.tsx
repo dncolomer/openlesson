@@ -37,6 +37,7 @@ export function KnowledgeRegionInspect({
   distances,
   path = null,
   unsysDistance = null,
+  aiUseNearest = null,
   mode = "individual",
   productKind,
   identityLabel,
@@ -49,6 +50,7 @@ export function KnowledgeRegionInspect({
   distances: readonly KnowledgeRegionClusterDistance[];
   path?: KnowledgeRegionIdentityPath | null;
   unsysDistance?: number | null;
+  aiUseNearest?: { label: string; formatted: string } | null;
   mode?: KnowledgeRegionFigureMode | string | null;
   productKind?: string | null;
   identityLabel?: string | null;
@@ -232,6 +234,17 @@ export function KnowledgeRegionInspect({
                 ? formatStudioHighDimDistance(unsysDistance)
                 : "—"}
             </dd>
+            {aiUseNearest ? (
+              <>
+                <dt className={FLOW_FORM_LABEL}>Nearest AI use</dt>
+                <dd
+                  className="font-mono text-[12px] text-white"
+                  data-knowledge-region-inspect-ai-use-nearest=""
+                >
+                  {aiUseNearest.label} · {aiUseNearest.formatted}
+                </dd>
+              </>
+            ) : null}
             <dt className={FLOW_FORM_LABEL}>flow_id</dt>
             <dd className="break-all font-mono text-[12px]">{inspect.flow_id || "—"}</dd>
             <dt className={FLOW_FORM_LABEL}>run_id</dt>

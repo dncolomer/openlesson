@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import {
-  drainRegionSimulationJobs,
-  REGION_SIM_TICK_MAX_DURATION,
-} from "@/lib/region-simulation-jobs";
+import { drainRegionSimulationJobs } from "@/lib/region-simulation-jobs";
 import { regionSimulationCronSecret } from "@/lib/region-simulation-flags";
 
 export const runtime = "nodejs";
-export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
+// Literal 60 matches REGION_SIM_TICK_MAX_DURATION; Next cannot analyze an import.
+export const maxDuration = 60;
 
 function authorized(req: NextRequest): boolean {
   const secret = regionSimulationCronSecret();

@@ -26,7 +26,6 @@ import {
 import {
   enqueueRegionSimulation,
   jobsPublicPayload,
-  REGION_SIM_TICK_MAX_DURATION,
   tickRegionSimulationJob,
 } from "@/lib/region-simulation-jobs";
 import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
@@ -39,7 +38,7 @@ import {
   listVerificationResultsForFlowId,
 } from "@/lib/verification-flow-repository";
 export const runtime = "nodejs";
-export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
+export const maxDuration = 60;
 
 async function requireInstructorOwner() {
   const session = await readLtiLaunchSession();

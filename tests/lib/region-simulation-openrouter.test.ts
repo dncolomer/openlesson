@@ -257,7 +257,7 @@ describe("cron drain route", () => {
     expect(cron).toContain("Bearer");
     expect(cron).toContain("regionSimulationCronSecret");
     expect(cron).not.toContain("searchParams.get(\"secret\")");
-    expect(cron).toContain("maxDuration = REGION_SIM_TICK_MAX_DURATION");
+    expect(cron).toContain("maxDuration = 60");
     const vercel = JSON.parse(
       readFileSync(join(__dirname, "../../vercel.json"), "utf8"),
     ) as { crons: Array<{ path: string; schedule: string }> };

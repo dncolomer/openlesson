@@ -28,13 +28,12 @@ import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import {
   enqueueRegionSimulation,
   jobsPublicPayload,
-  REGION_SIM_TICK_MAX_DURATION,
   tickRegionSimulationJob,
 } from "@/lib/region-simulation-jobs";
 import { getVerificationFlowById } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
-export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
+export const maxDuration = 60;
 
 async function ownedSimulationFlow(
   flowId: string,

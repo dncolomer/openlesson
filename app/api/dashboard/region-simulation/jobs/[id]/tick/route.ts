@@ -4,12 +4,11 @@ import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   getRegionSimulationJob,
   jobsPublicPayload,
-  REGION_SIM_TICK_MAX_DURATION,
   tickRegionSimulationJob,
 } from "@/lib/region-simulation-jobs";
 
 export const runtime = "nodejs";
-export const maxDuration = REGION_SIM_TICK_MAX_DURATION;
+export const maxDuration = 60;
 
 export async function POST(
   _req: NextRequest,

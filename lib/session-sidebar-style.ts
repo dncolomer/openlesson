@@ -93,6 +93,18 @@ export function sessionCanvasHex6(value: unknown, fallback = DEFAULT_SESSION_CAN
 }
 
 /** Invert RGB so a visual color can be stored for Excalidraw's dark-theme filter. */
+/** Ignore color-input events that are not from the focused well. */
+export function sessionCanvasColorInputPatch(
+  current: unknown,
+  nextRaw: unknown,
+  focused: boolean,
+): string | null {
+  if (!focused) return null;
+  const next = sessionCanvasHex6(nextRaw);
+  if (next === sessionCanvasHex6(current)) return null;
+  return next;
+}
+
 export function invertSessionCanvasColor(value: unknown): string {
   const hex = sessionCanvasHex6(value);
   const n = Number.parseInt(hex.slice(1), 16);

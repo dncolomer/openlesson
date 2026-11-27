@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
@@ -256,26 +256,34 @@ export function useOrgProtocolStyle() {
     }
   };
 
-  const handleCanvasStyle = async (canvas: SessionCanvasStyle) => {
+  const canvasSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canvasSaveGen = useRef(0);
+  const handleCanvasStyle = (canvas: SessionCanvasStyle) => {
     if (protocolSettingLocked(selected)) return;
     const nextCanvas = parseSessionCanvasStyle(canvas);
     setSidebarStyle((prev) => ({ ...prev, canvas: nextCanvas }));
-    try {
-      const res = await fetch(stylePath(selected?.id || "default"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvas: nextCanvas }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
-        return;
-      }
-      applyAestheticsPayload(data);
-    } catch (canvasErr) {
-      console.error("Canvas style error:", canvasErr);
-      alert(t("organization.sidebarStyleError"));
-    }
+    const gen = ++canvasSaveGen.current;
+    if (canvasSaveTimer.current) clearTimeout(canvasSaveTimer.current);
+    canvasSaveTimer.current = setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch(stylePath(selected?.id || "default"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ canvas: nextCanvas }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (gen !== canvasSaveGen.current) return;
+          if (!res.ok) {
+            alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
+          }
+        } catch (canvasErr) {
+          if (gen !== canvasSaveGen.current) return;
+          console.error("Canvas style error:", canvasErr);
+          alert(t("organization.sidebarStyleError"));
+        }
+      })();
+    }, 250);
   };
 
   const handleResetSidebarStyle = async () => {

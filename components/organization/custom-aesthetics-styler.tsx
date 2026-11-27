@@ -3,6 +3,7 @@
 import {
   parseSessionCanvasStyle,
   SESSION_SIDEBAR_STYLE_PROMPT_MAX,
+  sessionCanvasColorInputPatch,
   sessionCanvasHex6,
   type SessionCanvasStyle,
   type SessionSidebarStyle,
@@ -154,7 +155,14 @@ export function CustomAestheticsStyler({
                   data-org-canvas-background
                   value={sessionCanvasHex6(canvas.background)}
                   disabled={!editable || generating}
-                  onChange={(event) => patchCanvas({ background: event.target.value })}
+                  onChange={(event) => {
+                    const next = sessionCanvasColorInputPatch(
+                      canvas.background,
+                      event.target.value,
+                      document.activeElement === event.target,
+                    );
+                    if (next) patchCanvas({ background: next });
+                  }}
                   className="h-9 w-full cursor-pointer rounded-none border border-white/40 bg-black p-1 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </label>
@@ -165,7 +173,14 @@ export function CustomAestheticsStyler({
                   data-org-canvas-stroke
                   value={sessionCanvasHex6(canvas.stroke)}
                   disabled={!editable || generating}
-                  onChange={(event) => patchCanvas({ stroke: event.target.value })}
+                  onChange={(event) => {
+                    const next = sessionCanvasColorInputPatch(
+                      canvas.stroke,
+                      event.target.value,
+                      document.activeElement === event.target,
+                    );
+                    if (next) patchCanvas({ stroke: next });
+                  }}
                   className="h-9 w-full cursor-pointer rounded-none border border-white/40 bg-black p-1 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </label>
@@ -198,10 +213,27 @@ export function CustomAestheticsStyler({
           <p className="mt-3 text-xs text-neutral-400">{labels.empty}</p>
         ) : null}
         {urls.length > 0 ? (
-          <ul className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <ul
+            className={
+              compact
+                ? "mt-3 grid min-w-0 grid-cols-1 gap-2"
+                : "mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1"
+            }
+          >
             {urls.map((url) => (
-              <li key={url} className="console-copy w-24 shrink-0 overflow-hidden">
-                <img src={url} alt="" className="h-16 w-full object-cover" />
+              <li
+                key={url}
+                className={
+                  compact
+                    ? "console-copy min-w-0 overflow-hidden"
+                    : "console-copy w-24 shrink-0 overflow-hidden"
+                }
+              >
+                <img
+                  src={url}
+                  alt=""
+                  className={`w-full object-cover ${compact ? "aspect-[16/10] h-auto max-w-full" : "h-16"}`}
+                />
                 {editable ? (
                   <div className="flex justify-end p-1">
                     <button

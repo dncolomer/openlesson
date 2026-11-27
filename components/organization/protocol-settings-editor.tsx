@@ -41,7 +41,7 @@ export function ProtocolSettingsEditor({
         </div>
       </section>
       <aside
-        className="console-copy flex w-full shrink-0 flex-col gap-4 overflow-y-auto px-4 py-4 lg:w-[18rem]"
+        className="console-copy flex w-full min-w-0 shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 lg:w-[18rem]"
         data-org-protocol-settings-rail=""
       >
         <div className="flex flex-col gap-2" data-org-protocol-settings-name="">

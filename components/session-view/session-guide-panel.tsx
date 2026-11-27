@@ -50,7 +50,6 @@ export function SessionGuidePanel({
   const commandsOpen = canvasCommands && tab === "commands";
   const harnessOpen = showHarness && tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
-  const commandsHint = inertCommands || bridge ? null : "The board is still opening.";
   const catalog = ileWorkCanvasCommandsFor(guide);
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
@@ -167,11 +166,6 @@ export function SessionGuidePanel({
               }}
             />
           </div>
-          {commandsHint ? (
-            <p className="shrink-0 px-2 pb-1.5 pt-0.5 font-mono text-[9px] leading-snug text-white/45">
-              {commandsHint}
-            </p>
-          ) : null}
         </div>
       ) : harnessOpen ? (
         <SessionHarnessPanel guide={guide} remainingSeconds={remainingSeconds} />

@@ -1,8 +1,6 @@
 # Uncertain Systems — coding agents
 
-Use this file as the skill for Cursor, Claude Code, Codex, Grok, and other coding agents that talk to Uncertain Systems over REST or MCP.
-
-Load this document plus `/skill.md`. Human docs: `/docs/proof-of-work-api`.
+The agent skill is **`/skill.md`**. Load that file for every endpoint, schema, error, and example. This page is a short index. Human docs: `/docs/proof-of-work-api`.
 
 ## What you can do
 

@@ -21,10 +21,9 @@ export default function ProtocolApiPage() {
           <h1 className="mt-2 text-3xl font-medium text-white">Protocol API</h1>
           <p className="mt-3 max-w-3xl text-sm text-neutral-400">
             Agents and humans create knowledge verification protocols and knowledge regions with a
-            Bearer API key. Proof of work is recorded in the product UI. Headless session upload is
-            not a public agent API. Coding agents:{" "}
-            <Link href="/coding-agents.md" className="underline">
-              /coding-agents.md
+            Bearer API key. Agent skill:{" "}
+            <Link href="/skill.md" className="underline">
+              /skill.md
             </Link>
             .
           </p>
@@ -141,11 +140,11 @@ Authorization: Bearer sk_…
             <code className="text-neutral-300">/api/v3/knowledge-regions</code>.
           </p>
           <p className="mt-2 text-sm text-neutral-500">
-            Do not call <code className="text-neutral-400">start_session</code>,{" "}
-            <code className="text-neutral-400">upload_proof_of_work</code>, or{" "}
-            <code className="text-neutral-400">end_session</code>. Those tools are not on the public catalog.
-            Static skill: <Link href="/skill.md" className="underline">/skill.md</Link>. Coding agents:{" "}
-            <Link href="/coding-agents.md" className="underline">/coding-agents.md</Link>.
+            Agent skill:{" "}
+            <Link href="/skill.md" className="underline">
+              /skill.md
+            </Link>
+            .
           </p>
         </section>
       </main>

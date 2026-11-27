@@ -12,13 +12,10 @@ Public agent families:
 1. **Protocol API** — `GET/POST /api/v3/protocols`, `GET/PATCH/DELETE /api/v3/protocols/{protocol_id}`, `GET /api/v3/protocols/{protocol_id}/url`, `POST /api/v3/protocols/files`, `POST /api/v3/protocols/unsys-seed`. Create with `create_protocol` using one Author source: written `challenge` (The Protocol Challenge; optional `exact_problem_on_canvas`), files (challenge generated when a learner opens), or `opening_canvas_scene`. Protocols are independent. Do not send `kind`. `get_protocol_url` returns the public `/v/{token}` launch URL. Pass `identity` (or `id`) to prepopulate the participant ID so the protocol does not ask for it.
 2. **Knowledge Regions API** — `GET/POST /api/v3/knowledge-regions`, `GET /api/v3/knowledge-regions/options`, `GET/PATCH/DELETE /api/v3/knowledge-regions/{knowledge_region_id}`, `POST /api/v3/knowledge-regions/{knowledge_region_id}/simulation`, `GET /api/v3/knowledge-regions/jobs/{job_id}`, `GET /api/v3/knowledge-regions/{knowledge_region_id}/runs/{run_id}`, `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}`, `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model`. Create matches the dashboard wizard: protocols, exploration strategies, optional AI-use simulation.
 
-**Human-readable spec:** `/docs/proof-of-work-api`
-**Coding agents:** `/coding-agents.md`
-**Knowledge Regions spec:** see `/docs/proof-of-work-api` endpoint index
+**Skill file:** `/skill.md`
+**Human docs:** `/docs/proof-of-work-api`
 **Base URL:** `https://uncertain.systems` (or your self-hosted origin)
 **MCP:** `POST /api/mcp` with `Authorization: Bearer <api_key>`
-
-Proof of work is recorded in the product UI (knowledge verification protocols). Headless `start_session` → `upload_proof_of_work` → `end_session` is **not** a public agent API. Snapshot and Stash are retired.
 
 **API Metered plan required.** Plan-gate failures return **`403` with `error.code = "api_plan_required"`**.
 
@@ -1097,17 +1094,142 @@ Pass `custom_strategies` as a prompt string, `{ prompt }`, or `{ name, prompt }`
 }
 ```
 
-## Endpoint examples
+## Endpoints
 
-Each endpoint is curl, JavaScript (`fetch`), and Python (`requests`).
+Each public tool has REST and MCP parity. REST bodies are snake_case. MCP arguments match the REST fields plus `organization_id`. Examples are curl, JavaScript (`fetch`), and Python (`requests`).
 
-### `GET /api/v3/protocols` — list_protocols
+### list_protocols
+
+- **MCP:** `list_protocols`
+- **REST:** `GET /api/v3/protocols`
+- **Family:** Protocol API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 List knowledge verification protocols in the requested organization.
 
-Schemas: `protocol`
+List knowledge verification protocols owned by this key. REST: GET /api/v3/protocols. Do not send kind.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "organization_id"
+  ]
+}
+```
+
+**Schemas**
+
+#### protocol (response)
+
+Presented knowledge verification protocol.
+
+```json
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Linear systems",
+  "challenge": "Solve Ax = b",
+  "questions": [
+    "Solve Ax = b"
+  ],
+  "artifacts": [],
+  "duration_minutes": null,
+  "authoring_source": "problem",
+  "exact_problem_on_canvas": true,
+  "generate_problem_on_open": false,
+  "opening_canvas_scene": null,
+  "answers_model_seed": null,
+  "enforced_channels": {
+    "audio": true,
+    "muse": false,
+    "video": false,
+    "screenshots": false
+  },
+  "canvas_capture": {
+    "enabled": false,
+    "everyActions": 8
+  },
+  "public_token": "vf_…",
+  "workspace_id": null,
+  "owner_user_id": "user_…",
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "protocol_setting_id": null,
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z"
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "protocols": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Linear systems",
+      "challenge": "Solve Ax = b",
+      "questions": [
+        "Solve Ax = b"
+      ],
+      "artifacts": [],
+      "duration_minutes": null,
+      "authoring_source": "problem",
+      "exact_problem_on_canvas": true,
+      "generate_problem_on_open": false,
+      "opening_canvas_scene": null,
+      "answers_model_seed": null,
+      "enforced_channels": {
+        "audio": true,
+        "muse": false,
+        "video": false,
+        "screenshots": false
+      },
+      "canvas_capture": {
+        "enabled": false,
+        "everyActions": 8
+      },
+      "public_token": "vf_…",
+      "workspace_id": null,
+      "owner_user_id": "user_…",
+      "organization_id": "00000000-0000-0000-0000-000000000000",
+      "protocol_setting_id": null,
+      "created_at": "2026-11-27T00:00:00.000Z",
+      "updated_at": "2026-11-27T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+
+**Examples**
 
 #### curl
 
@@ -1146,13 +1268,446 @@ response = requests.request(
 print(response.json())
 ```
 
-### `POST /api/v3/protocols` — create_protocol
+### create_protocol
+
+- **MCP:** `create_protocol`
+- **REST:** `POST /api/v3/protocols`
+- **Family:** Protocol API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 201
 
 Create a knowledge verification protocol.
 
-Schemas: `enforced_channels`, `canvas_capture`, `answers_model_seed`, `opening_canvas_scene`, `artifacts`, `protocol`
+Create a knowledge verification protocol (same Author sources as the dashboard wizard). REST: POST /api/v3/protocols. Choose exactly one Author source.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `validation_error`
+1. Written Protocol Challenge — send challenge (aliases topic, problem, goal). May set exact_problem_on_canvas so that text opens on the Work canvas as written. Artifacts may ride along as Unsys context. Do not set generate_problem_on_open or opening_canvas_scene.
+2. From files — send artifacts or files. A new challenge statement is generated when a learner opens (generate_problem_on_open). Challenge may be empty; stored challenge falls back to name. The board stays empty. exact_problem_on_canvas is ignored.
+3. Prepared board — send opening_canvas_scene. Challenge may be empty; stored challenge falls back to board text then name. exact_problem_on_canvas and generate_problem_on_open are ignored.
+
+If more than one source is sent, the server keeps prepared board, then files with generate_problem_on_open, then written challenge. exact_problem_on_canvas is stored only with a written challenge.
+
+Do not send kind. Create and list reject solve, calibration, calibrate, learn, mapping, and map.
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems",
+  "challenge": "Solve Ax = b",
+  "exact_problem_on_canvas": true,
+  "enforced_channels": {
+    "audio": true,
+    "muse": false,
+    "video": false,
+    "screenshots": false
+  }
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `name` (optional, string)
+- `challenge` (optional, string · The Protocol Challenge. Required unless artifacts/files (challenge generated when a learner opens) or opening_canvas_scene.)
+- `topic` (optional, string · Alias of challenge.)
+- `goal` (optional, string · Alias of challenge.)
+- `problem` (optional, string · Alias of challenge.)
+- `questions` (optional, array)
+- `duration_minutes` (optional, number · Run countdown in minutes.)
+- `action_catalog` (optional, number, one of 4, 8, 16)
+- `artifacts` (optional, array · From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data. As the challenge source, a new statement is generated when a learner opens.)
+- `artifacts[].name` (optional, string)
+- `artifacts[].mime_type` (optional, string)
+- `artifacts[].file_id` (optional, string · Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store.)
+- `artifacts[].data` (optional, string · Base64 file bytes. Uploaded then attached as context.)
+- `files` (optional, array · Inline base64 uploads attached as artifacts (same as the wizard file picker).)
+- `files[].name` (required, string)
+- `files[].mime_type` (optional, string)
+- `files[].data` (required, string · Base64 file bytes.)
+- `exact_problem_on_canvas` (optional, boolean · Written Protocol Challenge source only (written problem source only). Puts challenge on the Work canvas as written. Ignored when artifacts are the challenge source or with opening_canvas_scene. Default false.)
+- `generate_problem_on_open` (optional, boolean · From files source. Implied true when artifacts are the challenge: a new statement is generated when a learner opens. Challenge may be empty. Ignored when opening_canvas_scene is set.)
+- `opening_canvas_scene` (optional, object · Prepared board source. The Work canvas is the challenge. Takes priority over generate_problem_on_open and exact_problem_on_canvas.)
+- `answers_model_seed` (optional, object | string · Custom uncertainty model for this protocol. Canonical { model } with priced parent→child edges, or a generic tree spec: nested { title, children, weight }, or { nodes, edges } with weight/price. JSON string accepted. Same as uncertainty_model.)
+- `uncertainty_model` (optional, object | string · Alias of answers_model_seed. Generic tree with weights (nodes/edges or nested children) or serialized JSON.)
+- `unsys_model` (optional, object | string · Alias of answers_model_seed.)
+- `generate_unsys` (optional, boolean · Generate an Unsys seed from The Protocol Challenge and artifacts when answers_model_seed is omitted.)
+- `unsys_guidance` (optional, string · Optional prompt used when generate_unsys is true.)
+- `enforced_channels` (optional, object · Channels the run requires (audio, muse, video, screenshots).)
+- `enforced_channels.audio` (optional, boolean)
+- `enforced_channels.muse` (optional, boolean)
+- `enforced_channels.video` (optional, boolean)
+- `enforced_channels.screenshots` (optional, boolean)
+- `protocol_setting_id` (optional, string · Named protocol canvas setting from GET /api/v3/protocol-settings. Omit or pass empty/default to use the organization default.)
+- `canvas_capture` (optional, object · Store mermaid documents of the Work canvas every N actions. Default off. Documents land on the stored record, never in the embedding.)
+- `canvas_capture.enabled` (optional, boolean)
+- `canvas_capture.every_actions` (optional, integer, min 2, max 48)
+- `workspace_id` (optional, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "name": {
+      "type": "string"
+    },
+    "challenge": {
+      "type": "string",
+      "description": "The Protocol Challenge. Required unless artifacts/files (challenge generated when a learner opens) or opening_canvas_scene."
+    },
+    "topic": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "goal": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "problem": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Run countdown in minutes."
+    },
+    "action_catalog": {
+      "type": "number",
+      "enum": [
+        4,
+        8,
+        16
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data. As the challenge source, a new statement is generated when a learner opens.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string",
+            "description": "Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store."
+          },
+          "data": {
+            "type": "string",
+            "description": "Base64 file bytes. Uploaded then attached as context."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Inline base64 uploads attached as artifacts (same as the wizard file picker).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "description": "Base64 file bytes."
+          }
+        },
+        "required": [
+          "name",
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "exact_problem_on_canvas": {
+      "type": "boolean",
+      "description": "Written Protocol Challenge source only (written problem source only). Puts challenge on the Work canvas as written. Ignored when artifacts are the challenge source or with opening_canvas_scene. Default false."
+    },
+    "generate_problem_on_open": {
+      "type": "boolean",
+      "description": "From files source. Implied true when artifacts are the challenge: a new statement is generated when a learner opens. Challenge may be empty. Ignored when opening_canvas_scene is set."
+    },
+    "opening_canvas_scene": {
+      "type": "object",
+      "description": "Prepared board source. The Work canvas is the challenge. Takes priority over generate_problem_on_open and exact_problem_on_canvas."
+    },
+    "answers_model_seed": {
+      "type": [
+        "object",
+        "string"
+      ],
+      "description": "Custom uncertainty model for this protocol. Canonical { model } with priced parent→child edges, or a generic tree spec: nested { title, children, weight }, or { nodes, edges } with weight/price. JSON string accepted. Same as uncertainty_model."
+    },
+    "uncertainty_model": {
+      "type": [
+        "object",
+        "string"
+      ],
+      "description": "Alias of answers_model_seed. Generic tree with weights (nodes/edges or nested children) or serialized JSON."
+    },
+    "unsys_model": {
+      "type": [
+        "object",
+        "string"
+      ],
+      "description": "Alias of answers_model_seed."
+    },
+    "generate_unsys": {
+      "type": "boolean",
+      "description": "Generate an Unsys seed from The Protocol Challenge and artifacts when answers_model_seed is omitted."
+    },
+    "unsys_guidance": {
+      "type": "string",
+      "description": "Optional prompt used when generate_unsys is true."
+    },
+    "enforced_channels": {
+      "type": "object",
+      "description": "Channels the run requires (audio, muse, video, screenshots).",
+      "properties": {
+        "audio": {
+          "type": "boolean"
+        },
+        "muse": {
+          "type": "boolean"
+        },
+        "video": {
+          "type": "boolean"
+        },
+        "screenshots": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "protocol_setting_id": {
+      "type": "string",
+      "description": "Named protocol canvas setting from GET /api/v3/protocol-settings. Omit or pass empty/default to use the organization default."
+    },
+    "canvas_capture": {
+      "type": "object",
+      "description": "Store mermaid documents of the Work canvas every N actions. Default off. Documents land on the stored record, never in the embedding.",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "every_actions": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 48
+        }
+      },
+      "additionalProperties": false
+    },
+    "workspace_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "organization_id"
+  ]
+}
+```
+
+**Schemas**
+
+#### enforced_channels (request)
+
+Channels the protocol run requires. Audio default on for written protocols.
+
+```json
+{
+  "audio": true,
+  "muse": false,
+  "video": false,
+  "screenshots": false
+}
+```
+
+#### canvas_capture (request)
+
+Store mermaid documents of the Work canvas every N actions. Default off.
+
+```json
+{
+  "enabled": true,
+  "every_actions": 8
+}
+```
+
+#### answers_model_seed (request)
+
+Uncertainty model. Canonical { model } with priced parent→child edges, or nested { title, children, weight }. Aliases uncertainty_model, unsys_model. JSON string accepted.
+
+```json
+{
+  "model": {
+    "rootId": "linear-systems",
+    "branches": [
+      {
+        "id": "linear-systems",
+        "title": "Linear systems",
+        "parentId": null,
+        "observation": "Ax = b",
+        "children": [
+          {
+            "id": "row-reduce",
+            "title": "Row reduce",
+            "weight": 0.3
+          },
+          {
+            "id": "inverse",
+            "title": "Inverse",
+            "weight": 0.8
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### opening_canvas_scene (request)
+
+Prepared board source. The Work canvas is the challenge.
+
+```json
+{
+  "elements": [],
+  "appState": {},
+  "files": {}
+}
+```
+
+#### artifacts (request)
+
+From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data.
+
+```json
+[
+  {
+    "name": "brief.pdf",
+    "mime_type": "application/pdf",
+    "file_id": "file_…"
+  }
+]
+```
+
+#### protocol (response)
+
+Presented knowledge verification protocol.
+
+```json
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Linear systems",
+  "challenge": "Solve Ax = b",
+  "questions": [
+    "Solve Ax = b"
+  ],
+  "artifacts": [],
+  "duration_minutes": null,
+  "authoring_source": "problem",
+  "exact_problem_on_canvas": true,
+  "generate_problem_on_open": false,
+  "opening_canvas_scene": null,
+  "answers_model_seed": null,
+  "enforced_channels": {
+    "audio": true,
+    "muse": false,
+    "video": false,
+    "screenshots": false
+  },
+  "canvas_capture": {
+    "enabled": false,
+    "everyActions": 8
+  },
+  "public_token": "vf_…",
+  "workspace_id": null,
+  "owner_user_id": "user_…",
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "protocol_setting_id": null,
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z"
+}
+```
+
+**Response** (HTTP 201)
+
+```json
+{
+  "protocol": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Linear systems",
+    "challenge": "Solve Ax = b",
+    "questions": [
+      "Solve Ax = b"
+    ],
+    "artifacts": [],
+    "duration_minutes": null,
+    "authoring_source": "problem",
+    "exact_problem_on_canvas": true,
+    "generate_problem_on_open": false,
+    "opening_canvas_scene": null,
+    "answers_model_seed": null,
+    "enforced_channels": {
+      "audio": true,
+      "muse": false,
+      "video": false,
+      "screenshots": false
+    },
+    "canvas_capture": {
+      "enabled": false,
+      "everyActions": 8
+    },
+    "public_token": "vf_…",
+    "workspace_id": null,
+    "owner_user_id": "user_…",
+    "organization_id": "00000000-0000-0000-0000-000000000000",
+    "protocol_setting_id": null,
+    "created_at": "2026-11-27T00:00:00.000Z",
+    "updated_at": "2026-11-27T00:00:00.000Z"
+  }
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1227,11 +1782,105 @@ response = requests.request(
 print(response.json())
 ```
 
-### `POST /api/v3/protocols/files` — upload_protocol_file
+### upload_protocol_file
+
+- **MCP:** `upload_protocol_file`
+- **REST:** `POST /api/v3/protocols/files`
+- **Family:** Protocol API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 201
 
 Upload a Protocol Challenge context file (PDF, text, image) and get an artifact pointer for create_protocol / update_protocol.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `validation_error`
+Upload a Protocol Challenge context file (PDF, text, image). REST: POST /api/v3/protocols/files. Pass the returned file_id in create_protocol / update_protocol artifacts.
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "brief.pdf",
+  "mime_type": "application/pdf",
+  "data": "<base64>"
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `name` (optional, string)
+- `file_name` (optional, string)
+- `mime_type` (optional, string)
+- `data` (required, string · Base64 file bytes.)
+- `workspace_id` (optional, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "name": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "mime_type": {
+      "type": "string"
+    },
+    "data": {
+      "type": "string",
+      "description": "Base64 file bytes."
+    },
+    "workspace_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "data"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Response** (HTTP 201)
+
+```json
+{
+  "artifact": {
+    "name": "brief.pdf",
+    "mime_type": "application/pdf",
+    "file_id": "file_…"
+  },
+  "file_id": "file_…",
+  "name": "brief.pdf",
+  "mime_type": "application/pdf"
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1288,13 +1937,247 @@ response = requests.request(
 print(response.json())
 ```
 
-### `POST /api/v3/protocols/unsys-seed` — generate_protocol_unsys_seed
+### generate_protocol_unsys_seed
+
+- **MCP:** `generate_protocol_unsys_seed`
+- **REST:** `POST /api/v3/protocols/unsys-seed`
+- **Family:** Protocol API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Generate the Unsys model for a protocol from The Protocol Challenge, artifacts, and optional guidance.
 
-Schemas: `answers_model_seed`, `artifacts`
+Generate the Unsys model from The Protocol Challenge, artifacts, and optional guidance (wizard model step). REST: POST /api/v3/protocols/unsys-seed. Pass answers_model_seed into create_protocol / update_protocol.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `validation_error`
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems",
+  "challenge": "Solve Ax = b"
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `name` (optional, string)
+- `challenge` (optional, string)
+- `topic` (optional, string · Alias of challenge.)
+- `goal` (optional, string · Alias of challenge.)
+- `problem` (optional, string · Alias of challenge.)
+- `artifacts` (optional, array)
+- `artifacts[].name` (optional, string)
+- `artifacts[].mime_type` (optional, string)
+- `artifacts[].file_id` (optional, string · Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store.)
+- `artifacts[].data` (optional, string · Base64 file bytes. Uploaded then attached as context.)
+- `guidance` (optional, string)
+- `prompt` (optional, string)
+- `unsys_guidance` (optional, string)
+- `parent_id` (optional, string)
+- `seed_model` (optional, object)
+- `model` (optional, object)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "name": {
+      "type": "string"
+    },
+    "challenge": {
+      "type": "string"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "goal": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "problem": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string",
+            "description": "Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store."
+          },
+          "data": {
+            "type": "string",
+            "description": "Base64 file bytes. Uploaded then attached as context."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "guidance": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "unsys_guidance": {
+      "type": "string"
+    },
+    "parent_id": {
+      "type": "string"
+    },
+    "seed_model": {
+      "type": "object"
+    },
+    "model": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "organization_id"
+  ]
+}
+```
+
+**Schemas**
+
+#### answers_model_seed (request)
+
+Uncertainty model. Canonical { model } with priced parent→child edges, or nested { title, children, weight }. Aliases uncertainty_model, unsys_model. JSON string accepted.
+
+```json
+{
+  "model": {
+    "rootId": "linear-systems",
+    "branches": [
+      {
+        "id": "linear-systems",
+        "title": "Linear systems",
+        "parentId": null,
+        "observation": "Ax = b",
+        "children": [
+          {
+            "id": "row-reduce",
+            "title": "Row reduce",
+            "weight": 0.3
+          },
+          {
+            "id": "inverse",
+            "title": "Inverse",
+            "weight": 0.8
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### artifacts (request)
+
+From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data.
+
+```json
+[
+  {
+    "name": "brief.pdf",
+    "mime_type": "application/pdf",
+    "file_id": "file_…"
+  }
+]
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "model": {
+    "model": {
+      "rootId": "linear-systems",
+      "branches": [
+        {
+          "id": "linear-systems",
+          "title": "Linear systems",
+          "parentId": null,
+          "observation": "Ax = b",
+          "children": [
+            {
+              "id": "row-reduce",
+              "title": "Row reduce",
+              "weight": 0.3
+            },
+            {
+              "id": "inverse",
+              "title": "Inverse",
+              "weight": 0.8
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "answers_model_seed": {
+    "model": {
+      "rootId": "linear-systems",
+      "branches": [
+        {
+          "id": "linear-systems",
+          "title": "Linear systems",
+          "parentId": null,
+          "observation": "Ax = b",
+          "children": [
+            {
+              "id": "row-reduce",
+              "title": "Row reduce",
+              "weight": 0.3
+            },
+            {
+              "id": "inverse",
+              "title": "Inverse",
+              "weight": 0.8
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1348,13 +2231,146 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/protocols/{protocol_id}` — get_protocol
+### get_protocol
+
+- **MCP:** `get_protocol`
+- **REST:** `GET /api/v3/protocols/{protocol_id}`
+- **Family:** Protocol API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Read one knowledge verification protocol.
 
-Schemas: `protocol`
+Read one knowledge verification protocol. REST: GET /api/v3/protocols/{protocol_id}.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+**Path parameters**
+
+- `protocol_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `protocol_id` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "protocol_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "protocol_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### protocol (response)
+
+Presented knowledge verification protocol.
+
+```json
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Linear systems",
+  "challenge": "Solve Ax = b",
+  "questions": [
+    "Solve Ax = b"
+  ],
+  "artifacts": [],
+  "duration_minutes": null,
+  "authoring_source": "problem",
+  "exact_problem_on_canvas": true,
+  "generate_problem_on_open": false,
+  "opening_canvas_scene": null,
+  "answers_model_seed": null,
+  "enforced_channels": {
+    "audio": true,
+    "muse": false,
+    "video": false,
+    "screenshots": false
+  },
+  "canvas_capture": {
+    "enabled": false,
+    "everyActions": 8
+  },
+  "public_token": "vf_…",
+  "workspace_id": null,
+  "owner_user_id": "user_…",
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "protocol_setting_id": null,
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z"
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "protocol": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Linear systems",
+    "challenge": "Solve Ax = b",
+    "questions": [
+      "Solve Ax = b"
+    ],
+    "artifacts": [],
+    "duration_minutes": null,
+    "authoring_source": "problem",
+    "exact_problem_on_canvas": true,
+    "generate_problem_on_open": false,
+    "opening_canvas_scene": null,
+    "answers_model_seed": null,
+    "enforced_channels": {
+      "audio": true,
+      "muse": false,
+      "video": false,
+      "screenshots": false
+    },
+    "canvas_capture": {
+      "enabled": false,
+      "everyActions": 8
+    },
+    "public_token": "vf_…",
+    "workspace_id": null,
+    "owner_user_id": "user_…",
+    "organization_id": "00000000-0000-0000-0000-000000000000",
+    "protocol_setting_id": null,
+    "created_at": "2026-11-27T00:00:00.000Z",
+    "updated_at": "2026-11-27T00:00:00.000Z"
+  }
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -1393,13 +2409,108 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/protocols/{protocol_id}/url` — get_protocol_url
+### get_protocol_url
+
+- **MCP:** `get_protocol_url`
+- **REST:** `GET /api/v3/protocols/{protocol_id}/url`
+- **Family:** Protocol API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Public URL for a protocol. Optional identity (or id) is prepopulated; the learner is not asked for an ID.
 
-Schemas: `protocol_url`
+Public launch URL for a protocol. Pass identity (or id) to prepopulate the participant ID so the flow does not ask for it. REST: GET /api/v3/protocols/{protocol_id}/url.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+**Path parameters**
+
+- `protocol_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+- `identity`
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `protocol_id` (required, string)
+- `identity` (optional, string · Participant ID to put on the URL. Omit for a URL that asks for identity.)
+- `id` (optional, string · Alias of identity.)
+- `candidate_id` (optional, string · Alias of identity.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "protocol_id": {
+      "type": "string"
+    },
+    "identity": {
+      "type": "string",
+      "description": "Participant ID to put on the URL. Omit for a URL that asks for identity."
+    },
+    "id": {
+      "type": "string",
+      "description": "Alias of identity."
+    },
+    "candidate_id": {
+      "type": "string",
+      "description": "Alias of identity."
+    }
+  },
+  "required": [
+    "organization_id",
+    "protocol_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### protocol_url (response)
+
+Public launch URL. identity is null when the learner will be asked for an ID.
+
+```json
+{
+  "protocol_id": "11111111-1111-1111-1111-111111111111",
+  "url": "https://uncertain.systems/v/vf_…?identity=learner-42",
+  "path": "/v/vf_…?identity=learner-42",
+  "identity": "learner-42"
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "protocol_id": "11111111-1111-1111-1111-111111111111",
+  "url": "https://uncertain.systems/v/vf_…?identity=learner-42",
+  "path": "/v/vf_…?identity=learner-42",
+  "identity": "learner-42"
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -1438,13 +2549,448 @@ response = requests.request(
 print(response.json())
 ```
 
-### `PATCH /api/v3/protocols/{protocol_id}` — update_protocol
+### update_protocol
+
+- **MCP:** `update_protocol`
+- **REST:** `PATCH /api/v3/protocols/{protocol_id}`
+- **Family:** Protocol API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Update a knowledge verification protocol.
 
-Schemas: `enforced_channels`, `canvas_capture`, `answers_model_seed`, `opening_canvas_scene`, `artifacts`, `protocol`
+Update a knowledge verification protocol (same Author sources as create_protocol). REST: PATCH /api/v3/protocols/{protocol_id}. Choose exactly one Author source.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`, `validation_error`
+1. Written Protocol Challenge — send challenge (aliases topic, problem, goal). May set exact_problem_on_canvas so that text opens on the Work canvas as written. Artifacts may ride along as Unsys context. Do not set generate_problem_on_open or opening_canvas_scene.
+2. From files — send artifacts or files. A new challenge statement is generated when a learner opens (generate_problem_on_open). Challenge may be empty; stored challenge falls back to name. The board stays empty. exact_problem_on_canvas is ignored.
+3. Prepared board — send opening_canvas_scene. Challenge may be empty; stored challenge falls back to board text then name. exact_problem_on_canvas and generate_problem_on_open are ignored.
+
+If more than one source is sent, the server keeps prepared board, then files with generate_problem_on_open, then written challenge. exact_problem_on_canvas is stored only with a written challenge.
+
+Do not send kind. Create and list reject solve, calibration, calibrate, learn, mapping, and map.
+
+**Path parameters**
+
+- `protocol_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems (revised)"
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `protocol_id` (required, string)
+- `name` (optional, string)
+- `challenge` (optional, string · The Protocol Challenge. Required unless artifacts/files (challenge generated when a learner opens) or opening_canvas_scene.)
+- `topic` (optional, string · Alias of challenge.)
+- `goal` (optional, string · Alias of challenge.)
+- `problem` (optional, string · Alias of challenge.)
+- `questions` (optional, array)
+- `duration_minutes` (optional, number · Run countdown in minutes.)
+- `action_catalog` (optional, number, one of 4, 8, 16)
+- `artifacts` (optional, array · From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data. As the challenge source, a new statement is generated when a learner opens.)
+- `artifacts[].name` (optional, string)
+- `artifacts[].mime_type` (optional, string)
+- `artifacts[].file_id` (optional, string · Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store.)
+- `artifacts[].data` (optional, string · Base64 file bytes. Uploaded then attached as context.)
+- `files` (optional, array · Inline base64 uploads attached as artifacts (same as the wizard file picker).)
+- `files[].name` (required, string)
+- `files[].mime_type` (optional, string)
+- `files[].data` (required, string · Base64 file bytes.)
+- `exact_problem_on_canvas` (optional, boolean · Written Protocol Challenge source only (written problem source only). Puts challenge on the Work canvas as written. Ignored when artifacts are the challenge source or with opening_canvas_scene. Default false.)
+- `generate_problem_on_open` (optional, boolean · From files source. Implied true when artifacts are the challenge: a new statement is generated when a learner opens. Challenge may be empty. Ignored when opening_canvas_scene is set.)
+- `opening_canvas_scene` (optional, object · Prepared board source. The Work canvas is the challenge. Takes priority over generate_problem_on_open and exact_problem_on_canvas.)
+- `answers_model_seed` (optional, object | string · Custom uncertainty model for this protocol. Canonical { model } with priced parent→child edges, or a generic tree spec: nested { title, children, weight }, or { nodes, edges } with weight/price. JSON string accepted. Same as uncertainty_model.)
+- `uncertainty_model` (optional, object | string · Alias of answers_model_seed. Generic tree with weights (nodes/edges or nested children) or serialized JSON.)
+- `unsys_model` (optional, object | string · Alias of answers_model_seed.)
+- `generate_unsys` (optional, boolean · Generate an Unsys seed from The Protocol Challenge and artifacts when answers_model_seed is omitted.)
+- `unsys_guidance` (optional, string · Optional prompt used when generate_unsys is true.)
+- `enforced_channels` (optional, object · Channels the run requires (audio, muse, video, screenshots).)
+- `enforced_channels.audio` (optional, boolean)
+- `enforced_channels.muse` (optional, boolean)
+- `enforced_channels.video` (optional, boolean)
+- `enforced_channels.screenshots` (optional, boolean)
+- `protocol_setting_id` (optional, string · Named protocol canvas setting from GET /api/v3/protocol-settings. Omit or pass empty/default to use the organization default.)
+- `canvas_capture` (optional, object · Store mermaid documents of the Work canvas every N actions. Default off. Documents land on the stored record, never in the embedding.)
+- `canvas_capture.enabled` (optional, boolean)
+- `canvas_capture.every_actions` (optional, integer, min 2, max 48)
+- `workspace_id` (optional, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "protocol_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "challenge": {
+      "type": "string",
+      "description": "The Protocol Challenge. Required unless artifacts/files (challenge generated when a learner opens) or opening_canvas_scene."
+    },
+    "topic": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "goal": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "problem": {
+      "type": "string",
+      "description": "Alias of challenge."
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Run countdown in minutes."
+    },
+    "action_catalog": {
+      "type": "number",
+      "enum": [
+        4,
+        8,
+        16
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data. As the challenge source, a new statement is generated when a learner opens.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string",
+            "description": "Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store."
+          },
+          "data": {
+            "type": "string",
+            "description": "Base64 file bytes. Uploaded then attached as context."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Inline base64 uploads attached as artifacts (same as the wizard file picker).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "description": "Base64 file bytes."
+          }
+        },
+        "required": [
+          "name",
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "exact_problem_on_canvas": {
+      "type": "boolean",
+      "description": "Written Protocol Challenge source only (written problem source only). Puts challenge on the Work canvas as written. Ignored when artifacts are the challenge source or with opening_canvas_scene. Default false."
+    },
+    "generate_problem_on_open": {
+      "type": "boolean",
+      "description": "From files source. Implied true when artifacts are the challenge: a new statement is generated when a learner opens. Challenge may be empty. Ignored when opening_canvas_scene is set."
+    },
+    "opening_canvas_scene": {
+      "type": "object",
+      "description": "Prepared board source. The Work canvas is the challenge. Takes priority over generate_problem_on_open and exact_problem_on_canvas."
+    },
+    "answers_model_seed": {
+      "type": [
+        "object",
+        "string"
+      ],
+      "description": "Custom uncertainty model for this protocol. Canonical { model } with priced parent→child edges, or a generic tree spec: nested { title, children, weight }, or { nodes, edges } with weight/price. JSON string accepted. Same as uncertainty_model."
+    },
+    "uncertainty_model": {
+      "type": [
+        "object",
+        "string"
+      ],
+      "description": "Alias of answers_model_seed. Generic tree with weights (nodes/edges or nested children) or serialized JSON."
+    },
+    "unsys_model": {
+      "type": [
+        "object",
+        "string"
+      ],
+      "description": "Alias of answers_model_seed."
+    },
+    "generate_unsys": {
+      "type": "boolean",
+      "description": "Generate an Unsys seed from The Protocol Challenge and artifacts when answers_model_seed is omitted."
+    },
+    "unsys_guidance": {
+      "type": "string",
+      "description": "Optional prompt used when generate_unsys is true."
+    },
+    "enforced_channels": {
+      "type": "object",
+      "description": "Channels the run requires (audio, muse, video, screenshots).",
+      "properties": {
+        "audio": {
+          "type": "boolean"
+        },
+        "muse": {
+          "type": "boolean"
+        },
+        "video": {
+          "type": "boolean"
+        },
+        "screenshots": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "protocol_setting_id": {
+      "type": "string",
+      "description": "Named protocol canvas setting from GET /api/v3/protocol-settings. Omit or pass empty/default to use the organization default."
+    },
+    "canvas_capture": {
+      "type": "object",
+      "description": "Store mermaid documents of the Work canvas every N actions. Default off. Documents land on the stored record, never in the embedding.",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "every_actions": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 48
+        }
+      },
+      "additionalProperties": false
+    },
+    "workspace_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "protocol_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### enforced_channels (request)
+
+Channels the protocol run requires. Audio default on for written protocols.
+
+```json
+{
+  "audio": true,
+  "muse": false,
+  "video": false,
+  "screenshots": false
+}
+```
+
+#### canvas_capture (request)
+
+Store mermaid documents of the Work canvas every N actions. Default off.
+
+```json
+{
+  "enabled": true,
+  "every_actions": 8
+}
+```
+
+#### answers_model_seed (request)
+
+Uncertainty model. Canonical { model } with priced parent→child edges, or nested { title, children, weight }. Aliases uncertainty_model, unsys_model. JSON string accepted.
+
+```json
+{
+  "model": {
+    "rootId": "linear-systems",
+    "branches": [
+      {
+        "id": "linear-systems",
+        "title": "Linear systems",
+        "parentId": null,
+        "observation": "Ax = b",
+        "children": [
+          {
+            "id": "row-reduce",
+            "title": "Row reduce",
+            "weight": 0.3
+          },
+          {
+            "id": "inverse",
+            "title": "Inverse",
+            "weight": 0.8
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### opening_canvas_scene (request)
+
+Prepared board source. The Work canvas is the challenge.
+
+```json
+{
+  "elements": [],
+  "appState": {},
+  "files": {}
+}
+```
+
+#### artifacts (request)
+
+From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data.
+
+```json
+[
+  {
+    "name": "brief.pdf",
+    "mime_type": "application/pdf",
+    "file_id": "file_…"
+  }
+]
+```
+
+#### protocol (response)
+
+Presented knowledge verification protocol.
+
+```json
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Linear systems",
+  "challenge": "Solve Ax = b",
+  "questions": [
+    "Solve Ax = b"
+  ],
+  "artifacts": [],
+  "duration_minutes": null,
+  "authoring_source": "problem",
+  "exact_problem_on_canvas": true,
+  "generate_problem_on_open": false,
+  "opening_canvas_scene": null,
+  "answers_model_seed": null,
+  "enforced_channels": {
+    "audio": true,
+    "muse": false,
+    "video": false,
+    "screenshots": false
+  },
+  "canvas_capture": {
+    "enabled": false,
+    "everyActions": 8
+  },
+  "public_token": "vf_…",
+  "workspace_id": null,
+  "owner_user_id": "user_…",
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "protocol_setting_id": null,
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z"
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "protocol": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Linear systems",
+    "challenge": "Solve Ax = b",
+    "questions": [
+      "Solve Ax = b"
+    ],
+    "artifacts": [],
+    "duration_minutes": null,
+    "authoring_source": "problem",
+    "exact_problem_on_canvas": true,
+    "generate_problem_on_open": false,
+    "opening_canvas_scene": null,
+    "answers_model_seed": null,
+    "enforced_channels": {
+      "audio": true,
+      "muse": false,
+      "video": false,
+      "screenshots": false
+    },
+    "canvas_capture": {
+      "enabled": false,
+      "everyActions": 8
+    },
+    "public_token": "vf_…",
+    "workspace_id": null,
+    "owner_user_id": "user_…",
+    "organization_id": "00000000-0000-0000-0000-000000000000",
+    "protocol_setting_id": null,
+    "created_at": "2026-11-27T00:00:00.000Z",
+    "updated_at": "2026-11-27T00:00:00.000Z"
+  }
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1495,11 +3041,75 @@ response = requests.request(
 print(response.json())
 ```
 
-### `DELETE /api/v3/protocols/{protocol_id}` — delete_protocol
+### delete_protocol
+
+- **MCP:** `delete_protocol`
+- **REST:** `DELETE /api/v3/protocols/{protocol_id}`
+- **Family:** Protocol API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Delete a knowledge verification protocol.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+Delete a knowledge verification protocol. REST: DELETE /api/v3/protocols/{protocol_id}.
+
+**Path parameters**
+
+- `protocol_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `protocol_id` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "protocol_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "protocol_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "deleted": true,
+  "protocol_id": "11111111-1111-1111-1111-111111111111"
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -1538,13 +3148,132 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions` — list_knowledge_regions
+### list_knowledge_regions
+
+- **MCP:** `list_knowledge_regions`
+- **REST:** `GET /api/v3/knowledge-regions`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 List knowledge regions in the requested organization.
 
-Schemas: `knowledge_region`
+List knowledge regions in the active organization. REST: GET /api/v3/knowledge-regions.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "organization_id"
+  ]
+}
+```
+
+**Schemas**
+
+#### knowledge_region (response)
+
+Region with clusters, strategies, and samples. No vectors.
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "name": "Linear systems region",
+  "description": "region-simulation: 1 flows · Exploit-heavy · 12/strategy · 0 real",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "subject_count": 1,
+  "workspace_id": "ws_…",
+  "protocols": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Linear systems"
+    }
+  ],
+  "strategies": [
+    {
+      "id": "exploit-heavy",
+      "name": "Exploit-heavy"
+    }
+  ],
+  "samples_per_strategy": 12,
+  "simulated_count": 12,
+  "cohort_count": 0,
+  "analysis_count": 0,
+  "real_session_count": 0,
+  "clusters": [
+    {
+      "id": "cluster_…",
+      "name": "Linear systems region · Exploit-heavy",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy",
+      "sample_count": 12
+    }
+  ],
+  "ai_use_clusters": [],
+  "samples": [
+    {
+      "id": "emb_…",
+      "identity": "Simulated · Exploit-heavy",
+      "origin": "simulated",
+      "point_kind": "simulated",
+      "flow_id": "11111111-1111-1111-1111-111111111111",
+      "run_id": "44444444-4444-4444-4444-444444444444",
+      "workspace_id": "ws_…",
+      "source": "simulated",
+      "cluster_id": "cluster_…",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy"
+    }
+  ]
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "knowledge_regions": [
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Linear systems region",
+      "description": "region-simulation: 1 flows · Exploit-heavy · 12/strategy · 0 real",
+      "workspace_id": "ws_…",
+      "subject_count": 1,
+      "created_at": "2026-11-27T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+
+**Examples**
 
 #### curl
 
@@ -1583,13 +3312,176 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions/options` — get_knowledge_region_options
+### get_knowledge_region_options
+
+- **MCP:** `get_knowledge_region_options`
+- **REST:** `GET /api/v3/knowledge-regions/options`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Wizard options for creating a knowledge region: protocols, exploration strategies, AI-use catalog, and sample bounds.
 
-Schemas: `knowledge_region_options`
+Wizard options for knowledge-region create: protocols, exploration strategies, AI-use catalog, sample bounds. REST: GET /api/v3/knowledge-regions/options.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "organization_id"
+  ]
+}
+```
+
+**Schemas**
+
+#### knowledge_region_options (response)
+
+Wizard options: protocols, built-in strategies, AI-use catalog, sample bounds.
+
+```json
+{
+  "wizard_steps": [
+    "name",
+    "protocols",
+    "explore",
+    "ai-use",
+    "run"
+  ],
+  "strategies": [
+    {
+      "id": "exploit-heavy",
+      "name": "Exploit-heavy",
+      "description": "Goes for the answer it already thinks is best and explores little."
+    },
+    {
+      "id": "information-seeking",
+      "name": "Information-seeking",
+      "description": "Chooses steps that reduce uncertainty most, even if they are slower."
+    },
+    {
+      "id": "novelty-seeking",
+      "name": "Novelty-seeking",
+      "description": "Goes for unfamiliar parts of the problem."
+    },
+    {
+      "id": "balanced",
+      "name": "Balanced",
+      "description": "Explores early, then commits."
+    },
+    {
+      "id": "narrow-and-deep",
+      "name": "Narrow and deep",
+      "description": "Stays with one approach and goes deep."
+    }
+  ],
+  "default_samples_per_strategy": 12,
+  "min_samples_per_strategy": 3,
+  "max_samples_per_strategy": 48,
+  "ai_use_catalog": [],
+  "default_checked": [],
+  "default_samples_per_ai_use": 6,
+  "min_samples_per_ai_use": 3,
+  "max_samples_per_ai_use": 12,
+  "protocols": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Linear systems",
+      "challenge": "Solve Ax = b",
+      "question_count": 1,
+      "real_session_count": 0
+    }
+  ]
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "wizard_steps": [
+    "name",
+    "protocols",
+    "explore",
+    "ai-use",
+    "run"
+  ],
+  "strategies": [
+    {
+      "id": "exploit-heavy",
+      "name": "Exploit-heavy",
+      "description": "Goes for the answer it already thinks is best and explores little."
+    },
+    {
+      "id": "information-seeking",
+      "name": "Information-seeking",
+      "description": "Chooses steps that reduce uncertainty most, even if they are slower."
+    },
+    {
+      "id": "novelty-seeking",
+      "name": "Novelty-seeking",
+      "description": "Goes for unfamiliar parts of the problem."
+    },
+    {
+      "id": "balanced",
+      "name": "Balanced",
+      "description": "Explores early, then commits."
+    },
+    {
+      "id": "narrow-and-deep",
+      "name": "Narrow and deep",
+      "description": "Stays with one approach and goes deep."
+    }
+  ],
+  "default_samples_per_strategy": 12,
+  "min_samples_per_strategy": 3,
+  "max_samples_per_strategy": 48,
+  "ai_use_catalog": [],
+  "default_checked": [],
+  "default_samples_per_ai_use": 6,
+  "min_samples_per_ai_use": 3,
+  "max_samples_per_ai_use": 12,
+  "protocols": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Linear systems",
+      "challenge": "Solve Ax = b",
+      "question_count": 1,
+      "real_session_count": 0
+    }
+  ]
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+
+**Examples**
 
 #### curl
 
@@ -1628,13 +3520,250 @@ response = requests.request(
 print(response.json())
 ```
 
-### `POST /api/v3/knowledge-regions` — create_knowledge_region
+### create_knowledge_region
+
+- **MCP:** `create_knowledge_region`
+- **REST:** `POST /api/v3/knowledge-regions`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 202
 
 Create a knowledge region by running the simulation wizard (protocols, exploration strategies, optional AI-use).
 
-Schemas: `custom_strategies`, `create_knowledge_region`, `simulation_job`
+Create a knowledge region by running the simulation wizard (same options as /regions/new). REST: POST /api/v3/knowledge-regions.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `validation_error`
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems region",
+  "protocol_ids": [
+    "11111111-1111-1111-1111-111111111111"
+  ],
+  "strategy_ids": [
+    "exploit-heavy",
+    "information-seeking"
+  ],
+  "custom_strategies": [
+    {
+      "prompt": "Ask more questions before you commit to an answer."
+    }
+  ],
+  "samples_per_strategy": 12
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `name` (required, string · Knowledge region name.)
+- `protocol_ids` (optional, array · Protocol ids from get_knowledge_region_options. Alias protocolIds.)
+- `strategy_ids` (optional, array · Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Custom strategies from custom_strategies are included even when their generated ids are omitted here. Alias strategyIds.)
+- `custom_strategies` (optional, array · Custom exploration strategies. Pass a prompt string, { prompt }, or { name, prompt }. Included in the run even if strategy_ids omits the generated custom id. Alias customStrategies.)
+- `custom_strategies[].id` (optional, string)
+- `custom_strategies[].name` (optional, string · Optional display name. Derived from prompt when omitted.)
+- `custom_strategies[].instructions` (optional, string · Exploration prompt. Alias of prompt.)
+- `custom_strategies[].prompt` (optional, string · Exploration prompt. Enough on its own: { prompt } or a string item. Alias of instructions.)
+- `custom_strategies[].description` (optional, string)
+- `samples_per_strategy` (optional, integer · Samples per exploration strategy (3–48, default 12). Alias samplesPerStrategy.)
+- `include_human_data` (optional, boolean · Overlay real protocol sessions on the simulated region. Alias includeHumanData.)
+- `ai_use_catalog_ids` (optional, array · AI-use catalog ids from get_knowledge_region_options (requires an org OpenRouter key). Alias aiUseCatalogIds.)
+- `samples_per_ai_use` (optional, integer · Samples per AI-use model (3–12, default 6). Alias samplesPerAiUse.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "name": {
+      "type": "string",
+      "description": "Knowledge region name."
+    },
+    "protocol_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Protocol ids from get_knowledge_region_options. Alias protocolIds."
+    },
+    "strategy_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Custom strategies from custom_strategies are included even when their generated ids are omitted here. Alias strategyIds."
+    },
+    "custom_strategies": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "description": "Prompt-only custom strategy. Name is derived from the prompt."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "description": "Optional display name. Derived from prompt when omitted."
+              },
+              "instructions": {
+                "type": "string",
+                "description": "Exploration prompt. Alias of prompt."
+              },
+              "prompt": {
+                "type": "string",
+                "description": "Exploration prompt. Enough on its own: { prompt } or a string item. Alias of instructions."
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Custom exploration strategies. Pass a prompt string, { prompt }, or { name, prompt }. Included in the run even if strategy_ids omits the generated custom id. Alias customStrategies."
+    },
+    "samples_per_strategy": {
+      "type": "integer",
+      "description": "Samples per exploration strategy (3–48, default 12). Alias samplesPerStrategy."
+    },
+    "include_human_data": {
+      "type": "boolean",
+      "description": "Overlay real protocol sessions on the simulated region. Alias includeHumanData."
+    },
+    "ai_use_catalog_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "AI-use catalog ids from get_knowledge_region_options (requires an org OpenRouter key). Alias aiUseCatalogIds."
+    },
+    "samples_per_ai_use": {
+      "type": "integer",
+      "description": "Samples per AI-use model (3–12, default 6). Alias samplesPerAiUse."
+    }
+  },
+  "required": [
+    "organization_id",
+    "name"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### custom_strategies (request)
+
+Custom exploration strategies for create_knowledge_region and simulate_knowledge_region. A prompt string, { prompt }, or { name, prompt } is enough. Included even when strategy_ids omits the generated custom id.
+
+```json
+[
+  {
+    "prompt": "Ask more questions before you commit to an answer."
+  },
+  {
+    "name": "Stay on substitution",
+    "prompt": "Pick substitution and stay with it."
+  },
+  "Stay on substitution and do not switch methods."
+]
+```
+
+#### create_knowledge_region (request)
+
+Simulation wizard body. strategy_ids are built-in catalog ids. custom_strategies add prompt-defined walks.
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems region",
+  "protocol_ids": [
+    "11111111-1111-1111-1111-111111111111"
+  ],
+  "strategy_ids": [
+    "exploit-heavy",
+    "information-seeking"
+  ],
+  "custom_strategies": [
+    {
+      "prompt": "Ask more questions before you commit to an answer."
+    }
+  ],
+  "samples_per_strategy": 12,
+  "include_human_data": false,
+  "ai_use_catalog_ids": [],
+  "samples_per_ai_use": 6
+}
+```
+
+#### simulation_job (response)
+
+202 body from create_knowledge_region / simulate_knowledge_region. Poll get_knowledge_region_job.
+
+```json
+{
+  "type": "job",
+  "job_id": "33333333-3333-3333-3333-333333333333",
+  "family": "exploration",
+  "status": "queued",
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "follow_up_job_id": null,
+  "progress": [],
+  "cost_usd": 0,
+  "error": null,
+  "plan_cursor": 0,
+  "plan_length": 24
+}
+```
+
+**Response** (HTTP 202)
+
+```json
+{
+  "type": "job",
+  "job_id": "33333333-3333-3333-3333-333333333333",
+  "family": "exploration",
+  "status": "queued",
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "follow_up_job_id": null,
+  "progress": [],
+  "cost_usd": 0,
+  "error": null,
+  "plan_cursor": 0,
+  "plan_length": 24
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1724,13 +3853,180 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions/{knowledge_region_id}` — get_knowledge_region
+### get_knowledge_region
+
+- **MCP:** `get_knowledge_region`
+- **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Read one knowledge region: clusters, strategies, AI-use clusters, and samples (no vectors).
 
-Schemas: `knowledge_region`
+Read one knowledge region with clusters, strategies, AI-use clusters, and samples (no vectors). REST: GET /api/v3/knowledge-regions/{knowledge_region_id}.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### knowledge_region (response)
+
+Region with clusters, strategies, and samples. No vectors.
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "name": "Linear systems region",
+  "description": "region-simulation: 1 flows · Exploit-heavy · 12/strategy · 0 real",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "subject_count": 1,
+  "workspace_id": "ws_…",
+  "protocols": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Linear systems"
+    }
+  ],
+  "strategies": [
+    {
+      "id": "exploit-heavy",
+      "name": "Exploit-heavy"
+    }
+  ],
+  "samples_per_strategy": 12,
+  "simulated_count": 12,
+  "cohort_count": 0,
+  "analysis_count": 0,
+  "real_session_count": 0,
+  "clusters": [
+    {
+      "id": "cluster_…",
+      "name": "Linear systems region · Exploit-heavy",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy",
+      "sample_count": 12
+    }
+  ],
+  "ai_use_clusters": [],
+  "samples": [
+    {
+      "id": "emb_…",
+      "identity": "Simulated · Exploit-heavy",
+      "origin": "simulated",
+      "point_kind": "simulated",
+      "flow_id": "11111111-1111-1111-1111-111111111111",
+      "run_id": "44444444-4444-4444-4444-444444444444",
+      "workspace_id": "ws_…",
+      "source": "simulated",
+      "cluster_id": "cluster_…",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy"
+    }
+  ]
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "name": "Linear systems region",
+  "description": "region-simulation: 1 flows · Exploit-heavy · 12/strategy · 0 real",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "subject_count": 1,
+  "workspace_id": "ws_…",
+  "protocols": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Linear systems"
+    }
+  ],
+  "strategies": [
+    {
+      "id": "exploit-heavy",
+      "name": "Exploit-heavy"
+    }
+  ],
+  "samples_per_strategy": 12,
+  "simulated_count": 12,
+  "cohort_count": 0,
+  "analysis_count": 0,
+  "real_session_count": 0,
+  "clusters": [
+    {
+      "id": "cluster_…",
+      "name": "Linear systems region · Exploit-heavy",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy",
+      "sample_count": 12
+    }
+  ],
+  "ai_use_clusters": [],
+  "samples": [
+    {
+      "id": "emb_…",
+      "identity": "Simulated · Exploit-heavy",
+      "origin": "simulated",
+      "point_kind": "simulated",
+      "flow_id": "11111111-1111-1111-1111-111111111111",
+      "run_id": "44444444-4444-4444-4444-444444444444",
+      "workspace_id": "ws_…",
+      "source": "simulated",
+      "cluster_id": "cluster_…",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy"
+    }
+  ]
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -1769,11 +4065,94 @@ response = requests.request(
 print(response.json())
 ```
 
-### `PATCH /api/v3/knowledge-regions/{knowledge_region_id}` — update_knowledge_region
+### update_knowledge_region
+
+- **MCP:** `update_knowledge_region`
+- **REST:** `PATCH /api/v3/knowledge-regions/{knowledge_region_id}`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Rename a knowledge region.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`, `validation_error`
+Rename a knowledge region. REST: PATCH /api/v3/knowledge-regions/{knowledge_region_id}.
+
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems region (revised)"
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+- `name` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id",
+    "name"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "name": "Linear systems region",
+  "description": "region-simulation: 1 flows · Exploit-heavy · 12/strategy · 0 real",
+  "workspace_id": "ws_…",
+  "subject_count": 1,
+  "created_at": "2026-11-27T00:00:00.000Z"
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1824,11 +4203,77 @@ response = requests.request(
 print(response.json())
 ```
 
-### `DELETE /api/v3/knowledge-regions/{knowledge_region_id}` — delete_knowledge_region
+### delete_knowledge_region
+
+- **MCP:** `delete_knowledge_region`
+- **REST:** `DELETE /api/v3/knowledge-regions/{knowledge_region_id}`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Delete a knowledge region and its simulation clusters.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+Delete a knowledge region and its simulation clusters. REST: DELETE /api/v3/knowledge-regions/{knowledge_region_id}.
+
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "deleted_ids": [
+    "22222222-2222-2222-2222-222222222222"
+  ]
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -1867,13 +4312,247 @@ response = requests.request(
 print(response.json())
 ```
 
-### `POST /api/v3/knowledge-regions/{knowledge_region_id}/simulation` — simulate_knowledge_region
+### simulate_knowledge_region
+
+- **MCP:** `simulate_knowledge_region`
+- **REST:** `POST /api/v3/knowledge-regions/{knowledge_region_id}/simulation`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:write`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 202
 
 Add exploration-strategy or AI-use samples to an existing knowledge region.
 
-Schemas: `custom_strategies`, `create_knowledge_region`, `simulation_job`
+Add exploration-strategy or AI-use samples to an existing knowledge region. REST: POST /api/v3/knowledge-regions/{knowledge_region_id}/simulation.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`, `validation_error`
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**JSON body**
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "strategy_ids": [
+    "novelty-seeking"
+  ],
+  "custom_strategies": [
+    "Stay on substitution and do not switch methods."
+  ],
+  "samples_per_strategy": 12
+}
+```
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+- `protocol_ids` (optional, array · Protocol ids from get_knowledge_region_options. Alias protocolIds.)
+- `strategy_ids` (optional, array · Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Custom strategies from custom_strategies are included even when their generated ids are omitted here. Alias strategyIds.)
+- `custom_strategies` (optional, array · Custom exploration strategies. Pass a prompt string, { prompt }, or { name, prompt }. Included in the run even if strategy_ids omits the generated custom id. Alias customStrategies.)
+- `custom_strategies[].id` (optional, string)
+- `custom_strategies[].name` (optional, string · Optional display name. Derived from prompt when omitted.)
+- `custom_strategies[].instructions` (optional, string · Exploration prompt. Alias of prompt.)
+- `custom_strategies[].prompt` (optional, string · Exploration prompt. Enough on its own: { prompt } or a string item. Alias of instructions.)
+- `custom_strategies[].description` (optional, string)
+- `samples_per_strategy` (optional, integer · Samples per exploration strategy (3–48, default 12). Alias samplesPerStrategy.)
+- `include_human_data` (optional, boolean · Overlay real protocol sessions on the simulated region. Alias includeHumanData.)
+- `ai_use_catalog_ids` (optional, array · AI-use catalog ids from get_knowledge_region_options (requires an org OpenRouter key). Alias aiUseCatalogIds.)
+- `samples_per_ai_use` (optional, integer · Samples per AI-use model (3–12, default 6). Alias samplesPerAiUse.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    },
+    "protocol_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Protocol ids from get_knowledge_region_options. Alias protocolIds."
+    },
+    "strategy_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Custom strategies from custom_strategies are included even when their generated ids are omitted here. Alias strategyIds."
+    },
+    "custom_strategies": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "description": "Prompt-only custom strategy. Name is derived from the prompt."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "description": "Optional display name. Derived from prompt when omitted."
+              },
+              "instructions": {
+                "type": "string",
+                "description": "Exploration prompt. Alias of prompt."
+              },
+              "prompt": {
+                "type": "string",
+                "description": "Exploration prompt. Enough on its own: { prompt } or a string item. Alias of instructions."
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Custom exploration strategies. Pass a prompt string, { prompt }, or { name, prompt }. Included in the run even if strategy_ids omits the generated custom id. Alias customStrategies."
+    },
+    "samples_per_strategy": {
+      "type": "integer",
+      "description": "Samples per exploration strategy (3–48, default 12). Alias samplesPerStrategy."
+    },
+    "include_human_data": {
+      "type": "boolean",
+      "description": "Overlay real protocol sessions on the simulated region. Alias includeHumanData."
+    },
+    "ai_use_catalog_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "AI-use catalog ids from get_knowledge_region_options (requires an org OpenRouter key). Alias aiUseCatalogIds."
+    },
+    "samples_per_ai_use": {
+      "type": "integer",
+      "description": "Samples per AI-use model (3–12, default 6). Alias samplesPerAiUse."
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### custom_strategies (request)
+
+Custom exploration strategies for create_knowledge_region and simulate_knowledge_region. A prompt string, { prompt }, or { name, prompt } is enough. Included even when strategy_ids omits the generated custom id.
+
+```json
+[
+  {
+    "prompt": "Ask more questions before you commit to an answer."
+  },
+  {
+    "name": "Stay on substitution",
+    "prompt": "Pick substitution and stay with it."
+  },
+  "Stay on substitution and do not switch methods."
+]
+```
+
+#### create_knowledge_region (request)
+
+Simulation wizard body. strategy_ids are built-in catalog ids. custom_strategies add prompt-defined walks.
+
+```json
+{
+  "organization_id": "00000000-0000-0000-0000-000000000000",
+  "name": "Linear systems region",
+  "protocol_ids": [
+    "11111111-1111-1111-1111-111111111111"
+  ],
+  "strategy_ids": [
+    "exploit-heavy",
+    "information-seeking"
+  ],
+  "custom_strategies": [
+    {
+      "prompt": "Ask more questions before you commit to an answer."
+    }
+  ],
+  "samples_per_strategy": 12,
+  "include_human_data": false,
+  "ai_use_catalog_ids": [],
+  "samples_per_ai_use": 6
+}
+```
+
+#### simulation_job (response)
+
+202 body from create_knowledge_region / simulate_knowledge_region. Poll get_knowledge_region_job.
+
+```json
+{
+  "type": "job",
+  "job_id": "33333333-3333-3333-3333-333333333333",
+  "family": "exploration",
+  "status": "queued",
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "follow_up_job_id": null,
+  "progress": [],
+  "cost_usd": 0,
+  "error": null,
+  "plan_cursor": 0,
+  "plan_length": 24
+}
+```
+
+**Response** (HTTP 202)
+
+```json
+{
+  "type": "job",
+  "job_id": "33333333-3333-3333-3333-333333333333",
+  "family": "exploration",
+  "status": "queued",
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "follow_up_job_id": null,
+  "progress": [],
+  "cost_usd": 0,
+  "error": null,
+  "plan_cursor": 0,
+  "plan_length": 24
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+- `validation_error` · HTTP 400 · Write bodies that fail authoring or wizard validation.
+
+**Examples**
 
 #### curl
 
@@ -1942,13 +4621,106 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions/jobs/{job_id}` — get_knowledge_region_job
+### get_knowledge_region_job
+
+- **MCP:** `get_knowledge_region_job`
+- **REST:** `GET /api/v3/knowledge-regions/jobs/{job_id}`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Read a knowledge-region simulation job.
 
-Schemas: `simulation_job`
+Read a knowledge-region simulation job. REST: GET /api/v3/knowledge-regions/jobs/{job_id}.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+**Path parameters**
+
+- `job_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `job_id` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "job_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "job_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### simulation_job (response)
+
+202 body from create_knowledge_region / simulate_knowledge_region. Poll get_knowledge_region_job.
+
+```json
+{
+  "type": "job",
+  "job_id": "33333333-3333-3333-3333-333333333333",
+  "family": "exploration",
+  "status": "queued",
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "follow_up_job_id": null,
+  "progress": [],
+  "cost_usd": 0,
+  "error": null,
+  "plan_cursor": 0,
+  "plan_length": 24
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "type": "job",
+  "job_id": "33333333-3333-3333-3333-333333333333",
+  "family": "exploration",
+  "status": "queued",
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "follow_up_job_id": null,
+  "progress": [],
+  "cost_usd": 0,
+  "error": null,
+  "plan_cursor": 0,
+  "plan_length": 24
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -1987,11 +4759,83 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions/{knowledge_region_id}/runs/{run_id}` — get_knowledge_region_run
+### get_knowledge_region_run
+
+- **MCP:** `get_knowledge_region_run`
+- **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}/runs/{run_id}`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Retrieve stored proof-of-work for one sample run in a knowledge region (no person audio or video).
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+Retrieve stored proof-of-work for one sample run (no person audio or video). REST: GET /api/v3/knowledge-regions/{knowledge_region_id}/runs/{run_id}.
+
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+- `run_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+- `run_id` (required, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id",
+    "run_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "run_id": "44444444-4444-4444-4444-444444444444",
+  "identity": "Simulated · Exploit-heavy",
+  "protocol_id": "11111111-1111-1111-1111-111111111111"
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -2030,13 +4874,204 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}` — get_knowledge_region_candidate
+### get_knowledge_region_candidate
+
+- **MCP:** `get_knowledge_region_candidate`
+- **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Render metrics for one candidate in a knowledge region: unsys distance, cluster L2, path and pairwise L2.
 
-Schemas: `knowledge_region_candidate`
+Render one candidate in a knowledge region (unsys distance, cluster L2, pairwise L2). REST: GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+- `candidate_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+- `space`
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+- `candidate_id` (required, string)
+- `space` (optional, string · Named mix of basis channels, default path. Example: path+audio.)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "space": {
+      "type": "string",
+      "description": "Named mix of basis channels, default path. Example: path+audio."
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id",
+    "candidate_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### knowledge_region_candidate (response)
+
+Closed metrics for one candidate in a named embedding space (default path).
+
+```json
+{
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "candidate_id": "learner-42",
+  "embedding_model_id": "flowcfg-v1-d96",
+  "space": "path",
+  "dim": 96,
+  "clusters": [
+    {
+      "id": "cluster_…",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy"
+    }
+  ],
+  "observations": [
+    {
+      "id": "emb_…",
+      "created_at": "2026-11-27T00:00:00.000Z",
+      "flow_id": "11111111-1111-1111-1111-111111111111",
+      "run_id": "44444444-4444-4444-4444-444444444444",
+      "nearest_cluster_id": "cluster_…",
+      "unsys": {
+        "distance": 0.4,
+        "excess": 0.1,
+        "steps": 3
+      },
+      "cluster_distances": [
+        {
+          "cluster_id": "cluster_…",
+          "l2": 0.12,
+          "nearest": true,
+          "in_cluster": true
+        }
+      ]
+    }
+  ],
+  "unsys": {
+    "average": 0.4,
+    "observation_count": 1,
+    "scored_count": 1,
+    "flows": []
+  },
+  "path": {
+    "segments": [],
+    "span": null
+  },
+  "pairwise": {
+    "observation_ids": [
+      "emb_…"
+    ],
+    "matrix": [
+      [
+        0
+      ]
+    ]
+  }
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "candidate_id": "learner-42",
+  "embedding_model_id": "flowcfg-v1-d96",
+  "space": "path",
+  "dim": 96,
+  "clusters": [
+    {
+      "id": "cluster_…",
+      "strategy_id": "exploit-heavy",
+      "strategy_name": "Exploit-heavy"
+    }
+  ],
+  "observations": [
+    {
+      "id": "emb_…",
+      "created_at": "2026-11-27T00:00:00.000Z",
+      "flow_id": "11111111-1111-1111-1111-111111111111",
+      "run_id": "44444444-4444-4444-4444-444444444444",
+      "nearest_cluster_id": "cluster_…",
+      "unsys": {
+        "distance": 0.4,
+        "excess": 0.1,
+        "steps": 3
+      },
+      "cluster_distances": [
+        {
+          "cluster_id": "cluster_…",
+          "l2": 0.12,
+          "nearest": true,
+          "in_cluster": true
+        }
+      ]
+    }
+  ],
+  "unsys": {
+    "average": 0.4,
+    "observation_count": 1,
+    "scored_count": 1,
+    "flows": []
+  },
+  "path": {
+    "segments": [],
+    "span": null
+  },
+  "pairwise": {
+    "observation_ids": [
+      "emb_…"
+    ],
+    "matrix": [
+      [
+        0
+      ]
+    ]
+  }
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 
@@ -2075,13 +5110,150 @@ response = requests.request(
 print(response.json())
 ```
 
-### `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model` — get_knowledge_region_uncertainty_model
+### get_knowledge_region_uncertainty_model
+
+- **MCP:** `get_knowledge_region_uncertainty_model`
+- **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model`
+- **Family:** Knowledge Regions API
+- **Scope:** `workspaces:read`
+- **Auth:** `Authorization: Bearer <api_key>`
+- **Success:** HTTP 200
 
 Overlay one candidate walk on the region’s reference uncertainty model.
 
-Schemas: `uncertainty_model`
+Overlay one candidate walk on the region’s reference uncertainty model. REST: GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model.
 
-Errors: `unauthorized`, `key_revoked`, `key_expired`, `api_plan_required`, `forbidden`, `organization_id_required`, `rate_limit_exceeded`, `not_found`
+**Path parameters**
+
+- `knowledge_region_id` (string, required)
+- `candidate_id` (string, required)
+
+**Query**
+
+- `organization_id` (required; also JSON body or `X-Organization-Id`)
+
+**MCP / REST arguments**
+
+- `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
+- `knowledge_region_id` (required, string)
+- `candidate_id` (required, string)
+- `run_id` (optional, string)
+
+**Input JSON Schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId."
+    },
+    "knowledge_region_id": {
+      "type": "string"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "knowledge_region_id",
+    "candidate_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Schemas**
+
+#### uncertainty_model (response)
+
+Reference hidden-state tree plus the candidate walk overlay.
+
+```json
+{
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "candidate_id": "learner-42",
+  "observation_id": "emb_…",
+  "run_id": "44444444-4444-4444-4444-444444444444",
+  "identity": "learner-42",
+  "reference": {
+    "root_id": "linear-systems",
+    "hidden_states": [
+      {
+        "id": "linear-systems",
+        "title": "Linear systems",
+        "parent_id": null
+      }
+    ]
+  },
+  "mapped": {
+    "sequence": [
+      "linear-systems",
+      "row-reduce"
+    ],
+    "hidden_states": []
+  },
+  "overlay": {
+    "walk": [
+      "linear-systems",
+      "row-reduce"
+    ]
+  }
+}
+```
+
+**Response** (HTTP 200)
+
+```json
+{
+  "knowledge_region_id": "22222222-2222-2222-2222-222222222222",
+  "candidate_id": "learner-42",
+  "observation_id": "emb_…",
+  "run_id": "44444444-4444-4444-4444-444444444444",
+  "identity": "learner-42",
+  "reference": {
+    "root_id": "linear-systems",
+    "hidden_states": [
+      {
+        "id": "linear-systems",
+        "title": "Linear systems",
+        "parent_id": null
+      }
+    ]
+  },
+  "mapped": {
+    "sequence": [
+      "linear-systems",
+      "row-reduce"
+    ],
+    "hidden_states": []
+  },
+  "overlay": {
+    "walk": [
+      "linear-systems",
+      "row-reduce"
+    ]
+  }
+}
+```
+
+**Errors**
+
+- `unauthorized` · HTTP 401 · Bearer key missing or invalid.
+- `key_revoked` · HTTP 401 · Key is inactive.
+- `key_expired` · HTTP 401 · Key past expires_at.
+- `api_plan_required` · HTTP 403 · Bearer endpoints require an active API Metered plan.
+- `forbidden` · HTTP 403 · Caller is not a member of the requested organization.
+- `organization_id_required` · HTTP 400 · Pass organization_id in JSON, query, or X-Organization-Id.
+- `rate_limit_exceeded` · HTTP 429 · 120 requests per minute per key.
+- `not_found` · HTTP 404 · Unknown protocol_id, knowledge_region_id, job_id, run_id, or candidate_id.
+
+**Examples**
 
 #### curl
 

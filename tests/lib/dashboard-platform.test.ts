@@ -760,7 +760,7 @@ describe("dashboard platform surface", () => {
     expect(skill).not.toContain("create_flow");
     expect(skill).not.toContain("/api/v3/flows");
     expect(skill).toContain("/docs/proof-of-work-api");
-    expect(skill).toContain("/coding-agents.md");
+    expect(skill).toContain("/skill.md");
     expect(skill).toContain("create_knowledge_region");
     expect(skill).not.toContain("create_workspace");
     expect(skill).not.toContain("list_map_tools");

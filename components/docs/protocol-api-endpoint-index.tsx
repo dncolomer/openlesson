@@ -128,9 +128,9 @@ export function ProtocolApiEndpointIndex() {
                         {schemas.length ? (
                           <div data-endpoint-schemas={tool.name}>
                             <p className={`${labelClass} mb-2`}>Schemas</p>
-                            <DocsMagiTabs data-tabs={`schemas-${tool.name}`}>
+                            <DocsMagiTabs data-tabs={`schemas-${tool.name}`} labels="code">
                               {schemas.map((schema) => (
-                                <DocsMagiTab key={schema.id} id={schema.id} label={schema.title}>
+                                <DocsMagiTab key={schema.id} id={schema.id} label={schema.id}>
                                   <p className="mt-2 text-xs text-neutral-500">{schema.summary}</p>
                                   <CodeBlock>{JSON.stringify(schema.example, null, 2)}</CodeBlock>
                                 </DocsMagiTab>
@@ -212,9 +212,9 @@ export function ProtocolApiEndpointIndex() {
           <code className="text-neutral-300">/skill.md</code>.
         </p>
         <div className="mt-3 border border-white/20 bg-black">
-          <DocsMagiTabs data-tabs="schema-catalog">
+          <DocsMagiTabs data-tabs="schema-catalog" labels="code">
             {AGENT_API_SCHEMAS.map((schema) => (
-              <DocsMagiTab key={schema.id} id={schema.id} label={schema.title}>
+              <DocsMagiTab key={schema.id} id={schema.id} label={schema.id}>
                 <div className="p-3" data-schema-catalog-item={schema.id}>
                   <p className="text-xs text-neutral-500">
                     {schema.kind}. {schema.summary}

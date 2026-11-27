@@ -30,7 +30,7 @@ List/read/rename/delete with list_knowledge_regions, get_knowledge_region, updat
 Add more samples with simulate_knowledge_region. Poll create jobs with get_knowledge_region_job.
 Retrieve data with get_knowledge_region (clusters and samples), get_knowledge_region_run (stored record), get_knowledge_region_candidate, and get_knowledge_region_uncertainty_model.
 
-Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent tools.
+Proof of work is recorded in the product UI.
 
 Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp.
 

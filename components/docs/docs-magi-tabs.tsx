@@ -14,7 +14,7 @@ export function DocsMagiTab({ children }: { id: string; label: string; children:
 
 const tabClass = (selected: boolean, labels: "title" | "code") =>
   labels === "code"
-    ? `flex shrink-0 items-center justify-center rounded-none border-r border-white/15 px-2 py-1.5 font-mono text-[10px] last:border-r-0 ${
+    ? `flex shrink-0 items-center justify-center whitespace-nowrap rounded-none border-r border-white/15 px-2 py-1.5 font-mono text-[10px] last:border-r-0 ${
         selected ? "bg-white text-black" : "bg-black text-neutral-500 hover:text-white"
       }`
     : `flex min-w-0 flex-1 items-center justify-center rounded-none border-r border-white/15 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[2px] last:border-r-0 ${

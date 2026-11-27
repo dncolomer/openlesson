@@ -8,12 +8,15 @@ import {
   EXPLORATION_STRATEGY_IDS,
 } from "@/lib/region-simulation";
 import { AGENT_TOOL_SURFACE, type AgentToolSurfaceEntry } from "./agent-tool-surface";
+import { MCP_EVIDENCE_TOOLS } from "./mcp-tools/evidence-tools";
 import {
   AGENT_API_EXAMPLE_JOB_ID,
   AGENT_API_EXAMPLE_ORG_ID,
   AGENT_API_EXAMPLE_PROTOCOL_ID,
   AGENT_API_EXAMPLE_REGION_ID,
+  AGENT_API_EXAMPLE_RUN_ID,
   agentApiExampleSnippets,
+  agentApiRequestExample,
   type AgentApiExampleLanguage,
 } from "./agent-api-examples";
 
@@ -562,30 +565,293 @@ export function agentApiStrategiesMarkdown(): string {
   return lines.join("\n").trimEnd();
 }
 
+function schemaExample(id: string): unknown {
+  return AGENT_API_SCHEMAS.find((schema) => schema.id === id)?.example ?? null;
+}
+
+function successStatus(name: string): number {
+  if (name === "create_protocol" || name === "upload_protocol_file") return 201;
+  if (name === "create_knowledge_region" || name === "simulate_knowledge_region") return 202;
+  return 200;
+}
+
+function pathParams(path: string): string[] {
+  return [...path.matchAll(/\{([a-z_]+)\}/g)].map((match) => match[1]!);
+}
+
+function isPublicArgName(name: string): boolean {
+  return !/[A-Z]/.test(name) && !name.startsWith("xai_");
+}
+
+type JsonSchemaNode = {
+  type?: unknown;
+  description?: unknown;
+  enum?: unknown;
+  minimum?: unknown;
+  maximum?: unknown;
+  properties?: Record<string, unknown>;
+  required?: unknown;
+  items?: unknown;
+  anyOf?: unknown;
+};
+
+function schemaTypeLabel(spec: JsonSchemaNode): string {
+  const parts: string[] = [];
+  if (typeof spec.type === "string") parts.push(spec.type);
+  else if (Array.isArray(spec.type)) {
+    parts.push(spec.type.filter((value) => typeof value === "string").join(" | "));
+  }
+  if (Array.isArray(spec.enum)) parts.push(`one of ${spec.enum.map(String).join(", ")}`);
+  if (typeof spec.minimum === "number") parts.push(`min ${spec.minimum}`);
+  if (typeof spec.maximum === "number") parts.push(`max ${spec.maximum}`);
+  if (Array.isArray(spec.anyOf)) parts.push("string or object");
+  return parts.join(", ");
+}
+
+function flattenPublicSchemaArgs(
+  properties: Record<string, unknown> | undefined,
+  required: readonly string[] = [],
+  prefix = "",
+): Array<{ path: string; required: boolean; type: string; desc: string }> {
+  if (!properties) return [];
+  const rows: Array<{ path: string; required: boolean; type: string; desc: string }> = [];
+  for (const [name, raw] of Object.entries(properties)) {
+    if (!isPublicArgName(name)) continue;
+    const spec = raw && typeof raw === "object" ? (raw as JsonSchemaNode) : {};
+    const path = prefix ? `${prefix}.${name}` : name;
+    rows.push({
+      path,
+      required: required.includes(name),
+      type: schemaTypeLabel(spec),
+      desc: typeof spec.description === "string" ? spec.description.trim() : "",
+    });
+    if (spec.properties) {
+      const nestedRequired = Array.isArray(spec.required)
+        ? spec.required.filter((value): value is string => typeof value === "string")
+        : [];
+      rows.push(...flattenPublicSchemaArgs(spec.properties, nestedRequired, path));
+    }
+    const items = spec.items;
+    if (items && typeof items === "object") {
+      const item = items as JsonSchemaNode;
+      if (item.properties) {
+        const nestedRequired = Array.isArray(item.required)
+          ? item.required.filter((value): value is string => typeof value === "string")
+          : [];
+        rows.push(...flattenPublicSchemaArgs(item.properties, nestedRequired, `${path}[]`));
+      }
+      if (Array.isArray(item.anyOf)) {
+        for (const branch of item.anyOf) {
+          if (!branch || typeof branch !== "object") continue;
+          const obj = branch as JsonSchemaNode;
+          if (!obj.properties) continue;
+          const nestedRequired = Array.isArray(obj.required)
+            ? obj.required.filter((value): value is string => typeof value === "string")
+            : [];
+          rows.push(...flattenPublicSchemaArgs(obj.properties, nestedRequired, `${path}[]`));
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+function publicJsonSchema(node: unknown): unknown {
+  if (node == null || typeof node !== "object") return node;
+  if (Array.isArray(node)) return node.map(publicJsonSchema);
+  const obj = node as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+      const props: Record<string, unknown> = {};
+      for (const [name, spec] of Object.entries(value as Record<string, unknown>)) {
+        if (!isPublicArgName(name)) continue;
+        props[name] = publicJsonSchema(spec);
+      }
+      out.properties = props;
+      continue;
+    }
+    if (key === "required" && Array.isArray(value)) {
+      out.required = value.filter(
+        (name): name is string => typeof name === "string" && isPublicArgName(name),
+      );
+      continue;
+    }
+    out[key] = publicJsonSchema(value);
+  }
+  return out;
+}
+
+function responseExampleForTool(name: string): unknown {
+  const protocol = schemaExample("protocol");
+  const region = schemaExample("knowledge_region");
+  const job = schemaExample("simulation_job");
+  const listed = {
+    id: AGENT_API_EXAMPLE_REGION_ID,
+    name: "Linear systems region",
+    description: "region-simulation: 1 flows · Exploit-heavy · 12/strategy · 0 real",
+    workspace_id: "ws_…",
+    subject_count: 1,
+    created_at: "2026-11-27T00:00:00.000Z",
+  };
+  switch (name) {
+    case "list_protocols":
+      return { protocols: [protocol] };
+    case "create_protocol":
+    case "get_protocol":
+    case "update_protocol":
+      return { protocol };
+    case "delete_protocol":
+      return { deleted: true, protocol_id: AGENT_API_EXAMPLE_PROTOCOL_ID };
+    case "upload_protocol_file":
+      return {
+        artifact: { name: "brief.pdf", mime_type: "application/pdf", file_id: "file_…" },
+        file_id: "file_…",
+        name: "brief.pdf",
+        mime_type: "application/pdf",
+      };
+    case "generate_protocol_unsys_seed":
+      return { model: schemaExample("answers_model_seed"), answers_model_seed: schemaExample("answers_model_seed") };
+    case "get_protocol_url":
+      return schemaExample("protocol_url");
+    case "list_knowledge_regions":
+      return { knowledge_regions: [listed] };
+    case "get_knowledge_region_options":
+      return schemaExample("knowledge_region_options");
+    case "create_knowledge_region":
+    case "simulate_knowledge_region":
+    case "get_knowledge_region_job":
+      return job;
+    case "get_knowledge_region":
+      return region;
+    case "update_knowledge_region":
+      return listed;
+    case "delete_knowledge_region":
+      return { id: AGENT_API_EXAMPLE_REGION_ID, deleted_ids: [AGENT_API_EXAMPLE_REGION_ID] };
+    case "get_knowledge_region_run":
+      return {
+        knowledge_region_id: AGENT_API_EXAMPLE_REGION_ID,
+        run_id: AGENT_API_EXAMPLE_RUN_ID,
+        identity: "Simulated · Exploit-heavy",
+        protocol_id: AGENT_API_EXAMPLE_PROTOCOL_ID,
+      };
+    case "get_knowledge_region_candidate":
+      return schemaExample("candidate");
+    case "get_knowledge_region_uncertainty_model":
+      return schemaExample("uncertainty_model");
+    default:
+      return null;
+  }
+}
+
 export function agentApiEndpointExamplesMarkdown(
   tools: readonly AgentToolSurfaceEntry[] = AGENT_TOOL_SURFACE,
 ): string {
   const lines = [
-    "## Endpoint examples",
+    "## Endpoints",
     "",
-    "Each endpoint is curl, JavaScript (`fetch`), and Python (`requests`).",
+    "Each public tool has REST and MCP parity. REST bodies are snake_case. MCP arguments match the REST fields plus `organization_id`. Examples are curl, JavaScript (`fetch`), and Python (`requests`).",
     "",
   ];
   for (const tool of tools) {
-    lines.push(`### \`${tool.rest.method} ${tool.rest.path}\` — ${tool.name}`);
+    const mcp = MCP_EVIDENCE_TOOLS.find((entry) => entry.name === tool.name);
+    const req = agentApiRequestExample(tool);
+    const params = pathParams(tool.rest.path);
+    const schemas = schemasForTool(tool.name);
+    const errors = errorsForTool(tool.name);
+    const status = successStatus(tool.name);
+    lines.push(`### ${tool.name}`);
+    lines.push("");
+    lines.push(`- **MCP:** \`${tool.name}\``);
+    lines.push(`- **REST:** \`${tool.rest.method} ${tool.rest.path}\``);
+    lines.push(
+      `- **Family:** ${tool.family === "protocol" ? "Protocol API" : "Knowledge Regions API"}`,
+    );
+    lines.push(`- **Scope:** \`${tool.scope}\``);
+    lines.push(`- **Auth:** \`Authorization: Bearer <api_key>\``);
+    lines.push(`- **Success:** HTTP ${status}`);
     lines.push("");
     lines.push(tool.summary);
     lines.push("");
-    const schemas = schemasForTool(tool.name);
+    if (mcp?.description) {
+      lines.push(mcp.description);
+      lines.push("");
+    }
+    if (params.length) {
+      lines.push("**Path parameters**");
+      lines.push("");
+      for (const name of params) {
+        lines.push(`- \`${name}\` (string, required)`);
+      }
+      lines.push("");
+    }
+    const queryKeys = Object.keys(req.query);
+    if (queryKeys.length) {
+      lines.push("**Query**");
+      lines.push("");
+      for (const key of queryKeys) {
+        lines.push(`- \`${key}\`${key === "organization_id" ? " (required; also JSON body or `X-Organization-Id`)" : ""}`);
+      }
+      lines.push("");
+    }
+    if (req.body) {
+      lines.push("**JSON body**");
+      lines.push("");
+      lines.push(fence("json", JSON.stringify(req.body, null, 2)));
+      lines.push("");
+    } else if (tool.rest.method !== "GET" && tool.rest.method !== "DELETE") {
+      lines.push("**JSON body:** none besides `organization_id` when sent in the body.");
+      lines.push("");
+    }
+    const properties = mcp?.inputSchema.properties ?? {};
+    const required = mcp?.inputSchema.required ?? [];
+    const publicArgs = flattenPublicSchemaArgs(properties, required);
+    if (publicArgs.length) {
+      lines.push("**MCP / REST arguments**");
+      lines.push("");
+      for (const arg of publicArgs) {
+        const bits = [arg.required ? "required" : "optional", arg.type].filter(Boolean);
+        lines.push(
+          `- \`${arg.path}\` (${bits.join(", ")}${arg.desc ? ` · ${arg.desc}` : ""})`,
+        );
+      }
+      lines.push("");
+    }
+    if (mcp?.inputSchema) {
+      lines.push("**Input JSON Schema**");
+      lines.push("");
+      lines.push(fence("json", JSON.stringify(publicJsonSchema(mcp.inputSchema), null, 2)));
+      lines.push("");
+    }
     if (schemas.length) {
-      lines.push(`Schemas: ${schemas.map((schema) => `\`${schema.title}\``).join(", ")}`);
+      lines.push("**Schemas**");
+      lines.push("");
+      for (const schema of schemas) {
+        lines.push(`#### ${schema.title} (${schema.kind})`);
+        lines.push("");
+        lines.push(schema.summary);
+        lines.push("");
+        lines.push(fence("json", JSON.stringify(schema.example, null, 2)));
+        lines.push("");
+      }
+    }
+    const response = responseExampleForTool(tool.name);
+    if (response) {
+      lines.push(`**Response** (HTTP ${status})`);
+      lines.push("");
+      lines.push(fence("json", JSON.stringify(response, null, 2)));
       lines.push("");
     }
-    const errors = errorsForTool(tool.name);
     if (errors.length) {
-      lines.push(`Errors: ${errors.map((error) => `\`${error.code}\``).join(", ")}`);
+      lines.push("**Errors**");
+      lines.push("");
+      for (const error of errors) {
+        lines.push(`- \`${error.code}\` · HTTP ${error.status} · ${error.summary}`);
+      }
       lines.push("");
     }
+    lines.push("**Examples**");
+    lines.push("");
     for (const snippet of agentApiExampleSnippets(tool)) {
       lines.push(`#### ${snippet.label}`);
       lines.push("");
@@ -618,13 +884,10 @@ Public agent families:
 1. **Protocol API** — \`GET/POST /api/v3/protocols\`, \`GET/PATCH/DELETE /api/v3/protocols/{protocol_id}\`, \`GET /api/v3/protocols/{protocol_id}/url\`, \`POST /api/v3/protocols/files\`, \`POST /api/v3/protocols/unsys-seed\`. Create with \`create_protocol\` using one Author source: written \`challenge\` (The Protocol Challenge; optional \`exact_problem_on_canvas\`), files (challenge generated when a learner opens), or \`opening_canvas_scene\`. Protocols are independent. Do not send \`kind\`. \`get_protocol_url\` returns the public \`/v/{token}\` launch URL. Pass \`identity\` (or \`id\`) to prepopulate the participant ID so the protocol does not ask for it.
 2. **Knowledge Regions API** — \`GET/POST /api/v3/knowledge-regions\`, \`GET /api/v3/knowledge-regions/options\`, \`GET/PATCH/DELETE /api/v3/knowledge-regions/{knowledge_region_id}\`, \`POST /api/v3/knowledge-regions/{knowledge_region_id}/simulation\`, \`GET /api/v3/knowledge-regions/jobs/{job_id}\`, \`GET /api/v3/knowledge-regions/{knowledge_region_id}/runs/{run_id}\`, \`GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}\`, \`GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model\`. Create matches the dashboard wizard: protocols, exploration strategies, optional AI-use simulation.
 
-**Human-readable spec:** \`/docs/proof-of-work-api\`
-**Coding agents:** \`/coding-agents.md\`
-**Knowledge Regions spec:** see \`/docs/proof-of-work-api\` endpoint index
+**Skill file:** \`/skill.md\`
+**Human docs:** \`/docs/proof-of-work-api\`
 **Base URL:** \`https://uncertain.systems\` (or your self-hosted origin)
 **MCP:** \`POST /api/mcp\` with \`Authorization: Bearer <api_key>\`
-
-Proof of work is recorded in the product UI (knowledge verification protocols). Headless \`start_session\` → \`upload_proof_of_work\` → \`end_session\` is **not** a public agent API. Snapshot and Stash are retired.
 
 **API Metered plan required.** Plan-gate failures return **\`403\` with \`error.code = "api_plan_required"\`**.
 

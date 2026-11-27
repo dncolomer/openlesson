@@ -69,7 +69,26 @@ describe("agent API endpoint examples", () => {
     expect(html).toContain('data-docs-tab="organization_id_required"');
     expect(html).toContain('data-docs-tab="api_plan_required"');
     expect(html).toContain("data-schema-catalog");
+    expect(html).toContain('data-docs-tabs="schema-catalog"');
+    expect(html).toContain('data-docs-tab-labels="code"');
+    expect(html).toContain('data-docs-tab="knowledge_region_options"');
+    expect(html).toContain('data-docs-tab="knowledge_region_create"');
+    expect(html).toContain('data-docs-tab="answers_model_seed"');
     expect(html).toContain("data-strategy-catalog");
+    const schemaCatalog = html.slice(
+      html.indexOf('data-docs-tabs="schema-catalog"'),
+      html.indexOf("data-schema-catalog-item"),
+    );
+    expect(schemaCatalog).toContain('data-docs-tab-labels="code"');
+    expect(schemaCatalog).toContain("whitespace-nowrap");
+    expect(schemaCatalog).not.toContain("uppercase");
+    expect(schemaCatalog).not.toContain("tracking-[2px]");
+    const endpointSchemaStart = html.indexOf('data-docs-tabs="schemas-create_protocol"');
+    const endpointSchemas = html.slice(
+      endpointSchemaStart,
+      html.indexOf(">", endpointSchemaStart) + 1,
+    );
+    expect(endpointSchemas).toContain('data-docs-tab-labels="code"');
     expect(html).toContain("exploit-heavy");
     expect(html).toContain("information-seeking");
     expect(html).toContain("novelty-seeking");

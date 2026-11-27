@@ -52,6 +52,14 @@ describe("agent API docs catalog", () => {
     expect(skill).toContain("generate_problem_on_open");
     expect(skill).toContain("get_protocol_url");
     expect(skill).toContain("full-access");
+    expect(skill).toContain("**Skill file:** `/skill.md`");
+    expect(skill).not.toContain("Headless session upload is not a public agent API");
+    expect(skill).not.toContain("is **not** a public agent API");
+    for (const tool of AGENT_TOOL_SURFACE) {
+      expect(skill).toContain(`### ${tool.name}`);
+      expect(skill).toContain(`\`${tool.rest.method} ${tool.rest.path}\``);
+      expect(skill).toContain(`**MCP:** \`${tool.name}\``);
+    }
     for (const id of EXPLORATION_STRATEGY_IDS) {
       expect(skill).toContain(id);
     }

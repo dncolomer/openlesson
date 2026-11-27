@@ -65,7 +65,7 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(skill).toContain("/api/v3/protocols");
     expect(skill).toContain("create_knowledge_region");
     expect(skill).toContain("/api/v3/knowledge-regions");
-    expect(skill).toContain("/coding-agents.md");
+    expect(skill).toContain("/skill.md");
     expect(skill).toContain("challenge");
     expect(skill).not.toContain("create_flow");
     expect(skill).not.toContain("/api/v3/flows");

@@ -387,7 +387,14 @@ describe("region simulation", () => {
 
   it("parses custom exploration strategies as simulation prompts", () => {
     expect(parseCustomExplorationStrategy({ name: "Cautious" })).toBeNull();
-    expect(parseCustomExplorationStrategy({ instructions: "Go slow." })).toBeNull();
+    const fromPrompt = parseCustomExplorationStrategy({
+      prompt: "Go slow and ask more questions.",
+    });
+    expect(fromPrompt?.instructions).toContain("Go slow");
+    expect(fromPrompt?.name).toBe("Go slow and ask more");
+    expect(parseCustomExplorationStrategy("Stay on substitution.")?.instructions).toContain(
+      "Stay on substitution",
+    );
     const parsed = parseCustomExplorationStrategy({
       name: "Cautious",
       prompt: "Ask more questions before you commit to an answer.",
@@ -404,6 +411,16 @@ describe("region simulation", () => {
     });
     expect(mixed.map((row) => row.id)).toEqual(["exploit-heavy", parsed!.id]);
     expect(mixed[1]?.instructions).toContain("Ask more questions");
+    const appended = parseSimulationStrategies({
+      strategyIds: ["balanced"],
+      customStrategies: [{ prompt: "Ask more questions before you commit to an answer." }],
+    });
+    expect(appended.map((row) => row.id)).toEqual([
+      "balanced",
+      parseCustomExplorationStrategy({
+        prompt: "Ask more questions before you commit to an answer.",
+      })!.id,
+    ]);
   });
 
   it("walks a custom strategy from its prompt and stores the instructions", async () => {

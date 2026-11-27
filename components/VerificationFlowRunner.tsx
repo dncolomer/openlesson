@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-identity-form";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
+import { PROTOCOL_LABEL } from "@/lib/product-flow";
 import type { TapStartingTopic } from "@/lib/tap-score";
-import { verificationQuestionStartingPrompt } from "@/lib/verification-flow";
+import {
+  parseProtocolLaunchIdentity,
+  verificationQuestionStartingPrompt,
+} from "@/lib/verification-flow";
 import {
   DEFAULT_FLOW_ENFORCED_CHANNELS,
   parseFlowEnforcedChannels,
@@ -22,10 +26,16 @@ import { ltiIdentityForPublicToken } from "@/lib/lti/auto-claim";
 import { parseSessionSidebarStyle, type SessionSidebarStyle } from "@/lib/session-sidebar-style";
 import { SessionSidebarStyleOverride } from "@/lib/use-session-sidebar-style";
 
-type Phase = "identity" | "pick" | "empty";
+type Phase = "identity" | "claiming" | "pick" | "empty";
 
-export function VerificationFlowRunner({ token }: { token: string }) {
-  const [phase, setPhase] = useState<Phase>("identity");
+export function VerificationFlowRunner({
+  token,
+  prepopulatedIdentity = "",
+}: {
+  token: string;
+  prepopulatedIdentity?: string;
+}) {
+  const [phase, setPhase] = useState<Phase>(prepopulatedIdentity ? "claiming" : "identity");
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
   const [topic, setTopic] = useState("");
@@ -57,7 +67,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
         setError(payload?.error?.message || "Could not start");
         return;
       }
-      setClaimedIdentity(String(payload.identity || identity.trim()));
+      setClaimedIdentity(String(payload.identity || nextIdentity.trim()));
       const rawTopics = Array.isArray(payload.topics) ? payload.topics : [];
       const fallback = payload.question ? [payload.question] : [];
       const cards = (rawTopics.length ? rawTopics : fallback)
@@ -93,10 +103,21 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   }
 
   useEffect(() => {
+    const fromUrl =
+      prepopulatedIdentity ||
+      (typeof window === "undefined"
+        ? ""
+        : parseProtocolLaunchIdentity(new URLSearchParams(window.location.search)));
+    if (fromUrl) {
+      setIdentity(fromUrl);
+      setPhase("claiming");
+      void claimIdentity(fromUrl);
+      return;
+    }
     void ltiIdentityForPublicToken(token).then((ltiIdentity) => {
       if (ltiIdentity) void claimIdentity(ltiIdentity);
     });
-  }, [token]);
+  }, [token, prepopulatedIdentity]);
 
   async function claim(event: React.FormEvent) {
     event.preventDefault();
@@ -162,6 +183,30 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           <p className="mt-2 text-sm text-neutral-400">
             This verification flow has an empty question pool, so it does not offer generated topics.
           </p>
+        </section>
+      </main>
+    );
+  }
+
+  if (prepopulatedIdentity || phase === "claiming") {
+    return (
+      <main
+        className="min-h-screen bg-[#0b0b0b] text-white"
+        data-verification-public-entry=""
+        data-verification-identity-prepopulated=""
+      >
+        <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400">
+            {PROTOCOL_LABEL}
+          </p>
+          <h1 className="font-serif text-2xl">Starting</h1>
+          {error ? (
+            <p className="text-sm text-red-300">{error}</p>
+          ) : (
+            <p className="text-sm text-neutral-400">
+              Opening this protocol as {prepopulatedIdentity || identity}.
+            </p>
+          )}
         </section>
       </main>
     );

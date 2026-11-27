@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
-import { AGENT_TOOL_SURFACE } from "@/lib/pow-api/agent-tool-surface";
+import { ProtocolApiEndpointIndex } from "@/components/docs/protocol-api-endpoint-index";
 
 const sectionClass = "console-copy p-5 sm:p-6";
 const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
@@ -65,6 +65,7 @@ Content-Type: application/json`}</pre>
               <code className="text-neutral-300">upload_protocol_file</code>,{" "}
               <code className="text-neutral-300">generate_protocol_unsys_seed</code>,{" "}
               <code className="text-neutral-300">get_protocol</code>,{" "}
+              <code className="text-neutral-300">get_protocol_url</code>,{" "}
               <code className="text-neutral-300">update_protocol</code>, and{" "}
               <code className="text-neutral-300">delete_protocol</code> are 1:1 with these REST twins.
               Create/update take one Author source: written Protocol Challenge, files, or a prepared
@@ -116,22 +117,9 @@ POST /api/v3/protocols
 }`}</pre>
         </section>
 
-        <section className={`${sectionClass} mb-6`} id="endpoint-index">
-          <h2 className="text-lg font-medium text-white">Endpoint index</h2>
-          <p className="mt-2 text-sm text-neutral-400">
-            MCP <code className="text-neutral-300">tools/list</code> is 1:1 with these REST twins.
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            {AGENT_TOOL_SURFACE.map((tool) => (
-              <li key={tool.name}>
-                <span className="font-mono text-neutral-300">{tool.rest.method}</span>{" "}
-                <span className="text-neutral-400">{tool.rest.path}</span>
-                <span className="ml-2 font-mono text-neutral-500">{tool.name}</span>
-                <p className="mt-0.5 text-neutral-500">{tool.summary}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div className="mb-6" id="endpoint-index">
+          <ProtocolApiEndpointIndex />
+        </div>
 
         <section className={`${sectionClass} mb-6`}>
           <h2 className="text-lg font-medium text-white">MCP</h2>
@@ -144,6 +132,7 @@ Authorization: Bearer sk_…
             <code className="text-neutral-300">generate_protocol_unsys_seed</code> →{" "}
             <code className="text-neutral-300">create_protocol</code> →{" "}
             <code className="text-neutral-300">get_protocol</code> →{" "}
+            <code className="text-neutral-300">get_protocol_url</code> →{" "}
             <code className="text-neutral-300">update_protocol</code>. REST lives at{" "}
             <code className="text-neutral-300">/api/v3/protocols</code>. Regions:{" "}
             <code className="text-neutral-300">get_knowledge_region_options</code> →{" "}

@@ -145,12 +145,29 @@ const CUSTOM_STRATEGY_SCHEMA = {
   type: "object",
   properties: {
     id: { type: "string" },
-    name: { type: "string" },
-    instructions: { type: "string" },
-    prompt: { type: "string", description: "Alias of instructions." },
+    name: {
+      type: "string",
+      description: "Optional display name. Derived from prompt when omitted.",
+    },
+    instructions: { type: "string", description: "Exploration prompt. Alias of prompt." },
+    prompt: {
+      type: "string",
+      description:
+        "Exploration prompt. Enough on its own: { prompt } or a string item. Alias of instructions.",
+    },
     description: { type: "string" },
   },
   additionalProperties: false,
+} as const;
+
+const CUSTOM_STRATEGY_ITEM_SCHEMA = {
+  anyOf: [
+    {
+      type: "string",
+      description: "Prompt-only custom strategy. Name is derived from the prompt.",
+    },
+    CUSTOM_STRATEGY_SCHEMA,
+  ],
 } as const;
 
 const KNOWLEDGE_REGION_SIMULATION_PROPERTIES = {
@@ -164,15 +181,16 @@ const KNOWLEDGE_REGION_SIMULATION_PROPERTIES = {
     type: "array",
     items: { type: "string" },
     description:
-      "Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Alias strategyIds.",
+      "Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Custom strategies from custom_strategies are included even when their generated ids are omitted here. Alias strategyIds.",
   },
   strategyIds: { type: "array", items: { type: "string" } },
   custom_strategies: {
     type: "array",
-    items: CUSTOM_STRATEGY_SCHEMA,
-    description: "Custom exploration strategies with name + instructions. Alias customStrategies.",
+    items: CUSTOM_STRATEGY_ITEM_SCHEMA,
+    description:
+      "Custom exploration strategies. Pass a prompt string, { prompt }, or { name, prompt }. Included in the run even if strategy_ids omits the generated custom id. Alias customStrategies.",
   },
-  customStrategies: { type: "array", items: CUSTOM_STRATEGY_SCHEMA },
+  customStrategies: { type: "array", items: CUSTOM_STRATEGY_ITEM_SCHEMA },
   samples_per_strategy: {
     type: "integer",
     description: "Samples per exploration strategy (3–48, default 12). Alias samplesPerStrategy.",
@@ -304,6 +322,24 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
       type: "object",
       properties: {
         protocol_id: { type: "string" },
+      },
+      required: ["protocol_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  get_protocol_url: {
+    description: `Public launch URL for a protocol. Pass identity (or id) to prepopulate the participant ID so the flow does not ask for it. REST: GET ${PROTOCOL_API_BASE}/{protocol_id}/url.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        protocol_id: { type: "string" },
+        identity: {
+          type: "string",
+          description: "Participant ID to put on the URL. Omit for a URL that asks for identity.",
+        },
+        id: { type: "string", description: "Alias of identity." },
+        candidate_id: { type: "string", description: "Alias of identity." },
       },
       required: ["protocol_id"],
       additionalProperties: false,

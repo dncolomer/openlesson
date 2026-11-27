@@ -4,6 +4,7 @@ import { buildIntegrationSkillApiPath } from "./proof-of-work-integration";
 import { KNOWLEDGE_REGION_API_BASE, PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
+import { protocolApiSkillCatalogForGenerators } from "./agent-api-docs";
 
 export interface IntegrationSkillRequest {
   integration_name: string;
@@ -223,7 +224,7 @@ export function workspaceSettingsIntegrationCopy(kind: unknown): {
 }
 
 export function formatSkillRestEndpointsLine(_kind: unknown): string {
-  return `REST: GET/POST ${PROTOCOL_API_BASE}, GET/PATCH/DELETE ${PROTOCOL_API_BASE}/{protocol_id}; GET/POST ${KNOWLEDGE_REGION_API_BASE}, GET ${KNOWLEDGE_REGION_API_BASE}/options, GET/PATCH/DELETE ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}, POST ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/simulation, GET ${KNOWLEDGE_REGION_API_BASE}/jobs/{job_id}, GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/runs/{run_id}, GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}. Proof of work is recorded in the product UI.`;
+  return `REST: GET/POST ${PROTOCOL_API_BASE}, GET/PATCH/DELETE ${PROTOCOL_API_BASE}/{protocol_id}, GET ${PROTOCOL_API_BASE}/{protocol_id}/url; GET/POST ${KNOWLEDGE_REGION_API_BASE}, GET ${KNOWLEDGE_REGION_API_BASE}/options, GET/PATCH/DELETE ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}, POST ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/simulation, GET ${KNOWLEDGE_REGION_API_BASE}/jobs/{job_id}, GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/runs/{run_id}, GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}. Proof of work is recorded in the product UI.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -289,7 +290,10 @@ Required content:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
 4. Current protocol list from the current status.
-5. Quick checklist: list_protocols → upload_protocol_file (optional) → generate_protocol_unsys_seed (optional) → create_protocol → get_protocol → update_protocol. Knowledge regions: get_knowledge_region_options → create_knowledge_region → get_knowledge_region → get_knowledge_region_candidate.
+5. Quick checklist: list_protocols → upload_protocol_file (optional) → generate_protocol_unsys_seed (optional) → create_protocol → get_protocol → get_protocol_url → update_protocol. Knowledge regions: get_knowledge_region_options → create_knowledge_region → get_knowledge_region → get_knowledge_region_candidate.
+6. Error responses, complex param/response schemas, exploration strategy ids, and custom_strategies prompt form from the Protocol API catalog.
+
+${protocolApiSkillCatalogForGenerators()}
 
 ${statusSection}
 

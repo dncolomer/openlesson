@@ -10,7 +10,7 @@ When the Customer Agent opens a new chat with a user, run this setup **before** 
 
 1. `list_protocols` — knowledge verification protocols owned by this key.
 2. `create_protocol` when the user needs a new protocol. Choose one Author source: `challenge` (The Protocol Challenge; optional `exact_problem_on_canvas`), `artifacts` / `upload_protocol_file` (challenge generated when a learner opens), or `opening_canvas_scene`. Also `answers_model_seed` / `generate_protocol_unsys_seed`, `enforced_channels`. Do not send `kind`.
-3. `get_protocol` — read the current protocol.
+3. `get_protocol` — read the current protocol. `get_protocol_url` for the public launch URL (optional `identity` to skip Identify yourself).
 4. `list_knowledge_regions` / `get_knowledge_region_options` when the user needs a region. `create_knowledge_region` with `protocol_ids` and `strategy_ids` (optional `ai_use_catalog_ids`).
 
 This setup runs **once per chat start**, not only at phase boundaries.

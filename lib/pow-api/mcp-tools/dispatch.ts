@@ -3,6 +3,7 @@ import {
   deleteAgentProtocol,
   generateAgentFlowUnsysSeed,
   getAgentProtocol,
+  getAgentProtocolUrl,
   listAgentProtocols,
   updateAgentProtocol,
   uploadAgentFlowFile,
@@ -95,6 +96,22 @@ export async function callMcpProofOfWorkTool(
     );
     if (!protocol) throw new Error("Protocol not found.");
     return await evidenceToolResult({ protocol }, { endpoint: "get_protocol" });
+  }
+
+  if (name === "get_protocol_url") {
+    requireScope(auth.scopes, "workspaces:read");
+    const protocolId = stringArg(args, "protocol_id");
+    if (!protocolId) throw new Error("protocol_id is required.");
+    const launch = await getAgentProtocolUrl(
+      undefined,
+      protocolId,
+      String(auth.user_id || ""),
+      organizationId,
+      ctx.origin,
+      args,
+    );
+    if (!launch) throw new Error("Protocol not found.");
+    return await evidenceToolResult(launch, { endpoint: "get_protocol_url" });
   }
 
   if (name === "update_protocol") {

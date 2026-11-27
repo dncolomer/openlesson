@@ -47,7 +47,12 @@ import {
   runProductFlowUnsysGenerate,
 } from "@/lib/flow-unsys-generate";
 import { requestHasUnsysSeed } from "@/lib/unsys-tree-spec";
-import { verificationFlowPublicPath } from "@/lib/verification-flow";
+import {
+  parseProtocolLaunchIdentity,
+  verificationFlowLaunchPath,
+  verificationFlowLaunchUrl,
+  verificationFlowPublicPath,
+} from "@/lib/verification-flow";
 import {
   getVerificationFlowById,
   listVerificationFlows,
@@ -298,6 +303,37 @@ export async function getAgentProtocol(
   }
   if (owner && presented.owner_user_id !== owner) return null;
   return presented;
+}
+
+export type PresentedProtocolLaunchUrl = {
+  protocol_id: string;
+  url: string;
+  path: string;
+  identity: string | null;
+};
+
+export async function getAgentProtocolUrl(
+  workspaceId: string | null | undefined,
+  protocolId: string,
+  ownerUserId: string | undefined,
+  organizationId: string | null | undefined,
+  origin: string,
+  identitySource?: Record<string, unknown> | null,
+): Promise<PresentedProtocolLaunchUrl | null> {
+  const protocol = await getAgentProtocol(
+    workspaceId,
+    protocolId,
+    ownerUserId,
+    organizationId,
+  );
+  if (!protocol) return null;
+  const identity = parseProtocolLaunchIdentity(identitySource ?? undefined) || null;
+  return {
+    protocol_id: protocol.id,
+    url: verificationFlowLaunchUrl(origin, protocol.public_token, identity),
+    path: verificationFlowLaunchPath(protocol.public_token, identity),
+    identity,
+  };
 }
 
 export async function getAgentFlow(

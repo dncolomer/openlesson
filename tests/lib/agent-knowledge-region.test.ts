@@ -87,7 +87,7 @@ describe("public Knowledge Regions agent API", () => {
   it("MCP schemas match the dashboard wizard fields", () => {
     const names = agentToolsByFamily("knowledge_region").map((tool) => tool.name);
     expect(names).toEqual([...KR_TOOLS]);
-    expect(AGENT_TOOL_SURFACE).toHaveLength(18);
+    expect(AGENT_TOOL_SURFACE).toHaveLength(19);
     const create = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "create_knowledge_region");
     const simulate = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "simulate_knowledge_region");
     const options = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "get_knowledge_region_options");

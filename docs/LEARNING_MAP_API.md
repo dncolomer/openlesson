@@ -30,6 +30,7 @@ Each key is a single full-access token.
 | `POST` | `/files` | `upload_protocol_file` | Upload Protocol Challenge context file. |
 | `POST` | `/unsys-seed` | `generate_protocol_unsys_seed` | Generate Unsys model from The Protocol Challenge + artifacts. |
 | `GET` | `/{protocol_id}` | `get_protocol` | Read one protocol. |
+| `GET` | `/{protocol_id}/url` | `get_protocol_url` | Public launch URL. Query `identity` (aliases `id`, `candidate_id`) to skip Identify yourself. |
 | `PATCH` | `/{protocol_id}` | `update_protocol` | Update. |
 | `DELETE` | `/{protocol_id}` | `delete_protocol` | Hard delete. |
 

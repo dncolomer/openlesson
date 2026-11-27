@@ -85,6 +85,17 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
+    name: "get_protocol_url",
+    family: "protocol",
+    scope: "workspaces:read",
+    summary:
+      "Public URL for a protocol. Optional identity (or id) is prepopulated; the learner is not asked for an ID.",
+    rest: {
+      method: "GET",
+      path: `${PROTOCOL_API_BASE}/{protocol_id}/url`,
+    },
+  },
+  {
     name: "update_protocol",
     family: "protocol",
     scope: "workspaces:write",

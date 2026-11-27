@@ -40,7 +40,7 @@ Matches `/regions/new`:
 - `name` (required)
 - `protocol_ids` (at least one)
 - `strategy_ids` (at least one built-in or custom)
-- `custom_strategies` optional `{ name, instructions, description? }`
+- `custom_strategies` optional prompt string, `{ prompt }`, or `{ name, prompt }` (`instructions` alias of `prompt`)
 - `samples_per_strategy` 3–48, default 12
 - `include_human_data` overlay real protocol sessions
 - `ai_use_catalog_ids` from options (org OpenRouter key required)

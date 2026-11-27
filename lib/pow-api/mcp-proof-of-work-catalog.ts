@@ -71,9 +71,12 @@ export function buildMcpOAuthDiscovery(origin: string) {
   };
 }
 
+/** Public Protocol API skill for agents (ChatGPT, Claude, coding agents). */
+export const PROTOCOL_API_SKILL_PATH = "/skill.md" as const;
+
 export function buildSkillFileUrl(origin: string): string {
   const base = origin.replace(/\/$/, "");
-  return `${base}/skill.md`;
+  return `${base}${PROTOCOL_API_SKILL_PATH}`;
 }
 
 export function buildCodingAgentsUrl(origin: string): string {

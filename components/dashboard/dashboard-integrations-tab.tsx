@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DashboardLmsCard } from "@/components/lti/dashboard-lms-card";
 import { default as Link } from "next/link";
+import { PROTOCOL_API_SKILL_PATH } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 
 interface AgentApiKey {
   id: string;
@@ -65,14 +66,23 @@ export function DashboardIntegrationsTab({
                 <h2 className="text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.integrationsTab")}</h2>
                 <p className="mt-1 text-sm text-neutral-500">{t("dashboard.integrationsSubtitle")}</p>
               </div>
-              {usesAgenticV2Keys && (
+              <div className="flex flex-wrap items-center gap-3">
                 <Link
-                  href="/docs/proof-of-work-api"
+                  href={PROTOCOL_API_SKILL_PATH}
                   className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                  data-dashboard-protocol-skill-link=""
                 >
-                  {t("dashboard.mcpDocsLink")} →
+                  {t("dashboard.mcpSkillLink")} →
                 </Link>
-              )}
+                {usesAgenticV2Keys && (
+                  <Link
+                    href="/docs/proof-of-work-api"
+                    className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                  >
+                    {t("dashboard.mcpDocsLink")} →
+                  </Link>
+                )}
+              </div>
             </div>
 
             <DashboardLmsCard usageCardClass={usageCardClass} />
@@ -93,6 +103,13 @@ export function DashboardIntegrationsTab({
                   <h2 className="mt-2 text-xl font-medium text-white">{t("dashboard.proofOfWorkApi")}</h2>
                 </div>
                 <div className="flex items-center gap-3">
+                  <Link
+                    href={PROTOCOL_API_SKILL_PATH}
+                    className="text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
+                    data-dashboard-protocol-skill-link=""
+                  >
+                    {t("dashboard.mcpSkillLink")} →
+                  </Link>
                   {usesAgenticV2Keys && (
                     <Link
                       href="/docs/proof-of-work-api"

@@ -72,6 +72,7 @@ export type ProofOfWorkApiEndpoint =
   | "upload_protocol_file"
   | "generate_protocol_unsys_seed"
   | "get_protocol"
+  | "get_protocol_url"
   | "update_protocol"
   | "delete_protocol"
   | "list_flows"

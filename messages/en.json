@@ -658,7 +658,7 @@
     "mcpResourcesTitle": "MCP resources",
     "mcpResourcesHint": "resources/read → uncertain-systems://integration-scope · uncertain-systems://proof-of-work-loop",
     "mcpDocsLink": "Protocol API docs",
-    "mcpSkillLink": "skill.md"
+    "mcpSkillLink": "Protocol API skill.md"
   },
   "pricing": {
     "openSource": "Open source",

@@ -95,6 +95,7 @@ describe("Proof-of-Work API v3 path contract", () => {
     };
     expect(enMessages.dashboard.proofOfWorkApi).toBe("Protocol API");
     expect(enMessages.dashboard.mcpDocsLink).toBe("Protocol API docs");
+    expect(enMessages.dashboard.mcpSkillLink).toBe("Protocol API skill.md");
     expect(enMessages.dashboard.proofOfWorkApi).not.toMatch(/Proof-of-Work API/i);
     expect(enMessages.dashboard.mcpDocsLink).not.toMatch(/Proof-of-Work API/i);
     expect(enMessages.dashboard.proofOfWorkApiDesc).not.toMatch(/Proof-of-Work API/i);

@@ -238,6 +238,52 @@ export function verificationFlowPublicPath(token: string): string {
   return `/v/${encodeURIComponent(token)}`;
 }
 
+/** Query keys that pre-fill the public protocol identity. */
+export const PROTOCOL_LAUNCH_IDENTITY_KEYS = ["identity", "id", "candidate_id"] as const;
+
+export function parseProtocolLaunchIdentity(
+  source:
+    | URLSearchParams
+    | { get?: (key: string) => string | null }
+    | Record<string, string | string[] | null | undefined>
+    | null
+    | undefined,
+): string {
+  if (!source) return "";
+  const read = (key: string): string => {
+    if (typeof (source as URLSearchParams).get === "function") {
+      return String((source as URLSearchParams).get(key) || "").trim();
+    }
+    const raw = (source as Record<string, unknown>)[key];
+    if (Array.isArray(raw)) return String(raw[0] || "").trim();
+    return String(raw ?? "").trim();
+  };
+  for (const key of PROTOCOL_LAUNCH_IDENTITY_KEYS) {
+    const decision = acceptParticipantIdentity(read(key));
+    if (decision.ok) return decision.identity;
+  }
+  return "";
+}
+
+export function verificationFlowLaunchPath(
+  token: string,
+  identity?: string | null,
+): string {
+  const path = verificationFlowPublicPath(token);
+  const id = String(identity || "").trim();
+  if (!id) return path;
+  return `${path}?identity=${encodeURIComponent(id)}`;
+}
+
+export function verificationFlowLaunchUrl(
+  origin: string,
+  token: string,
+  identity?: string | null,
+): string {
+  const base = String(origin || "").replace(/\/$/, "");
+  return `${base}${verificationFlowLaunchPath(token, identity)}`;
+}
+
 export function resultsForFlow<T extends { flowId: string }>(
   items: readonly T[],
   flowId: string,

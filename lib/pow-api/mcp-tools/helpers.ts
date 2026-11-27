@@ -22,9 +22,10 @@ Create, list, update, and delete knowledge verification protocols. REST: /api/v3
 Author sources on create_protocol / update_protocol (choose one): challenge (The Protocol Challenge; optional exact_problem_on_canvas), artifacts/files (challenge generated when a learner opens; generate_problem_on_open), or opening_canvas_scene. Also answers_model_seed / uncertainty_model (custom tree with weights, or generate_unsys), enforced_channels, canvas_capture.
 Do not send kind. Create and list reject solve, calibration, calibrate, learn, mapping, and map.
 Upload context files with upload_protocol_file. Generate the Unsys model with generate_protocol_unsys_seed.
+Mint a public launch URL with get_protocol_url. Pass identity (or id) to prepopulate the participant ID so the protocol does not ask for it.
 
 Knowledge Regions are a separate family. REST: /api/v3/knowledge-regions.
-Call get_knowledge_region_options for wizard fields (protocols, exploration strategies, AI-use catalog, sample bounds), then create_knowledge_region with name, protocol_ids, strategy_ids, optional custom_strategies, samples_per_strategy, include_human_data, ai_use_catalog_ids, samples_per_ai_use.
+Call get_knowledge_region_options for wizard fields (protocols, exploration strategies, AI-use catalog, sample bounds), then create_knowledge_region with name, protocol_ids, strategy_ids (exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep). Optional custom_strategies as a prompt string or { prompt } (name optional), samples_per_strategy, include_human_data, ai_use_catalog_ids, samples_per_ai_use.
 List/read/rename/delete with list_knowledge_regions, get_knowledge_region, update_knowledge_region, delete_knowledge_region.
 Add more samples with simulate_knowledge_region. Poll create jobs with get_knowledge_region_job.
 Retrieve data with get_knowledge_region (clusters and samples), get_knowledge_region_run (stored record), get_knowledge_region_candidate, and get_knowledge_region_uncertainty_model.

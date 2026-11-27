@@ -34,6 +34,7 @@ Each key is a single full-access token.
 | `POST` | `/files` | `upload_protocol_file` | Upload a Protocol Challenge context file. Pass `xai_file_id` in `artifacts`. |
 | `POST` | `/unsys-seed` | `generate_protocol_unsys_seed` | Generate the Unsys model from The Protocol Challenge and artifacts. |
 | `GET` | `/{protocol_id}` | `get_protocol` | Read one protocol. |
+| `GET` | `/{protocol_id}/url` | `get_protocol_url` | Public launch URL. Query `identity` (aliases `id`, `candidate_id`) to prepopulate the participant ID so Identify yourself is skipped. Omit identity for a URL that asks for it. |
 | `PATCH` | `/{protocol_id}` | `update_protocol` | Update one protocol (same wizard fields as create). |
 | `DELETE` | `/{protocol_id}` | `delete_protocol` | Delete one protocol. |
 
@@ -45,7 +46,7 @@ Full spec: `docs/KNOWLEDGE_REGION_API.md`.
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | `list_knowledge_regions` | List regions in the requested organization. Query `organization_id`. |
 | `GET` | `/options` | `get_knowledge_region_options` | Wizard options: protocols, exploration strategies, AI-use catalog, sample bounds. |
-| `POST` | `/` | `create_knowledge_region` | Create by running the simulation wizard (`name`, `protocol_ids`, `strategy_ids`, optional `custom_strategies`, `samples_per_strategy`, `include_human_data`, `ai_use_catalog_ids`, `samples_per_ai_use`). |
+| `POST` | `/` | `create_knowledge_region` | Create by running the simulation wizard (`name`, `protocol_ids`, `strategy_ids` from exploit-heavy / information-seeking / novelty-seeking / balanced / narrow-and-deep, optional `custom_strategies` as a prompt, `samples_per_strategy`, `include_human_data`, `ai_use_catalog_ids`, `samples_per_ai_use`). |
 | `GET` | `/{knowledge_region_id}` | `get_knowledge_region` | Clusters, strategies, AI-use clusters, samples (no vectors). |
 | `PATCH` | `/{knowledge_region_id}` | `update_knowledge_region` | Rename. |
 | `DELETE` | `/{knowledge_region_id}` | `delete_knowledge_region` | Delete parent and clusters. |

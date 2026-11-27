@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { VerificationFlowRunner } from "@/components/VerificationFlowRunner";
 import {
   applyVerificationCommand,
   emptyVerificationState,
+  parseProtocolLaunchIdentity,
+  verificationFlowLaunchPath,
+  verificationFlowLaunchUrl,
 } from "@/lib/verification-flow";
 import {
   listVerificationFlowsForDashboard,
@@ -100,5 +106,45 @@ describe("verification flow owner_user_id", () => {
     });
     expect(orgA.map((flow) => flow.publicToken)).toEqual(["org-a-token"]);
     expect(orgB.map((flow) => flow.publicToken)).toEqual(["org-b-token"]);
+  });
+});
+
+describe("protocol launch URL identity", () => {
+  it("reads identity, id, or candidate_id and builds a launch URL", () => {
+    expect(parseProtocolLaunchIdentity({ identity: " ada " })).toBe("ada");
+    expect(parseProtocolLaunchIdentity({ id: "bob" })).toBe("bob");
+    expect(parseProtocolLaunchIdentity({ candidate_id: "cara" })).toBe("cara");
+    expect(parseProtocolLaunchIdentity(new URLSearchParams("identity=dana"))).toBe("dana");
+    expect(parseProtocolLaunchIdentity({ identity: "   " })).toBe("");
+    expect(verificationFlowLaunchPath("tok", "")).toBe("/v/tok");
+    expect(verificationFlowLaunchPath("tok", "ada")).toBe("/v/tok?identity=ada");
+    expect(verificationFlowLaunchUrl("https://uncertain.systems/", "tok", "ada")).toBe(
+      "https://uncertain.systems/v/tok?identity=ada",
+    );
+  });
+
+  it("skips Identify yourself when the public URL already has an identity", () => {
+    const page = readFileSync(join(root, "app/v/[token]/page.tsx"), "utf8");
+    const runner = readFileSync(join(root, "components/VerificationFlowRunner.tsx"), "utf8");
+    expect(page).toContain("parseProtocolLaunchIdentity");
+    expect(page).toContain("prepopulatedIdentity");
+    expect(runner).toContain("data-verification-identity-prepopulated");
+    expect(runner).toContain('prepopulatedIdentity ? "claiming" : "identity"');
+    expect(runner.indexOf("data-verification-identity-prepopulated")).toBeLessThan(
+      runner.indexOf("<ProductFlowIdentityForm"),
+    );
+    const withId = renderToStaticMarkup(
+      createElement(VerificationFlowRunner, {
+        token: "tok",
+        prepopulatedIdentity: "ada",
+      }),
+    );
+    expect(withId).toContain("data-verification-identity-prepopulated");
+    expect(withId).toContain("Opening this protocol as ada");
+    expect(withId).not.toContain("data-verification-identity-input");
+    expect(withId).not.toContain("Identify yourself");
+    const withoutId = renderToStaticMarkup(createElement(VerificationFlowRunner, { token: "tok" }));
+    expect(withoutId).toContain("data-verification-identity-input");
+    expect(withoutId).toContain("Identify yourself");
   });
 });

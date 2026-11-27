@@ -152,6 +152,7 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
     case "list_protocols":
     case "create_protocol":
     case "get_protocol":
+    case "get_protocol_url":
     case "update_protocol":
     case "delete_protocol":
     case "upload_protocol_file":

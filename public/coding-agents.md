@@ -43,6 +43,7 @@ Authorization: Bearer sk_…
 | `POST` | `/api/v3/protocols/files` | `upload_protocol_file` |
 | `POST` | `/api/v3/protocols/unsys-seed` | `generate_protocol_unsys_seed` |
 | `GET` | `/api/v3/protocols/{protocol_id}` | `get_protocol` |
+| `GET` | `/api/v3/protocols/{protocol_id}/url` | `get_protocol_url` |
 | `PATCH` | `/api/v3/protocols/{protocol_id}` | `update_protocol` |
 | `DELETE` | `/api/v3/protocols/{protocol_id}` | `delete_protocol` |
 
@@ -59,6 +60,8 @@ Create example:
 ```
 
 List: `GET /api/v3/protocols?organization_id=<uuid>`.
+
+Launch URL: `GET /api/v3/protocols/{protocol_id}/url?organization_id=<uuid>`. Add `identity=` (aliases `id`, `candidate_id`) to prepopulate the participant ID. That public `/v/{token}?identity=` link does not ask the learner to identify.
 
 ## Knowledge Regions API
 
@@ -100,7 +103,8 @@ Create uses the same options as `/regions/new`: name → protocols → explorati
   "ai_use_catalog_ids": ["grok-low"],
   "samples_per_ai_use": 6,
   "custom_strategies": [
-    { "name": "Stay on substitution", "instructions": "Pick substitution and stay with it." }
+    { "prompt": "Ask more questions before you commit to an answer." },
+    { "name": "Stay on substitution", "prompt": "Pick substitution and stay with it." }
   ]
 }
 ```
@@ -118,7 +122,7 @@ Jobs return `202` with `job_id` and `status`. Poll `get_knowledge_region_job` un
 
 ## Agent loop
 
-1. `list_protocols` / `create_protocol` / `get_protocol`
+1. `list_protocols` / `create_protocol` / `get_protocol` / `get_protocol_url`
 2. `get_knowledge_region_options`
 3. `create_knowledge_region`
 4. `get_knowledge_region_job` until done

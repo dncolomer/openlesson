@@ -236,12 +236,25 @@ function paramsForCustomInstructions(instructions: string): ExplorationStrategy[
   return { maxSteps, prefer, commitAfter };
 }
 
+export function nameFromCustomStrategyPrompt(prompt: string): string {
+  const words = text(prompt)
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 5)
+    .join(" ");
+  return words.slice(0, 80) || "Custom strategy";
+}
+
 export function parseCustomExplorationStrategy(value: unknown): ExplorationStrategy | null {
+  if (typeof value === "string") {
+    return parseCustomExplorationStrategy({ prompt: value });
+  }
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  const name = text(record.name);
   const instructions = text(record.instructions) || text(record.prompt);
-  if (!name || !instructions) return null;
+  if (!instructions) return null;
+  const name = text(record.name) || nameFromCustomStrategyPrompt(instructions);
   const description = text(record.description) || instructions.slice(0, 160);
   const requested = text(record.id);
   const id = isCustomExplorationStrategyId(requested)
@@ -271,13 +284,22 @@ export function parseExplorationStrategyIds(value: unknown): ExplorationStrategy
 export function parseSimulationStrategies(input: {
   strategyIds?: unknown;
   customStrategies?: unknown;
+  recoveredStrategies?: unknown;
 }): ExplorationStrategy[] {
-  const customRows = Array.isArray(input.customStrategies) ? input.customStrategies : [];
   const customById = new Map<string, ExplorationStrategy>();
-  for (const row of customRows) {
+  for (const row of Array.isArray(input.customStrategies) ? input.customStrategies : []) {
     const parsed = parseCustomExplorationStrategy(row);
     if (!parsed || customById.has(parsed.id)) continue;
     customById.set(parsed.id, parsed);
+  }
+  const recoveredById = new Map<string, ExplorationStrategy>();
+  for (const row of Array.isArray(input.recoveredStrategies) ? input.recoveredStrategies : []) {
+    const parsed =
+      row && typeof row === "object" && "id" in (row as object) && "instructions" in (row as object)
+        ? (row as ExplorationStrategy)
+        : parseCustomExplorationStrategy(row);
+    if (!parsed || recoveredById.has(parsed.id)) continue;
+    recoveredById.set(parsed.id, parsed);
   }
   const listed = Array.isArray(input.strategyIds)
     ? input.strategyIds
@@ -287,8 +309,14 @@ export function parseSimulationStrategies(input: {
   for (const item of listed) {
     const id = text(item);
     if (!id || seen.has(id)) continue;
-    const strategy = explorationStrategyById(id) ?? customById.get(id) ?? null;
+    const strategy =
+      explorationStrategyById(id) ?? customById.get(id) ?? recoveredById.get(id) ?? null;
     if (!strategy) continue;
+    seen.add(strategy.id);
+    out.push(strategy);
+  }
+  for (const strategy of customById.values()) {
+    if (seen.has(strategy.id)) continue;
     seen.add(strategy.id);
     out.push(strategy);
   }
@@ -325,10 +353,8 @@ export function parseSimulationStrategiesWithRecovered(input: {
 }): ExplorationStrategy[] {
   return parseSimulationStrategies({
     strategyIds: input.strategyIds,
-    customStrategies: [
-      ...(Array.isArray(input.customStrategies) ? input.customStrategies : []),
-      ...collectRegionSimulationStrategies(input.embeddings ?? []),
-    ],
+    customStrategies: input.customStrategies,
+    recoveredStrategies: collectRegionSimulationStrategies(input.embeddings ?? []),
   });
 }
 

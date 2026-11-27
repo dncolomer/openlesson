@@ -10,6 +10,7 @@ import {
   buildMcpOAuthDiscovery,
   buildCodingAgentsUrl,
   buildSkillFileUrl,
+  PROTOCOL_API_SKILL_PATH,
 } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
@@ -121,7 +122,7 @@ export function IntegrationQuickAccess({
               </div>
               <code className={codeClass}>{skillUrl}</code>
               <div className="mt-auto flex flex-wrap gap-2">
-                <Link href="/skill.md" className={buttonClass}>
+                <Link href={PROTOCOL_API_SKILL_PATH} className={buttonClass} data-protocol-api-skill-link="">
                   {t("integrationAccess.skillOpen")}
                 </Link>
                 <Link href="/coding-agents.md" className={buttonClass}>

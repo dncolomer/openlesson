@@ -711,6 +711,13 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-integrations-tab.tsx")).toContain(
       "/docs/proof-of-work-api",
     );
+    expect(readRepo("components/dashboard/dashboard-integrations-tab.tsx")).toContain(
+      "PROTOCOL_API_SKILL_PATH",
+    );
+    expect(readRepo("components/dashboard/dashboard-integrations-tab.tsx")).toContain(
+      "data-dashboard-protocol-skill-link",
+    );
+    expect(readRepo("components/dashboard/dashboard-integrations-tab.tsx")).toContain("mcpSkillLink");
     expect(readRepo("components/dashboard/dashboard-integrations-tab.tsx")).not.toContain(
       "/docs/learning-map-api",
     );
@@ -743,6 +750,7 @@ describe("dashboard platform surface", () => {
       "workspace-scoped",
     );
     const skill = readRepo("public/skill.md");
+    expect(skill).toMatch(/^---\nname: protocol-api\n/);
     expect(skill).toContain("list_protocols");
     expect(skill).toContain("create_protocol");
     expect(skill).toContain("get_protocol");

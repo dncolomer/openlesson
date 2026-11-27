@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
+import {
+  MCP_PROOF_OF_WORK_TOOL_CATALOG,
+  PROTOCOL_API_SKILL_PATH,
+  buildSkillFileUrl,
+} from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { PUBLIC_AGENT_API_FAMILIES } from "@/lib/api/agent-api-paths";
 import { AGENT_TOOL_SURFACE } from "@/lib/pow-api/agent-tool-surface";
 
@@ -15,6 +19,7 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
       "upload_protocol_file",
       "generate_protocol_unsys_seed",
       "get_protocol",
+      "get_protocol_url",
       "update_protocol",
       "delete_protocol",
       "list_knowledge_regions",
@@ -63,5 +68,12 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
     expect(blob).not.toContain("/api/v3/snapshot");
     expect(blob).not.toContain("/api/v3/stash");
     expect(blob).not.toContain("/map-tools");
+  });
+
+  it("exposes the public Protocol API skill path", () => {
+    expect(PROTOCOL_API_SKILL_PATH).toBe("/skill.md");
+    expect(buildSkillFileUrl("https://uncertain.systems")).toBe(
+      "https://uncertain.systems/skill.md",
+    );
   });
 });

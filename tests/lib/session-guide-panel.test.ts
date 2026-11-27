@@ -106,6 +106,16 @@ describe("session guide panel", () => {
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("split");
     expect(learn).not.toContain('data-session-command="split"');
 
+    const inert = renderToStaticMarkup(
+      createElement(SessionGuidePanel, { guide: "verification", inertCommands: true }),
+    );
+    expect(inert).toContain("data-session-commands-inert");
+    expect(inert).not.toContain("The board is still opening.");
+    expect(inert).not.toContain(" disabled=");
+    expect(inert).toContain('data-session-command="draw"');
+    expect(inert).toContain('data-session-command="pointer"');
+    expect(inert).toContain('data-session-command="auto-layout"');
+
     const verify = renderToStaticMarkup(createElement(SessionGuidePanel, { guide: "verification" }));
     expect(verify).toContain('data-session-guide-tab="commands"');
     expect(verify).toContain('data-session-guide-tab="help"');

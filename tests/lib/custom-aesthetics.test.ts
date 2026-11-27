@@ -280,6 +280,7 @@ describe("session sidebar style", () => {
     expect(mock).toContain("protocolSettingsPreviewScene");
     expect(mock).toContain("SessionWorkSurface");
     expect(mock).toContain("SessionGuidePanel");
+    expect(mock).toContain("inertCommands");
     const scene = protocolSettingsPreviewScene();
     expect(scene.elements.length).toBeGreaterThan(0);
     expect(scene.appState).toBeTruthy();

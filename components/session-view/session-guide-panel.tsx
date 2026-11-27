@@ -35,9 +35,12 @@ type GuideTab = "commands" | "harness" | "help";
 export function SessionGuidePanel({
   guide,
   remainingSeconds = 0,
+  inertCommands = false,
 }: {
   guide: SessionGuideId;
   remainingSeconds?: number;
+  /** Protocol Settings preview: tiles look live, clicks do nothing. */
+  inertCommands?: boolean;
 }) {
   const canvasCommands = guide !== "calibrate";
   const showHarness = guide === "learn";
@@ -47,7 +50,7 @@ export function SessionGuidePanel({
   const commandsOpen = canvasCommands && tab === "commands";
   const harnessOpen = showHarness && tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
-  const commandsHint = !bridge ? "The board is still opening." : null;
+  const commandsHint = inertCommands || bridge ? null : "The board is still opening.";
   const catalog = ileWorkCanvasCommandsFor(guide);
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
@@ -102,11 +105,16 @@ export function SessionGuidePanel({
         </div>
       </div>
       {commandsOpen ? (
-        <div data-session-commands className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div data-session-commands className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          {inertCommands ? (
+            <div data-session-commands-inert="" className="absolute inset-0 z-10" aria-hidden />
+          ) : null}
           <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-0.5 px-1.5 pt-0.5">
             {catalog.map((command) => {
               const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
-              const ready = Boolean(bridge) && (!needsSelection || bridge?.selectionActive);
+              const ready =
+                inertCommands ||
+                (Boolean(bridge) && (!needsSelection || bridge?.selectionActive));
               return (
                 <button
                   key={command.id}
@@ -116,7 +124,7 @@ export function SessionGuidePanel({
                   aria-label={command.label}
                   disabled={!ready}
                   onClick={() => {
-                    if (!ready || !bridge) return;
+                    if (inertCommands || !ready || !bridge) return;
                     bridge.run(command.id);
                   }}
                   className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
@@ -142,15 +150,21 @@ export function SessionGuidePanel({
             <IleCanvasPointerButton
               plate
               active={Boolean(bridge?.pointer?.active)}
-              disabled={!bridge?.pointer}
-              onToggle={() => bridge?.pointer?.toggle()}
+              disabled={!inertCommands && !bridge?.pointer}
+              onToggle={() => {
+                if (inertCommands) return;
+                bridge?.pointer?.toggle();
+              }}
             />
           </div>
           <div className="flex shrink-0 flex-col gap-1 px-1.5 pt-1">
             <AutoLayoutToggle
               enabled={Boolean(bridge?.autoLayout?.enabled)}
-              disabled={!bridge?.autoLayout}
-              onToggle={() => bridge?.autoLayout?.toggle()}
+              disabled={!inertCommands && !bridge?.autoLayout}
+              onToggle={() => {
+                if (inertCommands) return;
+                bridge?.autoLayout?.toggle();
+              }}
             />
           </div>
           {commandsHint ? (

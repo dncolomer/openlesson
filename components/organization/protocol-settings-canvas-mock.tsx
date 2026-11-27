@@ -7,6 +7,7 @@ import { SessionDataCard } from "@/components/session-view/session-data-card";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionTopicCard } from "@/components/session-view/learn-work-dock-bar";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
+import { FALLBACK_AESTHETIC_IMAGES } from "@/lib/aesthetics";
 import { protocolSettingsPreviewScene } from "@/lib/organization/protocol-settings-preview";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import {
@@ -32,12 +33,16 @@ export function ProtocolSettingsCanvasMock({
   const initialScene = useMemo(() => protocolSettingsPreviewScene(), []);
   const boardStyle = useMemo(() => {
     const next = parseSessionSidebarStyle(style);
-    if (viewOnly) return next;
+    if (viewOnly) {
+      return { ...next, backgroundImage: null };
+    }
     return {
       ...next,
       canvas: { ...parseSessionCanvasStyle(next.canvas), zenMode: false },
     };
   }, [style, viewOnly]);
+  const topicUrls = viewOnly ? [] : urls;
+  const systemImages = viewOnly ? FALLBACK_AESTHETIC_IMAGES : undefined;
   return (
     <div data-org-protocol-settings-preview className="flex h-full min-h-0 min-w-0 flex-1">
       <SessionCommandBridgeProvider>
@@ -49,11 +54,12 @@ export function ProtocolSettingsCanvasMock({
             <SessionTopicCard
               id="protocol-settings"
               title="Protocol"
-              customUrls={urls}
+              customUrls={topicUrls}
+              systemImages={systemImages}
               sidebarStyle={boardStyle}
             />
           }
-          focus={<SessionGuidePanel guide="verification" />}
+          focus={<SessionGuidePanel guide="verification" inertCommands />}
           signals={
             <SessionDataCard
               audioEnabled={false}

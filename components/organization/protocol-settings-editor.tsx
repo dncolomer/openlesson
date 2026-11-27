@@ -35,7 +35,7 @@ export function ProtocolSettingsEditor({
         <div className="absolute inset-0">
           <ProtocolSettingsCanvasMock
             style={style.sidebarStyle}
-            urls={style.aestheticUrls}
+            urls={locked ? [] : style.aestheticUrls}
             viewOnly={locked}
           />
         </div>
@@ -95,7 +95,7 @@ export function ProtocolSettingsEditor({
         <div data-org-protocol-settings-editor-actions="">
           <CustomAestheticsStyler
               compact
-              urls={style.aestheticUrls}
+              urls={locked ? [] : style.aestheticUrls}
               style={style.sidebarStyle}
               prompt={style.sidebarPrompt}
               onPromptChange={style.setSidebarPrompt}

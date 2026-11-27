@@ -143,9 +143,13 @@ describe("named protocol settings", () => {
     expect(mock).toContain("SessionWorkSurface");
     expect(mock).toContain("ExcalidrawCanvas");
     expect(mock).toContain("liveCanvasChrome");
+    expect(mock).toContain("inertCommands");
     expect(mock).toContain("viewModeEnabled={viewOnly}");
     expect(mock).toContain("zenMode: false");
+    expect(mock).toContain("FALLBACK_AESTHETIC_IMAGES");
+    expect(mock).toContain("backgroundImage: null");
     expect(mock).not.toContain("sessionMarkMode");
+    expect(editor).toContain("urls={locked ? [] : style.aestheticUrls}");
     const page = read("app/dashboard/page.tsx");
     expect(page).toContain("overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8");
     expect(page).not.toContain("protocolSettingsEditorOpen");

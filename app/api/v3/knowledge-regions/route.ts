@@ -13,7 +13,8 @@ export const maxDuration = 60;
 
 function scheduleTicks(schedule: AgentSimulationSchedule) {
   if (schedule.shouldContinue) after(() => tickRegionSimulationJob(schedule.jobId));
-  if (schedule.followUpJobId) after(() => tickRegionSimulationJob(schedule.followUpJobId));
+  const followUpJobId = schedule.followUpJobId;
+  if (followUpJobId) after(() => tickRegionSimulationJob(followUpJobId));
 }
 
 export async function GET(req: NextRequest) {

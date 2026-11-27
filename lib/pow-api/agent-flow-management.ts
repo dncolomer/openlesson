@@ -48,6 +48,8 @@ import {
   listVerificationFlowsForOwnerUserId,
   runVerificationCommand,
 } from "@/lib/verification-flow-repository";
+import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthContext } from "./types";
 import { listWorkspaceBlocks, loadManagedWorkspace } from "./workspace-management";
 
@@ -353,9 +355,11 @@ export async function createAgentProtocol(
   const accepted = acceptProtocolPublish(draft);
   if (!accepted.ok) throw new Error(publishReason(accepted.reason));
 
+  const organizationId = await loadActiveOrganizationId(createAdminClient(), owner);
   const created = await runVerificationCommand({
     type: "create",
     ownerUserId: owner,
+    organizationId: organizationId || undefined,
     workspaceId: mapId,
     name: accepted.name,
     topic: accepted.challenge,

@@ -11,6 +11,7 @@ import {
 import { dashboardRegionCreateHref } from "@/lib/dashboard-nav";
 import { productFlowNewPath } from "@/lib/product-flow";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 
 export function DashboardKnowledgeRegionsTab({
   formatDate,
@@ -25,28 +26,33 @@ export function DashboardKnowledgeRegionsTab({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError("");
-    fetch(DASHBOARD_KNOWLEDGE_REGIONS_PATH)
-      .then(async (response) => {
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(errorMessageFromBody(payload, "Could not load knowledge regions"));
-        }
-        const next = Array.isArray(payload.regions) ? payload.regions : [];
-        if (!cancelled) setRegions(next as DashboardKnowledgeRegion[]);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setRegions([]);
-          setError(err instanceof Error ? err.message : "Could not load knowledge regions");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const load = () => {
+      setLoading(true);
+      setError("");
+      fetch(DASHBOARD_KNOWLEDGE_REGIONS_PATH)
+        .then(async (response) => {
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(errorMessageFromBody(payload, "Could not load knowledge regions"));
+          }
+          const next = Array.isArray(payload.regions) ? payload.regions : [];
+          if (!cancelled) setRegions(next as DashboardKnowledgeRegion[]);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setRegions([]);
+            setError(err instanceof Error ? err.message : "Could not load knowledge regions");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+    load();
+    window.addEventListener(ORGANIZATION_SWITCHED_EVENT, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(ORGANIZATION_SWITCHED_EVENT, load);
     };
   }, []);
 

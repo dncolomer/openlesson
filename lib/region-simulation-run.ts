@@ -35,6 +35,8 @@ import {
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
+import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
 import {
   aiUseClusterDescription,
   clampSamplesPerStrategy,
@@ -191,6 +193,7 @@ async function persistKnowledgeRegion(input: {
   flowId: string | null;
   createdBy: string;
   kind: ProductFlowKind;
+  organizationId?: string | null;
 }): Promise<{ persisted: boolean; id: string | null }> {
   const existingId = String(input.id || "").trim();
   if (!supabaseConfigured()) {
@@ -210,15 +213,23 @@ async function persistKnowledgeRegion(input: {
     }
     return { persisted: true, id: String(data.id) };
   }
-  const { data, error } = await supabase
-    .from("knowledge_regions")
-    .insert(knowledgeRegionWriteRow({ ...input, createdBy: input.createdBy }))
-    .select("id")
-    .maybeSingle();
-  if (error || !data?.id) {
-    throw new Error(error?.message || "Failed to create knowledge region");
+  const organizationId =
+    String(input.organizationId || "").trim() ||
+    (await loadActiveOrganizationId(supabase, input.ownerUserId));
+  const row = {
+    ...knowledgeRegionWriteRow({ ...input, createdBy: input.createdBy }),
+    ...(organizationId ? { organization_id: organizationId } : {}),
+  };
+  let inserted = await supabase.from("knowledge_regions").insert(row).select("id").maybeSingle();
+  if (inserted.error && organizationId && isMissingOrganizationIdColumn(inserted.error)) {
+    const retry = { ...row };
+    delete retry.organization_id;
+    inserted = await supabase.from("knowledge_regions").insert(retry).select("id").maybeSingle();
   }
-  return { persisted: true, id: String(data.id) };
+  if (inserted.error || !inserted.data?.id) {
+    throw new Error(inserted.error?.message || "Failed to create knowledge region");
+  }
+  return { persisted: true, id: String(inserted.data.id) };
 }
 
 async function deleteKnowledgeRegion(input: {

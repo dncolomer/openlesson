@@ -1,6 +1,6 @@
 /**
  * Owner Home dashboard: recent knowledge verification protocols
- * owned by the caller (owner_user_id).
+ * in the caller's active organization.
  */
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -11,7 +11,10 @@ import {
   sortDashboardRecentFlows,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
+import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
 import { productFlowOwnerTitle } from "@/lib/product-flow";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -22,12 +25,29 @@ export async function GET() {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
 
-    const verificationRes = await auth.supabase
-      .from("verify_flows")
-      .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
-      .eq("owner_user_id", auth.user.id)
-      .order("created_at", { ascending: false })
-      .limit(FLOW_LIMIT);
+    const admin = createAdminClient();
+    const organizationId = await loadActiveOrganizationId(admin, auth.user.id);
+    let verificationRes = organizationId
+      ? await admin
+          .from("verify_flows")
+          .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false })
+          .limit(FLOW_LIMIT)
+      : await admin
+          .from("verify_flows")
+          .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+          .eq("owner_user_id", auth.user.id)
+          .order("created_at", { ascending: false })
+          .limit(FLOW_LIMIT);
+    if (verificationRes.error && organizationId && isMissingOrganizationIdColumn(verificationRes.error)) {
+      verificationRes = await admin
+        .from("verify_flows")
+        .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+        .eq("owner_user_id", auth.user.id)
+        .order("created_at", { ascending: false })
+        .limit(FLOW_LIMIT);
+    }
 
     const protocols: DashboardRecentFlow[] = sortDashboardRecentFlows(
       (verificationRes.data || [])

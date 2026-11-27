@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { readRepo } from "../helpers/surface-source";
 import {
+  ORGANIZATION_SWITCHED_EVENT,
   PLATFORM_ORG_ADMIN_EMAIL,
   canListAllOrganizations,
+  isMissingOrganizationIdColumn,
   isMissingOrganizationMembersTable,
   sortOrganizationMemberships,
 } from "@/lib/organization/membership";
@@ -84,5 +86,38 @@ describe("organization membership", () => {
 
     const switchApi = readRepo("app/api/organization/switch/route.ts");
     expect(switchApi).toContain("switchActiveOrganization");
+
+    const sidebar = readRepo("components/dashboard/dashboard-sidebar.tsx");
+    expect(sidebar).toContain("ORGANIZATION_SWITCHED_EVENT");
+    expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
+      "ORGANIZATION_SWITCHED_EVENT",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "ORGANIZATION_SWITCHED_EVENT",
+    );
+    expect(readRepo("components/OrganizationDashboardTab.tsx")).toContain(
+      "ORGANIZATION_SWITCHED_EVENT",
+    );
+    expect(ORGANIZATION_SWITCHED_EVENT).toBe("openlesson:organization-switched");
+
+    const protocolOrg = readRepo(
+      "supabase/migrations/20261126150000_protocol_organization.sql",
+    );
+    expect(protocolOrg).toContain("verify_flows");
+    expect(protocolOrg).toContain("knowledge_regions");
+    expect(protocolOrg).toContain("ADD COLUMN IF NOT EXISTS organization_id");
+
+    expect(isMissingOrganizationIdColumn({ message: "column organization_id does not exist" })).toBe(
+      true,
+    );
+    expect(isMissingOrganizationIdColumn({ message: "owner_user_id missing" })).toBe(false);
+
+    const protocols = readRepo("app/api/dashboard/protocols/route.ts");
+    expect(protocols).toContain("listVerificationFlowsForDashboard");
+    expect(protocols).toContain("loadActiveOrganizationId");
+    expect(readRepo("app/api/dashboard/knowledge-regions/route.ts")).toContain(
+      "loadActiveOrganizationId",
+    );
+    expect(readRepo("lib/region-simulation-run.ts")).toContain("organization_id");
   });
 });

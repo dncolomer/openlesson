@@ -6,7 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { presentDashboardKnowledgeRegions } from "@/lib/dashboard-knowledge-regions";
+import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
+import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
 import { rejectedProtocolKind } from "@/lib/product-flow";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -18,20 +21,36 @@ export async function GET(req: NextRequest) {
       return jsonError(400, "Only knowledge verification protocols are supported");
     }
 
-    const { data: rows, error } = await auth.supabase
-      .from("knowledge_regions")
-      .select(
-        "id, workspace_id, owner_user_id, name, description, subject_count, created_at, embedding_model_id",
-      )
-      .eq("owner_user_id", auth.user.id)
-      .order("created_at", { ascending: false });
+    const admin = createAdminClient();
+    const organizationId = await loadActiveOrganizationId(admin, auth.user.id);
+    const select =
+      "id, workspace_id, owner_user_id, name, description, subject_count, created_at, embedding_model_id";
+    let listed = organizationId
+      ? await admin
+          .from("knowledge_regions")
+          .select(select)
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false })
+      : await admin
+          .from("knowledge_regions")
+          .select(select)
+          .eq("owner_user_id", auth.user.id)
+          .order("created_at", { ascending: false });
+    if (listed.error && organizationId && isMissingOrganizationIdColumn(listed.error)) {
+      listed = await admin
+        .from("knowledge_regions")
+        .select(select)
+        .eq("owner_user_id", auth.user.id)
+        .order("created_at", { ascending: false });
+    }
 
-    if (error) {
+    if (listed.error) {
       return NextResponse.json({ regions: [] });
     }
 
+    const ownerFilter = organizationId ? null : auth.user.id;
     return NextResponse.json({
-      regions: presentDashboardKnowledgeRegions(rows || [], auth.user.id),
+      regions: presentDashboardKnowledgeRegions(listed.data || [], ownerFilter),
     });
   } catch (error) {
     const message =

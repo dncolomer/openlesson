@@ -96,4 +96,24 @@ describe("dashboard knowledge regions", () => {
     expect(knowledgeRegionCreateOffersFlowSelect(2).canSelectExistingFlow).toBe(true);
   });
 
+  it("keeps teammate regions when listing an organization catalog", () => {
+    const regions = presentDashboardKnowledgeRegions([
+      {
+        id: "mine",
+        name: "Mine",
+        owner_user_id: "me",
+        subject_count: 2,
+        created_at: "2026-05-02",
+      },
+      {
+        id: "theirs",
+        name: "Theirs",
+        owner_user_id: "them",
+        subject_count: 1,
+        created_at: "2026-05-03",
+      },
+    ]);
+    expect(regions.map((row) => row.id)).toEqual(["theirs", "mine"]);
+  });
+
 });

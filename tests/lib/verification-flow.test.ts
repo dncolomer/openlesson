@@ -6,6 +6,7 @@ import {
   emptyVerificationState,
 } from "@/lib/verification-flow";
 import {
+  listVerificationFlowsForDashboard,
   listVerificationFlowsForOwnerUserId,
   resetVerificationFlowRepository,
   runVerificationCommand,
@@ -66,6 +67,38 @@ describe("verification flow owner_user_id", () => {
     const repository = readFileSync(join(root, "lib/verification-flow-repository.ts"), "utf8");
     expect(repository).toContain("owner_user_id");
     expect(repository).toContain("listVerificationFlowsForOwnerUserId");
+    expect(repository).toContain("listVerificationFlowsForDashboard");
     expect(repository).toContain("nullableId(value.flow.ownerUserId)");
+    expect(repository).toContain("organization_id");
+  });
+
+  it("lists dashboard flows by organization_id when stamped", async () => {
+    resetVerificationFlowRepository();
+    await runVerificationCommand({
+      type: "create",
+      ownerUserId: "owner-ada",
+      organizationId: "org-a",
+      topic: "Series",
+      questions: ["What is a series?"],
+      publicToken: "org-a-token",
+    });
+    await runVerificationCommand({
+      type: "create",
+      ownerUserId: "owner-ada",
+      organizationId: "org-b",
+      topic: "Limits",
+      questions: ["What is a limit?"],
+      publicToken: "org-b-token",
+    });
+    const orgA = await listVerificationFlowsForDashboard({
+      ownerUserId: "owner-ada",
+      organizationId: "org-a",
+    });
+    const orgB = await listVerificationFlowsForDashboard({
+      ownerUserId: "owner-ada",
+      organizationId: "org-b",
+    });
+    expect(orgA.map((flow) => flow.publicToken)).toEqual(["org-a-token"]);
+    expect(orgB.map((flow) => flow.publicToken)).toEqual(["org-b-token"]);
   });
 });

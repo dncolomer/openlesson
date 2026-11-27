@@ -41,6 +41,7 @@ import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-see
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
+import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
 
 const VERIFICATION_FLOW_GLOBAL = "__openlessonVerificationFlowRepository";
 
@@ -110,6 +111,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     id: String(row.id),
     workspaceId: String(row.workspace_id || ""),
     ownerUserId: String(row.owner_user_id || ""),
+    organizationId: String(row.organization_id || "") || undefined,
     name: String(row.name || "").trim() || topic,
     topic,
     questions: normalizeQuestionPool(row.questions),
@@ -214,6 +216,7 @@ async function persistCommand(
     const { error } = await writeVerificationFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
       owner_user_id: nullableId(value.flow.ownerUserId),
+      organization_id: nullableId(value.flow.organizationId),
       workspace_id: nullableId(value.flow.workspaceId),
       name: value.flow.name,
       topic: value.flow.topic,
@@ -437,6 +440,7 @@ async function writeVerificationFlow(
       "action_catalog",
       "duration_minutes",
       "owner_user_id",
+      "organization_id",
       "workspace_id",
       "archived_at",
       "artifacts",
@@ -478,6 +482,40 @@ export async function listVerificationFlowsForOwnerUserId(
     .select("*")
     .eq("owner_user_id", userId)
     .order("created_at", { ascending: false });
+  if (error || !Array.isArray(data)) return [];
+  return listedAuthorFlows(
+    data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),
+  );
+}
+
+export async function listVerificationFlowsForDashboard(input: {
+  ownerUserId: string;
+  organizationId?: string | null;
+}): Promise<VerificationFlow[]> {
+  const userId = String(input.ownerUserId || "").trim();
+  const organizationId = String(input.organizationId || "").trim();
+  if (!userId && !organizationId) return [];
+  if ((await resolveBackend()) === "memory") {
+    return listedAuthorFlows(
+      verificationRepositoryGlobal().memory.flows.filter((flow) => {
+        if (organizationId) {
+          const flowOrg = String(flow.organizationId || "").trim();
+          if (flowOrg) return flowOrg === organizationId;
+          return userId ? flow.ownerUserId === userId : false;
+        }
+        return flow.ownerUserId === userId;
+      }),
+    ).map(presentFlow);
+  }
+  const supabase = createAdminClient();
+  let query = supabase.from("verify_flows").select("*").order("created_at", { ascending: false });
+  query = organizationId
+    ? query.eq("organization_id", organizationId)
+    : query.eq("owner_user_id", userId);
+  const { data, error } = await query;
+  if (error && organizationId && isMissingOrganizationIdColumn(error)) {
+    return listVerificationFlowsForOwnerUserId(userId);
+  }
   if (error || !Array.isArray(data)) return [];
   return listedAuthorFlows(
     data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),

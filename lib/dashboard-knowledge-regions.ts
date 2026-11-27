@@ -1,6 +1,6 @@
 /**
  * Owner dashboard Knowledge regions: overlay models for Protocols,
- * listed by owner_user_id.
+ * listed by the active organization.
  */
 
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
@@ -53,16 +53,15 @@ export function presentDashboardKnowledgeRegions(
     created_at?: unknown;
     embedding_model_id?: unknown;
   }[],
-  ownerUserId: string,
+  ownerUserId?: string | null,
 ): DashboardKnowledgeRegion[] {
   const owner = String(ownerUserId || "").trim();
-  if (!owner) return [];
   const out: DashboardKnowledgeRegion[] = [];
   for (const region of regions) {
     const id = String(region.id || "").trim();
     const name = String(region.name || "").trim();
     if (!id || !name) continue;
-    if (String(region.owner_user_id || "").trim() !== owner) continue;
+    if (owner && String(region.owner_user_id || "").trim() !== owner) continue;
     if (String(region.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) continue;
     if (String(region.description || "").includes("region-simulation-cluster:")) continue;
     const subjectCount = Number(region.subject_count);

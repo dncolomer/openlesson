@@ -35,9 +35,11 @@ import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
 import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
 import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import { problemsForSimulationFlow, runRegionSimulation } from "@/lib/region-simulation-run";
+import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getVerificationFlowById,
-  listVerificationFlowsForOwnerUserId,
+  listVerificationFlowsForDashboard,
   listVerificationResultsForFlowId,
 } from "@/lib/verification-flow-repository";
 
@@ -58,9 +60,13 @@ async function realSessionCountForFlow(input: {
 
 async function listedSimulationFlows(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   embeddings: readonly { flow_id?: string | null; source?: string | null; identity?: string | null }[];
 }) {
-  const flows = await listVerificationFlowsForOwnerUserId(input.ownerUserId);
+  const flows = await listVerificationFlowsForDashboard({
+    ownerUserId: input.ownerUserId,
+    organizationId: input.organizationId,
+  });
   const listed = [];
   for (const flow of flows) {
     listed.push({
@@ -80,6 +86,7 @@ async function listedSimulationFlows(input: {
 async function ownedSimulationFlow(
   flowId: string,
   userId: string,
+  organizationId?: string | null,
 ): Promise<{
   id: string;
   name: string;
@@ -88,7 +95,10 @@ async function ownedSimulationFlow(
   answersModelSeed?: unknown;
 } | null> {
   const flow = await getVerificationFlowById(flowId);
-  if (!flow || !flowOwnedByUser(flow, userId)) return null;
+  if (!flow) return null;
+  const org = String(organizationId || "").trim();
+  const inOrg = org && String(flow.organizationId || "").trim() === org;
+  if (!flowOwnedByUser(flow, userId) && !inOrg) return null;
   return {
     id: flow.id,
     name: flow.name,
@@ -111,8 +121,13 @@ export async function GET(req: NextRequest) {
     } catch {
       embeddings = [];
     }
+    const organizationId = await loadActiveOrganizationId(
+      createAdminClient(),
+      auth.user.id,
+    );
     const listed = await listedSimulationFlows({
       ownerUserId: auth.user.id,
+      organizationId,
       embeddings,
     });
     return NextResponse.json({
@@ -161,6 +176,10 @@ export async function POST(req: NextRequest) {
       if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
     }
     const selectedFlows = aiUseCatalogIds.length ? protocolIds.slice(0, 1) : protocolIds;
+    const organizationId = await loadActiveOrganizationId(
+      createAdminClient(),
+      auth.user.id,
+    );
 
     const flows: Array<{
       id: string;
@@ -170,7 +189,7 @@ export async function POST(req: NextRequest) {
       answersModelSeed?: unknown;
     }> = [];
     for (const flowId of selectedFlows) {
-      const flow = await ownedSimulationFlow(flowId, auth.user.id);
+      const flow = await ownedSimulationFlow(flowId, auth.user.id, organizationId);
       if (!flow) return jsonError(404, "Protocol not found");
       flows.push(flow);
     }

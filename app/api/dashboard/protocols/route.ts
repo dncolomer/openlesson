@@ -25,8 +25,10 @@ import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
 import { parseFlowCanvasCapture } from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
+import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  listVerificationFlowsForOwnerUserId,
+  listVerificationFlowsForDashboard,
   runVerificationCommand,
 } from "@/lib/verification-flow-repository";
 
@@ -39,7 +41,14 @@ export async function GET(req: NextRequest) {
     if (rejectedProtocolKind(new URL(req.url).searchParams.get("kind"))) {
       return jsonError(400, "Only knowledge verification protocols are supported");
     }
-    const flows = await listVerificationFlowsForOwnerUserId(auth.user.id);
+    const organizationId = await loadActiveOrganizationId(
+      createAdminClient(),
+      auth.user.id,
+    );
+    const flows = await listVerificationFlowsForDashboard({
+      ownerUserId: auth.user.id,
+      organizationId,
+    });
     const listed = sortDashboardFlowsByCreatedAt(
       flows
         .map((flow) =>
@@ -101,9 +110,14 @@ export async function POST(req: NextRequest) {
     const accepted = acceptProtocolPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
 
+    const organizationId = await loadActiveOrganizationId(
+      createAdminClient(),
+      auth.user.id,
+    );
     const created = await runVerificationCommand({
       type: "create",
       ownerUserId: auth.user.id,
+      organizationId: organizationId || undefined,
       workspaceId,
       name: accepted.name,
       topic: accepted.challenge,

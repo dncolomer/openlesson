@@ -280,7 +280,7 @@ describe("region simulation", () => {
     expect(route).toContain("enqueueRegionSimulation");
     expect(route).toContain("defaultChecked: AI_USE_DEFAULT_CHECKED");
     expect(route).toContain("requireAuthenticatedUser");
-    expect(route).toContain("listVerificationFlowsForOwnerUserId");
+    expect(route).toContain("listVerificationFlowsForDashboard");
     expect(route).not.toContain("listSolveFlowsForOwnerUserId");
     expect(route).not.toContain("listCalibrationFlowsForOwnerUserId");
     expect(route).toContain("productFlowEmbeddingKind");

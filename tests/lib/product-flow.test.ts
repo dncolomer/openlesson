@@ -414,7 +414,8 @@ describe("product flow owner_user_id", () => {
   it("writes owner_user_id on create and does not insert an owner workspace", () => {
     const route = read("app/api/dashboard/protocols/route.ts");
     expect(route).toContain("ownerUserId: auth.user.id");
-    expect(route).toContain("listVerificationFlowsForOwnerUserId");
+    expect(route).toContain("listVerificationFlowsForDashboard");
+    expect(route).toContain("organizationId");
     expect(route).not.toContain("listCalibrationFlowsForOwnerUserId");
     expect(route).not.toContain("listSolveFlowsForOwnerUserId");
     expect(route).toContain("sortDashboardFlowsByCreatedAt");

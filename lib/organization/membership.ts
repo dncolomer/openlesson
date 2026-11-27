@@ -1,5 +1,8 @@
 export const PLATFORM_ORG_ADMIN_EMAIL = "uncertainsystems@gmail.com";
 
+/** Dashboard tabs refetch Protocols and Knowledge Regions on this event. */
+export const ORGANIZATION_SWITCHED_EVENT = "openlesson:organization-switched";
+
 export type OrganizationMembership = {
   organizationId: string;
   name: string;
@@ -39,6 +42,23 @@ export function isMissingOrganizationMembersTable(error: {
       msg.includes("schema cache") ||
       msg.includes("could not find") ||
       msg.includes("relation"))
+  );
+}
+
+export function isMissingOrganizationIdColumn(error: {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+} | null): boolean {
+  if (!error) return false;
+  const msg = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  if (!msg.includes("organization_id")) return false;
+  return (
+    msg.includes("does not exist") ||
+    msg.includes("schema cache") ||
+    msg.includes("could not find") ||
+    msg.includes("column")
   );
 }
 

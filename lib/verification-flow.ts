@@ -62,6 +62,7 @@ export type VerificationFlow = {
   id: string;
   workspaceId: string;
   ownerUserId?: string;
+  organizationId?: string;
   name: string;
   topic: string;
   questions: VerificationQuestion[];
@@ -527,6 +528,7 @@ export type VerificationCommand =
       type: "create";
       workspaceId?: string;
       ownerUserId?: string;
+      organizationId?: string;
       name?: string;
       topic?: string;
       problem?: string;
@@ -613,6 +615,7 @@ export function applyVerificationCommand(
       id: command.id || makeId("vf"),
       workspaceId: String(command.workspaceId || "").trim(),
       ownerUserId: String(command.ownerUserId || "").trim(),
+      organizationId: String(command.organizationId || "").trim() || undefined,
       name: normalizeFlowName(command.name, topic),
       topic,
       questions: flowProblemQuestionPool(topic),

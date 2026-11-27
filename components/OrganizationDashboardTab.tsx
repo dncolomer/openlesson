@@ -15,6 +15,7 @@ import {
   fileToAestheticPayload,
   validateAestheticFile,
 } from "@/lib/organization/custom-aesthetics-client";
+import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 import type { OrgBackendPublic } from "@/lib/organization/org-backends";
 
 function apiErrorMessage(body: unknown, fallback: string): string {
@@ -124,11 +125,6 @@ export function OrganizationDashboardTab() {
     setOpenrouterClearKey(false);
   };
 
-  useEffect(() => {
-    void loadOrganization();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const loadOrganization = async () => {
     try {
       const {
@@ -164,6 +160,15 @@ export function OrganizationDashboardTab() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadOrganization();
+    window.addEventListener(ORGANIZATION_SWITCHED_EVENT, loadOrganization);
+    return () => {
+      window.removeEventListener(ORGANIZATION_SWITCHED_EVENT, loadOrganization);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGenerateInvites = async () => {
     setGeneratingInvites(true);

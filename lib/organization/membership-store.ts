@@ -30,6 +30,22 @@ function presentMembership(
   };
 }
 
+export async function loadActiveOrganizationId(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<string | null> {
+  const id = String(userId || "").trim();
+  if (!id) return null;
+  const { data, error } = await admin
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  const organizationId = String(data.organization_id || "").trim();
+  return organizationId || null;
+}
+
 export async function upsertOrganizationMembership(
   admin: SupabaseClient,
   userId: string,

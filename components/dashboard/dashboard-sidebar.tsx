@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
-import type { OrganizationMembership } from "@/lib/organization/membership";
+import {
+  ORGANIZATION_SWITCHED_EVENT,
+  type OrganizationMembership,
+} from "@/lib/organization/membership";
 import {
   clusterDashboardNavItems,
   DASHBOARD_TOP_NAV_ITEMS,
@@ -183,6 +186,7 @@ function OrgSwitcher() {
         setActiveId(previous);
         return;
       }
+      window.dispatchEvent(new Event(ORGANIZATION_SWITCHED_EVENT));
       router.refresh();
     } catch {
       setActiveId(previous);

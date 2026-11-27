@@ -12,6 +12,7 @@ import { dashboardCreateHref, dashboardCreateLabel } from "@/lib/dashboard-nav";
 import { DASHBOARD_FLOWS_PATH, PROTOCOL_CHALLENGE_LABEL } from "@/lib/product-flow";
 import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 
 export function DashboardFlowsTab({
   formatDate,
@@ -27,28 +28,35 @@ export function DashboardFlowsTab({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    fetch(DASHBOARD_FLOWS_PATH)
-      .then(async (response) => {
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(errorMessageFromBody(payload, "Could not load protocols"));
-        }
-        if (!cancelled) {
-          setFlows(Array.isArray(payload.protocols) ? payload.protocols : []);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setFlows([]);
-          setError(err instanceof Error ? err.message : "Could not load protocols");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const load = () => {
+      setLoading(true);
+      setError("");
+      fetch(DASHBOARD_FLOWS_PATH)
+        .then(async (response) => {
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(errorMessageFromBody(payload, "Could not load protocols"));
+          }
+          if (!cancelled) {
+            setFlows(Array.isArray(payload.protocols) ? payload.protocols : []);
+            setPage(1);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setFlows([]);
+            setError(err instanceof Error ? err.message : "Could not load protocols");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+    load();
+    window.addEventListener(ORGANIZATION_SWITCHED_EVENT, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(ORGANIZATION_SWITCHED_EVENT, load);
     };
   }, []);
 

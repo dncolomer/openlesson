@@ -289,7 +289,7 @@ describe("flow embedding store", () => {
 describe("completion paths persist flow embeddings instead of snapshots", () => {
   it("Verification writes embed+raw and never snapshot", () => {
     const results = read("app/api/verification-flow/public/[token]/results/route.ts");
-    expect(results).toContain("completeFlowEmbedding");
+    expect(results).toContain("buildFlowEmbeddingRaw");
     expect(results).toContain("persistCompletedFlowEmbedding");
     expect(results).toContain('flowKind: "verify"');
     expect(results).not.toContain("lwm_snapshot");

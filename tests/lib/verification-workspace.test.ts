@@ -425,7 +425,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       }),
     ).toEqual(runnerA);
     const route = read("app/api/verification-flow/public/[token]/results/route.ts");
-    expect(route).toContain("completeFlowEmbedding");
+    expect(route).toContain("buildFlowEmbeddingRaw");
     expect(route).toContain("persistCompletedFlowEmbedding");
     expect(route).toContain("prompt");
   });

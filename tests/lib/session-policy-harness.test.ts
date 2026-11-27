@@ -350,7 +350,7 @@ describe("policy score against the prepared tree", () => {
     expect(verificationCanvas).toContain("handleCanvasPowActions");
     expect(verificationCanvas).toContain("uploadTapWorkCanvasPow");
     expect(publicVerification).toContain("policy: input.policy ?? null");
-    expect(results).toContain("completeFlowEmbedding");
+    expect(results).toContain("buildFlowEmbeddingRaw");
     expect(results).toContain("persistCompletedFlowEmbedding");
     expect(results).toContain("policyScoreFromUnknown");
     expect(results).toContain("prompt");

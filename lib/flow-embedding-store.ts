@@ -5,7 +5,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  completeFlowEmbedding,
+  buildFlowEmbeddingRaw,
   embedFlowOutput,
   recoverFlowEmbeddingRaw,
   type FlowEmbeddingRaw,
@@ -14,6 +14,10 @@ import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
+import {
+  flowcfgEmbeddingsConfigured,
+  requestFlowcfgEmbeddings,
+} from "@/lib/flowcfg-embeddings-api";
 import {
   mixFlowEmbeddingSpace,
   parseFlowEmbeddingChannelVectors,
@@ -189,20 +193,30 @@ export async function persistCompletedFlowEmbedding(
   let ownerUserId = text(input.ownerUserId);
   if (!workspaceId && !ownerUserId) throw new Error("owner_user_id is required");
   const recovered = recoverFlowEmbeddingRaw(input.raw);
-  const record = recovered
-    ? embedFlowOutput(recovered)
-    : completeFlowEmbedding({
+  const raw = recovered
+    ? recovered
+    : buildFlowEmbeddingRaw({
         flowKind: input.flowKind,
         model: input.model,
         sequence: input.sequence,
         pow: input.pow,
         audioEnforced: input.audioEnforced,
       });
+  const encoded = flowcfgEmbeddingsConfigured()
+    ? await requestFlowcfgEmbeddings(raw)
+    : (() => {
+        const record = embedFlowOutput(raw);
+        return {
+          embedding: record.vector,
+          channel_vectors: record.channel_vectors,
+          model: FLOW_EMBEDDING_MODEL_ID,
+        };
+      })();
   const stored: StoredFlowEmbedding = {
     id: text(input.id) || makeId(),
     workspace_id: workspaceId,
     owner_user_id: ownerUserId,
-    flow_kind: record.raw.flowKind,
+    flow_kind: raw.flowKind,
     flow_id: text(input.flowId) || null,
     run_id: text(input.runId) || null,
     identity: text(input.identity) || null,
@@ -210,10 +224,10 @@ export async function persistCompletedFlowEmbedding(
     link_label: normalizeFlowLinkLabel(input.linkLabel),
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
-    vector: record.vector,
-    vector_path_text: record.vector_path_text,
-    channel_vectors: record.channel_vectors,
-    raw: record.raw,
+    vector: encoded.embedding,
+    vector_path_text: mixFlowEmbeddingSpace(encoded.channel_vectors, "path+audio"),
+    channel_vectors: encoded.channel_vectors,
+    raw,
     created_at: new Date().toISOString(),
   };
   if ((await resolveBackend()) === "memory") {

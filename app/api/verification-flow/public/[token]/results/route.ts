@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { completeFlowEmbedding } from "@/lib/flow-embedding";
+import { buildFlowEmbeddingRaw, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import { persistCompletedFlowEmbedding } from "@/lib/flow-embedding-store";
 import { addPublicFlowResult, getVerificationFlowByToken } from "@/lib/verification-flow-repository";
 import { getFlowLinkByToken } from "@/lib/flow-links";
@@ -23,11 +23,12 @@ export async function POST(
   const prompt = String(body.prompt || "");
   const policy = policyScoreFromUnknown(body.policy);
   const flow = await getVerificationFlowByToken(token);
-  const embedding = completeFlowEmbedding({
+  if (!flow) return jsonError(404, "not_found");
+  const raw = buildFlowEmbeddingRaw({
     flowKind: "verify",
     model: policy?.model ?? null,
     sequence: policy?.sequence ?? null,
-    audioEnforced: flow?.enforcedChannels.audio,
+    audioEnforced: flow.enforcedChannels.audio,
     pow: [
       {
         type: source === "runner" ? "speech" : "tool",
@@ -43,36 +44,33 @@ export async function POST(
       })),
     ],
   });
+  const link = await getFlowLinkByToken(token);
+  const stored = await persistCompletedFlowEmbedding({
+    workspaceId: flow.workspaceId,
+    ownerUserId: flow.ownerUserId,
+    flowKind: "verify",
+    flowId: flow.id,
+    identity: String(body.identity || ""),
+    source,
+    linkLabel: link?.label ?? null,
+    raw,
+    audioEnforced: flow.enforcedChannels.audio,
+  });
   const saved = await addPublicFlowResult({
     token,
     identity: String(body.identity || ""),
     source,
     prompt,
     questionId: typeof body.questionId === "string" ? body.questionId : null,
-    embedding: embedding.vector,
+    embedding: stored.vector,
   });
   if (!saved.ok) {
     const status = saved.reason === "not_found" ? 404 : 400;
     return jsonError(status, saved.reason);
   }
-  if (saved.result) {
-    const link = await getFlowLinkByToken(token);
-    await persistCompletedFlowEmbedding({
-      workspaceId: saved.result.workspaceId,
-      ownerUserId: flow?.ownerUserId,
-      flowKind: "verify",
-      flowId: saved.result.flowId,
-      runId: saved.result.id,
-      identity: saved.result.identity,
-      source,
-      linkLabel: link?.label ?? null,
-      raw: embedding.raw,
-      audioEnforced: flow?.enforcedChannels.audio,
-    });
-  }
   return NextResponse.json({
     result: saved.result,
-    embedding_model_id: embedding.embedding_model_id,
-    raw: embedding.raw,
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    raw: stored.raw,
   });
 }

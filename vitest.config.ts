@@ -5,8 +5,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    setupFiles: ["tests/setup/flowcfg-embeddings-fetch.ts"],
     env: {
       STRIPE_SECRET_KEY: "sk_test_vitest_placeholder",
+      FLOWCFG_EMBEDDINGS_BASE_URL: "http://flowcfg-embeddings.test",
+      FLOWCFG_EMBEDDINGS_API_KEY: "sk-test-flowcfg",
     },
   },
   ssr: {

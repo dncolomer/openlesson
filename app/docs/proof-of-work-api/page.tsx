@@ -105,7 +105,7 @@ POST /api/v3/protocols
 {
   "organization_id": "00000000-0000-0000-0000-000000000000",
   "name": "Decoder",
-  "artifacts": [{ "name": "brief.pdf", "xai_file_id": "file_…" }],
+  "artifacts": [{ "name": "brief.pdf", "file_id": "file_…" }],
   "generate_problem_on_open": true
 }
 

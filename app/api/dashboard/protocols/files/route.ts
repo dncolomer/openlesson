@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      file_id: artifact.xaiFileId,
+      fileId: artifact.xaiFileId,
       xaiFileId: artifact.xaiFileId,
       xai_file_id: artifact.xaiFileId,
       name: artifact.name,

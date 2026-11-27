@@ -22,7 +22,9 @@ import { assertProtocolSettingInOrg } from "@/lib/organization/protocol-settings
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   parseFlowArtifacts,
+  presentPublicFlowArtifacts,
   type FlowArtifact,
+  type PublicFlowArtifact,
 } from "@/lib/flow-artifacts";
 import {
   resolveFlowArtifactsFromBody,
@@ -68,7 +70,7 @@ export type PresentedAgentProtocol = {
   name: string;
   challenge: string;
   questions: string[];
-  artifacts: FlowArtifact[];
+  artifacts: PublicFlowArtifact[];
   duration_minutes: number | null;
   action_catalog: number | null;
   authoring_source: FlowAuthoringSource;
@@ -188,7 +190,7 @@ export function presentAgentProtocol(flow: {
     name: flow.name,
     challenge,
     questions: questionsFrom(flow.questions),
-    artifacts: parseFlowArtifacts(flow.artifacts),
+    artifacts: presentPublicFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes ?? null,
     action_catalog: flow.actionCatalog,
     ...presentWizardFields({ ...flow, challenge, topic: challenge }),

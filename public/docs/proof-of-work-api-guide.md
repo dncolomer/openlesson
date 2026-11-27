@@ -14,7 +14,7 @@ Authenticate with `Authorization: Bearer <api_key>`. MCP (`POST /api/mcp`) has 1
 | Method | Path | MCP tool | Purpose |
 | :--- | :--- | :--- | :--- |
 | `GET` / `POST` | `/api/v3/protocols` | `list_protocols` / `create_protocol` | List or create a knowledge verification protocol. Create uses one Author source: written `challenge` (The Protocol Challenge; optional `exact_problem_on_canvas`), files (challenge generated when a learner opens), or `opening_canvas_scene`. Do not send `kind`. |
-| `POST` | `/api/v3/protocols/files` | `upload_protocol_file` | Upload a Protocol Challenge context file; attach `xai_file_id` on create/update. |
+| `POST` | `/api/v3/protocols/files` | `upload_protocol_file` | Upload a Protocol Challenge context file; attach `file_id` on create/update. |
 | `POST` | `/api/v3/protocols/unsys-seed` | `generate_protocol_unsys_seed` | Generate the Unsys model from The Protocol Challenge and artifacts. |
 | `GET` | `/api/v3/protocols/{protocol_id}/url` | `get_protocol_url` | Public launch URL. Query `identity` (aliases `id`, `candidate_id`) to prepopulate the participant ID so Identify yourself is skipped. |
 | `GET` / `PATCH` / `DELETE` | `/api/v3/protocols/{protocol_id}` | `get_protocol` / `update_protocol` / `delete_protocol` | Read, update, or delete one protocol. |

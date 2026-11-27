@@ -141,7 +141,7 @@ export function ProtocolApiEndpointIndex() {
                         {errors.length ? (
                           <div data-endpoint-errors={tool.name}>
                             <p className={`${labelClass} mb-2`}>Errors</p>
-                            <DocsMagiTabs data-tabs={`errors-${tool.name}`}>
+                            <DocsMagiTabs data-tabs={`errors-${tool.name}`} labels="code">
                               {errors.map((error) => (
                                 <DocsMagiTab key={error.code} id={error.code} label={error.code}>
                                   <div data-endpoint-error={error.code}>
@@ -176,7 +176,7 @@ export function ProtocolApiEndpointIndex() {
           Tab an error, then curl, JavaScript, or Python.
         </p>
         <div className="mt-3 border border-white/20 bg-black">
-          <DocsMagiTabs data-tabs="error-catalog">
+          <DocsMagiTabs data-tabs="error-catalog" labels="code">
             {AGENT_API_PUBLIC_ERRORS.map((error) => (
               <DocsMagiTab key={error.code} id={error.code} label={error.code}>
                 <div className="p-3" data-error-catalog-item={error.code}>

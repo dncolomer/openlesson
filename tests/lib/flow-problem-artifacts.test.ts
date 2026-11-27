@@ -10,7 +10,9 @@ import {
   emptyVerificationState,
 } from "@/lib/verification-flow";
 import {
+  parseFlowArtifact,
   parseFlowArtifacts,
+  presentPublicFlowArtifact,
   isFlowArtifactFileId,
 } from "@/lib/flow-artifacts";
 import {
@@ -48,6 +50,18 @@ const ARTIFACT = {
 describe("flow authoring: name + Problem + artifacts", () => {
   it("accepts name+The Protocol Challenge and ignores a questions array", () => {
     expect(isFlowArtifactFileId(ARTIFACT.xaiFileId)).toBe(true);
+    expect(
+      parseFlowArtifact({
+        name: "brief.pdf",
+        mime_type: "application/pdf",
+        file_id: ARTIFACT.xaiFileId,
+      }),
+    ).toEqual(ARTIFACT);
+    expect(presentPublicFlowArtifact(ARTIFACT)).toEqual({
+      name: "brief.pdf",
+      mime_type: "application/pdf",
+      file_id: ARTIFACT.xaiFileId,
+    });
 
     const empty = acceptProductFlowPublish({
       ...emptyProductFlowDraft(),

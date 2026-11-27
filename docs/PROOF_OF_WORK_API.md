@@ -31,7 +31,7 @@ Each key is a single full-access token.
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | `list_protocols` | List knowledge verification protocols in the requested organization. Query `organization_id`. Do not send `kind`. |
 | `POST` | `/` | `create_protocol` | Create an independent protocol. Choose one Author source: `challenge` (The Protocol Challenge; optional `exact_problem_on_canvas`), `artifacts` / `files` (challenge generated when a learner opens), or `opening_canvas_scene`. Also `answers_model_seed` or `generate_unsys`, `enforced_channels`, `duration_minutes`. Do not send `kind`. |
-| `POST` | `/files` | `upload_protocol_file` | Upload a Protocol Challenge context file. Pass `xai_file_id` in `artifacts`. |
+| `POST` | `/files` | `upload_protocol_file` | Upload a Protocol Challenge context file. Pass `file_id` in `artifacts`. |
 | `POST` | `/unsys-seed` | `generate_protocol_unsys_seed` | Generate the Unsys model from The Protocol Challenge and artifacts. |
 | `GET` | `/{protocol_id}` | `get_protocol` | Read one protocol. |
 | `GET` | `/{protocol_id}/url` | `get_protocol_url` | Public launch URL. Query `identity` (aliases `id`, `candidate_id`) to prepopulate the participant ID so Identify yourself is skipped. Omit identity for a URL that asks for it. |

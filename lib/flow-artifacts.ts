@@ -1,6 +1,7 @@
 /**
  * File artifacts linked on knowledge verification protocols.
- * Bytes live on org-scoped xAI Files; the protocol stores name, mime, file id.
+ * Bytes live on the org BlobStore (xAI Files, filesystem, or a custom backend);
+ * the protocol stores name, mime, and an opaque file id.
  */
 
 import { isStoredFileId } from "@/lib/ai/stored-file-id";
@@ -23,17 +24,42 @@ export type FlowArtifact = {
   xaiFileId: string;
 };
 
+/** Public Protocol API / MCP artifact. `file_id` is an opaque BlobStore key. */
+export type PublicFlowArtifact = {
+  name: string;
+  file_id: string;
+  mime_type?: string;
+};
+
 export function isFlowArtifactFileId(value: unknown): value is string {
   return typeof value === "string" && isStoredFileId(value);
+}
+
+export function storedFileIdFromRecord(rec: Record<string, unknown>): string {
+  return String(
+    rec.file_id ?? rec.fileId ?? rec.xai_file_id ?? rec.xaiFileId ?? "",
+  ).trim();
+}
+
+export function presentPublicFlowArtifact(item: FlowArtifact): PublicFlowArtifact {
+  return {
+    name: item.name,
+    file_id: item.xaiFileId,
+    ...(item.mimeType ? { mime_type: item.mimeType } : {}),
+  };
+}
+
+export function presentPublicFlowArtifacts(
+  artifacts: readonly FlowArtifact[] | null | undefined,
+): PublicFlowArtifact[] {
+  return parseFlowArtifacts(artifacts).map(presentPublicFlowArtifact);
 }
 
 export function parseFlowArtifact(raw: unknown): FlowArtifact | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const rec = raw as Record<string, unknown>;
   const name = String(rec.name ?? rec.fileName ?? rec.file_name ?? "").trim();
-  const xaiFileId = String(
-    rec.xaiFileId ?? rec.xai_file_id ?? rec.fileId ?? rec.file_id ?? "",
-  ).trim();
+  const xaiFileId = storedFileIdFromRecord(rec);
   if (!name || !isFlowArtifactFileId(xaiFileId)) return null;
   const mimeType = String(rec.mimeType ?? rec.mime_type ?? "").trim();
   return {
@@ -144,9 +170,7 @@ export async function uploadFlowArtifact(input: {
   const parsed = parseFlowArtifact({
     name: (body as { name?: unknown }).name ?? input.file.name,
     mimeType: (body as { mimeType?: unknown }).mimeType ?? mimeType,
-    xaiFileId:
-      (body as { xaiFileId?: unknown; xai_file_id?: unknown }).xaiFileId ??
-      (body as { xai_file_id?: unknown }).xai_file_id,
+    file_id: storedFileIdFromRecord(body as Record<string, unknown>),
   });
   if (!parsed) throw new Error("Upload did not return a file id");
   return parsed;

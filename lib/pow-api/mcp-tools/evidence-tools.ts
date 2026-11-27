@@ -22,9 +22,14 @@ const ARTIFACT_ITEM_SCHEMA = {
     name: { type: "string" },
     mime_type: { type: "string" },
     mimeType: { type: "string" },
-    xai_file_id: { type: "string" },
-    xaiFileId: { type: "string" },
-    file_id: { type: "string" },
+    file_id: {
+      type: "string",
+      description:
+        "Opaque BlobStore id from upload_protocol_file. Works with platform files or a custom document store.",
+    },
+    fileId: { type: "string", description: "Alias of file_id." },
+    xai_file_id: { type: "string", description: "Alias of file_id." },
+    xaiFileId: { type: "string", description: "Alias of file_id." },
     data: {
       type: "string",
       description: "Base64 file bytes. Uploaded then attached as context.",
@@ -75,7 +80,7 @@ const PROTOCOL_WRITE_PROPERTIES = {
   artifacts: {
     type: "array",
     description:
-      "From files source, or Unsys context on a written challenge. Pass xai_file_id from upload_protocol_file, or inline base64 data. As the challenge source, a new statement is generated when a learner opens.",
+      "From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data. As the challenge source, a new statement is generated when a learner opens.",
     items: ARTIFACT_ITEM_SCHEMA,
   },
   files: {
@@ -281,7 +286,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
     },
   },
   upload_protocol_file: {
-    description: `Upload a Protocol Challenge context file (PDF, text, image). REST: POST ${FLOW_FILES_API_PATH}. Pass the returned xai_file_id in create_protocol / update_protocol artifacts.`,
+    description: `Upload a Protocol Challenge context file (PDF, text, image). REST: POST ${FLOW_FILES_API_PATH}. Pass the returned file_id in create_protocol / update_protocol artifacts.`,
     inputSchema: {
       type: "object",
       properties: {

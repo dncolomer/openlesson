@@ -21,6 +21,7 @@ import {
   simulateAgentKnowledgeRegion,
   updateAgentKnowledgeRegion,
 } from "../agent-knowledge-region-management";
+import { presentPublicFlowArtifact } from "@/lib/flow-artifacts";
 import { rejectedProtocolKind } from "@/lib/product-flow";
 import { requireToolOrganizationId } from "@/lib/organization/request-organization";
 import {
@@ -69,8 +70,8 @@ export async function callMcpProofOfWorkTool(
     const artifact = await uploadAgentFlowFile(auth, args);
     return await evidenceToolResult(
       {
-        artifact,
-        xai_file_id: artifact.xaiFileId,
+        artifact: presentPublicFlowArtifact(artifact),
+        file_id: artifact.xaiFileId,
         name: artifact.name,
         mime_type: artifact.mimeType ?? null,
       },

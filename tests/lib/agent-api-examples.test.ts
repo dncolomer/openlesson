@@ -65,6 +65,9 @@ describe("agent API endpoint examples", () => {
     expect(html).toContain("data-endpoint-example-language=\"python\"");
     expect(html).toContain('data-docs-tabs="examples-get_protocol_url"');
     expect(html).toContain("data-error-catalog");
+    expect(html).toContain('data-docs-tab-labels="code"');
+    expect(html).toContain('data-docs-tab="organization_id_required"');
+    expect(html).toContain('data-docs-tab="api_plan_required"');
     expect(html).toContain("data-schema-catalog");
     expect(html).toContain("data-strategy-catalog");
     expect(html).toContain("exploit-heavy");

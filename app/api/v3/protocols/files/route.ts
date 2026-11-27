@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { presentPublicFlowArtifact } from "@/lib/flow-artifacts";
 import { uploadAgentFlowFile } from "@/lib/pow-api/agent-flow-management";
 import { requireAgentRequestOrganization } from "@/lib/organization/request-organization";
 
@@ -22,12 +23,10 @@ export async function POST(req: NextRequest) {
     const artifact = await uploadAgentFlowFile(auth, body);
     return NextResponse.json(
       {
-        artifact,
-        xai_file_id: artifact.xaiFileId,
-        xaiFileId: artifact.xaiFileId,
+        artifact: presentPublicFlowArtifact(artifact),
+        file_id: artifact.xaiFileId,
         name: artifact.name,
         mime_type: artifact.mimeType ?? null,
-        mimeType: artifact.mimeType ?? null,
       },
       { status: 201 },
     );

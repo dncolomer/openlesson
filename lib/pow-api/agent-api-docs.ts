@@ -188,8 +188,8 @@ export const AGENT_API_SCHEMAS: readonly AgentApiSchemaDoc[] = [
     title: "artifacts",
     kind: "request",
     summary:
-      "From files source, or Unsys context on a written challenge. Pass xai_file_id from upload_protocol_file, or inline base64 data.",
-    example: [{ name: "brief.pdf", mime_type: "application/pdf", xai_file_id: "file_…" }],
+      "From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data.",
+    example: [{ name: "brief.pdf", mime_type: "application/pdf", file_id: "file_…" }],
     tools: ["create_protocol", "update_protocol", "generate_protocol_unsys_seed"],
   },
   {

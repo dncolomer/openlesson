@@ -73,6 +73,14 @@ describe("public flow create/update matches the dashboard wizard", () => {
     const dispatch = read("lib/pow-api/mcp-tools/dispatch.ts");
     expect(dispatch).toContain('name === "upload_protocol_file"');
     expect(dispatch).toContain('name === "generate_protocol_unsys_seed"');
+    expect(dispatch).toContain("file_id: artifact.xaiFileId");
+    const filesRoute = read("app/api/v3/protocols/files/route.ts");
+    expect(filesRoute).toContain("file_id: artifact.xaiFileId");
+    expect(filesRoute).not.toContain("xai_file_id: artifact.xaiFileId");
+    const create = MCP_EVIDENCE_TOOLS.find((tool) => tool.name === "create_protocol");
+    const artifactProps = (create?.inputSchema.properties.artifacts as { items?: { properties?: Record<string, unknown> } })
+      ?.items?.properties;
+    expect(artifactProps).toHaveProperty("file_id");
   });
 
   it("createAgentFlow passes wizard fields into command apply", () => {

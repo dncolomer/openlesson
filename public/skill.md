@@ -704,7 +704,7 @@ Used by: `create_protocol`, `update_protocol`
 
 ### artifacts (request)
 
-From files source, or Unsys context on a written challenge. Pass xai_file_id from upload_protocol_file, or inline base64 data.
+From files source, or Unsys context on a written challenge. Pass file_id from upload_protocol_file (opaque BlobStore id), or inline base64 data.
 
 Used by: `create_protocol`, `update_protocol`, `generate_protocol_unsys_seed`
 
@@ -713,7 +713,7 @@ Used by: `create_protocol`, `update_protocol`, `generate_protocol_unsys_seed`
   {
     "name": "brief.pdf",
     "mime_type": "application/pdf",
-    "xai_file_id": "file_…"
+    "file_id": "file_…"
   }
 ]
 ```

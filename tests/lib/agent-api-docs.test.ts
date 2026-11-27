@@ -58,6 +58,8 @@ describe("agent API docs catalog", () => {
     expect(skill).toContain("{ prompt }");
     expect(skill).toContain("error.code");
     expect(skill).toContain("answers_model_seed");
+    expect(skill).toContain("file_id");
+    expect(skill).not.toContain("xai_file_id");
     for (const tool of AGENT_TOOL_SURFACE) {
       expect(skill).toContain(tool.name);
     }

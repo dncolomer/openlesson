@@ -77,6 +77,7 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("custom_aesthetics")).toBe("protocol_settings");
     expect(parseDashboardTab("sidebar_style")).toBe("protocol_settings");
     expect(parseDashboardTab("protocol_settings")).toBe("protocol_settings");
+    expect(parseDashboardTab("upgrade")).toBe("usage");
   });
 
   it("maps product tabs to type filters and create deep-links", () => {
@@ -172,11 +173,10 @@ describe("dashboard nav", () => {
     });
   });
 
-  it("puts Usage and Buy more credits on the Account sidebar", () => {
+  it("puts Usage on the Account sidebar and aliases Buy more credits to Usage", () => {
     const account = DASHBOARD_NAV_GROUPS.find((group) => group.id === "account");
     expect(account?.items.map((item) => item.id)).toEqual([
       "usage",
-      "upgrade",
       "organization",
       "protocol_settings",
       "integrations",
@@ -186,12 +186,11 @@ describe("dashboard nav", () => {
     );
     expect(dashboardFrameLabel("protocol_settings")).toBe("Protocol Settings");
     expect(dashboardNavGroupIdForTab("protocol_settings")).toBe("account");
-    expect(account?.items.find((item) => item.id === "upgrade")?.label).toBe("Buy more credits");
-    expect(parseDashboardTab("upgrade")).toBe("upgrade");
+    expect(account?.items.some((item) => item.id === "upgrade")).toBe(false);
+    expect(parseDashboardTab("upgrade")).toBe("usage");
     expect(parseDashboardTab("usage")).toBe("usage");
     expect(dashboardFrameLabel("usage")).toBe("Usage");
-    expect(dashboardFrameLabel("upgrade")).toBe("Buy more credits");
-    expect(dashboardNavGroupIdForTab("upgrade")).toBe("account");
+    expect(dashboardNavGroupIdForTab("usage")).toBe("account");
   });
 });
 
@@ -392,7 +391,13 @@ describe("dashboard platform surface", () => {
     );
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-sign-out");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
-      'group.id === "account"',
+      "data-dashboard-sidebar-footer",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
+      "md:border-t md:pl-0 md:pt-2",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "data-dashboard-nav-group={group.id}",
     );
     expect(DASHBOARD_TOP_NAV_ITEMS.map((item) => item.id)).toEqual(["home", "protocols", "regions"]);
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-nav-home");
@@ -677,17 +682,18 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/marketing/landing-heroes.tsx")).toContain("console-copy");
     expect(dashSrc).not.toContain("<Navbar");
     expect(readRepo("app/dashboard/page.tsx")).not.toContain("Navbar");
-    expect(dashSrc).toContain("DashboardUpgradeTab");
+    expect(readRepo("app/dashboard/page.tsx")).not.toContain("DashboardUpgradeTab");
     expect(dashSrc).toContain('activeTab === "usage"');
-    expect(dashSrc).toContain('activeTab === "upgrade"');
+    expect(dashSrc).not.toContain('activeTab === "upgrade"');
     expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-upgrade");
     expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-buy-credits");
     expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("Buy more credits");
-    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).not.toContain("DashboardUpgradeTab");
-    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("DashboardUpgradeTab");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("embedded");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).not.toContain(
       'setDashboardTab("upgrade")',
     );
-    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).not.toContain(
       "data-dashboard-buy-more-credits",
     );
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");

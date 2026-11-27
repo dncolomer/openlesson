@@ -18,7 +18,6 @@ import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -627,16 +626,6 @@ export default function DashboardPage() {
 
         {activeTab === "protocol_settings" && (
           <ProtocolSettingsTab settingId={searchParams.get("setting")} />
-        )}
-
-        {activeTab === "upgrade" && (
-          <DashboardUpgradeTab
-            plan={usageData?.plan || "inactive"}
-            subscriptionStatus={usageData?.subscriptionStatus || "inactive"}
-            periodEnd={usageData?.periodEnd ?? null}
-            isAdmin={Boolean(usageData?.isAdmin || user?.isAdmin)}
-            balance={usageData?.creditBalance}
-          />
         )}
 
         {activeTab === "usage" && (

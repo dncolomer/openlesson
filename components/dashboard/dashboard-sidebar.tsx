@@ -106,15 +106,11 @@ export function DashboardSidebar({
               {group.label}
             </div>
             <div className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-0">
-              {clusters.map((cluster, index) => (
+              {clusters.map((cluster, clusterIndex) => (
                 <ul
-                  key={`${group.id}-${cluster[0]?.cluster ?? index}`}
+                  key={`${group.id}-${cluster[0]?.cluster ?? clusterIndex}`}
                   data-dashboard-nav-cluster={cluster[0]?.cluster || undefined}
-                  className={`flex flex-row gap-0.5 md:flex-col ${
-                    index > 0
-                      ? "border-l border-white/20 pl-2 md:border-l-0 md:border-t md:pl-0 md:pt-2"
-                      : ""
-                  }`}
+                  className="flex flex-row gap-0.5 md:flex-col"
                 >
                   {cluster.map((item) => (
                     <NavItem
@@ -124,25 +120,23 @@ export function DashboardSidebar({
                       onSelect={onSelect}
                     />
                   ))}
-                  {group.id === "account" && index === clusters.length - 1 ? (
-                    <li>
-                      <button
-                        type="button"
-                        data-dashboard-sign-out
-                        onClick={() => void handleSignOut()}
-                        className={`${itemClass} ${idleClass}`}
-                      >
-                        {t("nav.signOut")}
-                      </button>
-                    </li>
-                  ) : null}
                 </ul>
               ))}
             </div>
           </nav>
         );
       })}
-      <OrgSwitcher />
+      <div className="mt-auto px-2 py-2" data-dashboard-sidebar-footer>
+        <OrgSwitcher />
+        <button
+          type="button"
+          data-dashboard-sign-out
+          onClick={() => void handleSignOut()}
+          className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-none border border-white/40 bg-black px-4 text-sm text-neutral-200 transition hover:border-white/70 hover:text-white"
+        >
+          {t("nav.signOut")}
+        </button>
+      </div>
     </aside>
   );
 }
@@ -273,11 +267,7 @@ function OrgSwitcher() {
   if (organizations.length === 0) return null;
 
   return (
-    <div
-      ref={rootRef}
-      className="mt-auto px-2 py-2"
-      data-dashboard-org-switcher
-    >
+    <div ref={rootRef} data-dashboard-org-switcher>
       <div className="mb-1 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
         {t("organization.orgSwitcher")}
       </div>

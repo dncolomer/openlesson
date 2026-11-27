@@ -12,12 +12,14 @@ const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neu
 export function DashboardUpgradeTab({
   balance,
   isAdmin,
+  embedded = false,
 }: {
   plan?: string;
   subscriptionStatus?: string;
   periodEnd?: string | null;
   isAdmin?: boolean;
   balance?: number;
+  embedded?: boolean;
 }) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
@@ -41,6 +43,7 @@ export function DashboardUpgradeTab({
   };
 
   if (isAdmin) {
+    if (embedded) return null;
     return (
       <div data-dashboard-upgrade className="space-y-8">
         <section className={usageCardClass}>
@@ -55,7 +58,8 @@ export function DashboardUpgradeTab({
   }
 
   return (
-    <div data-dashboard-upgrade className="space-y-8">
+    <div data-dashboard-upgrade className={embedded ? "space-y-4" : "space-y-8"}>
+      {embedded ? null : (
       <section className={usageCardClass}>
         <p className={usageLabelClass}>Credits</p>
         <h2 className="mt-2 text-2xl font-medium text-white">Buy more credits</h2>
@@ -66,6 +70,7 @@ export function DashboardUpgradeTab({
           free.
         </p>
       </section>
+      )}
 
       <section>
         <p className={usageLabelClass}>Credit packs</p>

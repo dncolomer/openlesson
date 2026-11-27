@@ -10,7 +10,6 @@ export const DASHBOARD_TABS = [
   "protocols",
   "regions",
   "usage",
-  "upgrade",
   "organization",
   "protocol_settings",
   "integrations",
@@ -58,9 +57,8 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     label: "Account",
     items: [
       { id: "usage", label: "Usage" },
-      { id: "upgrade", label: "Buy more credits" },
-      { id: "organization", label: "Organization", cluster: "org" },
-      { id: "protocol_settings", label: "Protocol Settings", cluster: "org" },
+      { id: "organization", label: "Organization" },
+      { id: "protocol_settings", label: "Protocol Settings" },
       { id: "integrations", label: "Integrations" },
     ],
   },
@@ -153,6 +151,7 @@ export function parseDashboardTab(value: unknown): DashboardTab {
   ) {
     return "protocol_settings";
   }
+  if (value === "upgrade") return "usage";
   if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
   return "home";
@@ -204,7 +203,6 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "protocol_settings") return "Protocol Settings";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";
-  if (tab === "upgrade") return "Buy more credits";
   if (tab === "sessions") return "Sessions";
   if (tab === "config") return "Config";
   return "Home";

@@ -6,7 +6,9 @@ import {
   canListAllOrganizations,
   isMissingOrganizationIdColumn,
   isMissingOrganizationMembersTable,
+  parseOrganizationMemberAdminFlag,
   sortOrganizationMemberships,
+  wouldLeaveOrganizationWithoutAdmin,
 } from "@/lib/organization/membership";
 
 describe("organization membership", () => {
@@ -34,6 +36,30 @@ describe("organization membership", () => {
         message: "Could not find the table 'public.organization_members' in the schema cache",
       }),
     ).toBe(true);
+  });
+
+  it("parses member role flags and blocks demoting the last admin", () => {
+    expect(parseOrganizationMemberAdminFlag({ is_org_admin: true })).toBe(true);
+    expect(parseOrganizationMemberAdminFlag({ isOrgAdmin: false })).toBe(false);
+    expect(parseOrganizationMemberAdminFlag({ role: "admin" })).toBe(true);
+    expect(parseOrganizationMemberAdminFlag({ role: "Member" })).toBe(false);
+    expect(parseOrganizationMemberAdminFlag({})).toBe(null);
+
+    const rows = [
+      { userId: "a", isOrgAdmin: true },
+      { userId: "b", isOrgAdmin: false },
+    ];
+    expect(wouldLeaveOrganizationWithoutAdmin(rows, "a")).toBe(true);
+    expect(wouldLeaveOrganizationWithoutAdmin(rows, "b")).toBe(false);
+    expect(
+      wouldLeaveOrganizationWithoutAdmin(
+        [
+          { userId: "a", isOrgAdmin: true },
+          { userId: "c", isOrgAdmin: true },
+        ],
+        "a",
+      ),
+    ).toBe(false);
   });
 
   it("sorts memberships by name then id", () => {
@@ -79,6 +105,20 @@ describe("organization membership", () => {
     const members = readRepo("app/api/organization/members/route.ts");
     expect(members).toContain("removeOrganizationMembership");
     expect(members).toContain("listOrganizationMemberRows");
+    expect(members).toContain("export async function PATCH");
+    expect(members).toContain("setOrganizationMemberRole");
+    expect(members).toContain("Only org admins can change member roles");
+    expect(members).toContain("Cannot demote the last org admin");
+
+    const store = readRepo("lib/organization/membership-store.ts");
+    expect(store).toContain("export async function setOrganizationMemberRole");
+
+    const orgTab = readRepo("components/OrganizationDashboardTab.tsx");
+    expect(orgTab).toContain("handleChangeMemberRole");
+    expect(orgTab).toContain("data-org-member-role");
+    expect(orgTab).toContain('method: "PATCH"');
+    expect(orgTab).toContain("organization.makeAdmin");
+    expect(orgTab).toContain("organization.makeMember");
 
     const membershipsApi = readRepo("app/api/organization/memberships/route.ts");
     expect(membershipsApi).toContain("listOrganizationMemberships");
@@ -88,7 +128,7 @@ describe("organization membership", () => {
     expect(switchApi).toContain("switchActiveOrganization");
 
     const sidebar = readRepo("components/dashboard/dashboard-sidebar.tsx");
-    expect(sidebar).toContain("ORGANIZATION_SWITCHED_EVENT");
+    expect(sidebar).toContain("dispatchOrganizationSwitched");
     expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
       "ORGANIZATION_SWITCHED_EVENT",
     );
@@ -114,9 +154,9 @@ describe("organization membership", () => {
 
     const protocols = readRepo("app/api/dashboard/protocols/route.ts");
     expect(protocols).toContain("listVerificationFlowsForDashboard");
-    expect(protocols).toContain("loadActiveOrganizationId");
+    expect(protocols).toContain("resolveDashboardOrganizationId");
     expect(readRepo("app/api/dashboard/knowledge-regions/route.ts")).toContain(
-      "loadActiveOrganizationId",
+      "resolveDashboardOrganizationId",
     );
     expect(readRepo("lib/region-simulation-run.ts")).toContain("organization_id");
   });

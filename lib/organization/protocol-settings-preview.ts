@@ -1,0 +1,24 @@
+import {
+  boardInstructionNoteElements,
+  withIleWorkCanvasGridAppState,
+  type IleWorkCanvasScene,
+} from "@/lib/learn-work-canvas";
+
+export const PROTOCOL_SETTINGS_PREVIEW_NOTE =
+  "Draw on this board. Fill, ink, zen, and grid apply here the same way they do on a prepared protocol board.";
+
+/** Seed once. Style changes restyle chrome; they do not wipe drawings. */
+export function protocolSettingsPreviewScene(): IleWorkCanvasScene {
+  const note = boardInstructionNoteElements({
+    text: PROTOCOL_SETTINGS_PREVIEW_NOTE,
+    x: 80,
+    y: 64,
+    textWidth: 360,
+    label: "Protocol Settings",
+  });
+  return {
+    elements: note.elements,
+    appState: withIleWorkCanvasGridAppState({}),
+    files: {},
+  };
+}

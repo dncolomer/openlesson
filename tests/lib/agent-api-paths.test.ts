@@ -6,6 +6,9 @@ import { join } from "node:path";
 import {
   ACCOUNT_API_BASE,
   EVAL_API_BASE,
+  KNOWLEDGE_REGION_API_BASE,
+  KNOWLEDGE_REGION_JOBS_API_PATH,
+  KNOWLEDGE_REGION_OPTIONS_API_PATH,
   POW_API_BASE,
   PUBLIC_AGENT_API_FAMILIES,
   SNAPSHOT_API_BASE,
@@ -34,10 +37,13 @@ function collectRouteTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Proof-of-Work API v3 path contract", () => {
-  it("exports one public agent family; Snapshot/Stash/PoW session bases are retired", () => {
+  it("exports two public agent families; Snapshot/Stash/PoW session bases are retired", () => {
     expect(WORKSPACE_API_BASE).toBe("/api/v3/workspaces");
     expect(ACCOUNT_API_BASE).toBe("/api/v3/account");
     expect(POW_API_BASE).toBe("/api/v3/pow");
+    expect(KNOWLEDGE_REGION_API_BASE).toBe("/api/v3/knowledge-regions");
+    expect(KNOWLEDGE_REGION_OPTIONS_API_PATH).toBe("/api/v3/knowledge-regions/options");
+    expect(KNOWLEDGE_REGION_JOBS_API_PATH).toBe("/api/v3/knowledge-regions/jobs");
     expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["protocol", "knowledge_region"]);
     expect(SNAPSHOT_API_BASE).toBe("/api/v3/snapshot");
     expect(EVAL_API_BASE).toBe(SNAPSHOT_API_BASE);
@@ -57,6 +63,9 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(skill).not.toContain("/api/v3/workspaces");
     expect(skill).toContain("create_protocol");
     expect(skill).toContain("/api/v3/protocols");
+    expect(skill).toContain("create_knowledge_region");
+    expect(skill).toContain("/api/v3/knowledge-regions");
+    expect(skill).toContain("/coding-agents.md");
     expect(skill).toContain("challenge");
     expect(skill).not.toContain("create_flow");
     expect(skill).not.toContain("/api/v3/flows");
@@ -187,6 +196,12 @@ describe("Proof-of-Work API v3 path contract", () => {
     ).toBe(false);
     expect(existsSync(join(ROOT, "app/api/v3/workspaces/route.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "app/api/v3/protocols/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/knowledge-regions/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/knowledge-regions/options/route.ts"))).toBe(true);
+    expect(
+      existsSync(join(ROOT, "public/coding-agents.md")),
+    ).toBe(true);
+    expect(existsSync(join(ROOT, "docs/KNOWLEDGE_REGION_API.md"))).toBe(true);
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts")),
     ).toBe(false);

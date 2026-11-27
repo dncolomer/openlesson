@@ -67,7 +67,7 @@ export function dashboardHomeIntegrationsCta(): DashboardHomeIntegrationsCta {
     label: "Integrations",
     href: dashboardHrefForTab("integrations"),
     eyebrow: "Quick access",
-    body: "Connect agents with skill.md, MCP, and API keys.",
+    body: "Connect agents with skill.md, coding-agents.md, MCP, and API keys.",
     action: "Open integrations →",
   };
 }

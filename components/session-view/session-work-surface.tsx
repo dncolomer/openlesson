@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { SessionPowLogOverlay } from "@/components/session-view/session-pow-log-overlay";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
+import type { SessionSidebarStyle } from "@/lib/session-sidebar-style";
 
 function useNarrowViewport(enabled: boolean): boolean {
   const [narrow, setNarrow] = useState(false);
@@ -34,6 +35,7 @@ export function SessionWorkSurface({
   transcript = null,
   actions = null,
   stackBelow = false,
+  sidebarStyle = null,
 }: {
   mode: SessionSidebarMode;
   stage: ReactNode;
@@ -48,6 +50,8 @@ export function SessionWorkSurface({
   actions?: ReactNode;
   /** Phone width: canvas on top, sidebar under it. Desktop stays a row. */
   stackBelow?: boolean;
+  /** Dashboard Protocol Settings passes a draft so the rail restyles live. */
+  sidebarStyle?: SessionSidebarStyle | null;
 }) {
   const stacked = useNarrowViewport(stackBelow);
   return (
@@ -68,6 +72,7 @@ export function SessionWorkSurface({
           transcript={transcript}
           actions={actions}
           fillWidth={stacked}
+          sidebarStyle={sidebarStyle}
         />
       </div>
       <div

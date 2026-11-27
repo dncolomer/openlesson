@@ -33,6 +33,8 @@ import { SessionPageLoading } from "@/components/session-view/session-page-loadi
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
+import { sessionCanvasExcalidrawChrome } from "@/lib/session-sidebar-style";
+import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
 
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
@@ -259,6 +261,10 @@ export function TapScorePhases(props: {
     getLiveTranscript,
   } = props;
 
+  const openingCanvasChrome = sessionCanvasExcalidrawChrome(
+    useSessionSidebarStyle().canvas,
+  );
+
   const [pendingStart, setPendingStart] = useState<{ topic: TapStartingTopic } | null>(null);
   const passGuard = useRef(false);
   const [challengeAttempt, setChallengeAttempt] = useState(0);
@@ -364,13 +370,22 @@ export function TapScorePhases(props: {
       [],
       problem || null,
       openingCanvasScene,
+      openingCanvasChrome,
     );
     syncScene(seeded.scene);
     setCanvasApplyElements(seeded.applyElements);
     setCanvasApplyFiles(seeded.applyFiles);
     setCanvasApplyNonce((n) => n + 1);
     setCanvasSeedNonce((n) => n + 1);
-  }, [canvasProblem, exactProblemOnCanvas, kind, openingCanvasScene, phase, syncScene]);
+  }, [
+    canvasProblem,
+    exactProblemOnCanvas,
+    kind,
+    openingCanvasChrome,
+    openingCanvasScene,
+    phase,
+    syncScene,
+  ]);
 
   const heliosBusy = tapHeliosCanvasBusy({
     isSending,
@@ -396,6 +411,7 @@ export function TapScorePhases(props: {
               assistantTurns,
               exactProblemOnCanvas ? canvasProblem : null,
               openingCanvasScene,
+              openingCanvasChrome,
             ).scene
           : applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
         : applyTapHeliosReplyToWorkCanvas(
@@ -417,6 +433,7 @@ export function TapScorePhases(props: {
     canvasProblem,
     exactProblemOnCanvas,
     openingCanvasScene,
+    openingCanvasChrome,
     kind,
     lastAssistantTurn?.id,
     lastAssistantTurn?.content,

@@ -20,8 +20,10 @@ import {
 import { heliosFlowCreateInput } from "@/lib/workspace-helios-flow";
 import {
   FLOW_OPENING_CANVAS_LABEL,
+  authoringOpeningCanvasScene,
   flowOpeningCanvasExtractText,
   flowOpeningCanvasHasContent,
+  learnerOpeningCanvasScene,
   parseFlowOpeningCanvasScene,
   parseFlowOpeningCanvasSceneForKind,
   seedPreparedOpeningCanvas,
@@ -291,6 +293,24 @@ describe("flow opening canvas", () => {
     const seeded = seedPreparedOpeningCanvas(null, stored);
     expect(seeded.seeded).toBe(true);
     expect(seeded.scene.elements.some((el) => el.fileId === "file-1")).toBe(true);
+    const authored = authoringOpeningCanvasScene(stored, {
+      gridModeEnabled: false,
+      zenModeEnabled: true,
+    });
+    expect(authored.appState.zenModeEnabled).toBe(false);
+    expect(authored.appState.gridModeEnabled).toBe(false);
+    const learner = learnerOpeningCanvasScene(stored, {
+      gridModeEnabled: false,
+      zenModeEnabled: false,
+    });
+    expect(learner.appState.zenModeEnabled).toBe(false);
+    expect(learner.appState.gridModeEnabled).toBe(false);
+    const styledSeed = seedPreparedOpeningCanvas(null, stored, {
+      gridModeEnabled: false,
+      zenModeEnabled: false,
+    });
+    expect(styledSeed.scene.appState.gridModeEnabled).toBe(false);
+    expect(styledSeed.scene.appState.zenModeEnabled).toBe(false);
     const alreadyLive = seedPreparedOpeningCanvas(seeded.scene, stored);
     expect(alreadyLive.seeded).toBe(false);
 
@@ -315,6 +335,8 @@ describe("flow opening canvas", () => {
       "FLOW_OPENING_CANVAS_LABEL",
     );
     expect(wizard).toContain("openingCanvasScene={draft.openingCanvasScene}");
+    expect(wizard).toContain("sidebarStyle={protocolStyle}");
+    expect(page).toContain("sidebarStyle={protocolStyle}");
     expect(page).toContain("openingCanvasScene={openingCanvasScene}");
     expect(wizard).not.toContain("window.open");
     expect(page).toContain("FlowOpeningCanvasHost");
@@ -327,8 +349,10 @@ describe("flow opening canvas", () => {
     expect(preview).toContain("data-flow-opening-canvas-open");
     expect(host).toContain("authoringOpeningCanvasScene");
     expect(host).toContain("ExcalidrawCanvas");
+    expect(host).toContain("sidebarStyle");
+    expect(host).toContain("liveCanvasChrome");
     expect(host).not.toContain("SessionWorkSurface");
-    expect(host).not.toContain("SessionSidebar");
+    expect(host).not.toMatch(/<SessionSidebar\b/);
     expect(host).not.toContain("SessionGuidePanel");
     expect(surface).not.toContain("data-flow-opening-canvas-sidebar");
     expect(surface).not.toContain("data-flow-opening-canvas-authoring-surface");

@@ -67,7 +67,11 @@ export async function authenticateApiKey(
     return errorResponse(401, "key_expired", "API key has expired");
   }
 
-  let organizationId = keyData.organization_id as string | null;
+  const keyOrganizationId =
+    typeof keyData.organization_id === "string" && keyData.organization_id.trim()
+      ? keyData.organization_id.trim()
+      : null;
+  let organizationId = keyOrganizationId;
   let isOrgAdmin = false;
   let isTeams = false;
 
@@ -147,6 +151,7 @@ export async function authenticateApiKey(
     user_id: keyData.user_id,
     guest_user_id: keyData.guest_user_id || null,
     organization_id: organizationId,
+    key_organization_id: keyOrganizationId,
     is_org_admin: isOrgAdmin,
     key_id: keyData.id,
     scopes,

@@ -30,6 +30,7 @@ import {
   jobsPublicPayload,
   tickRegionSimulationJob,
 } from "@/lib/region-simulation-jobs";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { getVerificationFlowById } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
@@ -38,6 +39,7 @@ export const maxDuration = 60;
 async function ownedSimulationFlow(
   flowId: string,
   userId: string,
+  organizationId?: string | null,
 ): Promise<{
   id: string;
   name: string;
@@ -46,7 +48,10 @@ async function ownedSimulationFlow(
   answersModelSeed?: unknown;
 } | null> {
   const flow = await getVerificationFlowById(flowId);
-  if (!flow || !flowOwnedByUser(flow, userId)) return null;
+  if (!flow) return null;
+  const org = String(organizationId || "").trim();
+  const inOrg = Boolean(org && String(flow.organizationId || "").trim() === org);
+  if (!flowOwnedByUser(flow, userId) && !inOrg) return null;
   return {
     id: flow.id,
     name: flow.name,
@@ -78,6 +83,7 @@ function clusterStrategiesForParent(
 
 async function flowsForRegion(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   seedFlowId: string;
   parentName: string;
   clusters: readonly { name?: unknown; description?: unknown; embedding_model_id?: unknown }[];
@@ -103,7 +109,7 @@ async function flowsForRegion(input: {
   const ids = requested.length ? requested : allowed;
   const flows = [];
   for (const flowId of ids) {
-    const flow = await ownedSimulationFlow(flowId, input.ownerUserId);
+    const flow = await ownedSimulationFlow(flowId, input.ownerUserId, input.organizationId);
     if (flow) flows.push(flow);
   }
   return flows;
@@ -112,11 +118,13 @@ async function flowsForRegion(input: {
 async function loadOwnedParent(
   req: NextRequest,
   regionId: string,
+  body?: Record<string, unknown> | null,
 ): Promise<
   | { ok: false; response: NextResponse }
   | {
       ok: true;
-      userId: string;
+      regionOwnerUserId: string;
+      organizationId: string | null;
       name: string;
       seedFlowId: string;
       clusters: Array<{ name?: unknown; description?: unknown; embedding_model_id?: unknown }>;
@@ -124,26 +132,43 @@ async function loadOwnedParent(
 > {
   const auth = await requireAuthenticatedUser();
   if (!auth.ok) return auth;
+  const org = await resolveDashboardOrganizationId({
+    req,
+    userId: auth.user.id,
+    email: auth.user.email,
+    body,
+  });
+  if (!org.ok) return org;
+  const organizationId = org.organizationId;
   const { data: row, error } = await auth.supabase
     .from("knowledge_regions")
     .select(
-      "id, name, owner_user_id, embedding_model_id, verify_flow_id",
+      "id, name, owner_user_id, organization_id, embedding_model_id, verify_flow_id",
     )
     .eq("id", regionId)
-    .eq("owner_user_id", auth.user.id)
     .maybeSingle();
   if (error || !row) return { ok: false, response: jsonError(404, "Region not found") };
   if (String(row.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) {
     return { ok: false, response: jsonError(404, "Region not found") };
   }
+  const rowOrg = String(row.organization_id || "").trim();
+  const owner = String(row.owner_user_id || "").trim();
+  const inOrg = Boolean(organizationId && rowOrg && rowOrg === organizationId);
+  if (!inOrg && owner !== auth.user.id) {
+    return { ok: false, response: jsonError(404, "Region not found") };
+  }
   const seedFlowId = String(row.verify_flow_id || "").trim();
-  const { data: siblings } = await auth.supabase
+  let siblingQuery = auth.supabase
     .from("knowledge_regions")
-    .select("name, description, embedding_model_id")
-    .eq("owner_user_id", auth.user.id);
+    .select("name, description, embedding_model_id");
+  siblingQuery = organizationId
+    ? siblingQuery.eq("organization_id", organizationId)
+    : siblingQuery.eq("owner_user_id", owner || auth.user.id);
+  const { data: siblings } = await siblingQuery;
   return {
     ok: true,
-    userId: auth.user.id,
+    regionOwnerUserId: owner || auth.user.id,
+    organizationId,
     name: String(row.name || "").trim(),
     seedFlowId,
     clusters: siblings || [],
@@ -156,13 +181,13 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const loaded = await loadOwnedParent(req, id);
-    if (!loaded.ok) return loaded.response;
     const body = (await req.json()) as Record<string, unknown>;
+    const loaded = await loadOwnedParent(req, id, body);
+    if (!loaded.ok) return loaded.response;
     let embeddings: Awaited<ReturnType<typeof listFlowEmbeddingsForOwner>> = [];
     try {
       embeddings = await listFlowEmbeddingsForOwner({
-        ownerUserId: loaded.userId,
+        ownerUserId: loaded.regionOwnerUserId,
         flowKind: productFlowEmbeddingKind(),
       });
     } catch {
@@ -176,7 +201,7 @@ export async function POST(
     const aiUseCatalogIds = parseAiUseCatalogIds(body.aiUseCatalogIds);
     const samplesPerAiUse = clampSamplesPerAiUse(body.samplesPerAiUse);
     if (aiUseCatalogIds.length) {
-      const openRouterKey = await loadOpenRouterApiKeyForOwnerUser(loaded.userId);
+      const openRouterKey = await loadOpenRouterApiKeyForOwnerUser(loaded.regionOwnerUserId);
       if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
     }
     if (!strategies.length && !aiUseCatalogIds.length) {
@@ -186,7 +211,8 @@ export async function POST(
       ? body.flowIds.map((flowId) => String(flowId || "").trim()).filter(Boolean)
       : [];
     const flows = await flowsForRegion({
-      ownerUserId: loaded.userId,
+      ownerUserId: loaded.regionOwnerUserId,
+      organizationId: loaded.organizationId,
       seedFlowId: loaded.seedFlowId,
       parentName: loaded.name,
       clusters: loaded.clusters,
@@ -196,7 +222,8 @@ export async function POST(
     if (regionSimulationJobsEnabled()) {
       if (strategies.length) {
         const job = await enqueueRegionSimulation({
-          ownerUserId: loaded.userId,
+          ownerUserId: loaded.regionOwnerUserId,
+          organizationId: loaded.organizationId,
           family: "exploration",
           name: loaded.name,
           kind: "verification",
@@ -215,7 +242,8 @@ export async function POST(
         return NextResponse.json(jobsPublicPayload(ticked.job));
       }
       const job = await enqueueRegionSimulation({
-        ownerUserId: loaded.userId,
+        ownerUserId: loaded.regionOwnerUserId,
+        organizationId: loaded.organizationId,
         family: "ai_use",
         name: loaded.name,
         kind: "verification",
@@ -230,7 +258,7 @@ export async function POST(
     }
     if (!strategies.length) return jsonError(400, "Select at least one exploration strategy");
     const result = await addRegionSimulationSamples({
-      ownerUserId: loaded.userId,
+      ownerUserId: loaded.regionOwnerUserId,
       regionId: id,
       name: loaded.name,
       kind: "verification",

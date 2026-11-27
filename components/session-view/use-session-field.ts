@@ -28,6 +28,8 @@ import {
   parseFlowOpeningCanvasScene,
   seedPreparedOpeningCanvas,
 } from "@/lib/flow-opening-canvas";
+import { sessionCanvasExcalidrawChrome } from "@/lib/session-sidebar-style";
+import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
@@ -114,6 +116,9 @@ export type SessionFieldInput = {
 };
 
 export function useSessionField(input: SessionFieldInput) {
+  const openingCanvasChrome = sessionCanvasExcalidrawChrome(
+    useSessionSidebarStyle().canvas,
+  );
   const {
     session,
     setSession,
@@ -355,7 +360,11 @@ export function useSessionField(input: SessionFieldInput) {
         coldSceneByChapter: ileWorkCanvasScenesFromWorkspaces(coldContextRef.current),
         focusedSceneRef: whiteboardSceneDataRef,
       });
-      const prepared = seedPreparedOpeningCanvas(picked.sceneToSend, options?.openingScene);
+      const prepared = seedPreparedOpeningCanvas(
+        picked.sceneToSend,
+        options?.openingScene,
+        openingCanvasChrome,
+      );
       if (prepared.seeded) {
         updateChapterWorkspace(boardId, { whiteboardSceneData: prepared.scene });
         if (picked.applyLive || boardId === activeChapterKey) {
@@ -376,6 +385,7 @@ export function useSessionField(input: SessionFieldInput) {
     [
       activeChapterKey,
       coldContextRef,
+      openingCanvasChrome,
       seedChapterWorkCanvas,
       sessionContext,
       updateChapterWorkspace,

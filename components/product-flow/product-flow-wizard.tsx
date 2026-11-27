@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
+  organizationIdJsonBody,
+  withOrganizationId,
+} from "@/lib/organization/active-organization-client";
+import {
   acceptProtocolPublish,
   DASHBOARD_FLOWS_PATH,
   emptyProtocolDraft,
@@ -43,6 +47,11 @@ import {
 } from "@/lib/flow-opening-canvas";
 import { FlowChannelsFields } from "@/components/product-flow/flow-channels-fields";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
+import { ProtocolSettingSelect } from "@/components/product-flow/protocol-setting-select";
+import {
+  EMPTY_SESSION_SIDEBAR_STYLE,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 
 function wizardDescription(step: ProductFlowWizardStep): string {
   if (step === "name") return "A short name for the dashboard list and the public run.";
@@ -65,6 +74,9 @@ export function ProductFlowWizard() {
   const [busy, setBusy] = useState(false);
   const [modelBusy, setModelBusy] = useState(false);
   const [authoringCanvas, setAuthoringCanvas] = useState(false);
+  const [protocolStyle, setProtocolStyle] = useState<SessionSidebarStyle>(
+    EMPTY_SESSION_SIDEBAR_STYLE,
+  );
   const [error, setError] = useState("");
   const canAdvance = productFlowWizardCanAdvance(step, draft);
   const problem = productFlowProblem(draft);
@@ -90,22 +102,25 @@ export function ProductFlowWizard() {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(DASHBOARD_FLOWS_PATH, {
+      const response = await fetch(withOrganizationId(DASHBOARD_FLOWS_PATH), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: accepted.name,
-          challenge: accepted.challenge,
-          artifacts: accepted.artifacts,
-          exactProblemOnCanvas: accepted.exactProblemOnCanvas,
-          openingCanvasScene: accepted.openingCanvasScene,
-          generateProblemOnOpen: accepted.generateProblemOnOpen,
-          actionCatalog: accepted.actionCatalog,
-          durationMinutes: accepted.durationMinutes,
-          answersModelSeed: accepted.answersModelSeed,
-          enforcedChannels: accepted.enforcedChannels,
-          canvasCapture: accepted.canvasCapture,
-        }),
+        body: JSON.stringify(
+          organizationIdJsonBody({
+            name: accepted.name,
+            challenge: accepted.challenge,
+            artifacts: accepted.artifacts,
+            exactProblemOnCanvas: accepted.exactProblemOnCanvas,
+            openingCanvasScene: accepted.openingCanvasScene,
+            generateProblemOnOpen: accepted.generateProblemOnOpen,
+            actionCatalog: accepted.actionCatalog,
+            durationMinutes: accepted.durationMinutes,
+            answersModelSeed: accepted.answersModelSeed,
+            enforcedChannels: accepted.enforcedChannels,
+            canvasCapture: accepted.canvasCapture,
+            protocolSettingId: accepted.protocolSettingId,
+          }),
+        ),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -187,6 +202,7 @@ export function ProductFlowWizard() {
         {authoringCanvas ? (
           <FlowOpeningCanvasHost
             scene={draft.openingCanvasScene}
+            sidebarStyle={protocolStyle}
             onSave={(openingCanvasScene) => {
               patch({ openingCanvasScene });
               setAuthoringCanvas(false);
@@ -206,6 +222,12 @@ export function ProductFlowWizard() {
                 className={FLOW_FORM_INPUT}
               />
             </FlowField>
+            <ProtocolSettingSelect
+              value={draft.protocolSettingId}
+              onChange={(protocolSettingId) => patch({ protocolSettingId })}
+              onStyleChange={setProtocolStyle}
+              disabled={busy}
+            />
             {actions}
           </FlowFormCard>
         ) : null}

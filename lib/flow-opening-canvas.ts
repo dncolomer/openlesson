@@ -7,6 +7,8 @@ import {
   ileWorkCanvasHasLiveElements,
   serializeIleWorkCanvasScene,
   withIleWorkCanvasGridAppState,
+  type IleWorkCanvasAppState,
+  type IleWorkCanvasChrome,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
 
@@ -92,29 +94,42 @@ export function flowOpeningCanvasGenerateProblem(
   return flowOpeningCanvasListing(scene);
 }
 
+function openingCanvasAppState(
+  scene: IleWorkCanvasScene,
+  chrome: IleWorkCanvasChrome | null | undefined,
+  zenModeEnabled: boolean,
+) {
+  const appState: IleWorkCanvasAppState = { ...scene.appState, zenModeEnabled };
+  if (typeof chrome?.gridModeEnabled === "boolean") {
+    appState.gridModeEnabled = chrome.gridModeEnabled;
+  }
+  if (chrome?.currentItemStrokeColor) {
+    appState.currentItemStrokeColor = chrome.currentItemStrokeColor;
+  }
+  return withIleWorkCanvasGridAppState(appState, { chrome });
+}
+
 export function authoringOpeningCanvasScene(
   scene: IleWorkCanvasScene | null | undefined,
+  chrome?: IleWorkCanvasChrome | null,
 ): IleWorkCanvasScene {
   const next = serializeIleWorkCanvasScene(scene);
   return {
     ...next,
-    appState: withIleWorkCanvasGridAppState({
-      ...next.appState,
-      zenModeEnabled: false,
-    }),
+    appState: openingCanvasAppState(next, chrome, false),
   };
 }
 
 export function learnerOpeningCanvasScene(
   scene: IleWorkCanvasScene | null | undefined,
+  chrome?: IleWorkCanvasChrome | null,
 ): IleWorkCanvasScene {
   const next = serializeIleWorkCanvasScene(scene);
+  const zen =
+    typeof chrome?.zenModeEnabled === "boolean" ? chrome.zenModeEnabled : true;
   return {
     ...next,
-    appState: withIleWorkCanvasGridAppState({
-      ...next.appState,
-      zenModeEnabled: true,
-    }),
+    appState: openingCanvasAppState(next, chrome, zen),
   };
 }
 
@@ -125,12 +140,13 @@ export function learnerOpeningCanvasScene(
 export function seedPreparedOpeningCanvas(
   current: IleWorkCanvasScene | null | undefined,
   prepared: IleWorkCanvasScene | null | undefined,
+  chrome?: IleWorkCanvasChrome | null,
 ): { scene: IleWorkCanvasScene; seeded: boolean } {
   const live = serializeIleWorkCanvasScene(current);
   if (ileWorkCanvasHasLiveElements(live)) return { scene: live, seeded: false };
   const next = parseFlowOpeningCanvasScene(prepared);
   if (!next) return { scene: live, seeded: false };
-  return { scene: learnerOpeningCanvasScene(next), seeded: true };
+  return { scene: learnerOpeningCanvasScene(next, chrome), seeded: true };
 }
 
 export function productFlowPublishTopicFromOpeningCanvas(input: {

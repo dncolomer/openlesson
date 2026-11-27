@@ -21,6 +21,7 @@ import {
   flowPowFromWorkspaceRow,
   type DataStudioInspectPayload,
 } from "@/lib/data-studio-view";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { getOrgScopedFileContentResponse, organizationIdFromUser, organizationIdFromWorkspace } from "@/lib/organization/org-xai-files";
 import { applyProofOfWorkRunIdFilter } from "@/lib/region-simulation-persist";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -45,6 +46,13 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
 
     const url = new URL(req.url);
     const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
@@ -58,21 +66,30 @@ export async function GET(req: NextRequest) {
     if (workspaceId) {
       const { data: workspace, error: workspaceError } = await auth.supabase
         .from("workspaces")
-        .select("id, user_id")
+        .select("id, user_id, organization_id")
         .eq("id", workspaceId)
-        .eq("user_id", auth.user.id)
         .maybeSingle();
-      if (workspaceError || !workspace) {
+      const workspaceOrg = String(workspace?.organization_id || "").trim();
+      const inOrg = Boolean(organizationId && workspaceOrg && workspaceOrg === organizationId);
+      const owner = String(workspace?.user_id || "").trim() === auth.user.id;
+      if (workspaceError || !workspace || (!inOrg && !owner)) {
         return jsonError(404, "Workspace not found");
       }
     } else {
-      const { data: owned } = await admin
+      let owned = await admin
         .from("session_embeddings")
         .select("id")
         .eq("owner_user_id", auth.user.id)
         .eq("run_id", runId)
         .limit(1);
-      if (!owned?.length) {
+      if (!owned.data?.length && organizationId) {
+        owned = await admin
+          .from("session_embeddings")
+          .select("id")
+          .eq("run_id", runId)
+          .limit(1);
+      }
+      if (!owned.data?.length) {
         return jsonError(404, "Run not found");
       }
     }
@@ -103,6 +120,7 @@ export async function GET(req: NextRequest) {
 
     const pow = (data || []).map((row) => flowPowFromWorkspaceRow(row));
     const orgId =
+      organizationId ||
       (await organizationIdFromWorkspace(admin, workspaceId || null)) ||
       (await organizationIdFromUser(auth.supabase, auth.user.id));
     const bodies = await loadStoredRecordBodies(pow, async (fileId) => {

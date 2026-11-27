@@ -158,7 +158,9 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     const root = join(__dirname, "../..");
     const files = [
       "public/skill.md",
+      "public/coding-agents.md",
       "docs/PROOF_OF_WORK_API.md",
+      "docs/KNOWLEDGE_REGION_API.md",
       "public/docs/proof-of-work-api-guide.md",
       "app/docs/proof-of-work-api/page.tsx",
       "public/customer-agent-uncertain-systems-policy.md",
@@ -167,6 +169,7 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     for (const rel of files) {
       const src = readFileSync(join(root, rel), "utf8");
       expect(src, rel).toContain("create_protocol");
+      expect(src, rel).toContain("create_knowledge_region");
       expect(src, rel).not.toContain("create_flow");
       expect(src, rel).not.toContain("/api/v3/flows");
       expect(publicDocInstructsHeadlessPowLoop(src), rel).toBe(false);

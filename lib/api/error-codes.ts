@@ -21,6 +21,7 @@ export const KNOWN_ERROR_CODES = [
   "product_access_required",
   "auth_required",
   "api_plan_required",
+  "organization_id_required",
   "guest_missing",
   "schema_outdated",
   "invalid_link",

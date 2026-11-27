@@ -2,7 +2,7 @@
 
 **A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create **knowledge verification protocols** (`create_protocol` or cookie `POST /api/dashboard/protocols`). Agents integrate through `/api/v3/protocols` plus MCP. Proof of work is recorded in the product UI.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create **knowledge verification protocols** (`create_protocol` or cookie `POST /api/dashboard/protocols`) and **knowledge regions** (`create_knowledge_region` or the dashboard wizard). Agents integrate through `/api/v3/protocols`, `/api/v3/knowledge-regions`, plus MCP. Proof of work is recorded in the product UI.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -18,15 +18,16 @@ The hosted product is **Embeddable Knowledge Verification Protocols**. Knowledge
 
 1. **Create a protocol** — MCP `create_protocol` / REST `POST /api/v3/protocols` with `challenge` (The Protocol Challenge). Cookie dashboard remains `POST /api/dashboard/protocols`. Do not send `kind`.
 2. **Read or update** — `get_protocol` / `update_protocol`. Upload context with `upload_protocol_file`; generate Unsys with `generate_protocol_unsys_seed`.
-3. **Learners run the protocol** in the product UI. Proof of work is recorded there.
+3. **Create a knowledge region** — `get_knowledge_region_options` then `create_knowledge_region` with `protocol_ids`, `strategy_ids`, and optional `ai_use_catalog_ids`. Cookie dashboard remains `/regions/new`.
+4. **Learners run the protocol** in the product UI. Proof of work is recorded there.
 
-Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use protocol management. Snapshot, Stash, and headless proof-of-work are not public agent surfaces.
+Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP client) and use protocol and knowledge-region management. Snapshot, Stash, and headless proof-of-work are not public agent surfaces.
 
 ## Key Features
 
 - **Embeddable Knowledge Verification Protocols** — public protocol runs with The Protocol Challenge
 - **Knowledge Regions** — domain geometry for protocols, without a type field
-- **Public agent APIs + MCP** — Protocol and Knowledge Region management (`/api/v3/protocols`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
+- **Public agent APIs + MCP** — Protocol API (`/api/v3/protocols`) and Knowledge Regions API (`/api/v3/knowledge-regions`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
 - **unsys** — practice dialogue in Learn sessions and workspace chat
@@ -155,14 +156,14 @@ Requires `XAI_API_KEY` (STT + action inference). Persist also needs Supabase ser
 
 ## Public agent APIs (v3)
 
-Uncertain Systems exposes **one** public agent family, with MCP parity at `POST /api/mcp`:
+Uncertain Systems exposes **two** public agent families, with MCP parity at `POST /api/mcp`:
 
-- **Protocol management** (`/api/v3/protocols`) — create, list, update, and delete knowledge verification protocols (`create_protocol`, `challenge`).
-- **Knowledge region candidate** (`/api/v3/knowledge-regions/{id}/candidates/{candidate_id}`).
+- **Protocol API** (`/api/v3/protocols`) — create, list, update, and delete knowledge verification protocols (`create_protocol`, `challenge`).
+- **Knowledge Regions API** (`/api/v3/knowledge-regions`) — CRUD, simulation wizard, jobs, stored runs, candidate render, uncertainty-model walk.
 
 Headless proof-of-work, Snapshot, and Stash are not public agent families. Generate an API key from the dashboard (`/dashboard`).
 
-See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
+See [`public/skill.md`](public/skill.md), [`public/coding-agents.md`](public/coding-agents.md), [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md), and [`docs/KNOWLEDGE_REGION_API.md`](docs/KNOWLEDGE_REGION_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
 
 ## Uncertain Systems
 

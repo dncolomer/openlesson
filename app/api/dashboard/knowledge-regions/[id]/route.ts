@@ -8,6 +8,7 @@ import {
   dashboardKnowledgeRegionHref,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { presentKnowledgeRegionDetails } from "@/lib/knowledge-region-details";
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import { productFlowEmbeddingKind } from "@/lib/product-flow";
@@ -43,16 +44,26 @@ export async function GET(
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
     const { id } = await context.params;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
 
     const { data: row, error } = await auth.supabase
       .from("knowledge_regions")
       .select(
-        "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id",
+        "id, workspace_id, owner_user_id, organization_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id",
       )
       .eq("id", id)
-      .eq("owner_user_id", auth.user.id)
       .maybeSingle();
     if (error || !row) return jsonError(404, "Region not found");
+    const rowOrg = String(row.organization_id || "").trim();
+    const owner = String(row.owner_user_id || "").trim();
+    const inOrg = Boolean(organizationId && rowOrg && rowOrg === organizationId);
+    if (!inOrg && owner !== auth.user.id) return jsonError(404, "Region not found");
     if (String(row.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) {
       return jsonError(404, "Region not found");
     }
@@ -60,15 +71,18 @@ export async function GET(
     const presented = presentDashboardKnowledgeRegions([row], auth.user.id)[0];
     if (!presented) return jsonError(404, "Region not found");
 
-    const { data: siblings } = await auth.supabase
+    let siblingQuery = auth.supabase
       .from("knowledge_regions")
       .select(
         "id, name, description, owner_user_id, embedding_model_id, centroid, cosine_threshold, mean_radius, subject_count",
-      )
-      .eq("owner_user_id", auth.user.id);
+      );
+    siblingQuery = organizationId
+      ? siblingQuery.eq("organization_id", organizationId)
+      : siblingQuery.eq("owner_user_id", auth.user.id);
+    const { data: siblings } = await siblingQuery;
 
     const stored = await listFlowEmbeddingsForOwner({
-      ownerUserId: auth.user.id,
+      ownerUserId: owner || auth.user.id,
       flowKind: productFlowEmbeddingKind(),
     });
     const embeddings: DataStudioEmbeddingRow[] = stored.map((item) => ({
@@ -113,15 +127,31 @@ export async function GET(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
     const { id } = await context.params;
+    const { data: row } = await auth.supabase
+      .from("knowledge_regions")
+      .select("id, owner_user_id, organization_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!row) return jsonError(404, "Region not found");
+    const rowOrg = String(row.organization_id || "").trim();
+    const owner = String(row.owner_user_id || "").trim();
+    const inOrg = Boolean(org.organizationId && rowOrg && rowOrg === org.organizationId);
+    if (!inOrg && owner !== auth.user.id) return jsonError(404, "Region not found");
     const result = await trashRegionSimulation({
-      ownerUserId: auth.user.id,
+      ownerUserId: owner || auth.user.id,
       regionId: id,
     });
     return NextResponse.json({

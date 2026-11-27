@@ -35,8 +35,7 @@ import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
 import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
 import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import { problemsForSimulationFlow, runRegionSimulation } from "@/lib/region-simulation-run";
-import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import {
   getVerificationFlowById,
   listVerificationFlowsForDashboard,
@@ -121,10 +120,13 @@ export async function GET(req: NextRequest) {
     } catch {
       embeddings = [];
     }
-    const organizationId = await loadActiveOrganizationId(
-      createAdminClient(),
-      auth.user.id,
-    );
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
     const listed = await listedSimulationFlows({
       ownerUserId: auth.user.id,
       organizationId,
@@ -176,10 +178,14 @@ export async function POST(req: NextRequest) {
       if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
     }
     const selectedFlows = aiUseCatalogIds.length ? protocolIds.slice(0, 1) : protocolIds;
-    const organizationId = await loadActiveOrganizationId(
-      createAdminClient(),
-      auth.user.id,
-    );
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
 
     const flows: Array<{
       id: string;
@@ -197,6 +203,7 @@ export async function POST(req: NextRequest) {
     if (regionSimulationJobsEnabled()) {
       const job = await enqueueRegionSimulation({
         ownerUserId: auth.user.id,
+        organizationId,
         family: "exploration",
         name,
         kind: "verification",
@@ -229,6 +236,7 @@ export async function POST(req: NextRequest) {
         try {
           const result = await runRegionSimulation({
             ownerUserId: auth.user.id,
+            organizationId,
             name,
             kind: "verification",
             flows,

@@ -45,6 +45,7 @@ import {
   parseFlowEnforcedChannels,
   type FlowEnforcedChannels,
 } from "@/lib/flow-channels";
+import { parseProtocolSettingId } from "@/lib/organization/protocol-settings";
 import {
   nextFlowCanvasCapture,
   parseFlowCanvasCapture,
@@ -77,6 +78,8 @@ export type VerificationFlow = {
   answersModelSeed?: AuthorUnsysModelSeed | null;
   enforcedChannels: FlowEnforcedChannels;
   canvasCapture: FlowCanvasCapture;
+  /** Named protocol setting. Null uses the organization default at run time. */
+  protocolSettingId?: string | null;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -542,6 +545,7 @@ export type VerificationCommand =
       answersModelSeed?: unknown;
       enforcedChannels?: unknown;
       canvasCapture?: unknown;
+      protocolSettingId?: string | null;
       id?: string;
       publicToken?: string;
     }
@@ -563,6 +567,7 @@ export type VerificationCommand =
       answersModelSeed?: unknown;
       enforcedChannels?: unknown;
       canvasCapture?: unknown;
+      protocolSettingId?: string | null;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | {
@@ -631,6 +636,7 @@ export function applyVerificationCommand(
       answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
       enforcedChannels: parseFlowEnforcedChannels(command.enforcedChannels),
       canvasCapture: parseFlowCanvasCapture(command.canvasCapture),
+      protocolSettingId: parseProtocolSettingId(command.protocolSettingId),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -687,6 +693,10 @@ export function applyVerificationCommand(
         command.enforcedChannels,
       ),
       canvasCapture: nextFlowCanvasCapture(current.canvasCapture, command.canvasCapture),
+      protocolSettingId:
+        command.protocolSettingId === undefined
+          ? current.protocolSettingId ?? null
+          : parseProtocolSettingId(command.protocolSettingId),
       updatedAt: nowIso(),
     };
     return {

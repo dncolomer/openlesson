@@ -1,7 +1,7 @@
 import type { ContinuousEvaluationPolicy } from "./proof-of-work-schema";
 import { formatInterruptionContractForSkillPrompt } from "./predictive-interruption";
 import { buildIntegrationSkillApiPath } from "./proof-of-work-integration";
-import { PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
+import { KNOWLEDGE_REGION_API_BASE, PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
@@ -9,14 +9,16 @@ export const UNCERTAIN_SYSTEMS_SCOPE = {
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
     "Protocol management — create, list, update, and delete knowledge verification protocols",
+    "Knowledge Regions — create, list, update, delete, simulate, and retrieve candidate/run data",
     "Proof of work is recorded in the product UI — not a public agent session loop",
   ],
   workspace_model:
-    "Knowledge verification protocols are independent. Agents create and update those protocols; learners record proof of work in the product UI.",
+    "Knowledge verification protocols and knowledge regions are independent families. Agents create and update those objects; learners record proof of work in the product UI.",
   integrator_model:
-    "Partner agents authorize with a Bearer key and manage knowledge verification protocols. ChatGPT, Claude, or any MCP client uses the same REST and MCP surface.",
+    "Partner agents authorize with a Bearer key and manage knowledge verification protocols and knowledge regions. ChatGPT, Claude, coding agents, or any MCP client uses the same REST and MCP surface.",
   docs: {
     api_reference: "/skill.md",
+    coding_agents: "/coding-agents.md",
     human_guide: "/docs/proof-of-work-api",
   },
 } as const;
@@ -150,7 +152,7 @@ export function buildContinuousEvaluationMcpPolicy(
         "After long idle gaps to re-orient the agent",
       ],
     },
-    recommended_cadence: `MCP loop: list_protocols → create_protocol → get_protocol → update_protocol. REST mirror: ${PROTOCOL_API_BASE}.`,
+    recommended_cadence: `MCP loop: list_protocols → create_protocol → get_protocol → update_protocol. Knowledge regions: get_knowledge_region_options → create_knowledge_region → get_knowledge_region. REST mirror: ${PROTOCOL_API_BASE} and ${KNOWLEDGE_REGION_API_BASE}.`,
   };
 }
 
@@ -196,6 +198,19 @@ export function recommendIntegrationActions(options: {
       reason: "Update an existing protocol.",
     });
   }
+
+  actions.push({
+    priority: 5,
+    mcp_tool: "get_knowledge_region_options",
+    rest_equivalent: `GET ${KNOWLEDGE_REGION_API_BASE}/options`,
+    reason: "Load wizard options for knowledge-region create (protocols, strategies, AI-use).",
+  });
+  actions.push({
+    priority: 6,
+    mcp_tool: "create_knowledge_region",
+    rest_equivalent: `POST ${KNOWLEDGE_REGION_API_BASE}`,
+    reason: "Create a knowledge region with the simulation wizard.",
+  });
 
   return actions.sort((a, b) => a.priority - b.priority);
 }
@@ -270,26 +285,29 @@ ${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
 ${UNCERTAIN_SYSTEMS_SCOPE.integrator_model}
 
 ## Surfaces (use either)
-- **REST:** \`${base}${PROTOCOL_API_BASE}\` with Bearer API key
+- **REST:** \`${base}${PROTOCOL_API_BASE}\` and \`${base}${KNOWLEDGE_REGION_API_BASE}\` with Bearer API key
 - **MCP:** \`${buildMcpEndpointPattern(baseUrl)}\` with Bearer API key and JSON-RPC tools/list
 
-Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.human_guide}
+Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.coding_agents} · ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.human_guide}
 `;
   }
 
   if (uri === "uncertain-systems://proof-of-work-loop") {
     return `# Protocol management
 
-ChatGPT, Claude, or any MCP client authorizes with a Bearer key and manages knowledge verification protocols. Proof of work is recorded in the product UI.
+ChatGPT, Claude, coding agents, or any MCP client authorizes with a Bearer key and manages knowledge verification protocols and knowledge regions. Proof of work is recorded in the product UI.
 
 ## Recommended loop
 1. **list_protocols** — existing knowledge verification protocols
 2. **create_protocol** / POST ${PROTOCOL_API_BASE} — send challenge (The Protocol Challenge). Do not send kind.
 3. **get_protocol** / GET ${PROTOCOL_API_BASE}/{protocol_id}
 4. **update_protocol** / PATCH ${PROTOCOL_API_BASE}/{protocol_id}
+5. **get_knowledge_region_options** / GET ${KNOWLEDGE_REGION_API_BASE}/options
+6. **create_knowledge_region** / POST ${KNOWLEDGE_REGION_API_BASE}
+7. **get_knowledge_region** / GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}
 
 ## Quick orientation
-Call **list_protocols** for knowledge verification protocols owned by this key.
+Call **list_protocols** for knowledge verification protocols owned by this key. Call **list_knowledge_regions** for regions.
 
 Every schema/skill response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools).
 

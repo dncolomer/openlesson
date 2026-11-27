@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, planDisplayName as formatPlanName, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
+import { ProtocolSettingsTab } from "@/components/organization/protocol-settings-tab";
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
@@ -26,6 +27,10 @@ import {
   type DashboardTab,
 } from "@/lib/dashboard-nav";
 import { clampDashboardTabForAccess } from "@/lib/free-tier";
+import {
+  organizationIdJsonBody,
+  withOrganizationId,
+} from "@/lib/organization/active-organization-client";
 
 interface AgentApiKey {
   id: string;
@@ -293,7 +298,7 @@ export default function DashboardPage() {
 
       // Load Flow API keys (API Metered)
       try {
-        const keysRes = await fetch("/api/dashboard/api-keys");
+        const keysRes = await fetch(withOrganizationId("/api/dashboard/api-keys"));
         if (keysRes.ok) {
           const keysPayload = await keysRes.json();
           const keys = (keysPayload.keys || []).filter((key: AgentApiKey) => key.is_active !== false);
@@ -369,10 +374,10 @@ export default function DashboardPage() {
     if (!newKeyName.trim()) return;
     setCreatingKey(true);
     try {
-      const res = await fetch("/api/dashboard/api-keys", {
+      const res = await fetch(withOrganizationId("/api/dashboard/api-keys"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newKeyName.trim() }),
+        body: JSON.stringify(organizationIdJsonBody({ label: newKeyName.trim() })),
       });
       const data = await res.json();
       const createdKey = data.key;
@@ -410,7 +415,7 @@ export default function DashboardPage() {
   const handleDeleteApiKey = async (id: string) => {
     if (!confirm(t('dashboard.deleteApiKeyConfirm'))) return;
     try {
-      await fetch(`/api/dashboard/api-keys/${id}`, { method: "DELETE" });
+      await fetch(withOrganizationId(`/api/dashboard/api-keys/${id}`), { method: "DELETE" });
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (err) {
       console.error("Failed to delete key:", err);
@@ -523,6 +528,9 @@ export default function DashboardPage() {
   const accessKnown = usageData != null;
   const hasPaidAccess = usageData?.hasPaidAccess === true;
 
+  const protocolSettingsEditorOpen =
+    activeTab === "protocol_settings" && Boolean(searchParams.get("setting")?.trim());
+
   const setDashboardTab = (tab: DashboardTab) => {
     const next = accessKnown ? clampDashboardTabForAccess(tab, hasPaidAccess) : tab;
     setActiveTab(next);
@@ -569,8 +577,20 @@ export default function DashboardPage() {
         hasPaidAccess={hasPaidAccess}
       />
 
-      <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
-      <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
+      <div
+        className={
+          protocolSettingsEditorOpen
+            ? "flex min-h-[36rem] min-w-0 flex-col md:h-full md:min-h-0 md:overflow-hidden"
+            : "min-w-0 md:min-h-0 md:overflow-y-auto"
+        }
+      >
+      <main
+        className={
+          protocolSettingsEditorOpen
+            ? "flex h-full min-h-0 flex-col overflow-hidden p-0"
+            : "overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8"
+        }
+      >
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <DashboardSessionsTab
@@ -604,6 +624,10 @@ export default function DashboardPage() {
         ) : null}
 
         {activeTab === "organization" && <OrganizationDashboardTab />}
+
+        {activeTab === "protocol_settings" && (
+          <ProtocolSettingsTab settingId={searchParams.get("setting")} />
+        )}
 
         {activeTab === "upgrade" && (
           <DashboardUpgradeTab

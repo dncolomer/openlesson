@@ -2,7 +2,7 @@
  * Owner Home dashboard: recent knowledge verification protocols
  * in the caller's active organization.
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
@@ -11,7 +11,7 @@ import {
   sortDashboardRecentFlows,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
-import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
 import { productFlowOwnerTitle } from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -20,13 +20,19 @@ export const runtime = "nodejs";
 
 const FLOW_LIMIT = 8;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
 
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
     const admin = createAdminClient();
-    const organizationId = await loadActiveOrganizationId(admin, auth.user.id);
     let verificationRes = organizationId
       ? await admin
           .from("verify_flows")

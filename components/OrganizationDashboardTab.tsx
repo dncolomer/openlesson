@@ -10,20 +10,11 @@ import {
   fileToLogoPayload,
   validateLogoFile,
 } from "@/lib/organization/logo-client";
-import { readCustomAestheticUrls } from "@/lib/organization/custom-aesthetic-set";
-import {
-  fileToAestheticPayload,
-  validateAestheticFile,
-} from "@/lib/organization/custom-aesthetics-client";
-import { CustomAestheticsStyler } from "@/components/organization/custom-aesthetics-styler";
-import {
-  EMPTY_SESSION_SIDEBAR_STYLE,
-  parseSessionCanvasStyle,
-  parseSessionSidebarStyle,
-  type SessionCanvasStyle,
-  type SessionSidebarStyle,
-} from "@/lib/session-sidebar-style";
 import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
+import {
+  organizationIdJsonBody,
+  withOrganizationId,
+} from "@/lib/organization/active-organization-client";
 import type { OrgBackendPublic } from "@/lib/organization/org-backends";
 
 function apiErrorMessage(body: unknown, fallback: string): string {
@@ -57,8 +48,6 @@ interface Organization {
   name: string;
   slug: string;
   logo_url?: string | null;
-  custom_aesthetic_urls?: string[] | null;
-  sidebar_style?: SessionSidebarStyle | null;
   created_at: string;
 }
 
@@ -98,13 +87,8 @@ export function OrganizationDashboardTab() {
   const [inviteCount, setInviteCount] = useState(1);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [removingMember, setRemovingMember] = useState<string | null>(null);
+  const [changingRoleMember, setChangingRoleMember] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [aestheticUrls, setAestheticUrls] = useState<string[]>([]);
-  const [sidebarStyle, setSidebarStyle] = useState<SessionSidebarStyle>(EMPTY_SESSION_SIDEBAR_STYLE);
-  const [sidebarPrompt, setSidebarPrompt] = useState("");
-  const [stylingSidebar, setStylingSidebar] = useState(false);
-  const [uploadingAesthetics, setUploadingAesthetics] = useState(false);
-  const [removingAestheticUrl, setRemovingAestheticUrl] = useState<string | null>(null);
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
   const [backends, setBackends] = useState<OrgBackendPublic | null>(null);
   const [llmMode, setLlmMode] = useState<"platform" | "custom">("platform");
@@ -160,10 +144,6 @@ export function OrganizationDashboardTab() {
       }
 
       setOrganization(data.organization);
-      setAestheticUrls(readCustomAestheticUrls(data.organization?.custom_aesthetic_urls));
-      const nextStyle = parseSessionSidebarStyle(data.organization?.sidebar_style);
-      setSidebarStyle(nextStyle);
-      setSidebarPrompt(nextStyle.prompt);
       setIsOrgAdmin(data.is_org_admin);
       setMembers(data.members || []);
       setInvites(data.invites || []);
@@ -230,6 +210,42 @@ export function OrganizationDashboardTab() {
     } catch (err) {
       console.error("Delete invite error:", err);
       alert(t("organization.revokeError"));
+    }
+  };
+
+  const handleChangeMemberRole = async (
+    memberId: string,
+    memberName: string,
+    makeAdmin: boolean,
+  ) => {
+    const message = makeAdmin
+      ? t("organization.makeAdminConfirm", { memberName })
+      : t("organization.makeMemberConfirm", { memberName });
+    if (!confirm(message)) return;
+
+    setChangingRoleMember(memberId);
+    try {
+      const res = await fetch(withOrganizationId("/api/organization/members"), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          organizationIdJsonBody({
+            memberId,
+            is_org_admin: makeAdmin,
+          }),
+        ),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.changeRoleError")));
+        return;
+      }
+      void loadOrganization();
+    } catch (err) {
+      console.error("Change member role error:", err);
+      alert(t("organization.changeRoleError"));
+    } finally {
+      setChangingRoleMember(null);
     }
   };
 
@@ -309,39 +325,6 @@ export function OrganizationDashboardTab() {
     }
   };
 
-  const handleAestheticUpload = async (files: FileList | null) => {
-    const list = files ? Array.from(files) : [];
-    if (list.length === 0) return;
-    for (const file of list) {
-      const err = validateAestheticFile(file);
-      if (err) {
-        alert(err);
-        return;
-      }
-    }
-    setUploadingAesthetics(true);
-    try {
-      const images = await Promise.all(list.map((file) => fileToAestheticPayload(file)));
-      const res = await fetch("/api/organization/aesthetics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.aestheticUploadError")));
-        return;
-      }
-      setAestheticUrls(readCustomAestheticUrls(data.images));
-      if (data.style) setSidebarStyle(parseSessionSidebarStyle(data.style));
-    } catch (uploadErr) {
-      console.error("Custom aesthetic upload error:", uploadErr);
-      alert(t("organization.aestheticUploadError"));
-    } finally {
-      setUploadingAesthetics(false);
-    }
-  };
-
   const handleSaveBackends = async () => {
     setSavingBackends(true);
     try {
@@ -402,107 +385,6 @@ export function OrganizationDashboardTab() {
       alert(t("organization.ssoError"));
     } finally {
       setSsoLoading(false);
-    }
-  };
-
-  const handleRemoveAesthetic = async (url: string) => {
-    setRemovingAestheticUrl(url);
-    try {
-      const res = await fetch("/api/organization/aesthetics", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.aestheticRemoveError")));
-        return;
-      }
-      setAestheticUrls(readCustomAestheticUrls(data.images));
-      if (data.style) setSidebarStyle(parseSessionSidebarStyle(data.style));
-    } catch (removeErr) {
-      console.error("Custom aesthetic remove error:", removeErr);
-      alert(t("organization.aestheticRemoveError"));
-    } finally {
-      setRemovingAestheticUrl(null);
-    }
-  };
-
-  const applyAestheticsPayload = (data: { images?: unknown; style?: unknown }) => {
-    setAestheticUrls(readCustomAestheticUrls(data.images));
-    if (data.style) {
-      const next = parseSessionSidebarStyle(data.style);
-      setSidebarStyle(next);
-      setSidebarPrompt(next.prompt);
-    }
-  };
-
-  const handleStyleSidebar = async () => {
-    const prompt = sidebarPrompt.trim();
-    if (!prompt) return;
-    setStylingSidebar(true);
-    try {
-      const res = await fetch("/api/organization/aesthetics/style", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
-        return;
-      }
-      applyAestheticsPayload(data);
-    } catch (styleErr) {
-      console.error("Sidebar style error:", styleErr);
-      alert(t("organization.sidebarStyleError"));
-    } finally {
-      setStylingSidebar(false);
-    }
-  };
-
-  const handleCanvasStyle = async (canvas: SessionCanvasStyle) => {
-    const nextCanvas = parseSessionCanvasStyle(canvas);
-    setSidebarStyle((prev) => ({ ...prev, canvas: nextCanvas }));
-    try {
-      const res = await fetch("/api/organization/aesthetics/style", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvas: nextCanvas }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
-        return;
-      }
-      applyAestheticsPayload(data);
-    } catch (canvasErr) {
-      console.error("Canvas style error:", canvasErr);
-      alert(t("organization.sidebarStyleError"));
-    }
-  };
-
-  const handleResetSidebarStyle = async () => {
-    setStylingSidebar(true);
-    try {
-      const res = await fetch("/api/organization/aesthetics/style", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reset: true }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
-        return;
-      }
-      applyAestheticsPayload(data);
-      setSidebarPrompt("");
-      setSidebarStyle(EMPTY_SESSION_SIDEBAR_STYLE);
-    } catch (styleErr) {
-      console.error("Sidebar style reset error:", styleErr);
-      alert(t("organization.sidebarStyleError"));
-    } finally {
-      setStylingSidebar(false);
     }
   };
 
@@ -873,43 +755,6 @@ export function OrganizationDashboardTab() {
       )}
 
       {isOrgAdmin && (
-        <CustomAestheticsStyler
-          urls={aestheticUrls}
-          style={sidebarStyle}
-          prompt={sidebarPrompt}
-          onPromptChange={setSidebarPrompt}
-          uploading={uploadingAesthetics}
-          generating={stylingSidebar}
-          removingUrl={removingAestheticUrl}
-          onUpload={(files) => void handleAestheticUpload(files)}
-          onRemove={(url) => void handleRemoveAesthetic(url)}
-          onCanvasChange={(canvas) => void handleCanvasStyle(canvas)}
-          onGenerate={() => void handleStyleSidebar()}
-          onReset={() => void handleResetSidebarStyle()}
-          labels={{
-            kicker: t("organization.customAesthetics"),
-            title: t("organization.customAestheticsTitle"),
-            helper: t("organization.customAestheticsHelper"),
-            prompt: t("organization.sidebarStylePrompt"),
-            promptPlaceholder: t("organization.sidebarStylePromptPlaceholder"),
-            apply: t("organization.sidebarStyleApply"),
-            applying: t("organization.sidebarStyleApplying"),
-            reset: t("organization.sidebarStyleReset"),
-            upload: t("organization.uploadAesthetics"),
-            uploading: t("organization.uploadingAesthetics"),
-            empty: t("organization.noCustomAesthetics"),
-            remove: t("organization.removeAesthetic"),
-            removing: t("organization.removingAesthetic"),
-            canvas: t("organization.canvasStyle"),
-            canvasHelper: t("organization.canvasStyleHelper"),
-            canvasBackground: t("organization.canvasBackground"),
-            canvasStroke: t("organization.canvasStroke"),
-            canvasZen: t("organization.canvasZenMode"),
-          }}
-        />
-      )}
-
-      {isOrgAdmin && (
         <section className="grid gap-4 sm:grid-cols-3">
           <div className={cardPaddedClass}>
             <p className={labelClass}>{t("organization.members")}</p>
@@ -990,20 +835,48 @@ export function OrganizationDashboardTab() {
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right sm:px-6">
-                      <button
-                        onClick={() =>
-                          handleRemoveMember(
-                            member.id,
-                            member.username || member.email || "this user"
-                          )
-                        }
-                        disabled={removingMember === member.id}
-                        className={dangerBtnClass}
-                      >
-                        {member.id === currentUserId
-                          ? t("organization.leave")
-                          : t("organization.remove")}
-                      </button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {member.id !== currentUserId ? (
+                          <button
+                            type="button"
+                            data-org-member-role
+                            onClick={() =>
+                              handleChangeMemberRole(
+                                member.id,
+                                member.username || member.email || "this user",
+                                !member.is_org_admin,
+                              )
+                            }
+                            disabled={
+                              changingRoleMember === member.id ||
+                              removingMember === member.id
+                            }
+                            className={dangerBtnClass}
+                          >
+                            {member.is_org_admin
+                              ? t("organization.makeMember")
+                              : t("organization.makeAdmin")}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveMember(
+                              member.id,
+                              member.username || member.email || "this user"
+                            )
+                          }
+                          disabled={
+                            removingMember === member.id ||
+                            changingRoleMember === member.id
+                          }
+                          className={dangerBtnClass}
+                        >
+                          {member.id === currentUserId
+                            ? t("organization.leave")
+                            : t("organization.remove")}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

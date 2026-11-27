@@ -78,6 +78,10 @@ import {
   type KnowledgeRegionUncertaintyModelRender,
 } from "@/lib/knowledge-region-unsys";
 import {
+  organizationIdJsonBody,
+  withOrganizationId,
+} from "@/lib/organization/active-organization-client";
+import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
   dashboardKnowledgeRegionSimulationPath,
 } from "@/lib/dashboard-knowledge-regions";
@@ -185,7 +189,7 @@ export function KnowledgeRegionPage({
     const href =
       detailsUrl ||
       `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}`;
-    void fetch(href)
+    void fetch(withOrganizationId(href))
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -282,7 +286,7 @@ export function KnowledgeRegionPage({
     const params = new URLSearchParams();
     if (selectedSample.workspace_id) params.set("workspaceId", selectedSample.workspace_id);
     if (selectedSample.run_id) params.set("runId", selectedSample.run_id);
-    void fetch(`${DASHBOARD_KNOWLEDGE_REGION_RUN_PATH}?${params.toString()}`)
+    void fetch(withOrganizationId(`${DASHBOARD_KNOWLEDGE_REGION_RUN_PATH}?${params.toString()}`))
       .then(async (response) => {
         const body = (await response.json().catch(() => ({}))) as {
           pow?: FlowPowRow[];
@@ -316,7 +320,7 @@ export function KnowledgeRegionPage({
       candidateId,
       runId: selectedSample.run_id || selectedSample.id,
     });
-    void fetch(href)
+    void fetch(withOrganizationId(href))
       .then(async (response) => {
         const body = (await response.json().catch(() => ({}))) as KnowledgeRegionUncertaintyModelRender;
         if (!cancelled && response.ok && body?.overlay) {
@@ -550,7 +554,9 @@ export function KnowledgeRegionPage({
 
   async function pollSimulationJob(jobId: string): Promise<Record<string, unknown>> {
     for (let i = 0; i < 180; i += 1) {
-      const status = await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}`);
+      const status = await fetch(
+        withOrganizationId(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}`),
+      );
       const payload = (await status.json().catch(() => ({}))) as Record<string, unknown>;
       const jobStatus = String(payload.status || "");
       if (jobStatus === "done") return payload;
@@ -558,9 +564,10 @@ export function KnowledgeRegionPage({
         throw new Error(String(payload.error || "Simulation job failed"));
       }
       if (jobStatus === "queued" || jobStatus === "running") {
-        await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`, {
-          method: "POST",
-        }).catch(() => null);
+        await fetch(
+          withOrganizationId(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`),
+          { method: "POST" },
+        ).catch(() => null);
       }
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
@@ -571,10 +578,10 @@ export function KnowledgeRegionPage({
     setSimBusy(true);
     setSimError("");
     try {
-      const response = await fetch(simulationPath, {
+      const response = await fetch(withOrganizationId(simulationPath), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(organizationIdJsonBody(body)),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -605,7 +612,9 @@ export function KnowledgeRegionPage({
     setSimError("");
     try {
       const response = await fetch(
-        `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}`,
+        withOrganizationId(
+          `${DASHBOARD_KNOWLEDGE_REGIONS_PATH}/${encodeURIComponent(regionId)}`,
+        ),
         { method: "DELETE" },
       );
       const payload = await response.json().catch(() => ({}));

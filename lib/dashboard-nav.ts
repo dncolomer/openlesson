@@ -12,6 +12,7 @@ export const DASHBOARD_TABS = [
   "usage",
   "upgrade",
   "organization",
+  "protocol_settings",
   "integrations",
   "sessions",
   "config",
@@ -58,7 +59,8 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     items: [
       { id: "usage", label: "Usage" },
       { id: "upgrade", label: "Buy more credits" },
-      { id: "organization", label: "Organization" },
+      { id: "organization", label: "Organization", cluster: "org" },
+      { id: "protocol_settings", label: "Protocol Settings", cluster: "org" },
       { id: "integrations", label: "Integrations" },
     ],
   },
@@ -143,6 +145,14 @@ export function parseDashboardTab(value: unknown): DashboardTab {
   ) {
     return "regions";
   }
+  if (
+    value === "style" ||
+    value === "aesthetics" ||
+    value === "custom_aesthetics" ||
+    value === "sidebar_style"
+  ) {
+    return "protocol_settings";
+  }
   if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
   return "home";
@@ -150,6 +160,12 @@ export function parseDashboardTab(value: unknown): DashboardTab {
 
 export function dashboardHrefForTab(tab: DashboardTab): string {
   return tab === "home" ? "/dashboard" : `/dashboard?tab=${tab}`;
+}
+
+export function dashboardProtocolSettingsHref(settingId?: string | null): string {
+  const id = String(settingId || "").trim();
+  if (!id) return dashboardHrefForTab("protocol_settings");
+  return `/dashboard?tab=protocol_settings&setting=${encodeURIComponent(id)}`;
 }
 
 export function dashboardTabForProductSurface(
@@ -185,6 +201,7 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "protocols") return "Protocols";
   if (tab === "regions") return "Knowledge Regions";
   if (tab === "organization") return "Organization";
+  if (tab === "protocol_settings") return "Protocol Settings";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";
   if (tab === "upgrade") return "Buy more credits";

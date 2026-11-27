@@ -12,6 +12,7 @@ import { dashboardCreateHref, dashboardCreateLabel } from "@/lib/dashboard-nav";
 import { DASHBOARD_FLOWS_PATH, PROTOCOL_CHALLENGE_LABEL } from "@/lib/product-flow";
 import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { withOrganizationId } from "@/lib/organization/active-organization-client";
 import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 
 export function DashboardFlowsTab({
@@ -28,10 +29,14 @@ export function DashboardFlowsTab({
 
   useEffect(() => {
     let cancelled = false;
-    const load = () => {
+    const load = (event?: Event) => {
+      const readId = (evt?: Event) =>
+        evt && "detail" in evt
+          ? String((evt as CustomEvent<{ organizationId?: string }>).detail?.organizationId || "")
+          : "";
       setLoading(true);
       setError("");
-      fetch(DASHBOARD_FLOWS_PATH)
+      fetch(withOrganizationId(DASHBOARD_FLOWS_PATH, readId(event)))
         .then(async (response) => {
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) {

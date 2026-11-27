@@ -13,6 +13,7 @@ import {
   setAuthorUnsysEdgePrice,
 } from "@/lib/author-unsys-model";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { organizationIdJsonBody } from "@/lib/organization/active-organization-client";
 import {
   FLOW_ARTIFACT_ACCEPT,
   FLOW_ARTIFACT_MAX_COUNT,
@@ -115,14 +116,16 @@ export function FlowUnsysModelStep({
       const response = await fetch(FLOW_UNSYS_SEED_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          problem,
-          artifacts: contextFiles,
-          openingCanvasScene,
-          guidance: prompt,
-          ...(parentId && model ? { parentId, seedModel: model } : {}),
-        }),
+        body: JSON.stringify(
+          organizationIdJsonBody({
+            name,
+            problem,
+            artifacts: contextFiles,
+            openingCanvasScene,
+            guidance: prompt,
+            ...(parentId && model ? { parentId, seedModel: model } : {}),
+          }),
+        ),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {

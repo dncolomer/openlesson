@@ -217,11 +217,12 @@ export const ILE_WORK_CANVAS_ROUNDNESS = "sharp" as const;
 /** Excalidraw's shipped edge default before our Work-canvas default. */
 export const EXCALIDRAW_DEFAULT_ROUNDNESS = "round" as const;
 
-/** Org board chrome: stored (pre-invert) Excalidraw colors plus zen default. */
+/** Org board chrome: stored (pre-invert) Excalidraw colors plus zen/grid defaults. */
 export type IleWorkCanvasChrome = {
   viewBackgroundColor?: string | null;
   currentItemStrokeColor?: string | null;
   zenModeEnabled?: boolean | null;
+  gridModeEnabled?: boolean | null;
 };
 
 export type IleWorkCanvasGridAppStateOptions = {
@@ -236,7 +237,9 @@ export function withIleWorkCanvasGridAppState(
 ): IleWorkCanvasAppState {
   const next = asRecord(appState);
   const chrome = options?.chrome;
-  if (typeof next.gridModeEnabled !== "boolean") next.gridModeEnabled = true;
+  if (typeof next.gridModeEnabled !== "boolean") {
+    next.gridModeEnabled = typeof chrome?.gridModeEnabled === "boolean" ? chrome.gridModeEnabled : true;
+  }
   if (typeof next.zenModeEnabled !== "boolean") {
     next.zenModeEnabled = typeof chrome?.zenModeEnabled === "boolean" ? chrome.zenModeEnabled : true;
   }

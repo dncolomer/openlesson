@@ -27,6 +27,30 @@ export function canListAllOrganizations(input: {
   return normalizeEmail(input.email) === PLATFORM_ORG_ADMIN_EMAIL;
 }
 
+/** True when demoting or removing `memberId` would leave zero org admins. */
+export function wouldLeaveOrganizationWithoutAdmin(
+  members: Array<{ userId: string; isOrgAdmin: boolean }>,
+  memberId: string,
+): boolean {
+  const id = String(memberId || "").trim();
+  if (!id) return true;
+  return !members.some((row) => row.isOrgAdmin && row.userId !== id);
+}
+
+/** Parse PATCH body for org-admin vs member. */
+export function parseOrganizationMemberAdminFlag(body: {
+  is_org_admin?: unknown;
+  isOrgAdmin?: unknown;
+  role?: unknown;
+}): boolean | null {
+  if (typeof body.is_org_admin === "boolean") return body.is_org_admin;
+  if (typeof body.isOrgAdmin === "boolean") return body.isOrgAdmin;
+  const role = String(body.role ?? "").trim().toLowerCase();
+  if (role === "admin") return true;
+  if (role === "member") return false;
+  return null;
+}
+
 export function isMissingOrganizationMembersTable(error: {
   message?: string;
   code?: string;

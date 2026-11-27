@@ -3,7 +3,7 @@
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
  * Public families: knowledge verification protocols (/api/v3/protocols)
- * and knowledge-region candidate render.
+ * and Knowledge Regions (/api/v3/knowledge-regions).
  * Learning Maps, workspaces, headless proof-of-work, Snapshot, and Stash
  * are not public agent APIs.
  */
@@ -74,6 +74,11 @@ export function buildMcpOAuthDiscovery(origin: string) {
 export function buildSkillFileUrl(origin: string): string {
   const base = origin.replace(/\/$/, "");
   return `${base}/skill.md`;
+}
+
+export function buildCodingAgentsUrl(origin: string): string {
+  const base = origin.replace(/\/$/, "");
+  return `${base}/coding-agents.md`;
 }
 
 export function buildMcpOAuthClientConfig(origin: string): string {

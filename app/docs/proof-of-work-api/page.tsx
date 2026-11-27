@@ -20,9 +20,13 @@ export default function ProtocolApiPage() {
           <p className={labelClass}>Public agent API v3</p>
           <h1 className="mt-2 text-3xl font-medium text-white">Protocol API</h1>
           <p className="mt-3 max-w-3xl text-sm text-neutral-400">
-            Agents and humans create knowledge verification protocols with a Bearer API key.
-            Proof of work is recorded in the product UI. Headless session upload is not a public
-            agent API.
+            Agents and humans create knowledge verification protocols and knowledge regions with a
+            Bearer API key. Proof of work is recorded in the product UI. Headless session upload is
+            not a public agent API. Coding agents:{" "}
+            <Link href="/coding-agents.md" className="underline">
+              /coding-agents.md
+            </Link>
+            .
           </p>
         </header>
 
@@ -66,6 +70,13 @@ Content-Type: application/json`}</pre>
               Create/update take one Author source: written Protocol Challenge, files, or a prepared
               board. Do not send <code className="text-neutral-300">kind</code>.
             </li>
+            <li>
+              <strong className="font-medium text-neutral-200">Knowledge regions</strong> — separate
+              family at <code className="text-neutral-300">/api/v3/knowledge-regions</code>. Create
+              matches the dashboard wizard: protocols, exploration strategies, optional AI-use
+              simulation. Retrieve clusters, samples, stored runs, candidate metrics, and the
+              uncertainty-model walk.
+            </li>
           </ul>
           <p className="mt-4 text-sm text-neutral-400">
             Choose one source. <code className="text-neutral-300">exact_problem_on_canvas</code> is
@@ -74,8 +85,15 @@ Content-Type: application/json`}</pre>
             <code className="text-neutral-300">opening_canvas_scene</code> ignores exact problem.
             Prepared board wins if more than one source is sent.
           </p>
+          <p className="mt-4 text-sm text-neutral-400">
+            Every call requires <code className="text-neutral-300">organization_id</code> (JSON, query, or
+            header <code className="text-neutral-300">X-Organization-Id</code>). Missing returns{" "}
+            <code className="text-neutral-300">400</code>{" "}
+            <code className="text-neutral-300">organization_id_required</code>.
+          </p>
           <pre className={codeBlockClass}>{`POST /api/v3/protocols
 {
+  "organization_id": "00000000-0000-0000-0000-000000000000",
   "name": "Linear systems",
   "challenge": "Solve Ax = b",
   "exact_problem_on_canvas": true,
@@ -84,6 +102,7 @@ Content-Type: application/json`}</pre>
 
 POST /api/v3/protocols
 {
+  "organization_id": "00000000-0000-0000-0000-000000000000",
   "name": "Decoder",
   "artifacts": [{ "name": "brief.pdf", "xai_file_id": "file_…" }],
   "generate_problem_on_open": true
@@ -91,6 +110,7 @@ POST /api/v3/protocols
 
 POST /api/v3/protocols
 {
+  "organization_id": "00000000-0000-0000-0000-000000000000",
   "name": "Board protocol",
   "opening_canvas_scene": { "elements": [], "appState": {}, "files": {} }
 }`}</pre>
@@ -125,13 +145,18 @@ Authorization: Bearer sk_…
             <code className="text-neutral-300">create_protocol</code> →{" "}
             <code className="text-neutral-300">get_protocol</code> →{" "}
             <code className="text-neutral-300">update_protocol</code>. REST lives at{" "}
-            <code className="text-neutral-300">/api/v3/protocols</code>.
+            <code className="text-neutral-300">/api/v3/protocols</code>. Regions:{" "}
+            <code className="text-neutral-300">get_knowledge_region_options</code> →{" "}
+            <code className="text-neutral-300">create_knowledge_region</code> →{" "}
+            <code className="text-neutral-300">get_knowledge_region</code>. REST lives at{" "}
+            <code className="text-neutral-300">/api/v3/knowledge-regions</code>.
           </p>
           <p className="mt-2 text-sm text-neutral-500">
             Do not call <code className="text-neutral-400">start_session</code>,{" "}
             <code className="text-neutral-400">upload_proof_of_work</code>, or{" "}
             <code className="text-neutral-400">end_session</code>. Those tools are not on the public catalog.
-            Static skill: <Link href="/skill.md" className="underline">/skill.md</Link>.
+            Static skill: <Link href="/skill.md" className="underline">/skill.md</Link>. Coding agents:{" "}
+            <Link href="/coding-agents.md" className="underline">/coding-agents.md</Link>.
           </p>
         </section>
       </main>

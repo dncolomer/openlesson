@@ -11,6 +11,7 @@ import { SESSION_TOPIC_CARD_REM, formatLearnElapsedClock } from "@/lib/session-s
 
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
+import type { SessionSidebarStyle } from "@/lib/session-sidebar-style";
 
 export type SessionTopicCardInput = {
   id?: string;
@@ -89,6 +90,7 @@ export function SessionTopicCard({
   image,
   customUrls,
   systemImages,
+  sidebarStyle: sidebarStyleProp,
 }: {
   id: string;
   title: string;
@@ -96,6 +98,7 @@ export function SessionTopicCard({
   description?: string | null;
   customUrls?: readonly string[] | null;
   systemImages?: readonly string[] | null;
+  sidebarStyle?: SessionSidebarStyle | null;
 }) {
   const explicitCustom = customUrls && customUrls.length > 0 ? customUrls : null;
   const explicitSystem = systemImages && systemImages.length > 0 ? systemImages : null;
@@ -120,7 +123,8 @@ export function SessionTopicCard({
           : surface.source === "fallback" || surface.source === "packages"
             ? surface.images
             : [];
-  const sidebarStyle = useSessionSidebarStyle();
+  const loadedSidebarStyle = useSessionSidebarStyle();
+  const sidebarStyle = sidebarStyleProp ?? loadedSidebarStyle;
   const styledCustom = sidebarStyle.backgroundImage
     ? [
         sidebarStyle.backgroundImage,

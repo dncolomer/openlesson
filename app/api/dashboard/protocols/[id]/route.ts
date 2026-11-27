@@ -17,6 +17,13 @@ import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
 import { parseFlowCanvasCapture } from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
+import {
+  isProtocolSettingsError,
+  parseProtocolSettingId,
+} from "@/lib/organization/protocol-settings";
+import { assertProtocolSettingInOrg } from "@/lib/organization/protocol-settings-store";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getVerificationFlowById,
   runVerificationCommand,
@@ -47,6 +54,7 @@ function presentOwnedLinks(links: readonly FlowLink[], origin: string) {
 async function loadOwnedFlow(
   req: NextRequest,
   id: string,
+  body?: Record<string, unknown> | null,
 ): Promise<
   | { ok: false; response: NextResponse }
   | {
@@ -65,8 +73,19 @@ async function loadOwnedFlow(
       response: jsonError(400, "Only knowledge verification protocols are supported"),
     };
   }
+  const org = await resolveDashboardOrganizationId({
+    req,
+    userId: auth.user.id,
+    email: auth.user.email,
+    body,
+  });
+  if (!org.ok) return org;
   const flow = await getVerificationFlowById(id);
-  if (flow && flowOwnedByUser(flow, auth.user.id)) {
+  if (!flow) return { ok: false, response: jsonError(404, "Protocol not found") };
+  const flowOrg = String(flow.organizationId || "").trim();
+  const requestedOrg = String(org.organizationId || "").trim();
+  const inOrg = Boolean(requestedOrg && flowOrg && flowOrg === requestedOrg);
+  if (flowOwnedByUser(flow, auth.user.id) || inOrg) {
     return {
       ok: true,
       ownerUserId: auth.user.id,
@@ -115,9 +134,9 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const loaded = await loadOwnedFlow(req, id);
-    if (!loaded.ok) return loaded.response;
     const body = (await req.json()) as Record<string, unknown>;
+    const loaded = await loadOwnedFlow(req, id, body);
+    if (!loaded.ok) return loaded.response;
     const action = typeof body.action === "string" ? body.action : "update";
     if (action === "addLink") {
       const created = await createFlowLink({
@@ -193,6 +212,21 @@ export async function POST(
       body.canvasCapture === undefined && body.canvas_capture === undefined
         ? undefined
         : parseFlowCanvasCapture(body.canvasCapture ?? body.canvas_capture);
+    const protocolSettingId =
+      body.protocol_setting_id === undefined && body.protocolSettingId === undefined
+        ? undefined
+        : parseProtocolSettingId(body.protocol_setting_id ?? body.protocolSettingId);
+    if (protocolSettingId !== undefined) {
+      const flowOrg = String(loaded.flow.organizationId || "").trim();
+      if (flowOrg) {
+        try {
+          await assertProtocolSettingInOrg(createAdminClient(), flowOrg, protocolSettingId);
+        } catch (error) {
+          if (isProtocolSettingsError(error)) return jsonError(error.status, error.message);
+          throw error;
+        }
+      }
+    }
 
     const updated = await runVerificationCommand({
       type: "update",
@@ -209,6 +243,7 @@ export async function POST(
       answersModelSeed,
       enforcedChannels,
       canvasCapture,
+      protocolSettingId,
     });
     if (!updated.ok) return jsonError(400, updated.reason);
     return NextResponse.json({

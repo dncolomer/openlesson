@@ -1,14 +1,17 @@
 /**
  * Single inventory of public agent tools (MCP tools/list + REST twins).
  * Families: Embeddable Knowledge Verification Protocols and
- * knowledge-region candidate render. Learning Maps, workspaces, Helios
- * map tools, headless proof-of-work, Snapshot, and Stash are not public.
+ * Knowledge Regions (CRUD, wizard simulation, candidate render).
+ * Learning Maps, workspaces, Helios map tools, headless proof-of-work,
+ * Snapshot, and Stash are not public.
  */
 
 import {
   FLOW_FILES_API_PATH,
   FLOW_UNSYS_SEED_API_PATH,
   KNOWLEDGE_REGION_API_BASE,
+  KNOWLEDGE_REGION_JOBS_API_PATH,
+  KNOWLEDGE_REGION_OPTIONS_API_PATH,
   PROTOCOL_API_BASE,
   type PublicAgentApiFamily,
 } from "@/lib/api/agent-api-paths";
@@ -33,7 +36,7 @@ export const AGENT_TOOL_SURFACE = [
     name: "list_protocols",
     family: "protocol",
     scope: "workspaces:read",
-    summary: "List knowledge verification protocols owned by this key.",
+    summary: "List knowledge verification protocols in the requested organization.",
     rest: {
       method: "GET",
       path: PROTOCOL_API_BASE,
@@ -102,6 +105,100 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
+    name: "list_knowledge_regions",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary: "List knowledge regions in the requested organization.",
+    rest: {
+      method: "GET",
+      path: KNOWLEDGE_REGION_API_BASE,
+    },
+  },
+  {
+    name: "get_knowledge_region_options",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary:
+      "Wizard options for creating a knowledge region: protocols, exploration strategies, AI-use catalog, and sample bounds.",
+    rest: {
+      method: "GET",
+      path: KNOWLEDGE_REGION_OPTIONS_API_PATH,
+    },
+  },
+  {
+    name: "create_knowledge_region",
+    family: "knowledge_region",
+    scope: "workspaces:write",
+    summary:
+      "Create a knowledge region by running the simulation wizard (protocols, exploration strategies, optional AI-use).",
+    rest: {
+      method: "POST",
+      path: KNOWLEDGE_REGION_API_BASE,
+    },
+  },
+  {
+    name: "get_knowledge_region",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary: "Read one knowledge region: clusters, strategies, AI-use clusters, and samples (no vectors).",
+    rest: {
+      method: "GET",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}`,
+    },
+  },
+  {
+    name: "update_knowledge_region",
+    family: "knowledge_region",
+    scope: "workspaces:write",
+    summary: "Rename a knowledge region.",
+    rest: {
+      method: "PATCH",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}`,
+    },
+  },
+  {
+    name: "delete_knowledge_region",
+    family: "knowledge_region",
+    scope: "workspaces:write",
+    summary: "Delete a knowledge region and its simulation clusters.",
+    rest: {
+      method: "DELETE",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}`,
+    },
+  },
+  {
+    name: "simulate_knowledge_region",
+    family: "knowledge_region",
+    scope: "workspaces:write",
+    summary:
+      "Add exploration-strategy or AI-use samples to an existing knowledge region.",
+    rest: {
+      method: "POST",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/simulation`,
+    },
+  },
+  {
+    name: "get_knowledge_region_job",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary: "Read a knowledge-region simulation job.",
+    rest: {
+      method: "GET",
+      path: `${KNOWLEDGE_REGION_JOBS_API_PATH}/{job_id}`,
+    },
+  },
+  {
+    name: "get_knowledge_region_run",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary:
+      "Retrieve stored proof-of-work for one sample run in a knowledge region (no person audio or video).",
+    rest: {
+      method: "GET",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/runs/{run_id}`,
+    },
+  },
+  {
     name: "get_knowledge_region_candidate",
     family: "knowledge_region",
     scope: "workspaces:read",
@@ -110,6 +207,17 @@ export const AGENT_TOOL_SURFACE = [
     rest: {
       method: "GET",
       path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}`,
+    },
+  },
+  {
+    name: "get_knowledge_region_uncertainty_model",
+    family: "knowledge_region",
+    scope: "workspaces:read",
+    summary:
+      "Overlay one candidate walk on the region’s reference uncertainty model.",
+    rest: {
+      method: "GET",
+      path: `${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model`,
     },
   },
 ] as const satisfies readonly AgentToolSurfaceEntry[];

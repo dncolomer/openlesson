@@ -5,6 +5,7 @@
  * Stored topic column is The Protocol Challenge.
  */
 
+import { parseProtocolSettingId } from "@/lib/organization/protocol-settings";
 import { parseLearningModelSize } from "@/lib/learning-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import {
@@ -61,6 +62,8 @@ export type ProtocolDraft = {
   answersModelSeed: AuthorUnsysModelSeed | null;
   enforcedChannels: FlowEnforcedChannels;
   canvasCapture: FlowCanvasCapture;
+  /** Null follows the organization default at run time. */
+  protocolSettingId: string | null;
 };
 
 /** @deprecated Use ProtocolDraft. */
@@ -273,6 +276,7 @@ export function emptyProtocolDraft(): ProtocolDraft {
     answersModelSeed: null,
     enforcedChannels: parseFlowEnforcedChannels(null),
     canvasCapture: { ...DEFAULT_FLOW_CANVAS_CAPTURE },
+    protocolSettingId: null,
   };
 }
 
@@ -377,6 +381,7 @@ export type AcceptedProtocolPublish =
       answersModelSeed: AuthorUnsysModelSeed | null;
       enforcedChannels: FlowEnforcedChannels;
       canvasCapture: FlowCanvasCapture;
+      protocolSettingId: string | null;
     }
   | { ok: false; reason: string };
 
@@ -447,6 +452,9 @@ export function acceptProtocolPublish(
     answersModelSeed,
     enforcedChannels,
     canvasCapture,
+    protocolSettingId: parseProtocolSettingId(
+      (draft as ProtocolDraft).protocolSettingId,
+    ),
   };
 }
 

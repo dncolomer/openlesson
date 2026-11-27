@@ -8,6 +8,7 @@ import {
   buildMcpEndpointUrl,
   buildMcpOAuthClientConfig,
   buildMcpOAuthDiscovery,
+  buildCodingAgentsUrl,
   buildSkillFileUrl,
 } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
@@ -44,6 +45,7 @@ export function IntegrationQuickAccess({
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const skillUrl = useMemo(() => buildSkillFileUrl(origin), [origin]);
+  const codingAgentsUrl = useMemo(() => buildCodingAgentsUrl(origin), [origin]);
   const mcpEndpointUrl = useMemo(() => buildMcpEndpointUrl(origin), [origin]);
   const bearerConfig = useMemo(
     () => buildMcpClientConfig(origin, apiKeyPlaceholder),
@@ -122,12 +124,22 @@ export function IntegrationQuickAccess({
                 <Link href="/skill.md" className={buttonClass}>
                   {t("integrationAccess.skillOpen")}
                 </Link>
+                <Link href="/coding-agents.md" className={buttonClass}>
+                  {t("integrationAccess.codingAgentsOpen")}
+                </Link>
                 <button
                   type="button"
                   className={buttonClass}
                   onClick={() => void copyText(skillUrl, `${idPrefix}-skill-url`)}
                 >
                   {copyLabel(`${idPrefix}-skill-url`)}
+                </button>
+                <button
+                  type="button"
+                  className={buttonClass}
+                  onClick={() => void copyText(codingAgentsUrl, `${idPrefix}-coding-agents-url`)}
+                >
+                  {copyLabel(`${idPrefix}-coding-agents-url`)}
                 </button>
               </div>
             </div>

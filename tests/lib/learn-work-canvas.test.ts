@@ -292,6 +292,13 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(keptOn.gridModeEnabled).toBe(true);
     expect(keptOn.zenModeEnabled).toBe(true);
 
+    const fromChrome = withIleWorkCanvasGridAppState(
+      {},
+      { chrome: { gridModeEnabled: false, zenModeEnabled: false } },
+    );
+    expect(fromChrome.gridModeEnabled).toBe(false);
+    expect(fromChrome.zenModeEnabled).toBe(false);
+
     const keptBold = withIleWorkCanvasGridAppState({
       currentItemStrokeWidth: EXCALIDRAW_DEFAULT_STROKE_WIDTH,
     });

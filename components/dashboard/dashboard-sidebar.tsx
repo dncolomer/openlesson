@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
 import {
-  ORGANIZATION_SWITCHED_EVENT,
-  type OrganizationMembership,
-} from "@/lib/organization/membership";
+  dispatchOrganizationSwitched,
+  rememberActiveOrganizationId,
+} from "@/lib/organization/active-organization-client";
+import { type OrganizationMembership } from "@/lib/organization/membership";
 import {
   clusterDashboardNavItems,
   DASHBOARD_TOP_NAV_ITEMS,
@@ -162,6 +163,7 @@ function OrgSwitcher() {
           next[0]?.organizationId ||
           "";
         setActiveId(active);
+        if (active) rememberActiveOrganizationId(active);
       } catch {
         // Switcher stays hidden until memberships load.
       }
@@ -186,7 +188,7 @@ function OrgSwitcher() {
         setActiveId(previous);
         return;
       }
-      window.dispatchEvent(new Event(ORGANIZATION_SWITCHED_EVENT));
+      dispatchOrganizationSwitched(organizationId);
       router.refresh();
     } catch {
       setActiveId(previous);

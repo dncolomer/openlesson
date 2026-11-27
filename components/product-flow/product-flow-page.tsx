@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
+  organizationIdJsonBody,
+  withOrganizationId,
+} from "@/lib/organization/active-organization-client";
+import {
   DASHBOARD_PROTOCOLS_PATH,
   PROTOCOL_CHALLENGE_LABEL,
   PROTOCOL_LABEL,
@@ -44,6 +48,12 @@ import {
 } from "@/lib/flow-canvas-capture";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import { FlowPublicLinks } from "@/components/product-flow/copy-flow-url-button";
+import { ProtocolSettingSelect } from "@/components/product-flow/protocol-setting-select";
+import { parseProtocolSettingId } from "@/lib/organization/protocol-settings";
+import {
+  EMPTY_SESSION_SIDEBAR_STYLE,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 
 type LoadedFlow = {
   id: string;
@@ -62,6 +72,7 @@ type LoadedFlow = {
   answersModelSeed?: AuthorUnsysModelSeed | null;
   enforcedChannels?: FlowEnforcedChannels;
   canvasCapture?: FlowCanvasCapture;
+  protocolSettingId?: string | null;
 };
 
 export function ProductFlowPage({ flowId }: { flowId: string }) {
@@ -81,6 +92,10 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
   const [canvasCapture, setCanvasCapture] = useState<FlowCanvasCapture>(() =>
     parseFlowCanvasCapture(null),
   );
+  const [protocolSettingId, setProtocolSettingId] = useState<string | null>(null);
+  const [protocolStyle, setProtocolStyle] = useState<SessionSidebarStyle>(
+    EMPTY_SESSION_SIDEBAR_STYLE,
+  );
   const [minutes, setMinutes] = useState(15);
   const [publicUrl, setPublicUrl] = useState("");
   const [links, setLinks] = useState<Array<{ id: string; label: string | null; url: string }>>([]);
@@ -89,7 +104,9 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
   const [modelBusy, setModelBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flowId)}`);
+    const response = await fetch(
+      withOrganizationId(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flowId)}`),
+    );
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       setError(errorMessageFromBody(payload, "Could not load protocol"));
@@ -106,6 +123,7 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
     setAnswersModelSeed(parseFlowUnsysSeed(next.answersModelSeed));
     setEnforcedChannels(parseFlowEnforcedChannels(next.enforcedChannels));
     setCanvasCapture(parseFlowCanvasCapture(next.canvasCapture));
+    setProtocolSettingId(parseProtocolSettingId(next.protocolSettingId));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setPublicUrl(String(payload.publicUrl || ""));
     const extra = Array.isArray(payload.links) ? payload.links : [];
@@ -129,22 +147,28 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update",
-          name,
-          artifacts,
-          exactProblemOnCanvas,
-          openingCanvasScene,
-          generateProblemOnOpen,
-          durationMinutes: minutes,
-          answersModelSeed,
-          enforcedChannels,
-          canvasCapture: flowAuthorShowsCanvasCapture() ? canvasCapture : undefined,
-        }),
-      });
+      const response = await fetch(
+        withOrganizationId(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            organizationIdJsonBody({
+              action: "update",
+              name,
+              artifacts,
+              exactProblemOnCanvas,
+              openingCanvasScene,
+              generateProblemOnOpen,
+              durationMinutes: minutes,
+              answersModelSeed,
+              enforcedChannels,
+              canvasCapture: flowAuthorShowsCanvasCapture() ? canvasCapture : undefined,
+              protocolSettingId,
+            }),
+          ),
+        },
+      );
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(errorMessageFromBody(payload, "Could not save protocol"));
@@ -162,10 +186,12 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
+      const response = await fetch(
+        withOrganizationId(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`),
+        {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "remove" }),
+        body: JSON.stringify(organizationIdJsonBody({ action: "remove" })),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -183,10 +209,12 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
+      const response = await fetch(
+        withOrganizationId(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`),
+        {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "addLink", label }),
+        body: JSON.stringify(organizationIdJsonBody({ action: "addLink", label })),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -205,10 +233,12 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`, {
+      const response = await fetch(
+        withOrganizationId(`${DASHBOARD_PROTOCOLS_PATH}/${encodeURIComponent(flow.id)}`),
+        {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "removeLink", linkId }),
+        body: JSON.stringify(organizationIdJsonBody({ action: "removeLink", linkId })),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -250,6 +280,7 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
           <div className="flex min-h-[70vh] flex-col">
             <FlowOpeningCanvasHost
               scene={openingCanvasScene}
+              sidebarStyle={protocolStyle}
               onSave={(next) => {
                 setOpeningCanvasScene(next);
                 setAuthoringCanvas(false);
@@ -268,6 +299,12 @@ export function ProductFlowPage({ flowId }: { flowId: string }) {
               className={FLOW_FORM_INPUT}
             />
           </FlowField>
+          <ProtocolSettingSelect
+            value={protocolSettingId}
+            onChange={setProtocolSettingId}
+            onStyleChange={setProtocolStyle}
+            disabled={busy}
+          />
 
           <section className="space-y-5" data-flow-problem="">
             <FlowProblemFields

@@ -46,6 +46,39 @@ export async function loadActiveOrganizationId(
   return organizationId || null;
 }
 
+/** True when the user is a member, the active profile org, or a platform admin. */
+export async function userCanAccessOrganization(
+  admin: SupabaseClient,
+  input: {
+    userId: string;
+    organizationId: string;
+    email?: string | null;
+  },
+): Promise<boolean> {
+  const userId = String(input.userId || "").trim();
+  const organizationId = String(input.organizationId || "").trim();
+  if (!userId || !organizationId) return false;
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("organization_id, is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (
+    canListAllOrganizations({
+      isAdmin: profile?.is_admin === true,
+      email: input.email,
+    })
+  ) {
+    return true;
+  }
+
+  const membership = await loadMembershipRow(admin, userId, organizationId);
+  if (membership) return true;
+  return String(profile?.organization_id || "").trim() === organizationId;
+}
+
 export async function upsertOrganizationMembership(
   admin: SupabaseClient,
   userId: string,
@@ -102,6 +135,41 @@ export async function listOrganizationMemberIds(
 ): Promise<string[]> {
   const rows = await listOrganizationMemberRows(admin, organizationId);
   return rows.map((row) => row.userId);
+}
+
+export async function userIsOrgAdminForOrganization(
+  admin: SupabaseClient,
+  input: {
+    userId: string;
+    organizationId: string;
+    email?: string | null;
+  },
+): Promise<boolean> {
+  const userId = String(input.userId || "").trim();
+  const organizationId = String(input.organizationId || "").trim();
+  if (!userId || !organizationId) return false;
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("organization_id, is_org_admin, is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (
+    canListAllOrganizations({
+      isAdmin: profile?.is_admin === true,
+      email: input.email,
+    })
+  ) {
+    return true;
+  }
+
+  const membership = await loadMembershipRow(admin, userId, organizationId);
+  if (membership) return membership.isOrgAdmin;
+  return (
+    profile?.is_org_admin === true &&
+    String(profile.organization_id || "").trim() === organizationId
+  );
 }
 
 async function loadMembershipRow(
@@ -279,6 +347,31 @@ export async function switchActiveOrganization(
   }
 
   return { organizationId, isOrgAdmin };
+}
+
+export async function setOrganizationMemberRole(
+  admin: SupabaseClient,
+  userId: string,
+  organizationId: string,
+  isOrgAdmin: boolean,
+): Promise<void> {
+  await upsertOrganizationMembership(admin, userId, organizationId, isOrgAdmin);
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profile?.organization_id !== organizationId) return;
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ is_org_admin: isOrgAdmin })
+    .eq("id", userId);
+  if (error) {
+    throw new Error(error.message || "Failed to update organization role");
+  }
 }
 
 export async function removeOrganizationMembership(

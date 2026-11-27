@@ -1,7 +1,7 @@
 import type { ProofOfWorkEvalSchemaResult, ProofOfWorkSchemaIntegrationHints } from "./proof-of-work-schema";
 import type { PerformanceContextPayload } from "./performance-context";
 import { buildIntegrationSkillApiPath } from "./proof-of-work-integration";
-import { PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
+import { KNOWLEDGE_REGION_API_BASE, PROTOCOL_API_BASE } from "@/lib/api/agent-api-paths";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
 
@@ -194,9 +194,9 @@ export function knowledgeRegionIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for protocol management. Agents create, list, update, and delete knowledge verification protocols through /api/v3/protocols and MCP.",
+      "Download a skill.md for protocol and knowledge-region management. Agents create, list, update, and delete knowledge verification protocols through /api/v3/protocols and knowledge regions through /api/v3/knowledge-regions.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage knowledge verification protocols.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage knowledge verification protocols and knowledge regions.",
   };
 }
 
@@ -206,9 +206,9 @@ export function learningWorkspaceIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for protocol management. Agents create, list, update, and delete knowledge verification protocols.",
+      "Download a skill.md for protocol and knowledge-region management. Agents create, list, update, and delete knowledge verification protocols and knowledge regions.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage knowledge verification protocols.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage knowledge verification protocols and knowledge regions.",
   };
 }
 
@@ -223,7 +223,7 @@ export function workspaceSettingsIntegrationCopy(kind: unknown): {
 }
 
 export function formatSkillRestEndpointsLine(_kind: unknown): string {
-  return `REST: GET/POST ${PROTOCOL_API_BASE}, GET/PATCH/DELETE ${PROTOCOL_API_BASE}/{protocol_id}. Proof of work is recorded in the product UI.`;
+  return `REST: GET/POST ${PROTOCOL_API_BASE}, GET/PATCH/DELETE ${PROTOCOL_API_BASE}/{protocol_id}; GET/POST ${KNOWLEDGE_REGION_API_BASE}, GET ${KNOWLEDGE_REGION_API_BASE}/options, GET/PATCH/DELETE ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}, POST ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/simulation, GET ${KNOWLEDGE_REGION_API_BASE}/jobs/{job_id}, GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/runs/{run_id}, GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}. Proof of work is recorded in the product UI.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -289,7 +289,7 @@ Required content:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
 4. Current protocol list from the current status.
-5. Quick checklist: list_protocols → upload_protocol_file (optional) → generate_protocol_unsys_seed (optional) → create_protocol → get_protocol → update_protocol.
+5. Quick checklist: list_protocols → upload_protocol_file (optional) → generate_protocol_unsys_seed (optional) → create_protocol → get_protocol → update_protocol. Knowledge regions: get_knowledge_region_options → create_knowledge_region → get_knowledge_region → get_knowledge_region_candidate.
 
 ${statusSection}
 
@@ -297,5 +297,5 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" tailored to "${workspaceTitle}". Cover knowledge verification protocol create/list/update/delete. Payload field is challenge (The Protocol Challenge). Do not send kind. Do not document a public proof-of-work session loop.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" tailored to "${workspaceTitle}". Cover knowledge verification protocol create/list/update/delete and knowledge-region CRUD plus simulation wizard. Payload field for protocols is challenge (The Protocol Challenge). Do not send kind. Do not document a public proof-of-work session loop.`;
 }

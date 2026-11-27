@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
 import { loadKnowledgeRegionUncertaintyModel } from "@/lib/knowledge-region-unsys";
+import { requireAgentRequestOrganization } from "@/lib/organization/request-organization";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,8 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const { auth } = result;
   const ownerUserId = String(auth.user_id || "").trim();
   if (!ownerUserId) return errorResponse(401, "auth_required", "Not authenticated");
+  const org = await requireAgentRequestOrganization(req, auth);
+  if (!org.ok) return org.response;
   const { id, candidateId } = await params;
   const runId = req.nextUrl.searchParams.get("run_id") || req.nextUrl.searchParams.get("runId");
   const loaded = await loadKnowledgeRegionUncertaintyModel({
@@ -21,6 +24,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
     knowledgeRegionId: id,
     candidateId,
     runId,
+    organizationId: org.organizationId,
   });
   if (!loaded.ok) {
     return errorResponse(loaded.status, loaded.code, loaded.message);

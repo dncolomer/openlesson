@@ -11,18 +11,33 @@ import {
   serializeFlowOpeningCanvasScene,
 } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
+import {
+  parseSessionCanvasStyle,
+  parseSessionSidebarStyle,
+  sessionCanvasExcalidrawChrome,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 
 export function FlowOpeningCanvasHost({
   scene,
   onSave,
   onCancel,
+  sidebarStyle,
 }: {
   scene: IleWorkCanvasScene | null;
   onSave: (next: IleWorkCanvasScene | null) => void;
   onCancel: () => void;
+  sidebarStyle?: SessionSidebarStyle | null;
 }) {
-  const liveRef = useRef<IleWorkCanvasScene>(authoringOpeningCanvasScene(scene));
-  const initial = authoringOpeningCanvasScene(scene);
+  const authoringStyle = sidebarStyle
+    ? {
+        ...parseSessionSidebarStyle(sidebarStyle),
+        canvas: { ...parseSessionCanvasStyle(sidebarStyle.canvas), zenMode: false },
+      }
+    : null;
+  const chrome = sessionCanvasExcalidrawChrome(authoringStyle?.canvas);
+  const liveRef = useRef<IleWorkCanvasScene>(authoringOpeningCanvasScene(scene, chrome));
+  const initial = authoringOpeningCanvasScene(scene, chrome);
 
   return (
     <div
@@ -56,8 +71,10 @@ export function FlowOpeningCanvasHost({
             boardId="flow-opening-canvas-authoring"
             initialSceneData={initial}
             sessionMarkMode="learn"
+            sidebarStyle={authoringStyle}
+            liveCanvasChrome={Boolean(authoringStyle)}
             onSceneChange={(next) => {
-              liveRef.current = authoringOpeningCanvasScene(next);
+              liveRef.current = authoringOpeningCanvasScene(next, chrome);
             }}
           />
         </div>

@@ -72,6 +72,11 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("plans")).toBe("home");
     expect(parseDashboardTab("unknown")).toBe("home");
     expect(parseDashboardTab(null)).toBe("home");
+    expect(parseDashboardTab("style")).toBe("protocol_settings");
+    expect(parseDashboardTab("aesthetics")).toBe("protocol_settings");
+    expect(parseDashboardTab("custom_aesthetics")).toBe("protocol_settings");
+    expect(parseDashboardTab("sidebar_style")).toBe("protocol_settings");
+    expect(parseDashboardTab("protocol_settings")).toBe("protocol_settings");
   });
 
   it("maps product tabs to type filters and create deep-links", () => {
@@ -162,7 +167,7 @@ describe("dashboard nav", () => {
       label: "Integrations",
       href: dashboardHrefForTab("integrations"),
       eyebrow: "Quick access",
-      body: "Connect agents with skill.md, MCP, and API keys.",
+      body: "Connect agents with skill.md, coding-agents.md, MCP, and API keys.",
       action: "Open integrations →",
     });
   });
@@ -173,8 +178,14 @@ describe("dashboard nav", () => {
       "usage",
       "upgrade",
       "organization",
+      "protocol_settings",
       "integrations",
     ]);
+    expect(account?.items.find((item) => item.id === "protocol_settings")?.label).toBe(
+      "Protocol Settings",
+    );
+    expect(dashboardFrameLabel("protocol_settings")).toBe("Protocol Settings");
+    expect(dashboardNavGroupIdForTab("protocol_settings")).toBe("account");
     expect(account?.items.find((item) => item.id === "upgrade")?.label).toBe("Buy more credits");
     expect(parseDashboardTab("upgrade")).toBe("upgrade");
     expect(parseDashboardTab("usage")).toBe("usage");
@@ -729,6 +740,8 @@ describe("dashboard platform surface", () => {
     expect(skill).not.toContain("create_flow");
     expect(skill).not.toContain("/api/v3/flows");
     expect(skill).toContain("/docs/proof-of-work-api");
+    expect(skill).toContain("/coding-agents.md");
+    expect(skill).toContain("create_knowledge_region");
     expect(skill).not.toContain("create_workspace");
     expect(skill).not.toContain("list_map_tools");
     expect(skill).not.toContain("apply_map_tool");

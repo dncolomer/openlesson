@@ -11,6 +11,8 @@ import {
   claimPublicIdentity,
   getVerificationFlowByToken,
 } from "@/lib/verification-flow-repository";
+import { resolveSidebarStyleForProtocol } from "@/lib/organization/protocol-settings-store";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   insufficientCreditsResponse,
   runnerUserIdFromCookies,
@@ -25,12 +27,19 @@ export async function GET(
   const { token } = await context.params;
   const flow = await getVerificationFlowByToken(token);
   if (!flow) return jsonError(404, "Verification flow not found");
+  const sidebarStyle = await resolveSidebarStyleForProtocol(
+    createAdminClient(),
+    flow.organizationId,
+    flow.protocolSettingId,
+  );
   return NextResponse.json({
     topic: flow.topic,
     exactProblemOnCanvas: flow.exactProblemOnCanvas,
     openingCanvasScene: flow.openingCanvasScene,
     enforcedChannels: flow.enforcedChannels,
     canvasCapture: flow.canvasCapture,
+    sidebarStyle,
+    protocolSettingId: flow.protocolSettingId ?? null,
     questionCount: flow.questions.length,
     durationMinutes: flow.durationMinutes,
     actionCatalog: flow.actionCatalog,
@@ -72,6 +81,12 @@ export async function POST(
     openingCanvasScene: claimed.flow.openingCanvasScene,
     enforcedChannels: claimed.flow.enforcedChannels,
     canvasCapture: claimed.flow.canvasCapture,
+    sidebarStyle: await resolveSidebarStyleForProtocol(
+      createAdminClient(),
+      claimed.flow.organizationId,
+      claimed.flow.protocolSettingId,
+    ),
+    protocolSettingId: claimed.flow.protocolSettingId ?? null,
   });
   } catch (error) {
     const credits = insufficientCreditsResponse(error);

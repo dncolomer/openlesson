@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import {
   getOrgScopedFileContentResponse,
   organizationIdFromSession,
@@ -19,6 +20,12 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
 
     const fileId = (req.nextUrl.searchParams.get("fileId") || "").trim();
     if (!fileId) return jsonError(400, "fileId required");
@@ -42,11 +49,14 @@ export async function GET(req: NextRequest) {
     if (!allowed && row.workspace_id) {
       const { data: workspace } = await auth.supabase
         .from("workspaces")
-        .select("id")
+        .select("id, user_id, organization_id")
         .eq("id", row.workspace_id)
-        .eq("user_id", auth.user.id)
         .maybeSingle();
-      allowed = Boolean(workspace);
+      const workspaceOrg = String(workspace?.organization_id || "").trim();
+      const inOrg = Boolean(
+        org.organizationId && workspaceOrg && workspaceOrg === org.organizationId,
+      );
+      allowed = Boolean(workspace && (workspace.user_id === auth.user.id || inOrg));
     }
     if (!allowed && row.session_id) {
       const { data: owned } = await admin
@@ -60,6 +70,7 @@ export async function GET(req: NextRequest) {
     if (!allowed) return jsonError(403, "Forbidden");
 
     const organizationId =
+      org.organizationId ||
       (await organizationIdFromWorkspace(admin, row.workspace_id)) ||
       (await organizationIdFromSession(
         admin,

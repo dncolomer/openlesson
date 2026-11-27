@@ -45,7 +45,11 @@ export type RegionSimulationWizardDraft = {
 };
 
 export function protocolIdsFromRequestBody(body: Record<string, unknown> | null | undefined): string[] {
-  const raw = Array.isArray(body?.protocolIds) ? body.protocolIds : [];
+  const raw = Array.isArray(body?.protocolIds)
+    ? body.protocolIds
+    : Array.isArray(body?.protocol_ids)
+      ? body.protocol_ids
+      : [];
   return raw.map((id) => String(id || "").trim()).filter(Boolean);
 }
 

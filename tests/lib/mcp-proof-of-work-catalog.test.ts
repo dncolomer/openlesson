@@ -4,7 +4,7 @@ import { PUBLIC_AGENT_API_FAMILIES } from "@/lib/api/agent-api-paths";
 import { AGENT_TOOL_SURFACE } from "@/lib/pow-api/agent-tool-surface";
 
 describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
-  it("exposes only independent flow management", () => {
+  it("exposes protocol and knowledge-region management", () => {
     expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["protocol", "knowledge_region"]);
     const families = new Set(AGENT_TOOL_SURFACE.map((t) => t.family));
     expect([...families]).toEqual(["protocol", "knowledge_region"]);
@@ -17,7 +17,17 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
       "get_protocol",
       "update_protocol",
       "delete_protocol",
+      "list_knowledge_regions",
+      "get_knowledge_region_options",
+      "create_knowledge_region",
+      "get_knowledge_region",
+      "update_knowledge_region",
+      "delete_knowledge_region",
+      "simulate_knowledge_region",
+      "get_knowledge_region_job",
+      "get_knowledge_region_run",
       "get_knowledge_region_candidate",
+      "get_knowledge_region_uncertainty_model",
     ]);
     expect(names).not.toContain("create_flow");
     expect(names).not.toContain("create_workspace");
@@ -39,7 +49,16 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((t) => t.name);
     expect(names).not.toContain("link_flow");
     expect(names).not.toContain("apply_map_tool");
+    const createRegion = MCP_PROOF_OF_WORK_TOOL_CATALOG.find(
+      (t) => t.name === "create_knowledge_region",
+    );
+    expect(createRegion?.rest.path).toBe("/api/v3/knowledge-regions");
+    const options = MCP_PROOF_OF_WORK_TOOL_CATALOG.find(
+      (t) => t.name === "get_knowledge_region_options",
+    );
+    expect(options?.rest.path).toBe("/api/v3/knowledge-regions/options");
     const blob = JSON.stringify(MCP_PROOF_OF_WORK_TOOL_CATALOG);
+    expect(blob).toContain("/api/v3/knowledge-regions");
     expect(blob).not.toContain("/sessions");
     expect(blob).not.toContain("/api/v3/snapshot");
     expect(blob).not.toContain("/api/v3/stash");

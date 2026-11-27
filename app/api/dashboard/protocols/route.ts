@@ -25,7 +25,12 @@ import { parseFlowEnforcedChannels } from "@/lib/flow-channels";
 import { parseFlowCanvasCapture } from "@/lib/flow-canvas-capture";
 import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
-import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
+import {
+  isProtocolSettingsError,
+  parseProtocolSettingId,
+} from "@/lib/organization/protocol-settings";
+import { assertProtocolSettingInOrg } from "@/lib/organization/protocol-settings-store";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   listVerificationFlowsForDashboard,
@@ -41,10 +46,13 @@ export async function GET(req: NextRequest) {
     if (rejectedProtocolKind(new URL(req.url).searchParams.get("kind"))) {
       return jsonError(400, "Only knowledge verification protocols are supported");
     }
-    const organizationId = await loadActiveOrganizationId(
-      createAdminClient(),
-      auth.user.id,
-    );
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
     const flows = await listVerificationFlowsForDashboard({
       ownerUserId: auth.user.id,
       organizationId,
@@ -106,14 +114,36 @@ export async function POST(req: NextRequest) {
         body.enforcedChannels ?? body.enforced_channels,
       ),
       canvasCapture: parseFlowCanvasCapture(body.canvasCapture ?? body.canvas_capture),
+      protocolSettingId: parseProtocolSettingId(
+        body.protocol_setting_id ?? body.protocolSettingId,
+      ),
     };
     const accepted = acceptProtocolPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
 
-    const organizationId = await loadActiveOrganizationId(
-      createAdminClient(),
-      auth.user.id,
-    );
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
+    let protocolSettingId = accepted.protocolSettingId;
+    if (organizationId) {
+      try {
+        protocolSettingId = await assertProtocolSettingInOrg(
+          createAdminClient(),
+          organizationId,
+          accepted.protocolSettingId,
+        );
+      } catch (error) {
+        if (isProtocolSettingsError(error)) return jsonError(error.status, error.message);
+        throw error;
+      }
+    } else {
+      protocolSettingId = null;
+    }
     const created = await runVerificationCommand({
       type: "create",
       ownerUserId: auth.user.id,
@@ -130,6 +160,7 @@ export async function POST(req: NextRequest) {
       answersModelSeed: accepted.answersModelSeed,
       enforcedChannels: accepted.enforcedChannels,
       canvasCapture: accepted.canvasCapture,
+      protocolSettingId,
     });
     if (!created.ok || !created.flow) {
       return jsonError(400, created.ok ? "create_failed" : created.reason);

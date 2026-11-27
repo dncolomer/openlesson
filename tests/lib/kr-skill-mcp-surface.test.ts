@@ -169,6 +169,7 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     const stdBlob = JSON.stringify(standard);
     assertNoLinkMint("KR recommended actions", krBlob);
     expect(kr.some((a) => a.mcp_tool === "create_protocol")).toBe(true);
+    expect(kr.some((a) => a.mcp_tool === "create_knowledge_region")).toBe(true);
     expect(kr.some((a) => a.rest_equivalent.includes("/protocols"))).toBe(true);
     expect(kr.some((a) => a.mcp_tool === "create_tap_link")).toBe(false);
 

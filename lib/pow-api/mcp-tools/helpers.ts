@@ -14,13 +14,20 @@ export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — knowledge verification protocols and knowledge-region candidate render with REST parity.
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — knowledge verification protocols and knowledge regions with REST parity.
+
+Every tool requires organization_id (the org to target; users belong to multiple orgs). REST: query organization_id, JSON body, or header X-Organization-Id.
 
 Create, list, update, and delete knowledge verification protocols. REST: /api/v3/protocols.
 Author sources on create_protocol / update_protocol (choose one): challenge (The Protocol Challenge; optional exact_problem_on_canvas), artifacts/files (challenge generated when a learner opens; generate_problem_on_open), or opening_canvas_scene. Also answers_model_seed / uncertainty_model (custom tree with weights, or generate_unsys), enforced_channels, canvas_capture.
 Do not send kind. Create and list reject solve, calibration, calibrate, learn, mapping, and map.
 Upload context files with upload_protocol_file. Generate the Unsys model with generate_protocol_unsys_seed.
-Read one candidate in a knowledge region. REST: /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}.
+
+Knowledge Regions are a separate family. REST: /api/v3/knowledge-regions.
+Call get_knowledge_region_options for wizard fields (protocols, exploration strategies, AI-use catalog, sample bounds), then create_knowledge_region with name, protocol_ids, strategy_ids, optional custom_strategies, samples_per_strategy, include_human_data, ai_use_catalog_ids, samples_per_ai_use.
+List/read/rename/delete with list_knowledge_regions, get_knowledge_region, update_knowledge_region, delete_knowledge_region.
+Add more samples with simulate_knowledge_region. Poll create jobs with get_knowledge_region_job.
+Retrieve data with get_knowledge_region (clusters and samples), get_knowledge_region_run (stored record), get_knowledge_region_candidate, and get_knowledge_region_uncertainty_model.
 
 Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent tools.
 

@@ -90,6 +90,7 @@ export async function authenticateOAuthAccessToken(
     user_id: tokenData.user_id,
     guest_user_id: null,
     organization_id: profile?.organization_id || null,
+    key_organization_id: null,
     is_org_admin: profile?.is_org_admin === true || isAdmin,
     key_id: tokenData.id,
     scopes,

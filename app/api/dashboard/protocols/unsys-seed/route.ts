@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { runProductFlowUnsysGenerate } from "@/lib/flow-unsys-generate";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { FLOW_UNSYS_SEED_PATH } from "@/lib/flow-unsys-seed";
 
 export const runtime = "nodejs";
@@ -16,6 +17,13 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   try {
     const body = (await req.json()) as Record<string, unknown>;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
     const result = await runProductFlowUnsysGenerate(body);
     if (!result.ok) {
       const status = result.error === "A problem is required." ? 400 : 502;

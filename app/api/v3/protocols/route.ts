@@ -4,6 +4,7 @@ import {
   createAgentProtocol,
   listAgentProtocols,
 } from "@/lib/pow-api/agent-flow-management";
+import { requireAgentRequestOrganization } from "@/lib/organization/request-organization";
 import { rejectedProtocolKind } from "@/lib/product-flow";
 
 export const runtime = "nodejs";
@@ -15,6 +16,8 @@ export async function GET(req: NextRequest) {
   const { auth } = result;
   const ownerUserId = String(auth.user_id || "").trim();
   if (!ownerUserId) return errorResponse(401, "auth_required", "Not authenticated");
+  const org = await requireAgentRequestOrganization(req, auth);
+  if (!org.ok) return org.response;
   const url = new URL(req.url);
   if (rejectedProtocolKind(url.searchParams.get("kind"))) {
     return errorResponse(
@@ -27,6 +30,7 @@ export async function GET(req: NextRequest) {
   const protocols = await listAgentProtocols({
     ownerUserId,
     workspaceId,
+    organizationId: org.organizationId,
   });
   return NextResponse.json({ protocols });
 }
@@ -41,8 +45,10 @@ export async function POST(req: NextRequest) {
   } catch {
     return errorResponse(400, "validation_error", "Invalid JSON body");
   }
+  const org = await requireAgentRequestOrganization(req, auth, body);
+  if (!org.ok) return org.response;
   try {
-    const protocol = await createAgentProtocol(auth, undefined, body);
+    const protocol = await createAgentProtocol(auth, undefined, body, org.organizationId);
     return NextResponse.json({ protocol }, { status: 201 });
   } catch (error) {
     return errorResponse(

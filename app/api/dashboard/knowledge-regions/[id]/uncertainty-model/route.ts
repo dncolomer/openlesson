@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { loadKnowledgeRegionUncertaintyModel } from "@/lib/knowledge-region-unsys";
 
 export const runtime = "nodejs";
@@ -16,6 +17,12 @@ export async function GET(
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
     const { id } = await context.params;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
     const candidateId = (req.nextUrl.searchParams.get("candidateId") || "").trim();
     const runId = (req.nextUrl.searchParams.get("runId") || "").trim();
     if (!candidateId) return jsonError(400, "candidateId is required");
@@ -24,6 +31,7 @@ export async function GET(
       knowledgeRegionId: id,
       candidateId,
       runId: runId || null,
+      organizationId: org.organizationId,
     });
     if (!loaded.ok) {
       return jsonError(loaded.status, loaded.message);

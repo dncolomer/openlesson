@@ -49,8 +49,9 @@ describe("public flow create/update matches the dashboard wizard", () => {
       expect(properties).toHaveProperty("duration_minutes");
       expect(properties).not.toHaveProperty("kind");
     }
-    expect(create?.inputSchema.required).toBeUndefined();
-    expect(update?.inputSchema.required).toEqual(["protocol_id"]);
+    expect(create?.inputSchema.required).toEqual(["organization_id"]);
+    expect(update?.inputSchema.required).toEqual(["organization_id", "protocol_id"]);
+    expect(create?.inputSchema.properties).toHaveProperty("organization_id");
     expect(create?.description).toContain(FLOW_AUTHORING_CREATE_SPEC);
     expect(update?.description).toContain(FLOW_AUTHORING_CREATE_SPEC);
     const exactDoc = JSON.stringify(create?.inputSchema.properties.exact_problem_on_canvas || {});

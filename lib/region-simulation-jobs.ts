@@ -69,6 +69,7 @@ export type RegionSimulationJobPlan = {
   includeHumanData: boolean;
   catalogIds: string[];
   samplesPerAiUse: number;
+  organizationId?: string | null;
   followUp?: RegionSimulationFollowUp | null;
   items: RegionSimulationJobItem[];
 };
@@ -292,6 +293,16 @@ function normalizeJob(row: Record<string, unknown>): RegionSimulationJobRow | nu
   };
 }
 
+export function jobMatchesOrganization(
+  job: RegionSimulationJobRow,
+  input: { userId: string; organizationId?: string | null },
+): boolean {
+  const requested = String(input.organizationId || "").trim();
+  const jobOrg = String(job.plan?.organizationId || "").trim();
+  if (requested && jobOrg && jobOrg === requested) return true;
+  return job.owner_user_id === input.userId;
+}
+
 export async function getRegionSimulationJob(
   jobId: string,
   ownerUserId?: string,
@@ -339,6 +350,7 @@ async function acquireLease(jobId: string, owner: string): Promise<RegionSimulat
 
 export async function enqueueRegionSimulation(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   family: RegionSimulationFamily;
   name: string;
   kind: ProductFlowKind;
@@ -390,6 +402,7 @@ export async function enqueueRegionSimulation(input: {
     includeHumanData: input.includeHumanData === true,
     catalogIds: family === "ai_use" ? parseAiUseCatalogIds(input.catalogIds) : catalogIds,
     samplesPerAiUse,
+    organizationId: String(input.organizationId || "").trim() || null,
     followUp: family === "exploration" ? input.followUp || null : null,
     items,
   };
@@ -576,6 +589,7 @@ async function maybeEnqueueFollowUp(job: RegionSimulationJobRow): Promise<string
   if (!regionSimulationAiUseEnabled()) return null;
   const next = await enqueueRegionSimulation({
     ownerUserId: job.owner_user_id,
+    organizationId: job.plan.organizationId,
     family: "ai_use",
     name: job.plan.name,
     kind: job.plan.kind,
@@ -592,6 +606,7 @@ async function refreshAfterTick(job: RegionSimulationJobRow): Promise<void> {
   try {
     const records = await refreshSimulationFamilyClusters({
       ownerUserId: job.owner_user_id,
+      organizationId: job.plan.organizationId,
       regionId: job.region_id || "",
       family: job.family,
       name: job.plan.name,

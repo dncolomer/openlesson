@@ -1,5 +1,5 @@
 /**
- * MCP tools/list catalog — 1:1 with AGENT_TOOL_SURFACE (protocol management).
+ * MCP tools/list catalog — 1:1 with AGENT_TOOL_SURFACE (protocol + knowledge-region management).
  */
 
 import { AGENT_TOOL_SURFACE } from "../agent-tool-surface";
@@ -7,6 +7,8 @@ import {
   FLOW_FILES_API_PATH,
   FLOW_UNSYS_SEED_API_PATH,
   KNOWLEDGE_REGION_API_BASE,
+  KNOWLEDGE_REGION_JOBS_API_PATH,
+  KNOWLEDGE_REGION_OPTIONS_API_PATH,
   PROTOCOL_API_BASE,
 } from "@/lib/api/agent-api-paths";
 import { FLOW_CHANNEL_IDS } from "@/lib/flow-channels";
@@ -120,6 +122,11 @@ const PROTOCOL_WRITE_PROPERTIES = {
     description: "Optional prompt used when generate_unsys is true.",
   },
   enforced_channels: ENFORCED_CHANNELS_SCHEMA,
+  protocol_setting_id: {
+    type: "string",
+    description:
+      "Named protocol canvas setting from GET /api/v3/protocol-settings. Omit or pass empty/default to use the organization default.",
+  },
   canvas_capture: {
     type: "object",
     description:
@@ -134,6 +141,62 @@ const PROTOCOL_WRITE_PROPERTIES = {
   workspace_id: { type: "string" },
 } as const;
 
+const CUSTOM_STRATEGY_SCHEMA = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    instructions: { type: "string" },
+    prompt: { type: "string", description: "Alias of instructions." },
+    description: { type: "string" },
+  },
+  additionalProperties: false,
+} as const;
+
+const KNOWLEDGE_REGION_SIMULATION_PROPERTIES = {
+  protocol_ids: {
+    type: "array",
+    items: { type: "string" },
+    description: "Protocol ids from get_knowledge_region_options. Alias protocolIds.",
+  },
+  protocolIds: { type: "array", items: { type: "string" } },
+  strategy_ids: {
+    type: "array",
+    items: { type: "string" },
+    description:
+      "Built-in exploration strategy ids: exploit-heavy, information-seeking, novelty-seeking, balanced, narrow-and-deep. Alias strategyIds.",
+  },
+  strategyIds: { type: "array", items: { type: "string" } },
+  custom_strategies: {
+    type: "array",
+    items: CUSTOM_STRATEGY_SCHEMA,
+    description: "Custom exploration strategies with name + instructions. Alias customStrategies.",
+  },
+  customStrategies: { type: "array", items: CUSTOM_STRATEGY_SCHEMA },
+  samples_per_strategy: {
+    type: "integer",
+    description: "Samples per exploration strategy (3–48, default 12). Alias samplesPerStrategy.",
+  },
+  samplesPerStrategy: { type: "integer" },
+  include_human_data: {
+    type: "boolean",
+    description: "Overlay real protocol sessions on the simulated region. Alias includeHumanData.",
+  },
+  includeHumanData: { type: "boolean" },
+  ai_use_catalog_ids: {
+    type: "array",
+    items: { type: "string" },
+    description:
+      "AI-use catalog ids from get_knowledge_region_options (requires an org OpenRouter key). Alias aiUseCatalogIds.",
+  },
+  aiUseCatalogIds: { type: "array", items: { type: "string" } },
+  samples_per_ai_use: {
+    type: "integer",
+    description: "Samples per AI-use model (3–12, default 6). Alias samplesPerAiUse.",
+  },
+  samplesPerAiUse: { type: "integer" },
+} as const;
+
 type McpTool = {
   name: string;
   description: string;
@@ -145,6 +208,39 @@ type McpTool = {
   };
   annotations?: { readOnlyHint: true };
 };
+
+const ORGANIZATION_ID_PROPERTIES = {
+  organization_id: {
+    type: "string",
+    description:
+      "Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.",
+  },
+  organizationId: {
+    type: "string",
+    description: "Alias of organization_id.",
+  },
+} as const;
+
+function withOrganizationIdSchema(
+  schema: Omit<McpTool, "name">,
+): Omit<McpTool, "name"> {
+  const previous = schema.inputSchema.required ?? [];
+  const required = [
+    "organization_id",
+    ...previous.filter((name) => name !== "organization_id"),
+  ];
+  return {
+    ...schema,
+    inputSchema: {
+      ...schema.inputSchema,
+      properties: {
+        ...ORGANIZATION_ID_PROPERTIES,
+        ...schema.inputSchema.properties,
+      },
+      required,
+    },
+  };
+}
 
 const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
   list_protocols: {
@@ -235,6 +331,108 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
       additionalProperties: false,
     },
   },
+  list_knowledge_regions: {
+    description: `List knowledge regions in the active organization. REST: GET ${KNOWLEDGE_REGION_API_BASE}.`,
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  get_knowledge_region_options: {
+    description: `Wizard options for knowledge-region create: protocols, exploration strategies, AI-use catalog, sample bounds. REST: GET ${KNOWLEDGE_REGION_OPTIONS_API_PATH}.`,
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  create_knowledge_region: {
+    description: `Create a knowledge region by running the simulation wizard (same options as /regions/new). REST: POST ${KNOWLEDGE_REGION_API_BASE}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Knowledge region name." },
+        ...KNOWLEDGE_REGION_SIMULATION_PROPERTIES,
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
+  },
+  get_knowledge_region: {
+    description: `Read one knowledge region with clusters, strategies, AI-use clusters, and samples (no vectors). REST: GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        knowledge_region_id: { type: "string" },
+      },
+      required: ["knowledge_region_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  update_knowledge_region: {
+    description: `Rename a knowledge region. REST: PATCH ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        knowledge_region_id: { type: "string" },
+        name: { type: "string" },
+      },
+      required: ["knowledge_region_id", "name"],
+      additionalProperties: false,
+    },
+  },
+  delete_knowledge_region: {
+    description: `Delete a knowledge region and its simulation clusters. REST: DELETE ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        knowledge_region_id: { type: "string" },
+      },
+      required: ["knowledge_region_id"],
+      additionalProperties: false,
+    },
+  },
+  simulate_knowledge_region: {
+    description: `Add exploration-strategy or AI-use samples to an existing knowledge region. REST: POST ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/simulation.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        knowledge_region_id: { type: "string" },
+        ...KNOWLEDGE_REGION_SIMULATION_PROPERTIES,
+      },
+      required: ["knowledge_region_id"],
+      additionalProperties: false,
+    },
+  },
+  get_knowledge_region_job: {
+    description: `Read a knowledge-region simulation job. REST: GET ${KNOWLEDGE_REGION_JOBS_API_PATH}/{job_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_id: { type: "string" },
+      },
+      required: ["job_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  get_knowledge_region_run: {
+    description: `Retrieve stored proof-of-work for one sample run (no person audio or video). REST: GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/runs/{run_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        knowledge_region_id: { type: "string" },
+        run_id: { type: "string" },
+      },
+      required: ["knowledge_region_id", "run_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
   get_knowledge_region_candidate: {
     description: `Render one candidate in a knowledge region (unsys distance, cluster L2, pairwise L2). REST: GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}.`,
     inputSchema: {
@@ -252,6 +450,21 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
     },
     annotations: { readOnlyHint: true },
   },
+  get_knowledge_region_uncertainty_model: {
+    description: `Overlay one candidate walk on the region’s reference uncertainty model. REST: GET ${KNOWLEDGE_REGION_API_BASE}/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        knowledge_region_id: { type: "string" },
+        candidate_id: { type: "string" },
+        run_id: { type: "string" },
+        runId: { type: "string" },
+      },
+      required: ["knowledge_region_id", "candidate_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
 };
 
 export const MCP_EVIDENCE_TOOLS = AGENT_TOOL_SURFACE.map((tool) => {
@@ -259,10 +472,11 @@ export const MCP_EVIDENCE_TOOLS = AGENT_TOOL_SURFACE.map((tool) => {
   if (!schema) {
     throw new Error(`Missing MCP schema for ${tool.name}`);
   }
+  const withOrg = withOrganizationIdSchema(schema);
   return {
     name: tool.name,
-    description: schema.description,
-    inputSchema: schema.inputSchema,
-    ...(schema.annotations ? { annotations: schema.annotations } : {}),
+    description: withOrg.description,
+    inputSchema: withOrg.inputSchema,
+    ...(withOrg.annotations ? { annotations: withOrg.annotations } : {}),
   };
 });

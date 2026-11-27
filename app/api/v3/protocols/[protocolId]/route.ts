@@ -5,6 +5,7 @@ import {
   getAgentProtocol,
   updateAgentProtocol,
 } from "@/lib/pow-api/agent-flow-management";
+import { requireAgentRequestOrganization } from "@/lib/organization/request-organization";
 
 export const runtime = "nodejs";
 
@@ -16,8 +17,15 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const result = await authenticateRequest(req, "workspaces:read");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
+  const org = await requireAgentRequestOrganization(req, auth);
+  if (!org.ok) return org.response;
   const { protocolId } = await params;
-  const protocol = await getAgentProtocol(undefined, protocolId, String(auth.user_id || ""));
+  const protocol = await getAgentProtocol(
+    undefined,
+    protocolId,
+    String(auth.user_id || ""),
+    org.organizationId,
+  );
   if (!protocol) return errorResponse(404, "not_found", "Protocol not found");
   return NextResponse.json({ protocol });
 }
@@ -33,8 +41,16 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
   } catch {
     return errorResponse(400, "validation_error", "Invalid JSON body");
   }
+  const org = await requireAgentRequestOrganization(req, auth, body);
+  if (!org.ok) return org.response;
   try {
-    const protocol = await updateAgentProtocol(auth, undefined, protocolId, body);
+    const protocol = await updateAgentProtocol(
+      auth,
+      undefined,
+      protocolId,
+      body,
+      org.organizationId,
+    );
     return NextResponse.json({ protocol });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update protocol";
@@ -51,9 +67,11 @@ export async function DELETE(req: NextRequest, { params }: RouteProps) {
   const result = await authenticateRequest(req, "workspaces:write");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
+  const org = await requireAgentRequestOrganization(req, auth);
+  if (!org.ok) return org.response;
   const { protocolId } = await params;
   try {
-    const deleted = await deleteAgentProtocol(auth, protocolId);
+    const deleted = await deleteAgentProtocol(auth, protocolId, org.organizationId);
     return NextResponse.json(deleted);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete protocol";

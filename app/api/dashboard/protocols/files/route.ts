@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { uploadFlowArtifactBytes } from "@/lib/flow-artifact-upload";
 
 export const runtime = "nodejs";
@@ -15,6 +16,13 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
     const body = (await req.json()) as Record<string, unknown>;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
     const workspaceId = String(body.workspaceId ?? body.workspace_id ?? "").trim();
     const fileName = String(body.fileName ?? body.file_name ?? body.name ?? "").trim();
     const mimeType = String(body.mimeType ?? body.mime_type ?? "");

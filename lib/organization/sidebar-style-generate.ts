@@ -85,6 +85,7 @@ export function sidebarStyleUserContent(input: {
 export async function generateSessionSidebarTokens(input: {
   prompt: string;
   assetUrls: readonly string[];
+  canvas?: SessionSidebarStyle["canvas"] | null;
 }): Promise<Pick<SessionSidebarStyle, "tokens" | "canvas">> {
   const messages: Message[] = [
     systemMessage(SYSTEM),
@@ -97,10 +98,11 @@ export async function generateSessionSidebarTokens(input: {
     fetchTimeout: 30_000,
     retries: 1,
   });
+  const keepGrid = parseSessionSidebarStyle({ canvas: input.canvas }).canvas.gridMode;
   if (!response.success || !response.data || typeof response.data !== "object") {
     return {
       tokens: { ...DEFAULT_SESSION_SIDEBAR_STYLE_TOKENS },
-      canvas: { ...DEFAULT_SESSION_CANVAS_STYLE },
+      canvas: { ...DEFAULT_SESSION_CANVAS_STYLE, gridMode: keepGrid },
     };
   }
   const parsed = parseSessionSidebarStyle({
@@ -108,8 +110,9 @@ export async function generateSessionSidebarTokens(input: {
     canvasBackground: response.data.canvasBackground,
     canvasStroke: response.data.canvasStroke,
     zenMode: response.data.zenMode,
+    gridMode: keepGrid,
   });
-  return { tokens: parsed.tokens, canvas: parsed.canvas };
+  return { tokens: parsed.tokens, canvas: { ...parsed.canvas, gridMode: keepGrid } };
 }
 
 export async function generateSessionSidebarStill(input: {
@@ -134,11 +137,12 @@ export async function generateSessionSidebarStill(input: {
 export async function generateSessionSidebarStyle(input: {
   prompt: string;
   assetUrls: readonly string[];
+  canvas?: SessionSidebarStyle["canvas"] | null;
   now?: Date;
 }): Promise<{ style: SessionSidebarStyle; still: { bytes: Buffer; contentType: "image/png" | "image/jpeg" | "image/webp" } | null }> {
   const prompt = clampSidebarStylePrompt(input.prompt);
   const [look, still] = await Promise.all([
-    generateSessionSidebarTokens({ prompt, assetUrls: input.assetUrls }),
+    generateSessionSidebarTokens({ prompt, assetUrls: input.assetUrls, canvas: input.canvas }),
     generateSessionSidebarStill({ prompt, assetUrls: input.assetUrls }),
   ]);
   return {

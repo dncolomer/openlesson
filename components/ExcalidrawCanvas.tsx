@@ -83,7 +83,10 @@ import { WorkCanvasLatexLayer } from "@/components/excalidraw-canvas/work-canvas
 import { IleLaserToolbarSlot } from "@/components/excalidraw-canvas/laser-toolbar-slot";
 import { behaviorBoardSampler, sampleBoardAppState } from "@/lib/behavior-capture-pointer";
 import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
-import { sessionCanvasExcalidrawChrome } from "@/lib/session-sidebar-style";
+import {
+  sessionCanvasExcalidrawChrome,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 import "@excalidraw/excalidraw/index.css";
 import "@/app/learn-excalidraw-theme.css";
 
@@ -155,6 +158,10 @@ export interface ExcalidrawCanvasProps {
   sessionMarkQuestions?: readonly { id?: string | null; text?: string | null }[];
   /** Session and chapter. Growing questions inside one key keeps the presses. */
   sessionMarkListKey?: string | null;
+  /** Dashboard Protocol Settings passes a draft so chrome restyles live. */
+  sidebarStyle?: SessionSidebarStyle | null;
+  /** Always apply fill, ink, zen, and grid (preview / authoring). Live sessions keep stored scene choices. */
+  liveCanvasChrome?: boolean;
 }
 
 /**
@@ -190,10 +197,13 @@ export function ExcalidrawCanvas({
   sessionMarkMode = null,
   sessionMarkQuestions,
   sessionMarkListKey = null,
+  sidebarStyle: sidebarStyleProp,
+  liveCanvasChrome = false,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
-  const sidebarStyle = useSessionSidebarStyle();
+  const loadedSidebarStyle = useSessionSidebarStyle();
+  const sidebarStyle = sidebarStyleProp ?? loadedSidebarStyle;
   const canvasChrome = sessionCanvasExcalidrawChrome(sidebarStyle.canvas);
   const canvasChromeRef = useRef(canvasChrome);
   canvasChromeRef.current = canvasChrome;
@@ -471,24 +481,33 @@ export function ExcalidrawCanvas({
     if (!api || !canvasApiReady) return;
     const chrome = canvasChromeRef.current;
     const source = sourceSceneRef.current?.appState as
-      | { zenModeEnabled?: unknown; currentItemStrokeColor?: unknown }
+      | {
+          zenModeEnabled?: unknown;
+          currentItemStrokeColor?: unknown;
+          gridModeEnabled?: unknown;
+        }
       | undefined;
     const patch: Record<string, unknown> = {
       viewBackgroundColor: chrome.viewBackgroundColor,
     };
-    if (typeof source?.zenModeEnabled !== "boolean") {
+    if (liveCanvasChrome || typeof source?.zenModeEnabled !== "boolean") {
       patch.zenModeEnabled = chrome.zenModeEnabled;
     }
-    if (!String(source?.currentItemStrokeColor || "").trim()) {
+    if (liveCanvasChrome || typeof source?.gridModeEnabled !== "boolean") {
+      patch.gridModeEnabled = chrome.gridModeEnabled;
+    }
+    if (liveCanvasChrome || !String(source?.currentItemStrokeColor || "").trim()) {
       patch.currentItemStrokeColor = chrome.currentItemStrokeColor;
     }
     api.updateScene({ appState: patch });
   }, [
     boardId,
     canvasApiReady,
+    liveCanvasChrome,
     sidebarStyle.canvas.background,
     sidebarStyle.canvas.stroke,
     sidebarStyle.canvas.zenMode,
+    sidebarStyle.canvas.gridMode,
   ]);
 
   useEffect(() => {

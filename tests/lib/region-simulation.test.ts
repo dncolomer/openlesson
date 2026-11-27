@@ -348,6 +348,7 @@ describe("region simulation", () => {
       }),
     ).toBe(true);
     expect(protocolIdsFromRequestBody({ protocolIds: [" p1 ", "", "p2"] })).toEqual(["p1", "p2"]);
+    expect(protocolIdsFromRequestBody({ protocol_ids: [" p1 ", "", "p2"] })).toEqual(["p1", "p2"]);
     expect(protocolIdsFromRequestBody({ flowIds: ["legacy"] })).toEqual([]);
   });
 

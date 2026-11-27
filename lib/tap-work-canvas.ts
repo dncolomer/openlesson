@@ -22,6 +22,7 @@ import {
   ileWorkCanvasLiveApply,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
+  type IleWorkCanvasChrome,
   type IleWorkCanvasElement,
   type IleWorkCanvasFiles,
   type IleWorkCanvasScene,
@@ -146,9 +147,10 @@ export function applyTapVerificationOpeningToWorkCanvas(
   turns: readonly TapAssistantCanvasTurn[] | null | undefined,
   exactProblem?: string | null,
   preparedScene?: IleWorkCanvasScene | null,
+  chrome?: IleWorkCanvasChrome | null,
 ): IleWorkCanvasScene {
   const assistant = assistantCanvasTurns(turns);
-  const prepared = seedPreparedOpeningCanvas(scene, preparedScene);
+  const prepared = seedPreparedOpeningCanvas(scene, preparedScene, chrome);
   if (prepared.seeded) {
     return applyTapAssistantTurnsToWorkCanvas(prepared.scene, assistant);
   }
@@ -174,6 +176,7 @@ export function tapWorkCanvasOpeningLiveSeed(
   turns: readonly TapAssistantCanvasTurn[] | null | undefined,
   exactProblem?: string | null,
   preparedScene?: IleWorkCanvasScene | null,
+  chrome?: IleWorkCanvasChrome | null,
 ): {
   scene: IleWorkCanvasScene;
   applyElements: IleWorkCanvasElement[];
@@ -184,6 +187,7 @@ export function tapWorkCanvasOpeningLiveSeed(
     turns,
     exactProblem,
     preparedScene,
+    chrome,
   );
   const apply = ileWorkCanvasLiveApply(next);
   return {

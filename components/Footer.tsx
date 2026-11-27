@@ -12,6 +12,7 @@ const productLinks = [
   { labelKey: "footer.science", href: "/science" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
   { labelKey: "footer.skillFile", href: "/skill.md" },
+  { labelKey: "footer.codingAgents", href: "/coding-agents.md" },
 ];
 
 const resourceLinks = [

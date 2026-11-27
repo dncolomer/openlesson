@@ -4,6 +4,7 @@
  */
 
 import { isStoredFileId } from "@/lib/ai/stored-file-id";
+import { organizationIdJsonBody } from "@/lib/organization/active-organization-client";
 import {
   HELIOS_MAP_FILE_ACCEPT,
   HELIOS_MAP_MAX_FILE_BYTES,
@@ -120,12 +121,14 @@ export async function uploadFlowArtifact(input: {
   const res = await fetch(FLOW_ARTIFACTS_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fileName: input.file.name,
-      mimeType,
-      data,
-      ...(workspaceId ? { workspaceId } : {}),
-    }),
+    body: JSON.stringify(
+      organizationIdJsonBody({
+        fileName: input.file.name,
+        mimeType,
+        data,
+        ...(workspaceId ? { workspaceId } : {}),
+      }),
+    ),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {

@@ -249,6 +249,7 @@ async function deleteKnowledgeRegion(input: {
 
 async function persistPathTextCompanion(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   workspaceId: string | null;
   name: string;
   description: string;
@@ -275,6 +276,7 @@ async function persistPathTextCompanion(input: {
 
 export async function runRegionSimulation(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   name: string;
   flows: readonly RegionSimulationFlowInput[];
   strategyIds?: readonly ExplorationStrategyId[];
@@ -375,6 +377,7 @@ export async function runRegionSimulation(input: {
 
   const parent = await persistKnowledgeRegion({
     ownerUserId,
+    organizationId: input.organizationId,
     workspaceId,
     name: parentSpec.name,
     description: parentDescription,
@@ -385,6 +388,7 @@ export async function runRegionSimulation(input: {
   });
   await persistPathTextCompanion({
     ownerUserId,
+    organizationId: input.organizationId,
     workspaceId,
     name,
     description: parentDescription,
@@ -404,6 +408,7 @@ export async function runRegionSimulation(input: {
     const description = regionSimulationClusterDescription(strategyId);
     const saved = await persistKnowledgeRegion({
       ownerUserId,
+      organizationId: input.organizationId,
       workspaceId,
       name: spec.name,
       description,
@@ -414,6 +419,7 @@ export async function runRegionSimulation(input: {
     });
     await persistPathTextCompanion({
       ownerUserId,
+      organizationId: input.organizationId,
       workspaceId,
       name: clusterName,
       description,
@@ -670,6 +676,7 @@ async function loadOwnedAiUseClusters(input: {
 
 export async function refreshSimulationFamilyClusters(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   regionId: string;
   family: "exploration" | "ai_use";
   name: string;
@@ -703,6 +710,7 @@ export async function refreshSimulationFamilyClusters(input: {
     );
     const records = await refreshRegionSimulationRecords({
       ownerUserId: input.ownerUserId,
+      organizationId: input.organizationId,
       regionId: input.regionId,
       name: input.name,
       kind: input.kind,
@@ -716,6 +724,7 @@ export async function refreshSimulationFamilyClusters(input: {
     });
     await refreshAiUseClusters({
       ownerUserId: input.ownerUserId,
+      organizationId: input.organizationId,
       parentId: records.id,
       name: input.name,
       kind: input.kind,
@@ -734,6 +743,7 @@ export async function refreshSimulationFamilyClusters(input: {
   });
   const records = await refreshRegionSimulationRecords({
     ownerUserId: input.ownerUserId,
+    organizationId: input.organizationId,
     regionId: input.regionId,
     name: input.name,
     kind: input.kind,
@@ -751,6 +761,7 @@ export async function refreshSimulationFamilyClusters(input: {
   if (aiUseExisting.length) {
     await refreshAiUseClusters({
       ownerUserId: input.ownerUserId,
+      organizationId: input.organizationId,
       parentId: records.id,
       name: input.name,
       kind: input.kind,
@@ -764,6 +775,7 @@ export async function refreshSimulationFamilyClusters(input: {
 
 async function refreshAiUseClusters(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   parentId: string;
   name: string;
   kind: ProductFlowKind;
@@ -784,6 +796,7 @@ async function refreshAiUseClusters(input: {
     await persistKnowledgeRegion({
       id: existing?.id,
       ownerUserId: input.ownerUserId,
+      organizationId: input.organizationId,
       workspaceId,
       name: spec.name,
       description: aiUseClusterDescription(catalogId),
@@ -797,6 +810,7 @@ async function refreshAiUseClusters(input: {
 
 async function refreshRegionSimulationRecords(input: {
   ownerUserId: string;
+  organizationId?: string | null;
   regionId: string;
   name: string;
   kind: ProductFlowKind;
@@ -858,6 +872,7 @@ async function refreshRegionSimulationRecords(input: {
   const parent = await persistKnowledgeRegion({
     id: input.regionId,
     ownerUserId: input.ownerUserId,
+    organizationId: input.organizationId,
     workspaceId,
     name: parentSpec.name,
     description: parentDescription,
@@ -892,6 +907,7 @@ async function refreshRegionSimulationRecords(input: {
     const saved = await persistKnowledgeRegion({
       id: existing?.id,
       ownerUserId: input.ownerUserId,
+      organizationId: input.organizationId,
       workspaceId,
       name: spec.name,
       description,

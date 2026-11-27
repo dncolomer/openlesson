@@ -41,6 +41,8 @@ describe("mcp-jsonrpc-handler", () => {
     const names = tools.map((tool) => tool.name);
     expect(names).toContain("list_protocols");
     expect(names).toContain("create_protocol");
+    expect(names).toContain("create_knowledge_region");
+    expect(names).toContain("get_knowledge_region_options");
     expect(names).not.toContain("create_flow");
     expect(names).not.toContain("list_workspaces");
     expect(names).not.toContain("create_workspace");

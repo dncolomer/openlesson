@@ -9,6 +9,7 @@ import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/pow-api/auth";
 import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-entity";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_API_KEY_SCOPES } from "@/lib/pow-api/scopes";
 import type { ApiKeyScope } from "@/lib/pow-api/types";
@@ -19,7 +20,7 @@ const DEFAULT_RATE_LIMIT = 120;
 
 // ─── GET: List all API keys for the authenticated user ──────────────
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -32,13 +33,26 @@ export async function GET(_req: NextRequest) {
       return errorResponse(401, "unauthorized", "Authentication required");
     }
 
-    const { data: keys, error } = await supabase
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: user.id,
+      email: user.email,
+    });
+    if (!org.ok) return org.response;
+
+    let query = supabase
       .from("agent_api_keys")
       .select(
-        "id, label, key_prefix, scopes, rate_limit, is_active, created_at, last_used_at, expires_at"
+        "id, label, key_prefix, scopes, rate_limit, is_active, created_at, last_used_at, expires_at, organization_id"
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    if (org.organizationId) {
+      query = query.or(
+        `organization_id.eq.${org.organizationId},organization_id.is.null`,
+      );
+    }
+    const { data: keys, error } = await query;
 
     if (error) {
       console.error("[v2/keys] List keys error:", error);
@@ -126,12 +140,20 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Parse & validate body ───────────────────────────────────
-    let body: CreateKeyBody = {};
+    let body: CreateKeyBody & Record<string, unknown> = {};
     try {
       body = await req.json();
     } catch {
       // Empty body is fine — all fields are optional
     }
+
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: user.id,
+      email: user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
 
     const { label, expires_in_days } = body;
 
@@ -193,7 +215,7 @@ export async function POST(req: NextRequest) {
       .from("agent_api_keys")
       .insert({
         user_id: user.id,
-        organization_id: profile.organization_id || null,
+        organization_id: org.organizationId || profile.organization_id || null,
         key_hash: keyHash,
         key_prefix: keyPrefix,
         label: label || null,

@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
+  organizationIdJsonBody,
+  withOrganizationId,
+} from "@/lib/organization/active-organization-client";
+import {
   PROTOCOL_LABEL,
   productFlowNewPath,
   productRegionDashboardPath,
@@ -172,7 +176,7 @@ export function RegionSimulationSetup({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(apiPath)
+    fetch(withOrganizationId(apiPath))
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -256,15 +260,18 @@ export function RegionSimulationSetup({
 
   async function pollJob(jobId: string, onProgress: (progress: RegionSimulationProgress[]) => void) {
     for (let i = 0; i < 180; i += 1) {
-      const status = await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}`);
+      const status = await fetch(
+        withOrganizationId(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}`),
+      );
       const payload = (await status.json().catch(() => ({}))) as Record<string, unknown>;
       if (Array.isArray(payload.progress)) onProgress(payload.progress as RegionSimulationProgress[]);
       const jobStatus = String(payload.status || "");
       if (jobStatus === "done" || jobStatus === "failed") return payload;
       if (jobStatus === "queued" || jobStatus === "running") {
-        await fetch(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`, { method: "POST" }).catch(
-          () => null,
-        );
+        await fetch(
+          withOrganizationId(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`),
+          { method: "POST" },
+        ).catch(() => null);
       }
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
@@ -322,10 +329,11 @@ export function RegionSimulationSetup({
       }),
     );
     try {
-      const response = await fetch(apiPath, {
+      const response = await fetch(withOrganizationId(apiPath), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(
+          organizationIdJsonBody({
           name: name.trim(),
           protocolIds,
           strategyIds,
@@ -342,6 +350,7 @@ export function RegionSimulationSetup({
           aiUseCatalogIds,
           samplesPerAiUse,
         }),
+        ),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));

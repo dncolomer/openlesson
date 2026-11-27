@@ -19,6 +19,8 @@ import {
 import { parseFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import { ltiIdentityForPublicToken } from "@/lib/lti/auto-claim";
+import { parseSessionSidebarStyle, type SessionSidebarStyle } from "@/lib/session-sidebar-style";
+import { SessionSidebarStyleOverride } from "@/lib/use-session-sidebar-style";
 
 type Phase = "identity" | "pick" | "empty";
 
@@ -39,6 +41,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sidebarStyle, setSidebarStyle] = useState<SessionSidebarStyle | null>(null);
 
   async function claimIdentity(nextIdentity: string) {
     setBusy(true);
@@ -82,6 +85,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       setDurationMinutes(flowCountdownMinutes(payload.durationMinutes));
       setEnforcedChannels(parseFlowEnforcedChannels(payload.enforcedChannels));
       setCanvasCapture(parseFlowCanvasCapture(payload.canvasCapture));
+      setSidebarStyle(parseSessionSidebarStyle(payload.sidebarStyle));
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -128,6 +132,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   if (phase === "pick" && presetTopics.length > 0) {
     return (
       <div className="h-screen min-h-0" data-verification-public-entry data-verification-tap-session>
+        <SessionSidebarStyleOverride style={sidebarStyle}>
         <TapScoreClient
           presetStartingTopics={presetTopics}
           localOpening
@@ -144,6 +149,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}
           showEndSession
         />
+        </SessionSidebarStyleOverride>
       </div>
     );
   }

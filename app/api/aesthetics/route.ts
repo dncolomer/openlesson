@@ -10,6 +10,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadOrgAesthetics } from "@/lib/organization/aesthetics-store";
+import { resolveSidebarStyleForProtocol } from "@/lib/organization/protocol-settings-store";
 import {
   EMPTY_SESSION_SIDEBAR_STYLE,
   type SessionSidebarStyle,
@@ -38,9 +39,11 @@ async function viewerOrgAesthetics(): Promise<{
       .maybeSingle();
     if (!profile?.organization_id) return empty;
 
-    const loaded = await loadOrgAesthetics(createAdminClient(), profile.organization_id);
+    const admin = createAdminClient();
+    const loaded = await loadOrgAesthetics(admin, profile.organization_id);
     if (!loaded.ok) return empty;
-    return loaded.stored;
+    const style = await resolveSidebarStyleForProtocol(admin, profile.organization_id, null);
+    return { urls: loaded.stored.urls, style };
   } catch {
     return empty;
   }

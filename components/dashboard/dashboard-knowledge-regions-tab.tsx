@@ -11,6 +11,7 @@ import {
 import { dashboardRegionCreateHref } from "@/lib/dashboard-nav";
 import { productFlowNewPath } from "@/lib/product-flow";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { withOrganizationId } from "@/lib/organization/active-organization-client";
 import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 
 export function DashboardKnowledgeRegionsTab({
@@ -26,10 +27,14 @@ export function DashboardKnowledgeRegionsTab({
 
   useEffect(() => {
     let cancelled = false;
-    const load = () => {
+    const load = (event?: Event) => {
+      const readId = (evt?: Event) =>
+        evt && "detail" in evt
+          ? String((evt as CustomEvent<{ organizationId?: string }>).detail?.organizationId || "")
+          : "";
       setLoading(true);
       setError("");
-      fetch(DASHBOARD_KNOWLEDGE_REGIONS_PATH)
+      fetch(withOrganizationId(DASHBOARD_KNOWLEDGE_REGIONS_PATH, readId(event)))
         .then(async (response) => {
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) {

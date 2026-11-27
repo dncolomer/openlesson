@@ -38,6 +38,7 @@ describe("integration-discovery", () => {
       workspace_kind: "knowledge_region",
     });
     expect(cold.some((a) => a.mcp_tool === "create_protocol")).toBe(true);
+    expect(cold.some((a) => a.mcp_tool === "create_knowledge_region")).toBe(true);
 
     const warm = recommendIntegrationActions({
       proof_of_work_artifacts: 6,
@@ -59,6 +60,8 @@ describe("integration-discovery", () => {
     expect(loop).toContain("list_protocols");
     expect(loop).toContain("get_protocol");
     expect(loop).toContain("update_protocol");
+    expect(loop).toContain("create_knowledge_region");
+    expect(loop).toContain("get_knowledge_region_options");
     expect(loop).not.toContain("create_flow");
     expect(loop).not.toContain("link_flow");
     expect(loop).not.toContain("apply_map_tool");

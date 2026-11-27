@@ -15,6 +15,12 @@ import {
   type FlowAuthoringSource,
 } from "@/lib/product-flow";
 import {
+  isProtocolSettingsError,
+  parseProtocolSettingId,
+} from "@/lib/organization/protocol-settings";
+import { assertProtocolSettingInOrg } from "@/lib/organization/protocol-settings-store";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
   parseFlowArtifacts,
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
@@ -45,11 +51,10 @@ import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
   getVerificationFlowById,
   listVerificationFlows,
+  listVerificationFlowsForDashboard,
   listVerificationFlowsForOwnerUserId,
   runVerificationCommand,
 } from "@/lib/verification-flow-repository";
-import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
-import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthContext } from "./types";
 import { listWorkspaceBlocks, loadManagedWorkspace } from "./workspace-management";
 
@@ -71,6 +76,8 @@ export type PresentedAgentProtocol = {
   public_token: string;
   workspace_id: string | null;
   owner_user_id: string | null;
+  organization_id: string | null;
+  protocol_setting_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -162,9 +169,11 @@ export function presentAgentProtocol(flow: {
   enforcedChannels?: unknown;
   canvasCapture?: unknown;
   openingCanvasScene?: unknown;
+  protocolSettingId?: string | null;
   publicToken: string;
   workspaceId: string;
   ownerUserId?: string;
+  organizationId?: string;
   createdAt: string;
   updatedAt: string;
 }): PresentedAgentProtocol {
@@ -181,6 +190,8 @@ export function presentAgentProtocol(flow: {
     public_token: flow.publicToken,
     workspace_id: presentWorkspaceId(flow.workspaceId),
     owner_user_id: flow.ownerUserId || null,
+    organization_id: presentWorkspaceId(flow.organizationId),
+    protocol_setting_id: parseProtocolSettingId(flow.protocolSettingId),
     created_at: flow.createdAt,
     updated_at: flow.updatedAt,
   };
@@ -227,6 +238,7 @@ function assertNoRetiredKind(body: Record<string, unknown>): void {
 export type ListAgentProtocolsInput = {
   ownerUserId: string;
   workspaceId?: string;
+  organizationId?: string | null;
 };
 
 export type ListAgentFlowsInput = ListAgentProtocolsInput & { kind?: unknown };
@@ -238,10 +250,21 @@ export async function listAgentProtocols(
     typeof input === "string" ? { ownerUserId: "", workspaceId: input } : input;
   const workspaceId = optionalWorkspaceId(filter.workspaceId);
   const ownerUserId = String(filter.ownerUserId || "").trim();
+  const organizationId = optionalWorkspaceId(filter.organizationId);
   const verification = workspaceId
     ? await listVerificationFlows(workspaceId)
-    : await listVerificationFlowsForOwnerUserId(ownerUserId);
+    : organizationId
+      ? await listVerificationFlowsForDashboard({
+          ownerUserId,
+          organizationId,
+        })
+      : await listVerificationFlowsForOwnerUserId(ownerUserId);
   const presented = verification.map(presentAgentProtocol);
+  if (organizationId) {
+    return presented.filter(
+      (flow) => !flow.organization_id || flow.organization_id === organizationId,
+    );
+  }
   if (!ownerUserId) return presented;
   return presented.filter((flow) => flow.owner_user_id === ownerUserId);
 }
@@ -259,13 +282,20 @@ export async function getAgentProtocol(
   workspaceId: string | null | undefined,
   protocolId: string,
   ownerUserId?: string,
+  organizationId?: string | null,
 ): Promise<PresentedAgentProtocol | null> {
   const mapId = optionalWorkspaceId(workspaceId);
   const owner = String(ownerUserId || "").trim();
+  const org = optionalWorkspaceId(organizationId);
   const verification = await getVerificationFlowById(protocolId);
   const presented = verification ? presentAgentProtocol(verification) : null;
   if (!presented) return null;
   if (mapId && presented.workspace_id && presented.workspace_id !== mapId) return null;
+  if (org) {
+    if (presented.organization_id && presented.organization_id !== org) return null;
+    if (!presented.organization_id && owner && presented.owner_user_id !== owner) return null;
+    return presented;
+  }
   if (owner && presented.owner_user_id !== owner) return null;
   return presented;
 }
@@ -308,6 +338,7 @@ export async function createAgentProtocol(
   auth: AuthContext,
   workspaceId: string | null | undefined,
   body: Record<string, unknown>,
+  organizationId: string,
 ): Promise<PresentedAgentProtocol> {
   assertNoRetiredKind(body);
   const owner = ownerUserId(auth);
@@ -351,15 +382,28 @@ export async function createAgentProtocol(
       body.enforced_channels ?? body.enforcedChannels,
     ),
     canvasCapture: parseFlowCanvasCapture(body.canvas_capture ?? body.canvasCapture),
+    protocolSettingId: parseProtocolSettingId(
+      body.protocol_setting_id ?? body.protocolSettingId,
+    ),
   };
   const accepted = acceptProtocolPublish(draft);
   if (!accepted.ok) throw new Error(publishReason(accepted.reason));
+  let protocolSettingId = accepted.protocolSettingId;
+  try {
+    protocolSettingId = await assertProtocolSettingInOrg(
+      createAdminClient(),
+      organizationId,
+      accepted.protocolSettingId,
+    );
+  } catch (error) {
+    if (isProtocolSettingsError(error)) throw new Error(error.message);
+    throw error;
+  }
 
-  const organizationId = await loadActiveOrganizationId(createAdminClient(), owner);
   const created = await runVerificationCommand({
     type: "create",
     ownerUserId: owner,
-    organizationId: organizationId || undefined,
+    organizationId,
     workspaceId: mapId,
     name: accepted.name,
     topic: accepted.challenge,
@@ -372,6 +416,7 @@ export async function createAgentProtocol(
     answersModelSeed: accepted.answersModelSeed,
     enforcedChannels: accepted.enforcedChannels,
     canvasCapture: accepted.canvasCapture,
+    protocolSettingId,
   });
   if (!created.ok || !created.flow) {
     throw new Error(created.ok ? "create_failed" : created.reason);
@@ -383,8 +428,9 @@ export async function createAgentFlow(
   auth: AuthContext,
   workspaceId: string | null | undefined,
   body: Record<string, unknown>,
+  organizationId: string,
 ): Promise<PresentedAgentProtocol> {
-  return createAgentProtocol(auth, workspaceId, body);
+  return createAgentProtocol(auth, workspaceId, body, organizationId);
 }
 
 export async function updateAgentProtocol(
@@ -392,10 +438,11 @@ export async function updateAgentProtocol(
   workspaceId: string | null | undefined,
   protocolId: string,
   body: Record<string, unknown>,
+  organizationId: string,
 ): Promise<PresentedAgentProtocol> {
   assertNoRetiredKind(body);
   const owner = ownerUserId(auth);
-  const existing = await getAgentProtocol(workspaceId, protocolId, owner);
+  const existing = await getAgentProtocol(workspaceId, protocolId, owner, organizationId);
   if (!existing) throw new Error("Protocol not found.");
   const name = body.name === undefined ? undefined : String(body.name || "").trim();
   const challenge =
@@ -449,6 +496,23 @@ export async function updateAgentProtocol(
     body.canvas_capture === undefined && body.canvasCapture === undefined
       ? undefined
       : parseFlowCanvasCapture(body.canvas_capture ?? body.canvasCapture);
+  const protocolSettingIdRaw =
+    body.protocol_setting_id === undefined && body.protocolSettingId === undefined
+      ? undefined
+      : parseProtocolSettingId(body.protocol_setting_id ?? body.protocolSettingId);
+  let protocolSettingId = protocolSettingIdRaw;
+  if (protocolSettingIdRaw !== undefined) {
+    try {
+      protocolSettingId = await assertProtocolSettingInOrg(
+        createAdminClient(),
+        organizationId,
+        protocolSettingIdRaw,
+      );
+    } catch (error) {
+      if (isProtocolSettingsError(error)) throw new Error(error.message);
+      throw error;
+    }
+  }
 
   const updated = await runVerificationCommand({
     type: "update",
@@ -466,6 +530,7 @@ export async function updateAgentProtocol(
     answersModelSeed,
     enforcedChannels,
     canvasCapture,
+    protocolSettingId,
   });
   if (!updated.ok || !updated.flow) {
     throw new Error(updated.ok ? "update_failed" : updated.reason);
@@ -478,16 +543,18 @@ export async function updateAgentFlow(
   workspaceId: string | null | undefined,
   flowId: string,
   body: Record<string, unknown>,
+  organizationId: string,
 ): Promise<PresentedAgentProtocol> {
-  return updateAgentProtocol(auth, workspaceId, flowId, body);
+  return updateAgentProtocol(auth, workspaceId, flowId, body, organizationId);
 }
 
 export async function deleteAgentProtocol(
   auth: AuthContext,
   protocolId: string,
+  organizationId: string,
 ): Promise<{ deleted: true; protocol_id: string }> {
   const owner = ownerUserId(auth);
-  const existing = await getAgentProtocol(undefined, protocolId, owner);
+  const existing = await getAgentProtocol(undefined, protocolId, owner, organizationId);
   if (!existing) throw new Error("Protocol not found.");
   const removed = await runVerificationCommand({
     type: "remove",
@@ -502,8 +569,9 @@ export async function deleteAgentProtocol(
 export async function deleteAgentFlow(
   auth: AuthContext,
   flowId: string,
+  organizationId: string,
 ): Promise<{ deleted: true; protocol_id: string; flow_id: string }> {
-  const result = await deleteAgentProtocol(auth, flowId);
+  const result = await deleteAgentProtocol(auth, flowId, organizationId);
   return { ...result, flow_id: result.protocol_id };
 }
 

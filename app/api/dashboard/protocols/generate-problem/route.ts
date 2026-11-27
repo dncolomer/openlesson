@@ -9,6 +9,7 @@ import {
   DASHBOARD_FLOWS_GENERATE_PROBLEM_PATH,
   generateFlowProblemFromArtifacts,
 } from "@/lib/flow-problem-generate";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -18,6 +19,13 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   try {
     const body = (await req.json()) as Record<string, unknown>;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
     const result = await generateFlowProblemFromArtifacts(body);
     if (!result.ok) {
       const status = result.error === "Attach at least one artifact." ? 400 : 502;

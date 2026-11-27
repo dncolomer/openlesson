@@ -3,7 +3,8 @@
  *   - Embeddable Knowledge Verification Protocols `/api/v3/protocols`
  *     (create/update match the dashboard wizard: challenge, artifacts, files,
  *     unsys seed, exact challenge on canvas, enforced channels)
- *   - Knowledge region candidate render `/api/v3/knowledge-regions`
+ *   - Knowledge Regions `/api/v3/knowledge-regions` (CRUD + wizard simulation,
+ *     candidate render, uncertainty-model walk, stored run)
  *
  * Learning Map management (`/api/v3/workspaces`) is retired. Headless
  * proof-of-work (`/api/v3/pow` sessions), Snapshot, and Stash are not
@@ -12,10 +13,15 @@
 
 export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
 export const PROTOCOL_API_BASE = "/api/v3/protocols" as const;
+export const PROTOCOL_SETTINGS_API_BASE = "/api/v3/protocol-settings" as const;
 export const FLOW_API_BASE = PROTOCOL_API_BASE;
 export const FLOW_FILES_API_PATH = `${PROTOCOL_API_BASE}/files` as const;
 export const FLOW_UNSYS_SEED_API_PATH = `${PROTOCOL_API_BASE}/unsys-seed` as const;
 export const KNOWLEDGE_REGION_API_BASE = "/api/v3/knowledge-regions" as const;
+export const KNOWLEDGE_REGION_OPTIONS_API_PATH =
+  `${KNOWLEDGE_REGION_API_BASE}/options` as const;
+export const KNOWLEDGE_REGION_JOBS_API_PATH =
+  `${KNOWLEDGE_REGION_API_BASE}/jobs` as const;
 export const ACCOUNT_API_BASE = "/api/v3/account" as const;
 export const POW_API_BASE = "/api/v3/pow" as const;
 /** Retired Snapshot API family. Kept so tests can assert the tree is gone. */

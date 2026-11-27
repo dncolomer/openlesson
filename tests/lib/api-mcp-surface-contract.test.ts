@@ -8,6 +8,9 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  KNOWLEDGE_REGION_API_BASE,
+  KNOWLEDGE_REGION_JOBS_API_PATH,
+  KNOWLEDGE_REGION_OPTIONS_API_PATH,
   PROTOCOL_API_BASE,
   PUBLIC_AGENT_API_FAMILIES,
 } from "@/lib/api/agent-api-paths";
@@ -70,6 +73,8 @@ function restPathToRouteFile(path: string): string {
     .replace(/\{block_id\}/g, "[blockId]")
     .replace(/\{knowledge_region_id\}/g, "[id]")
     .replace(/\{candidate_id\}/g, "[candidateId]")
+    .replace(/\{job_id\}/g, "[jobId]")
+    .replace(/\{run_id\}/g, "[runId]")
     .replace(/\{id\}/g, "[id]");
   // Collection GET /workspaces has no trailing resource
   if (
@@ -97,6 +102,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     expect(agentToolNames()).not.toContain("list_map_tools");
     expect(agentToolNames()).not.toContain("apply_map_tool");
     expect(agentToolNames()).toContain("create_protocol");
+    expect(agentToolNames()).toContain("create_knowledge_region");
     expect(agentToolNames()).not.toContain("create_flow");
     expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["protocol", "knowledge_region"]);
     for (const tool of AGENT_TOOL_SURFACE) {
@@ -114,10 +120,22 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         built: PROTOCOL_API_BASE,
         routeRel: "app/api/v3/protocols/route.ts",
       },
+      {
+        built: KNOWLEDGE_REGION_API_BASE,
+        routeRel: "app/api/v3/knowledge-regions/route.ts",
+      },
+      {
+        built: KNOWLEDGE_REGION_OPTIONS_API_PATH,
+        routeRel: "app/api/v3/knowledge-regions/options/route.ts",
+      },
+      {
+        built: KNOWLEDGE_REGION_JOBS_API_PATH,
+        routeRel: "app/api/v3/knowledge-regions/jobs/[jobId]/route.ts",
+      },
     ];
 
     for (const { built, routeRel } of cases) {
-      expect(built.startsWith(PROTOCOL_API_BASE)).toBe(true);
+      expect(built.startsWith("/api/v3/")).toBe(true);
       expect(existsSync(join(ROOT, routeRel))).toBe(true);
     }
     expect(existsSync(join(ROOT, "app/api/v3/workspaces/route.ts"))).toBe(false);
@@ -175,7 +193,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     ).toBe(false);
   });
 
-  it("MCP public tools are independent protocol management only", () => {
+  it("MCP public tools are protocol and knowledge-region management", () => {
     const mcpNames = new Set<string>(MCP_EVIDENCE_TOOLS.map((t) => t.name));
     for (const name of [
       "list_protocols",
@@ -185,7 +203,17 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "get_protocol",
       "update_protocol",
       "delete_protocol",
+      "list_knowledge_regions",
+      "get_knowledge_region_options",
+      "create_knowledge_region",
+      "get_knowledge_region",
+      "update_knowledge_region",
+      "delete_knowledge_region",
+      "simulate_knowledge_region",
+      "get_knowledge_region_job",
+      "get_knowledge_region_run",
       "get_knowledge_region_candidate",
+      "get_knowledge_region_uncertainty_model",
     ] as const) {
       expect(mcpNames.has(name)).toBe(true);
     }

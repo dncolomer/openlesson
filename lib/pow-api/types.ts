@@ -35,6 +35,8 @@ export interface AuthContext {
   user_id: string | null;
   guest_user_id: string | null;
   organization_id: string | null;
+  /** API key row organization_id only — not the last-switched profile org. */
+  key_organization_id?: string | null;
   is_org_admin: boolean;
   key_id: string;
   scopes: ApiKeyScope[];

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
 import { uploadAgentFlowFile } from "@/lib/pow-api/agent-flow-management";
+import { requireAgentRequestOrganization } from "@/lib/organization/request-organization";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return errorResponse(400, "validation_error", "Invalid JSON body");
   }
+  const org = await requireAgentRequestOrganization(req, auth, body);
+  if (!org.ok) return org.response;
   try {
     const artifact = await uploadAgentFlowFile(auth, body);
     return NextResponse.json(

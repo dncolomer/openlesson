@@ -21,6 +21,8 @@ export type SessionCanvasStyle = {
   background: string;
   stroke: string;
   zenMode: boolean;
+  /** Excalidraw grid when a board opens. MAGI default is on. */
+  gridMode: boolean;
 };
 
 export type SessionSidebarStyle = {
@@ -43,12 +45,13 @@ export const DEFAULT_SESSION_SIDEBAR_STYLE_TOKENS: SessionSidebarStyleTokens = {
 
 /**
  * Visual MAGI board: near-black fill, near-white ink (stored Excalidraw stroke
- * `#1e1e1e` inverts to `#e1e1e1`), zen on.
+ * `#1e1e1e` inverts to `#e1e1e1`), zen on, grid on.
  */
 export const DEFAULT_SESSION_CANVAS_STYLE: SessionCanvasStyle = {
   background: "#0a0a0a",
   stroke: "#e1e1e1",
   zenMode: true,
+  gridMode: true,
 };
 
 export const EMPTY_SESSION_SIDEBAR_STYLE: SessionSidebarStyle = {
@@ -111,20 +114,24 @@ export function parseSessionCanvasStyle(value: unknown): SessionCanvasStyle {
     : DEFAULT_SESSION_CANVAS_STYLE.stroke;
   const zenRaw = row.zenMode ?? row.zenModeEnabled ?? row.zen;
   const zenMode = typeof zenRaw === "boolean" ? zenRaw : DEFAULT_SESSION_CANVAS_STYLE.zenMode;
-  return { background, stroke, zenMode };
+  const gridRaw = row.gridMode ?? row.gridModeEnabled ?? row.grid;
+  const gridMode = typeof gridRaw === "boolean" ? gridRaw : DEFAULT_SESSION_CANVAS_STYLE.gridMode;
+  return { background, stroke, zenMode, gridMode };
 }
 
 /** Stored Excalidraw appState for the org board look (pre-invert). */
-export function sessionCanvasExcalidrawChrome(canvas: SessionCanvasStyle | null | undefined): {
+export function sessionCanvasExcalidrawChrome(canvas: unknown): {
   viewBackgroundColor: string;
   currentItemStrokeColor: string;
   zenModeEnabled: boolean;
+  gridModeEnabled: boolean;
 } {
   const resolved = parseSessionCanvasStyle(canvas);
   return {
     viewBackgroundColor: invertSessionCanvasColor(resolved.background),
     currentItemStrokeColor: invertSessionCanvasColor(resolved.stroke),
     zenModeEnabled: resolved.zenMode,
+    gridModeEnabled: resolved.gridMode,
   };
 }
 
@@ -149,6 +156,7 @@ export function parseSessionSidebarStyle(value: unknown): SessionSidebarStyle {
           canvasBackground: row.canvasBackground,
           canvasStroke: row.canvasStroke,
           zenMode: row.zenMode ?? row.zenModeEnabled,
+          gridMode: row.gridMode ?? row.gridModeEnabled,
         },
   );
   return { prompt, generatedAt, backgroundImage, tokens, canvas };

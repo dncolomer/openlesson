@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { protocolChallengeFromUnknown, rejectedProtocolKind } from "@/lib/product-flow";
 import { generateVerificationPoolFromTopic } from "@/lib/verification-flow";
 import { callXaiJSON, DEFAULT_MODEL, systemMessage, userMessage } from "@/lib/xai-client";
@@ -28,6 +29,13 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   try {
     const body = (await req.json()) as Record<string, unknown>;
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+      body,
+    });
+    if (!org.ok) return org.response;
     if (rejectedProtocolKind(body.kind)) {
       return jsonError(400, "Only knowledge verification protocols are supported");
     }

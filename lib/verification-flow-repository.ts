@@ -38,6 +38,7 @@ import {
 } from "@/lib/flow-canvas-capture";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import { parseProtocolSettingId } from "@/lib/organization/protocol-settings";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
@@ -127,6 +128,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
     enforcedChannels: parseFlowEnforcedChannels(row.enforced_channels),
     canvasCapture: parseFlowCanvasCapture(row.canvas_capture),
+    protocolSettingId: parseProtocolSettingId(row.protocol_setting_id),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -230,6 +232,7 @@ async function persistCommand(
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
       enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       canvas_capture: serializeFlowCanvasCapture(value.flow.canvasCapture),
+      protocol_setting_id: parseProtocolSettingId(value.flow.protocolSettingId),
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -251,6 +254,7 @@ async function persistCommand(
       answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
       enforced_channels: serializeFlowEnforcedChannels(value.flow.enforcedChannels),
       canvas_capture: serializeFlowCanvasCapture(value.flow.canvasCapture),
+      protocol_setting_id: parseProtocolSettingId(value.flow.protocolSettingId),
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -450,6 +454,7 @@ async function writeVerificationFlow(
       "answers_model_seed",
       "enforced_channels",
       "canvas_capture",
+      "protocol_setting_id",
     ],
   );
 }

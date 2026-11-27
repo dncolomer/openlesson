@@ -30,7 +30,7 @@ export const DASHBOARD_KNOWLEDGE_REGION_UNSYS_PATH =
   "/api/dashboard/knowledge-regions";
 
 const REGION_SELECT =
-  "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id";
+  "id, workspace_id, owner_user_id, organization_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id";
 
 const FLOW_TABLE = "verify_flows";
 
@@ -398,10 +398,12 @@ export async function loadKnowledgeRegionUncertaintyModel(input: {
   knowledgeRegionId: string;
   candidateId: string;
   runId?: string | null;
+  organizationId?: string | null;
 }): Promise<LoadKnowledgeRegionUncertaintyModelResult> {
   const ownerUserId = text(input.ownerUserId);
   const knowledgeRegionId = text(input.knowledgeRegionId);
   const candidateId = text(input.candidateId);
+  const organizationId = text(input.organizationId);
   if (!ownerUserId) {
     return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
   }
@@ -415,14 +417,23 @@ export async function loadKnowledgeRegionUncertaintyModel(input: {
   }
 
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase
+  let query = supabase
     .from("knowledge_regions")
     .select(REGION_SELECT)
-    .eq("id", knowledgeRegionId)
-    .eq("owner_user_id", ownerUserId)
-    .maybeSingle();
+    .eq("id", knowledgeRegionId);
+  if (!organizationId) query = query.eq("owner_user_id", ownerUserId);
+  const { data: row, error } = await query.maybeSingle();
   if (error || !row) {
     return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
+  }
+  const rowOrg = text((row as { organization_id?: unknown }).organization_id);
+  if (organizationId) {
+    if (rowOrg && rowOrg !== organizationId) {
+      return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
+    }
+    if (!rowOrg && text(row.owner_user_id) !== ownerUserId) {
+      return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };
+    }
   }
   if (text(row.embedding_model_id) === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) {
     return { ok: false, status: 404, code: "not_found", message: "Knowledge region not found" };

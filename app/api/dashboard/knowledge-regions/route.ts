@@ -7,7 +7,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { presentDashboardKnowledgeRegions } from "@/lib/dashboard-knowledge-regions";
 import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
-import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
+import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { rejectedProtocolKind } from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -21,8 +21,14 @@ export async function GET(req: NextRequest) {
       return jsonError(400, "Only knowledge verification protocols are supported");
     }
 
+    const org = await resolveDashboardOrganizationId({
+      req,
+      userId: auth.user.id,
+      email: auth.user.email,
+    });
+    if (!org.ok) return org.response;
+    const organizationId = org.organizationId;
     const admin = createAdminClient();
-    const organizationId = await loadActiveOrganizationId(admin, auth.user.id);
     const select =
       "id, workspace_id, owner_user_id, name, description, subject_count, created_at, embedding_model_id";
     let listed = organizationId

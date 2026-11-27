@@ -60,7 +60,10 @@ describe("named protocol settings", () => {
       { ...presented, id: "b", name: "Beta", isDefault: false },
       { ...presented, id: "a", name: "Alpha", isDefault: true },
     ]).map((row) => row.id)).toEqual(["a", "b"]);
-    expect(DEFAULT_PROTOCOL_SETTING_NAME).toBe("Default");
+    expect(DEFAULT_PROTOCOL_SETTING_NAME).toBe("Uncertain Systems");
+    const rename = read("supabase/migrations/20261127150000_protocol_settings_uncertain_systems.sql");
+    expect(rename).toContain("Uncertain Systems");
+    expect(rename).toContain("lower(ps.name) = 'default'");
     expect(emptyProtocolDraft().protocolSettingId).toBeNull();
     expect(nextUntitledProtocolSettingName([])).toBe("Untitled");
     expect(nextUntitledProtocolSettingName([{ name: "Untitled" }])).toBe("Untitled 2");

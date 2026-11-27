@@ -4,7 +4,7 @@ import {
 } from "@/lib/session-sidebar-style";
 
 export const PROTOCOL_SETTING_NAME_MAX = 80;
-export const DEFAULT_PROTOCOL_SETTING_NAME = "Default";
+export const DEFAULT_PROTOCOL_SETTING_NAME = "Uncertain Systems";
 
 export type ProtocolSettingRecord = {
   id: string;

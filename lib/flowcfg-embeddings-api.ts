@@ -1,6 +1,7 @@
 /**
  * HTTP client for the private flowcfg embeddings host.
- * POST /v1/embed with Bearer auth and recoverable Path raw (PoW + gen model + policy).
+ * OpenAI embeddings envelope: POST /v1/embeddings with Bearer auth.
+ * input is a JSON string of recoverable Path raw (genModel, projectedPolicy, pow).
  */
 
 import {
@@ -55,7 +56,7 @@ export async function requestFlowcfgEmbeddings(
   if (!origin || !key) {
     throw new Error("FLOWCFG_EMBEDDINGS_BASE_URL and FLOWCFG_EMBEDDINGS_API_KEY are required");
   }
-  const response = await fetch(`${origin}/v1/embed`, {
+  const response = await fetch(`${origin}/v1/embeddings`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
@@ -63,7 +64,7 @@ export async function requestFlowcfgEmbeddings(
     },
     body: JSON.stringify({
       model: FLOWCFG_EMBEDDINGS_MODEL,
-      raw: embedRequestBody(raw),
+      input: JSON.stringify(embedRequestBody(raw)),
     }),
   });
   const payload = (await response.json().catch(() => null)) as {

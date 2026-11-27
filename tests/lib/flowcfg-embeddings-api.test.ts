@@ -93,7 +93,7 @@ describe("flowcfg embeddings persist client", () => {
     resetFlowEmbeddingStore("memory");
   });
 
-  it("persistCompletedFlowEmbedding POSTs /v1/embed with Path raw and stores returned Path", async () => {
+  it("persistCompletedFlowEmbedding POSTs /v1/embeddings and stores returned Path", async () => {
     const local = embedFlowOutput(FIXTURE_RAW);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     resetFlowEmbeddingStore("memory");
@@ -104,23 +104,19 @@ describe("flowcfg embeddings persist client", () => {
       raw: FIXTURE_RAW,
     });
     expect(fetchSpy).toHaveBeenCalled();
-    const call = fetchSpy.mock.calls.find(([input]) => String(input).includes("/v1/embed"));
+    const call = fetchSpy.mock.calls.find(([input]) => String(input).includes("/v1/embeddings"));
     expect(call).toBeTruthy();
-    expect(String(call![0])).toBe("http://flowcfg-embeddings.test/v1/embed");
+    expect(String(call![0])).toBe("http://flowcfg-embeddings.test/v1/embeddings");
     const init = call![1] as RequestInit;
     expect(init.method).toBe("POST");
     expect(String(init.headers && (init.headers as Record<string, string>).Authorization)).toContain(
       "Bearer ",
     );
-    const body = JSON.parse(String(init.body)) as {
-      model: string;
-      raw: { genModel?: unknown; projectedPolicy?: unknown; pow?: unknown; flowKind?: unknown };
-    };
+    const body = JSON.parse(String(init.body)) as { model: string; input: string };
     expect(body.model).toBe(FLOW_EMBEDDING_MODEL_ID);
-    expect(body.raw.flowKind).toBeUndefined();
-    expect(body.raw.genModel).toMatchObject({ rootId: "root" });
-    expect(body.raw.projectedPolicy).toMatchObject({ sequence: ["root", "cheap", "cheap-leaf"] });
-    expect(Array.isArray(body.raw.pow)).toBe(true);
+    const parsed = JSON.parse(body.input) as { flowKind?: unknown; genModel?: { rootId?: string } };
+    expect(parsed.flowKind).toBeUndefined();
+    expect(parsed.genModel).toMatchObject({ rootId: "root" });
     expect(stored.vector).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(stored.vector).toEqual(local.vector);
     expect(stored.channel_vectors.path).toEqual(local.channel_vectors.path);

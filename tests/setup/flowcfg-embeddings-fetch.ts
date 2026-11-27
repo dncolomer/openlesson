@@ -1,5 +1,5 @@
 /**
- * Persist goes over HTTP. Tests intercept POST /v1/embed and encode
+ * Persist goes over HTTP. Tests intercept POST /v1/embeddings and encode
  * with the in-repo Path function so stored floats still match live Path.
  */
 import { embedFlowOutput, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
@@ -17,7 +17,7 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
       : input instanceof URL
         ? input.href
         : input.url;
-  if (!url.startsWith(`${origin}/v1/embed`)) {
+  if (!url.startsWith(`${origin}/v1/embeddings`)) {
     return originalFetch(input as RequestInfo, init);
   }
   const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
@@ -30,17 +30,24 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
       : input instanceof Request
         ? await input.clone().text()
         : "";
-  const parsed = JSON.parse(rawBody) as { model?: string; raw?: unknown };
-  const record = embedFlowOutput(parsed.raw);
+  const parsed = JSON.parse(rawBody) as { model?: string; input?: unknown };
+  const inputText = typeof parsed.input === "string" ? parsed.input : null;
+  if (!inputText) {
+    return Response.json({ error: { message: "input must be a string" } }, { status: 400 });
+  }
+  const record = embedFlowOutput(JSON.parse(inputText));
   return Response.json({
+    object: "list",
     model: parsed.model || FLOW_EMBEDDING_MODEL_ID,
     data: [
       {
-        index: 0,
+        object: "embedding",
         embedding: record.vector,
+        index: 0,
         channel_vectors: record.channel_vectors,
       },
     ],
+    usage: { prompt_tokens: Math.max(1, Math.ceil(inputText.length / 4)), total_tokens: 1 },
   });
 };
 

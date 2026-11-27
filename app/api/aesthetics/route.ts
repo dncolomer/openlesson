@@ -7,37 +7,42 @@ import {
   formatAestheticName,
   type AestheticPackage,
 } from "@/lib/aesthetics";
-import { readCustomAestheticUrls } from "@/lib/organization/custom-aesthetic-set";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadOrgAesthetics } from "@/lib/organization/aesthetics-store";
+import {
+  EMPTY_SESSION_SIDEBAR_STYLE,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"]);
 const AESTHETICS_DIR = path.join(process.cwd(), "public", "aesthetics");
 
 /** Viewer's org set. Anonymous users and users with no org stay on system defaults. */
-async function viewerCustomAestheticUrls(): Promise<string[]> {
+async function viewerOrgAesthetics(): Promise<{
+  urls: string[];
+  style: SessionSidebarStyle;
+}> {
+  const empty = { urls: [] as string[], style: EMPTY_SESSION_SIDEBAR_STYLE };
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return [];
+    if (!user) return empty;
 
     const { data: profile } = await supabase
       .from("profiles")
       .select("organization_id")
       .eq("id", user.id)
       .maybeSingle();
-    if (!profile?.organization_id) return [];
+    if (!profile?.organization_id) return empty;
 
-    const { data: org, error } = await supabase
-      .from("organizations")
-      .select("custom_aesthetic_urls")
-      .eq("id", profile.organization_id)
-      .maybeSingle();
-    if (error || !org) return [];
-    return readCustomAestheticUrls(org.custom_aesthetic_urls);
+    const loaded = await loadOrgAesthetics(createAdminClient(), profile.organization_id);
+    if (!loaded.ok) return empty;
+    return loaded.stored;
   } catch {
-    return [];
+    return empty;
   }
 }
 
@@ -47,15 +52,16 @@ function randomItem<T>(items: T[]) {
 
 export async function GET() {
   try {
-    const customUrls = await viewerCustomAestheticUrls();
+    const org = await viewerOrgAesthetics();
     const decision = decideActiveAestheticPool({
-      customUrls,
+      customUrls: org.urls,
       systemImages: [],
     });
     if (decision.source === "custom") {
       return NextResponse.json({
         packages: [aestheticPackageFromCustomUrls(decision.images)],
         source: "custom",
+        sidebarStyle: org.style,
       });
     }
 
@@ -81,10 +87,13 @@ export async function GET() {
         }),
     );
 
-    return NextResponse.json({ packages: packages.filter(Boolean) });
+    return NextResponse.json({
+      packages: packages.filter(Boolean),
+      sidebarStyle: org.style,
+    });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return NextResponse.json({ packages: [] });
+      return NextResponse.json({ packages: [], sidebarStyle: EMPTY_SESSION_SIDEBAR_STYLE });
     }
     console.error("Failed to load aesthetics packages", error);
     return NextResponse.json({ packages: [] }, { status: 500 });

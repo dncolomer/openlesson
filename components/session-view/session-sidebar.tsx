@@ -7,7 +7,11 @@ import {
   sessionSidebarRailStyle,
   type SessionSidebarMode,
 } from "@/lib/session-sidebar";
-import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import {
+  sessionSidebarStyleCssVars,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
+import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
 import { LearnElapsedTimer, SessionTopicCardTimerProvider } from "@/components/session-view/learn-work-dock-bar";
 
 const SECTION_LABEL = {
@@ -66,6 +70,7 @@ export function SessionSidebar({
   elapsedStartedAt = null,
   fillWidth = false,
   className = "",
+  sidebarStyle: sidebarStyleProp,
 }: {
   mode: SessionSidebarMode;
   clock?: ReactNode;
@@ -86,7 +91,12 @@ export function SessionSidebar({
   /** Narrow Calibrate: the rail uses the width under the canvas instead of 16rem. */
   fillWidth?: boolean;
   className?: string;
+  /** Dashboard preview passes a draft. Live sessions load the org style. */
+  sidebarStyle?: SessionSidebarStyle | null;
 }) {
+  const loadedStyle = useSessionSidebarStyle();
+  const sidebarStyle = sidebarStyleProp ?? loadedStyle;
+  const styleVars = sessionSidebarStyleCssVars(sidebarStyle);
   const [uncontrolledResources, setUncontrolledResources] = useState(false);
   const resourcesOpenNow = resourcesOpen ?? uncontrolledResources;
   const selectResources = (next: boolean) => {
@@ -113,8 +123,18 @@ export function SessionSidebar({
               height: "42%",
               flexShrink: 0,
               ["--session-topic-card-height" as string]: "7rem",
+              ...styleVars,
+              backgroundColor: sidebarStyle.tokens.background,
+              borderColor: sidebarStyle.tokens.border,
+              color: sidebarStyle.tokens.text,
             }
-          : sessionSidebarRailStyle(false)
+          : {
+              ...sessionSidebarRailStyle(false),
+              ...styleVars,
+              backgroundColor: sidebarStyle.tokens.background,
+              borderColor: sidebarStyle.tokens.border,
+              color: sidebarStyle.tokens.text,
+            }
       }
       className={`relative box-border flex h-full min-h-0 flex-col overflow-hidden border-r border-white/30 bg-black ${className}`.trim()}
     >
@@ -164,13 +184,8 @@ export function SessionSidebar({
               data-session-sidebar-focus
               className="relative flex min-h-0 flex-1 flex-col overflow-hidden border-b border-white/40 bg-black"
             >
-              <SessionConsoleScan />
-              <SessionConsoleMarks />
               {resourcesInFocus ? (
                 <div role="tablist" className="relative z-[2] flex shrink-0 border-b border-white/30 bg-black">
-                  <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.12em] text-white/35">
-                    02
-                  </span>
                   <button
                     type="button"
                     role="tab"
@@ -201,19 +216,13 @@ export function SessionSidebar({
                   </button>
                 </div>
               ) : focusLabel ? (
-                <div className="relative z-[2] flex shrink-0 items-center gap-2 border-b border-white/30 bg-black px-2 py-1 pl-3">
-                  <span aria-hidden className="font-mono text-[9px] tracking-[0.12em] text-white/35">
-                    02
-                  </span>
+                <div className="relative z-[2] flex shrink-0 items-center gap-2 border-b border-white/30 bg-black px-2 py-1">
                   <p
                     data-session-sidebar-focus-label
                     className="min-w-0 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
                   >
                     {focusLabel}
                   </p>
-                  <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.2em] text-white/20">
-                    ////
-                  </span>
                 </div>
               ) : null}
               {resourcesInFocus && resourcesOpenNow ? (
@@ -227,19 +236,13 @@ export function SessionSidebar({
       ) : null}
         {showSignals ? (
           <div data-session-sidebar-section="signals" className="shrink-0 bg-black">
-            <div className="flex items-center gap-2 border-b border-white/30 px-2 py-1 pl-3">
-              <span aria-hidden className="font-mono text-[9px] tracking-[0.12em] text-white/35">
-                03
-              </span>
+            <div className="flex items-center gap-2 border-b border-white/30 px-2 py-1">
               <p
                 data-session-sidebar-signals-label
                 className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
               >
                 {SECTION_LABEL.signals}
               </p>
-              <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.2em] text-white/20">
-                ////
-              </span>
             </div>
             <div
               data-session-sidebar-signals-frame

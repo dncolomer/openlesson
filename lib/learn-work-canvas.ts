@@ -92,6 +92,8 @@ export {
   EXCALIDRAW_DEFAULT_ROUNDNESS,
   ILE_AUTO_LAYOUT_APP_STATE_KEY,
   withIleWorkCanvasGridAppState,
+  type IleWorkCanvasChrome,
+  type IleWorkCanvasGridAppStateOptions,
   emptyIleWorkCanvasScene,
   ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS,
   ileWorkCanvasAppStateKeepingDefaultKeys,

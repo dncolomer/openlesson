@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import {
   FALLBACK_AESTHETIC_IMAGES,
@@ -8,8 +8,9 @@ import {
   sessionTopicCardStill,
 } from "@/lib/aesthetics";
 import { SESSION_TOPIC_CARD_REM, formatLearnElapsedClock } from "@/lib/session-sidebar";
-import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
+import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
 
 export type SessionTopicCardInput = {
   id?: string;
@@ -62,9 +63,6 @@ export function LearnElapsedTimer({ startedAt }: { startedAt?: string | null }) 
   );
 }
 
-/** Silent radar loop for the topic card. The still stays the default. */
-export const SESSION_TOPIC_CARD_LOOP = "/aesthetics/session-topic-loop.mp4";
-
 const SessionTopicCardTimerContext = createContext<ReactNode>(null);
 
 /** Sidebar clock rendered inside the topic card, above the chapter name. */
@@ -84,7 +82,6 @@ export function SessionTopicCardTimerProvider({
 
 /**
  * Cover for the session's one chapter. It does not switch chapters.
- * Loop swaps the still for the radar video and back.
  */
 export function SessionTopicCard({
   id,
@@ -123,79 +120,59 @@ export function SessionTopicCard({
           : surface.source === "fallback" || surface.source === "packages"
             ? surface.images
             : [];
+  const sidebarStyle = useSessionSidebarStyle();
+  const styledCustom = sidebarStyle.backgroundImage
+    ? [
+        sidebarStyle.backgroundImage,
+        ...resolvedCustom.filter((url) => url !== sidebarStyle.backgroundImage),
+      ]
+    : resolvedCustom;
   const still = sessionTopicCardStill({
     id,
-    assigned: image,
-    customUrls: resolvedCustom,
+    assigned: sidebarStyle.backgroundImage || image,
+    customUrls: styledCustom,
     systemImages: resolvedSystem,
     allowSystemFallback: !poolsPending,
   });
   const heading = title.trim() || "Topic";
   const timer = useContext(SessionTopicCardTimerContext);
   const height = `var(--session-topic-card-height, ${SESSION_TOPIC_CARD_REM}rem)`;
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [mode, setMode] = useState<"image" | "video">("image");
-  useEffect(() => {
-    const node = videoRef.current;
-    if (!node) return;
-    if (mode === "video") void node.play().catch(() => undefined);
-    else node.pause();
-  }, [mode]);
   return (
     <div
       data-session-topic-card={id}
       data-session-topic-card-static="true"
-      className="relative w-full min-w-0 max-w-full shrink-0 overflow-hidden border-b border-white/50 bg-black"
-      style={{ height, minHeight: height }}
+      className="relative w-full min-w-0 max-w-full shrink-0 overflow-hidden border-b bg-black"
+      style={{
+        height,
+        minHeight: height,
+        borderColor: sidebarStyle.tokens.border,
+        backgroundColor: sidebarStyle.tokens.background,
+      }}
     >
       <span
         data-session-topic-card-image
         data-ile-chapter-chip-image
         aria-hidden
-        className={`absolute inset-0 bg-cover bg-center ${mode === "video" ? "hidden" : ""}`}
+        className="absolute inset-0 bg-cover bg-center"
         style={still ? { backgroundImage: `url(${still})` } : undefined}
       />
-      <video
-        ref={videoRef}
-        data-session-topic-card-video=""
-        src={SESSION_TOPIC_CARD_LOOP}
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        className={`absolute inset-0 h-full w-full object-cover grayscale ${mode === "video" ? "" : "hidden"}`}
-      />
-      <button
-        type="button"
-        data-session-topic-card-media={mode}
-        aria-pressed={mode === "video"}
-        onClick={() => setMode((current) => (current === "image" ? "video" : "image"))}
-        className="pointer-events-auto absolute right-2 top-4 z-30 rounded-none border border-white/70 bg-black/85 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.22em] text-white hover:bg-white hover:text-black"
-      >
-        {mode === "image" ? "Loop" : "Still"}
-      </button>
       <span
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/25"
-      />
-      <SessionConsoleScan />
-      <SessionConsoleMarks />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-8 top-0 z-10 h-1.5"
+        className="absolute inset-0"
         style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, rgba(255,255,255,0.75) 0 1px, transparent 1px 7px)",
+          background: `linear-gradient(to top, ${sidebarStyle.tokens.overlay}, transparent 55%, ${sidebarStyle.tokens.overlay})`,
         }}
       />
-      <span className="pointer-events-none absolute left-5 top-2 z-10 font-mono text-[9px] uppercase tracking-[0.34em] text-white">
-        01
-      </span>
       <span className="relative z-10 flex h-full w-full flex-col items-start justify-end gap-1 px-2 pb-2">
         {timer}
         <span
           data-session-topic-card-title
-          className="line-clamp-3 max-w-full min-w-0 self-start text-left border border-white/55 bg-black/80 px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em] text-white"
+          className="line-clamp-3 max-w-full min-w-0 self-start text-left border px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em]"
+          style={{
+            borderColor: sidebarStyle.tokens.accent,
+            backgroundColor: sidebarStyle.tokens.panel,
+            color: sidebarStyle.tokens.text,
+          }}
         >
           {heading}
         </span>

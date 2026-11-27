@@ -217,22 +217,41 @@ export const ILE_WORK_CANVAS_ROUNDNESS = "sharp" as const;
 /** Excalidraw's shipped edge default before our Work-canvas default. */
 export const EXCALIDRAW_DEFAULT_ROUNDNESS = "round" as const;
 
+/** Org board chrome: stored (pre-invert) Excalidraw colors plus zen default. */
+export type IleWorkCanvasChrome = {
+  viewBackgroundColor?: string | null;
+  currentItemStrokeColor?: string | null;
+  zenModeEnabled?: boolean | null;
+};
+
+export type IleWorkCanvasGridAppStateOptions = {
+  migrateLegacyStrokeWidth?: boolean;
+  migrateLegacyRoundness?: boolean;
+  chrome?: IleWorkCanvasChrome | null;
+};
+
 export function withIleWorkCanvasGridAppState(
   appState: IleWorkCanvasAppState | null | undefined,
-  options?: { migrateLegacyStrokeWidth?: boolean; migrateLegacyRoundness?: boolean },
+  options?: IleWorkCanvasGridAppStateOptions,
 ): IleWorkCanvasAppState {
   const next = asRecord(appState);
+  const chrome = options?.chrome;
   if (typeof next.gridModeEnabled !== "boolean") next.gridModeEnabled = true;
-  if (typeof next.zenModeEnabled !== "boolean") next.zenModeEnabled = true;
+  if (typeof next.zenModeEnabled !== "boolean") {
+    next.zenModeEnabled = typeof chrome?.zenModeEnabled === "boolean" ? chrome.zenModeEnabled : true;
+  }
   if (typeof next[ILE_AUTO_LAYOUT_APP_STATE_KEY] !== "boolean") {
     next[ILE_AUTO_LAYOUT_APP_STATE_KEY] = false;
   }
   if (typeof next.gridSize !== "number" || next.gridSize <= 0) {
     next.gridSize = ILE_WORK_CANVAS_DEFAULT_GRID_SIZE;
   }
+  const chromeStroke = String(chrome?.currentItemStrokeColor || "").trim();
   if (typeof next.currentItemStrokeColor !== "string" || !String(next.currentItemStrokeColor).trim()) {
-    next.currentItemStrokeColor = ILE_WORK_CANVAS_STROKE_COLOR;
+    next.currentItemStrokeColor = chromeStroke || ILE_WORK_CANVAS_STROKE_COLOR;
   }
+  const chromeBackground = String(chrome?.viewBackgroundColor || "").trim();
+  if (chromeBackground) next.viewBackgroundColor = chromeBackground;
   const strokeWidth = Number(next.currentItemStrokeWidth);
   const legacyDefault =
     options?.migrateLegacyStrokeWidth === true && strokeWidth === EXCALIDRAW_DEFAULT_STROKE_WIDTH;
@@ -277,6 +296,7 @@ export const ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS = [
   "zenModeEnabled",
   ILE_AUTO_LAYOUT_APP_STATE_KEY,
   "gridSize",
+  "viewBackgroundColor",
   "currentItemStrokeColor",
   "currentItemStrokeWidth",
   "currentItemFontFamily",

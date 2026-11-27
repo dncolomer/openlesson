@@ -64,14 +64,16 @@ export function IleStartLoading({
 
   return (
     <div data-ile-start-loading className="flex w-full max-w-2xl flex-col">
-      <div className="relative border border-white/40 bg-black">
+      <div data-ile-start-plate className="relative border border-white/40 bg-black">
         <SessionConsoleMarks />
         <div className="relative z-[2] px-5 py-5 sm:px-7 sm:py-6">
-          <LoadingStatusMessage
-            message={statusLabel?.trim() || t("session.startLoading")}
-            className="text-left"
-            size="sm"
-          />
+          <div data-ile-start-status="">
+            <LoadingStatusMessage
+              message={statusLabel?.trim() || t("session.startLoading")}
+              className="text-left"
+              size="sm"
+            />
+          </div>
           <section
             data-ile-start-tips
             aria-roledescription="carousel"
@@ -79,7 +81,10 @@ export function IleStartLoading({
             className="mt-6 border-t border-white/25 pt-5"
           >
             <div className="flex items-baseline justify-between gap-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/55">
+              <p
+                data-ile-start-tips-kicker
+                className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/55"
+              >
                 {t("session.startTipsTitle")}
               </p>
               <p

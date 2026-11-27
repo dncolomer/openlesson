@@ -14,6 +14,9 @@ export const CANVAS_ASK_MODEL = "grok-4.7";
 /** Structured canvas commands (concepts, define, simplify, …). No reasoning loop. */
 export const CANVAS_COMMAND_MODEL = "grok-4.20-0309-non-reasoning";
 
+/** Grok Imagine stills for org sidebar style. */
+export const IMAGINE_IMAGE_MODEL = "grok-imagine-image-2.0";
+
 /**
  * Grok 4.5 reasoning depth. API default is "high" (slow); we default to "low"
  * for interactive latency. Reasoning cannot be fully disabled on grok-4.5.

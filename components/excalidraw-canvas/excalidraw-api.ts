@@ -201,8 +201,12 @@ export function sanitizeWorkCanvasExportElements(
 
 export async function exportWorkCanvasPng(input: WorkCanvasPngExportInput): Promise<Blob> {
   const elements = sanitizeWorkCanvasExportElements(input.elements);
+  const storedBackground = String(
+    (input.appState as { viewBackgroundColor?: unknown } | undefined)?.viewBackgroundColor || "",
+  ).trim();
+  const viewBackgroundColor = storedBackground || "#0a0a0a";
   const appState = {
-    viewBackgroundColor: "#0a0a0a",
+    viewBackgroundColor,
     ...(input.appState ?? {}),
   };
   const files = input.files ?? {};
@@ -217,7 +221,7 @@ export async function exportWorkCanvasPng(input: WorkCanvasPngExportInput): Prom
     },
     config: {
       theme: "dark",
-      canvasBackgroundColor: "#0a0a0a",
+      canvasBackgroundColor: viewBackgroundColor,
       ...(environment ? { environment } : {}),
     },
   });

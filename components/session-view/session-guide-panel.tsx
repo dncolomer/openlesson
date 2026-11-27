@@ -4,10 +4,8 @@ import { useState } from "react";
 import {
   AutoLayoutToggle,
   CommandMark,
-  CommandPlate,
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
-  ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import { IleCanvasPointerButton } from "@/components/session-view/learn-canvas-pointer-button";
@@ -51,14 +49,9 @@ export function SessionGuidePanel({
   const text = SESSION_INSTRUCTIONS[guide];
   const commandsHint = !bridge ? "The board is still opening." : null;
   const catalog = ileWorkCanvasCommandsFor(guide);
-  const dictateIndex = String(catalog.length + 1).padStart(2, "0");
-  const pointerIndex = String(catalog.length + 2).padStart(2, "0");
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
-      <div className="flex shrink-0 border-b border-white/30 bg-black">
-        <span aria-hidden className="flex shrink-0 items-center pl-2 pr-1 font-mono text-[9px] tracking-[0.12em] text-white/35">
-          02
-        </span>
+      <div data-session-guide-tabs className="flex shrink-0 border-b border-white/30 bg-black">
         <div
           role="tablist"
           className={`grid min-w-0 flex-1 ${canvasCommands && showHarness ? "grid-cols-3" : canvasCommands || showHarness ? "grid-cols-2" : "grid-cols-1"}`}
@@ -128,7 +121,6 @@ export function SessionGuidePanel({
                   }}
                   className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
                 >
-                  <CommandPlate index={ileWorkCanvasCommandIndex(command.id, catalog)} />
                   <CommandMark
                     id={command.id}
                     label={command.label}
@@ -140,7 +132,6 @@ export function SessionGuidePanel({
             })}
             <IleCanvasDictateButton
               plate
-              index={dictateIndex}
               transcript={bridge?.dictate?.transcript ?? ""}
               getLiveTranscript={bridge?.dictate?.getLiveTranscript}
               onLiveText={(text) => bridge?.dictate?.write(text, false)}
@@ -150,7 +141,6 @@ export function SessionGuidePanel({
             />
             <IleCanvasPointerButton
               plate
-              index={pointerIndex}
               active={Boolean(bridge?.pointer?.active)}
               disabled={!bridge?.pointer}
               onToggle={() => bridge?.pointer?.toggle()}

@@ -13,10 +13,8 @@ import {
 } from "@/lib/learn-canvas-dictate";
 import {
   CommandMark,
-  CommandPlate,
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
-  ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
 
 function dictateButtonClass(
@@ -46,7 +44,6 @@ export function IleCanvasDictateButton({
   square = false,
   wide = false,
   plate = false,
-  index = "07",
 }: {
   transcript: string;
   getLiveTranscript?: () => string;
@@ -64,7 +61,6 @@ export function IleCanvasDictateButton({
   wide?: boolean;
   /** Commands grid tile. */
   plate?: boolean;
-  index?: string;
 }) {
   const [dictating, setDictating] = useState(false);
   const captureRef = useRef<IleDictateCapture | null>(null);
@@ -122,7 +118,6 @@ export function IleCanvasDictateButton({
   };
 
   const markClass = plate ? ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS : "h-3.5 w-3.5";
-  const runIndex = ileWorkCanvasCommandIndex("draw");
   return (
     <div
       data-ile-canvas-dictate
@@ -139,7 +134,6 @@ export function IleCanvasDictateButton({
           onClick={finish}
           className={dictateButtonClass("stop", square, wide, plate)}
         >
-          {plate ? <CommandPlate index={index} /> : null}
           <CommandMark id="dictate" label={ILE_CANVAS_DICTATE_LABEL} className={markClass} />
           {plate ? (
             <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_STOP_LABEL}</span>
@@ -154,7 +148,6 @@ export function IleCanvasDictateButton({
           onClick={finishAndRun}
           className={dictateButtonClass("run", square, wide, plate)}
         >
-          {plate ? <CommandPlate index={runIndex} /> : null}
           <CommandMark id="draw" label={ILE_CANVAS_DICTATE_RUN_LABEL} className={markClass} />
           {plate ? (
             <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_RUN_LABEL}</span>
@@ -176,7 +169,6 @@ export function IleCanvasDictateButton({
           }}
           className={dictateButtonClass("idle", square, wide, plate)}
         >
-          {plate ? <CommandPlate index={index} /> : null}
           <CommandMark id="dictate" label={ILE_CANVAS_DICTATE_LABEL} className={markClass} />
           {plate ? (
             <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_LABEL}</span>

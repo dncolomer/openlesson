@@ -25,6 +25,7 @@ import {
   type SessionSidebarMode,
   type SessionSidebarSection,
 } from "@/lib/session-sidebar";
+import { parseSessionSidebarStyle } from "@/lib/session-sidebar-style";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 
 const ROOT = join(__dirname, "../..");
@@ -150,6 +151,49 @@ describe("session sidebar mode configuration", () => {
     expect(Number.parseFloat(collapsed.width)).toBeGreaterThan(0);
   });
 
+  it("paints org sidebar tokens onto the 16rem rail", () => {
+    const html = renderToStaticMarkup(
+      createElement(SessionSidebar, {
+        mode: "ile",
+        sidebarStyle: parseSessionSidebarStyle({
+          prompt: "brass on ink",
+          backgroundImage: "https://cdn.example/sidebar.jpg",
+          tokens: {
+            background: "#120800",
+            border: "rgba(255,200,80,0.4)",
+            text: "#f4e1b0",
+          },
+        }),
+        chapters: topicCard(),
+        actions: voiceActions("ile"),
+      }),
+    );
+    expect(html).toContain("border-r border-white/30 bg-black");
+    expect(html).toContain("background-color:#120800");
+    expect(html).toContain("--session-sidebar-bg:#120800");
+    expect(html).toContain("--session-sidebar-wash:url(https://cdn.example/sidebar.jpg)");
+    expect(html).toContain(`width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
+    const theme = readFileSync(join(ROOT, "app/session-sidebar-theme.css"), "utf8");
+    expect(readFileSync(join(ROOT, "app/globals.css"), "utf8")).toContain(
+      "./session-sidebar-theme.css",
+    );
+    expect(theme).toContain("[data-session-guide-tab][aria-selected=\"true\"]");
+    expect(theme).toContain("[data-session-guide-tabs]");
+    expect(theme).toContain("[data-session-instructions]");
+    expect(theme).toContain("[data-ile-canvas-dictate] button:not(:disabled)");
+    expect(theme).toContain("[data-session-command]:not(:disabled)");
+    expect(theme).toContain("[data-session-data-tab][aria-selected=\"true\"]");
+    expect(theme).toContain("[data-session-data-standby]");
+    expect(theme).toContain("[data-session-data-tabs]");
+    expect(theme).toContain("[data-session-data-enable]");
+    expect(theme).toContain("[data-ile-bar-save]");
+    expect(theme).toContain("[data-session-sidebar-signals-label]");
+    expect(theme).toContain("[data-session-page-loading]");
+    expect(theme).toContain("[data-ile-start-plate]");
+    expect(theme).toContain("[data-ile-start-tip]");
+    expect(theme).toContain("[data-ile-start-tip-mark]");
+  });
+
   it("renders the TAP Learning sidebar beside a clock, widgets, and Data", () => {
     const html = renderSidebar("ile", 65);
     expect(html).toContain('data-session-sidebar-mode="ile"');
@@ -178,11 +222,12 @@ describe("session sidebar mode configuration", () => {
     expect(card).toContain(TOPIC_TITLE);
     expect(card.match(/data-session-topic-card=/g)).toHaveLength(1);
     expect(card.match(/data-session-topic-card-image/g)).toHaveLength(1);
-    expect(card).toContain('data-session-topic-card-media="image"');
-    expect(card).toContain('data-session-topic-card-video=""');
-    expect(card).toContain("/aesthetics/session-topic-loop.mp4");
-    expect(card).toContain(">Loop<");
-    expect(card.match(/<button/g)).toHaveLength(1);
+    expect(card).not.toContain("data-session-topic-card-media");
+    expect(card).not.toContain("data-session-topic-card-video");
+    expect(card).not.toContain("/aesthetics/session-topic-loop.mp4");
+    expect(card).not.toContain(">Loop<");
+    expect(card).not.toContain(">Still<");
+    expect(card.match(/<button/g) ?? []).toHaveLength(0);
     expect(card).not.toContain("onClick");
     expect(card).not.toContain("tabindex");
     expect(card).not.toContain("href=");
@@ -192,16 +237,17 @@ describe("session sidebar mode configuration", () => {
     expect(card).not.toContain("onFocusOpenWork");
     expect(SESSION_TOPIC_CARD_REM).toBeGreaterThan(SESSION_TOPIC_DOCK_CHIP_REM);
     expect(card).toContain(`var(--session-topic-card-height, ${SESSION_TOPIC_CARD_REM}rem)`);
-    expect(card).toContain(">01<");
-    const stillTag = card.slice(
-      card.indexOf("data-session-topic-card-image"),
-      card.indexOf("data-session-topic-card-video"),
-    );
-    expect(stillTag).not.toContain("grayscale");
-    expect(html.slice(focusAt, signalsAt)).toContain(">02<");
-    expect(html.slice(signalsAt, html.indexOf("data-session-sidebar-signals-frame"))).toContain(">03<");
+    expect(card).not.toContain(">01<");
+    expect(card).not.toContain("grayscale");
+    expect(html.slice(focusAt, signalsAt)).not.toContain(">02<");
+    expect(html.slice(signalsAt, html.indexOf("data-session-sidebar-signals-frame"))).not.toContain(">03<");
     const sidebarSource = readFileSync(join(ROOT, "components/session-view/session-sidebar.tsx"), "utf8");
     expect(sidebarSource).toContain("border-r border-white/30");
+    expect(sidebarSource).not.toContain("SessionConsoleMarks");
+    expect(sidebarSource).not.toContain("////");
+    expect(readFileSync(join(ROOT, "components/session-view/learn-work-dock-bar.tsx"), "utf8")).not.toContain(
+      "SessionConsoleMarks",
+    );
     expect(sidebarSource).not.toContain("border-l border-white/40");
     expect(sidebarSource).not.toContain("overflow-y-auto border-l");
     expect(sidebarSource).not.toContain("SESSION_SIDEBAR_FOCUS_REM");
@@ -410,8 +456,8 @@ describe("session sidebar mode configuration", () => {
       const modeTopic = html.indexOf('data-session-sidebar-section="topic"');
       const modeCard = html.slice(modeTopic, html.indexOf('data-session-sidebar-section="focus"'));
       expect(modeTopic).toBeLessThan(html.indexOf('data-session-sidebar-section="focus"'));
-      expect(modeCard.match(/<button/g)).toHaveLength(1);
-      expect(modeCard).toContain('data-session-topic-card-media="image"');
+      expect(modeCard.match(/<button/g) ?? []).toHaveLength(0);
+      expect(modeCard).not.toContain("data-session-topic-card-media");
       expect(modeCard).toContain("data-session-sidebar-clock");
       expect(modeCard).toContain('data-session-topic-card-timer="true"');
       expect(modeCard).toContain("items-start");
@@ -468,6 +514,8 @@ describe("session sidebar mode configuration", () => {
       }),
     );
     expect(standby).toContain('data-session-data-card');
+    expect(standby).toContain("data-session-data-tabs");
+    expect(standby).toContain('data-session-data-standby="audio"');
     expect(standby).toContain('data-session-data-active="audio"');
     expect(standby).toContain('data-session-data-tab="audio"');
     expect(standby).toContain('data-session-data-tab="muse"');

@@ -26,12 +26,14 @@ export function SessionStageProgress({
           : "pointer-events-none absolute left-3 top-3 z-[12] flex items-baseline gap-2"
       }
     >
-      <span
-        aria-hidden
-        className="font-mono text-[9px] tracking-[0.28em] text-white/45"
-      >
-        {SESSION_STAGE_INDEX}
-      </span>
+      {placement === "overlay" ? (
+        <span
+          aria-hidden
+          className="font-mono text-[9px] tracking-[0.28em] text-white/45"
+        >
+          {SESSION_STAGE_INDEX}
+        </span>
+      ) : null}
       <p
         data-session-stage-progress-label=""
         className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/80"

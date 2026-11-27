@@ -82,6 +82,8 @@ import { useWorkCanvasLatex } from "@/components/excalidraw-canvas/use-work-canv
 import { WorkCanvasLatexLayer } from "@/components/excalidraw-canvas/work-canvas-latex-layer";
 import { IleLaserToolbarSlot } from "@/components/excalidraw-canvas/laser-toolbar-slot";
 import { behaviorBoardSampler, sampleBoardAppState } from "@/lib/behavior-capture-pointer";
+import { useSessionSidebarStyle } from "@/lib/use-session-sidebar-style";
+import { sessionCanvasExcalidrawChrome } from "@/lib/session-sidebar-style";
 import "@excalidraw/excalidraw/index.css";
 import "@/app/learn-excalidraw-theme.css";
 
@@ -191,6 +193,10 @@ export function ExcalidrawCanvas({
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
+  const sidebarStyle = useSessionSidebarStyle();
+  const canvasChrome = sessionCanvasExcalidrawChrome(sidebarStyle.canvas);
+  const canvasChromeRef = useRef(canvasChrome);
+  canvasChromeRef.current = canvasChrome;
   const excalidrawAPIRef = useRef<LiveExcalidrawAPI | null>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
@@ -230,7 +236,9 @@ export function ExcalidrawCanvas({
   const applyingRemoteRef = useRef(false);
 
   const sceneDataRef = useRef<IleWorkCanvasScene | null>(null);
-  const initialSceneDataRef = useRef(openCanvasScene(initialSceneData, !openFocusRole));
+  const initialSceneDataRef = useRef(
+    openCanvasScene(initialSceneData, !openFocusRole, canvasChrome),
+  );
   const onSceneChangeRef = useRef(onSceneChange);
   const onCanvasChangeRef = useRef(onCanvasChange);
   onCanvasChangeRef.current = onCanvasChange;
@@ -455,6 +463,34 @@ export function ExcalidrawCanvas({
     });
   }, [flushPendingApply, syncPromptBarPlacement]);
 
+  const sourceSceneRef = useRef(initialSceneData);
+  sourceSceneRef.current = initialSceneData;
+
+  useEffect(() => {
+    const api = excalidrawAPIRef.current;
+    if (!api || !canvasApiReady) return;
+    const chrome = canvasChromeRef.current;
+    const source = sourceSceneRef.current?.appState as
+      | { zenModeEnabled?: unknown; currentItemStrokeColor?: unknown }
+      | undefined;
+    const patch: Record<string, unknown> = {
+      viewBackgroundColor: chrome.viewBackgroundColor,
+    };
+    if (typeof source?.zenModeEnabled !== "boolean") {
+      patch.zenModeEnabled = chrome.zenModeEnabled;
+    }
+    if (!String(source?.currentItemStrokeColor || "").trim()) {
+      patch.currentItemStrokeColor = chrome.currentItemStrokeColor;
+    }
+    api.updateScene({ appState: patch });
+  }, [
+    boardId,
+    canvasApiReady,
+    sidebarStyle.canvas.background,
+    sidebarStyle.canvas.stroke,
+    sidebarStyle.canvas.zenMode,
+  ]);
+
   useEffect(() => {
     onSceneChangeRef.current = onSceneChange;
   }, [onSceneChange]);
@@ -464,7 +500,9 @@ export function ExcalidrawCanvas({
   }, [onCanvasPowActions]);
 
   useEffect(() => {
-    canvasPowCollectorRef.current.reset(openCanvasScene(initialSceneData, false));
+    canvasPowCollectorRef.current.reset(
+      openCanvasScene(initialSceneData, false, canvasChromeRef.current),
+    );
   }, [boardId]);
 
   useEffect(() => {
@@ -657,7 +695,9 @@ export function ExcalidrawCanvas({
     const liveAppState = api.getAppState() ?? {};
     upsertThinkingChip(projectThinkingChip(turnId, origin, liveAppState));
     const timer = window.setTimeout(() => {
-      const next = sanitizeSceneData(replaceScene ?? { elements: [], appState: {}, files: {} });
+      const next = sanitizeSceneData(replaceScene ?? { elements: [], appState: {}, files: {} }, {
+        chrome: canvasChromeRef.current,
+      });
       commitScene(
         api,
         { elements: next.elements, appState: next.appState },
@@ -685,7 +725,7 @@ export function ExcalidrawCanvas({
   ]);
 
   useEffect(() => {
-    const next = openCanvasScene(initialSceneData, true);
+    const next = openCanvasScene(initialSceneData, true, canvasChromeRef.current);
     initialSceneDataRef.current = next;
     if (ileWorkCanvasHasLiveElements(initialSceneData)) {
       userClearedRef.current = false;
@@ -737,7 +777,10 @@ export function ExcalidrawCanvas({
       files: IleWorkCanvasFiles,
     ) => {
       const previous = sceneDataRef.current;
-      const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
+      const sceneData = sanitizeSceneData(
+        { elements: [...elements], appState, files },
+        { chrome: canvasChromeRef.current },
+      );
       const prevLive = ileWorkCanvasHasLiveElements(previous);
       const nextLive = ileWorkCanvasHasLiveElements(sceneData);
       const deletedSnapshot = (sceneData.elements ?? []).some((el) => el.isDeleted);
@@ -812,11 +855,14 @@ export function ExcalidrawCanvas({
         syncCanvasSelection(api.getAppState?.() ?? {});
         canvasPowCollectorRef.current.markGestureBusy(true);
       } else if (payload.button === "up") {
-        const scene = sanitizeSceneData({
-          elements: [...(api?.getSceneElements() ?? [])],
-          appState: api?.getAppState() ?? {},
-          files: api?.getFiles() ?? {},
-        });
+        const scene = sanitizeSceneData(
+          {
+            elements: [...(api?.getSceneElements() ?? [])],
+            appState: api?.getAppState() ?? {},
+            files: api?.getFiles() ?? {},
+          },
+          { chrome: canvasChromeRef.current },
+        );
         const powEvents = canvasPowCollectorRef.current.observeScene(scene, {
           gestureBusy: false,
         });
@@ -954,11 +1000,18 @@ export function ExcalidrawCanvas({
     !excalidrawAPIRef.current &&
     ileWorkCanvasHasLiveElements(initialSceneData)
   ) {
-    initialSceneDataRef.current = openCanvasScene(initialSceneData, !openFocusRole);
+    initialSceneDataRef.current = openCanvasScene(
+      initialSceneData,
+      !openFocusRole,
+      canvasChromeRef.current,
+    );
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] rounded-none overflow-hidden">
+    <div
+      className="flex h-full flex-col overflow-hidden rounded-none"
+      style={{ backgroundColor: sidebarStyle.canvas.background }}
+    >
       {onSubmitToHelios ? (
         <CanvasSubmitBar
           t={t}
@@ -969,7 +1022,12 @@ export function ExcalidrawCanvas({
         />
       ) : null}
 
-      <div ref={canvasHostRef} className="flex-1 min-h-0 relative" data-ile-excalidraw-host>
+      <div
+        ref={canvasHostRef}
+        className="relative min-h-0 flex-1"
+        data-ile-excalidraw-host
+        style={{ backgroundColor: sidebarStyle.canvas.background }}
+      >
         {isLoaded && (
           <IleExcalidrawErrorBoundary>
             <IleExcalidrawMount

@@ -7,6 +7,7 @@
 }
 
 @import "./learn-excalidraw-theme.css";
+@import "./session-sidebar-theme.css";
 
 body {
   background: var(--background);

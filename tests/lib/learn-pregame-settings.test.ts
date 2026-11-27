@@ -412,6 +412,12 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(pageLoad).toContain("data-console-frame");
     expect(pageLoad).toContain("SessionConsoleScan");
     expect(pageLoad).toContain("SessionConsoleMarks");
+    expect(pageLoad).toContain("border border-white/40 bg-black");
+    expect(pageLoad).toContain("useSessionSidebarStyle");
+    expect(pageLoad).toContain("sessionSidebarStyleCssVars");
+    expect(pageLoad).toContain("sidebarStyle.tokens.background");
+    expect(startLoad).toContain("data-ile-start-plate");
+    expect(startLoad).toContain("border border-white/40 bg-black");
     expect(startLoad).toContain("shuffleIleStartTipIds");
     expect(startLoad).not.toMatch(/useMemo\(\(\) => shuffleIleStartTipIds/);
     expect(startLoad).toContain("useState<readonly IleStartTipId[]>(ILE_START_TIP_IDS)");
@@ -450,6 +456,10 @@ describe("TAP Learning pre-game settings surface", () => {
     );
     expect(saving).toContain("data-ile-start-tips");
     expect(saving).toContain("Saving proof of work");
+    expect(saving).toContain("data-session-page-loading");
+    expect(saving).toContain("--session-sidebar-bg");
+    expect(saving).toContain("border-white/40");
+    expect(saving).toContain("bg-black");
     expect(
       existsSync(join(process.cwd(), "components/session-view/learn-continue-map-preview.tsx")),
     ).toBe(false);

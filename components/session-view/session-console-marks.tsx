@@ -5,10 +5,10 @@ const ARM = "pointer-events-none absolute z-[3] h-1.5 w-1.5 border-white/40";
 export function SessionConsoleMarks() {
   return (
     <>
-      <span aria-hidden className={`${ARM} left-1 top-1 border-l border-t`} />
-      <span aria-hidden className={`${ARM} right-1 top-1 border-r border-t`} />
-      <span aria-hidden className={`${ARM} bottom-1 left-1 border-b border-l`} />
-      <span aria-hidden className={`${ARM} bottom-1 right-1 border-b border-r`} />
+      <span aria-hidden data-session-console-mark="" className={`${ARM} left-1 top-1 border-l border-t`} />
+      <span aria-hidden data-session-console-mark="" className={`${ARM} right-1 top-1 border-r border-t`} />
+      <span aria-hidden data-session-console-mark="" className={`${ARM} bottom-1 left-1 border-b border-l`} />
+      <span aria-hidden data-session-console-mark="" className={`${ARM} bottom-1 right-1 border-b border-r`} />
     </>
   );
 }
@@ -17,6 +17,7 @@ export function SessionConsoleScan() {
   return (
     <div
       aria-hidden
+      data-session-console-scan=""
       className="pointer-events-none absolute inset-0 z-[1]"
       style={{
         backgroundImage:

@@ -15,6 +15,14 @@ import {
   fileToAestheticPayload,
   validateAestheticFile,
 } from "@/lib/organization/custom-aesthetics-client";
+import { CustomAestheticsStyler } from "@/components/organization/custom-aesthetics-styler";
+import {
+  EMPTY_SESSION_SIDEBAR_STYLE,
+  parseSessionCanvasStyle,
+  parseSessionSidebarStyle,
+  type SessionCanvasStyle,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 import type { OrgBackendPublic } from "@/lib/organization/org-backends";
 
@@ -50,6 +58,7 @@ interface Organization {
   slug: string;
   logo_url?: string | null;
   custom_aesthetic_urls?: string[] | null;
+  sidebar_style?: SessionSidebarStyle | null;
   created_at: string;
 }
 
@@ -91,6 +100,9 @@ export function OrganizationDashboardTab() {
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [aestheticUrls, setAestheticUrls] = useState<string[]>([]);
+  const [sidebarStyle, setSidebarStyle] = useState<SessionSidebarStyle>(EMPTY_SESSION_SIDEBAR_STYLE);
+  const [sidebarPrompt, setSidebarPrompt] = useState("");
+  const [stylingSidebar, setStylingSidebar] = useState(false);
   const [uploadingAesthetics, setUploadingAesthetics] = useState(false);
   const [removingAestheticUrl, setRemovingAestheticUrl] = useState<string | null>(null);
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
@@ -149,6 +161,9 @@ export function OrganizationDashboardTab() {
 
       setOrganization(data.organization);
       setAestheticUrls(readCustomAestheticUrls(data.organization?.custom_aesthetic_urls));
+      const nextStyle = parseSessionSidebarStyle(data.organization?.sidebar_style);
+      setSidebarStyle(nextStyle);
+      setSidebarPrompt(nextStyle.prompt);
       setIsOrgAdmin(data.is_org_admin);
       setMembers(data.members || []);
       setInvites(data.invites || []);
@@ -318,6 +333,7 @@ export function OrganizationDashboardTab() {
         return;
       }
       setAestheticUrls(readCustomAestheticUrls(data.images));
+      if (data.style) setSidebarStyle(parseSessionSidebarStyle(data.style));
     } catch (uploadErr) {
       console.error("Custom aesthetic upload error:", uploadErr);
       alert(t("organization.aestheticUploadError"));
@@ -403,11 +419,90 @@ export function OrganizationDashboardTab() {
         return;
       }
       setAestheticUrls(readCustomAestheticUrls(data.images));
+      if (data.style) setSidebarStyle(parseSessionSidebarStyle(data.style));
     } catch (removeErr) {
       console.error("Custom aesthetic remove error:", removeErr);
       alert(t("organization.aestheticRemoveError"));
     } finally {
       setRemovingAestheticUrl(null);
+    }
+  };
+
+  const applyAestheticsPayload = (data: { images?: unknown; style?: unknown }) => {
+    setAestheticUrls(readCustomAestheticUrls(data.images));
+    if (data.style) {
+      const next = parseSessionSidebarStyle(data.style);
+      setSidebarStyle(next);
+      setSidebarPrompt(next.prompt);
+    }
+  };
+
+  const handleStyleSidebar = async () => {
+    const prompt = sidebarPrompt.trim();
+    if (!prompt) return;
+    setStylingSidebar(true);
+    try {
+      const res = await fetch("/api/organization/aesthetics/style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
+        return;
+      }
+      applyAestheticsPayload(data);
+    } catch (styleErr) {
+      console.error("Sidebar style error:", styleErr);
+      alert(t("organization.sidebarStyleError"));
+    } finally {
+      setStylingSidebar(false);
+    }
+  };
+
+  const handleCanvasStyle = async (canvas: SessionCanvasStyle) => {
+    const nextCanvas = parseSessionCanvasStyle(canvas);
+    setSidebarStyle((prev) => ({ ...prev, canvas: nextCanvas }));
+    try {
+      const res = await fetch("/api/organization/aesthetics/style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canvas: nextCanvas }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
+        return;
+      }
+      applyAestheticsPayload(data);
+    } catch (canvasErr) {
+      console.error("Canvas style error:", canvasErr);
+      alert(t("organization.sidebarStyleError"));
+    }
+  };
+
+  const handleResetSidebarStyle = async () => {
+    setStylingSidebar(true);
+    try {
+      const res = await fetch("/api/organization/aesthetics/style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reset: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
+        return;
+      }
+      applyAestheticsPayload(data);
+      setSidebarPrompt("");
+      setSidebarStyle(EMPTY_SESSION_SIDEBAR_STYLE);
+    } catch (styleErr) {
+      console.error("Sidebar style reset error:", styleErr);
+      alert(t("organization.sidebarStyleError"));
+    } finally {
+      setStylingSidebar(false);
     }
   };
 
@@ -778,65 +873,40 @@ export function OrganizationDashboardTab() {
       )}
 
       {isOrgAdmin && (
-        <section className={cardPaddedClass} data-org-custom-aesthetics>
-          <p className={labelClass}>{t("organization.customAesthetics")}</p>
-          <h3 className="mt-1 text-sm font-medium text-white">
-            {t("organization.customAestheticsTitle")}
-          </h3>
-          <p className="mt-2 max-w-xl text-xs text-neutral-500">
-            {t("organization.customAestheticsHelper")}
-          </p>
-          <label className="console-button mt-4 inline-flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white/80 hover:text-white">
-            <input
-              data-org-aesthetic-upload
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              multiple
-              className="hidden"
-              disabled={uploadingAesthetics}
-              onChange={(e) => {
-                void handleAestheticUpload(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            {uploadingAesthetics
-              ? t("organization.uploadingAesthetics")
-              : t("organization.uploadAesthetics")}
-          </label>
-          {aestheticUrls.length === 0 ? (
-            <p className="mt-4 text-sm text-neutral-400">
-              {t("organization.noCustomAesthetics")}
-            </p>
-          ) : (
-            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {aestheticUrls.map((url) => (
-                <li
-                  key={url}
-                  className="console-copy overflow-hidden"
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-28 w-full object-cover"
-                  />
-                  <div className="flex justify-end p-2">
-                    <button
-                      type="button"
-                      data-org-aesthetic-remove
-                      className={dangerBtnClass}
-                      disabled={removingAestheticUrl === url}
-                      onClick={() => void handleRemoveAesthetic(url)}
-                    >
-                      {removingAestheticUrl === url
-                        ? t("organization.removingAesthetic")
-                        : t("organization.removeAesthetic")}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <CustomAestheticsStyler
+          urls={aestheticUrls}
+          style={sidebarStyle}
+          prompt={sidebarPrompt}
+          onPromptChange={setSidebarPrompt}
+          uploading={uploadingAesthetics}
+          generating={stylingSidebar}
+          removingUrl={removingAestheticUrl}
+          onUpload={(files) => void handleAestheticUpload(files)}
+          onRemove={(url) => void handleRemoveAesthetic(url)}
+          onCanvasChange={(canvas) => void handleCanvasStyle(canvas)}
+          onGenerate={() => void handleStyleSidebar()}
+          onReset={() => void handleResetSidebarStyle()}
+          labels={{
+            kicker: t("organization.customAesthetics"),
+            title: t("organization.customAestheticsTitle"),
+            helper: t("organization.customAestheticsHelper"),
+            prompt: t("organization.sidebarStylePrompt"),
+            promptPlaceholder: t("organization.sidebarStylePromptPlaceholder"),
+            apply: t("organization.sidebarStyleApply"),
+            applying: t("organization.sidebarStyleApplying"),
+            reset: t("organization.sidebarStyleReset"),
+            upload: t("organization.uploadAesthetics"),
+            uploading: t("organization.uploadingAesthetics"),
+            empty: t("organization.noCustomAesthetics"),
+            remove: t("organization.removeAesthetic"),
+            removing: t("organization.removingAesthetic"),
+            canvas: t("organization.canvasStyle"),
+            canvasHelper: t("organization.canvasStyleHelper"),
+            canvasBackground: t("organization.canvasBackground"),
+            canvasStroke: t("organization.canvasStroke"),
+            canvasZen: t("organization.canvasZenMode"),
+          }}
+        />
       )}
 
       {isOrgAdmin && (

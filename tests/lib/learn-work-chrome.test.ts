@@ -235,8 +235,9 @@ describe("session topic card", () => {
     );
     expect(html).not.toContain("data-ile-chapter-dock-chapters");
     expect(html).not.toContain("grid-cols-2");
-    expect(html.match(/<button/g)).toHaveLength(1);
-    expect(html).toContain('data-session-topic-card-media="image"');
+    expect(html.match(/<button/g) ?? []).toHaveLength(0);
+    expect(html).not.toContain("data-session-topic-card-media");
+    expect(html).not.toContain(">Loop<");
     expect(html).not.toContain("overflow-x-auto");
     expect(html).not.toContain("w-[7rem]");
     expect(html.match(/data-session-topic-card=/g)).toHaveLength(1);

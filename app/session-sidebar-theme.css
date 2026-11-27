@@ -1,0 +1,215 @@
+/**
+ * Org sidebar tokens (set as --session-sidebar-* on [data-session-sidebar])
+ * restyle Commands / Help / tiles / Data / Exit. MAGI classes stay in JSX.
+ */
+
+[data-session-sidebar] {
+  --session-sidebar-bg: #000000;
+  --session-sidebar-border: rgba(255, 255, 255, 0.3);
+  --session-sidebar-text: #ffffff;
+  --session-sidebar-muted: rgba(255, 255, 255, 0.4);
+  --session-sidebar-panel: #000000;
+  --session-sidebar-accent: #ffffff;
+  --session-sidebar-overlay: rgba(0, 0, 0, 0.55);
+}
+
+[data-session-sidebar] [data-session-guide],
+[data-session-sidebar] [data-session-harness],
+[data-session-sidebar] [data-session-data-card],
+[data-session-sidebar] [data-session-sidebar-section="focus"],
+[data-session-sidebar] [data-session-sidebar-section="signals"],
+[data-session-sidebar] [data-session-sidebar-section="resources"],
+[data-session-sidebar] [data-session-sidebar-actions],
+[data-session-sidebar] [data-session-sidebar-signals-frame],
+[data-session-sidebar] [data-ile-global-resources],
+[data-session-sidebar] [data-session-guide-tabs],
+[data-session-sidebar] [data-session-commands],
+[data-session-sidebar] [data-session-instructions],
+[data-session-sidebar] [data-session-data-tabs],
+[data-session-sidebar] [data-session-data-standby],
+[data-session-sidebar] [data-session-data-video],
+[data-session-sidebar] [data-session-data-screen] {
+  background-color: var(--session-sidebar-bg);
+  border-color: var(--session-sidebar-border);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-guide-tab][aria-selected="true"],
+[data-session-sidebar] [data-session-sidebar-focus-tab][aria-selected="true"],
+[data-session-sidebar] [data-session-data-tab][aria-selected="true"] {
+  background-color: var(--session-sidebar-accent);
+  color: var(--session-sidebar-bg);
+}
+
+[data-session-sidebar] [data-session-guide-tab]:not([aria-selected="true"]),
+[data-session-sidebar] [data-session-sidebar-focus-tab]:not([aria-selected="true"]),
+[data-session-sidebar] [data-session-data-tab]:not([aria-selected="true"]) {
+  background-color: transparent;
+  color: var(--session-sidebar-muted);
+}
+
+[data-session-sidebar] [data-session-guide-tab]:not([aria-selected="true"]):hover,
+[data-session-sidebar] [data-session-sidebar-focus-tab]:not([aria-selected="true"]):hover,
+[data-session-sidebar] [data-session-data-tab]:not([aria-selected="true"]):hover {
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-command]:not(:disabled),
+[data-session-sidebar] [data-ile-canvas-pointer]:not(:disabled),
+[data-session-sidebar] [data-ile-canvas-dictate] button:not(:disabled) {
+  background-color: var(--session-sidebar-panel);
+  border-color: var(--session-sidebar-border);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-command]:not(:disabled):hover,
+[data-session-sidebar] [data-ile-canvas-pointer]:not(:disabled):hover,
+[data-session-sidebar] [data-ile-canvas-dictate] button:not(:disabled):hover {
+  border-color: var(--session-sidebar-accent);
+  background-color: var(--session-sidebar-panel);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-command][aria-pressed="true"]:not(:disabled),
+[data-session-sidebar] [data-ile-canvas-pointer][aria-pressed="true"]:not(:disabled),
+[data-session-sidebar] [data-ile-canvas-dictate] button[aria-pressed="true"]:not(:disabled) {
+  background-color: var(--session-sidebar-accent);
+  border-color: var(--session-sidebar-accent);
+  color: var(--session-sidebar-bg);
+}
+
+[data-session-sidebar] [data-session-auto-layout-track="on"] {
+  background-color: var(--session-sidebar-accent);
+  border-color: var(--session-sidebar-accent);
+}
+
+[data-session-sidebar] [data-session-auto-layout-track="off"] {
+  background-color: var(--session-sidebar-panel);
+  border-color: var(--session-sidebar-border);
+}
+
+[data-session-sidebar] [data-ile-bar-save],
+[data-session-sidebar] [data-session-sidebar-actions] button {
+  background-color: var(--session-sidebar-accent);
+  border-color: var(--session-sidebar-accent);
+  color: var(--session-sidebar-bg);
+}
+
+[data-session-sidebar] [data-ile-bar-save]:hover,
+[data-session-sidebar] [data-session-sidebar-actions] button:hover {
+  background-color: var(--session-sidebar-text);
+  border-color: var(--session-sidebar-text);
+  color: var(--session-sidebar-bg);
+}
+
+[data-session-sidebar] [data-session-command-cheatsheet-open],
+[data-session-sidebar] [data-session-harness-hidden-states] {
+  background-color: var(--session-sidebar-panel);
+  border-color: var(--session-sidebar-border);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-command-cheatsheet-open]:hover,
+[data-session-sidebar] [data-session-harness-hidden-states]:hover {
+  border-color: var(--session-sidebar-accent);
+  background-color: var(--session-sidebar-panel);
+}
+
+[data-session-sidebar] [data-session-instructions] p,
+[data-session-sidebar] [data-session-harness-next],
+[data-session-sidebar] [data-session-sidebar-focus-label],
+[data-session-sidebar] [data-session-sidebar-signals-label] {
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-data-standby] p {
+  color: var(--session-sidebar-muted);
+}
+
+[data-session-sidebar] [data-session-data-enable],
+[data-session-sidebar] [data-session-data-stop] {
+  background-color: var(--session-sidebar-panel);
+  border-color: var(--session-sidebar-accent);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-sidebar] [data-session-data-enable]:hover,
+[data-session-sidebar] [data-session-data-stop]:hover {
+  background-color: var(--session-sidebar-accent);
+  color: var(--session-sidebar-bg);
+}
+
+/* Start / save tips plates share org sidebar tokens. MAGI classes stay in JSX. */
+[data-session-page-loading] {
+  --session-sidebar-bg: #000000;
+  --session-sidebar-border: rgba(255, 255, 255, 0.3);
+  --session-sidebar-text: #ffffff;
+  --session-sidebar-muted: rgba(255, 255, 255, 0.4);
+  --session-sidebar-panel: #000000;
+  --session-sidebar-accent: #ffffff;
+  --session-sidebar-overlay: rgba(0, 0, 0, 0.55);
+  background-color: var(--session-sidebar-bg);
+  border-color: var(--session-sidebar-border);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-page-loading][data-session-page-loading-wash="true"]::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--session-sidebar-wash);
+  background-position: center;
+  background-size: cover;
+  opacity: 0.28;
+}
+
+[data-session-page-loading][data-session-page-loading-wash="true"]::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--session-sidebar-overlay);
+}
+
+[data-session-page-loading] [data-session-console-mark] {
+  border-color: var(--session-sidebar-border);
+}
+
+[data-session-page-loading] [data-ile-start-plate],
+[data-session-page-loading] [data-ile-start-tip] {
+  background-color: var(--session-sidebar-panel);
+  border-color: var(--session-sidebar-border);
+  color: var(--session-sidebar-text);
+}
+
+[data-session-page-loading] [data-ile-start-tips],
+[data-session-page-loading] [data-ile-start-loading] .border-t {
+  border-color: var(--session-sidebar-border);
+}
+
+[data-session-page-loading] [data-ile-start-loading],
+[data-session-page-loading] [data-ile-start-status],
+[data-session-page-loading] [data-ile-start-status] *,
+[data-session-page-loading] [data-ile-start-tip-index],
+[data-session-page-loading] [data-session-field-label] {
+  color: var(--session-sidebar-text);
+}
+
+[data-session-page-loading] [data-ile-start-tips-kicker] {
+  color: var(--session-sidebar-muted);
+}
+
+[data-session-page-loading] [data-ile-start-tip-mark][data-active="true"],
+[data-session-page-loading] [role="progressbar"] > div {
+  background-color: var(--session-sidebar-accent);
+}
+
+[data-session-page-loading] [data-ile-start-tip-mark][data-active="false"],
+[data-session-page-loading] [role="progressbar"] {
+  background-color: var(--session-sidebar-muted);
+}
+
+

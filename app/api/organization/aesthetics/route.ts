@@ -5,7 +5,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   addCustomAestheticUrls,
   authorizeCustomAestheticEdit,
-  readCustomAestheticUrls,
   removeCustomAestheticUrl,
 } from "@/lib/organization/custom-aesthetic-set";
 import {
@@ -13,6 +12,8 @@ import {
   ORG_AESTHETICS_BUCKET,
   parseCustomAestheticPayload,
 } from "@/lib/organization/custom-aesthetics";
+import { loadOrgAesthetics, saveOrgAesthetics } from "@/lib/organization/aesthetics-store";
+import { EMPTY_SESSION_SIDEBAR_STYLE } from "@/lib/session-sidebar-style";
 
 export const runtime = "nodejs";
 
@@ -31,32 +32,8 @@ async function loadProfile(userId: string, supabase: { from: (table: string) => 
   return profile as AestheticProfile;
 }
 
-async function loadStoredUrls(
-  orgId: string,
-): Promise<{ ok: true; urls: string[] } | { ok: false }> {
-  const adminClient = createAdminClient();
-  const { data, error } = await adminClient
-    .from("organizations")
-    .select("custom_aesthetic_urls")
-    .eq("id", orgId)
-    .single();
-  if (error) {
-    console.error("[org-aesthetics] read failed:", error);
-    return { ok: false };
-  }
-  return { ok: true, urls: readCustomAestheticUrls(data?.custom_aesthetic_urls) };
-}
-
-async function saveUrls(orgId: string, urls: string[]) {
-  const adminClient = createAdminClient();
-  const { error } = await adminClient
-    .from("organizations")
-    .update({
-      custom_aesthetic_urls: urls,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", orgId);
-  return error;
+function presentAesthetics(stored: { urls: string[]; style: typeof EMPTY_SESSION_SIDEBAR_STYLE }) {
+  return { images: stored.urls, style: stored.style };
 }
 
 // GET /api/organization/aesthetics — current org set (empty means system defaults)
@@ -66,11 +43,11 @@ export async function GET() {
     if (!auth.ok) return auth.response;
     const profile = await loadProfile(auth.user.id, auth.supabase);
     if (!profile?.organization_id) {
-      return NextResponse.json({ images: [] });
+      return NextResponse.json(presentAesthetics({ urls: [], style: EMPTY_SESSION_SIDEBAR_STYLE }));
     }
-    const stored = await loadStoredUrls(profile.organization_id);
-    if (!stored.ok) return jsonError(500, "Failed to load custom aesthetics");
-    return NextResponse.json({ images: stored.urls });
+    const loaded = await loadOrgAesthetics(createAdminClient(), profile.organization_id);
+    if (!loaded.ok) return jsonError(500, "Failed to load custom aesthetics");
+    return NextResponse.json(presentAesthetics(loaded.stored));
   } catch (error) {
     console.error("Organization aesthetics read error:", error);
     return jsonError(500, "Internal server error");
@@ -93,9 +70,9 @@ export async function POST(req: NextRequest) {
     const guard = authorizeCustomAestheticEdit(profile);
     if (!guard.ok) return jsonError(guard.status, guard.error);
 
-    const stored = await loadStoredUrls(guard.organizationId);
-    if (!stored.ok) return jsonError(500, "Failed to load custom aesthetics");
-    const current = stored.urls;
+    const loaded = await loadOrgAesthetics(createAdminClient(), guard.organizationId);
+    if (!loaded.ok) return jsonError(500, "Failed to load custom aesthetics");
+    const current = loaded.stored.urls;
     const prepared = applyCustomAestheticUploads({
       current,
       organizationId: guard.organizationId,
@@ -126,14 +103,17 @@ export async function POST(req: NextRequest) {
       published.push(publicData.publicUrl || image.url);
     }
 
-    const images = addCustomAestheticUrls(current, published);
-    const updateError = await saveUrls(guard.organizationId, images);
-    if (updateError) {
-      console.error("[org-aesthetics] failed to save urls:", updateError);
+    const stored = {
+      urls: addCustomAestheticUrls(current, published),
+      style: loaded.stored.style,
+    };
+    const updateError = await saveOrgAesthetics(adminClient, guard.organizationId, stored);
+    if (updateError.error) {
+      console.error("[org-aesthetics] failed to save urls:", updateError.error);
       return jsonError(500, "Images uploaded but failed to save on organization");
     }
 
-    return NextResponse.json({ images });
+    return NextResponse.json(presentAesthetics(stored));
   } catch (error) {
     console.error("Organization aesthetics upload error:", error);
     return jsonError(500, "Internal server error");
@@ -156,16 +136,22 @@ export async function DELETE(req: NextRequest) {
     const guard = authorizeCustomAestheticEdit(profile);
     if (!guard.ok) return jsonError(guard.status, guard.error);
 
-    const stored = await loadStoredUrls(guard.organizationId);
-    if (!stored.ok) return jsonError(500, "Failed to load custom aesthetics");
-    const images = removeCustomAestheticUrl(stored.urls, url);
-    const updateError = await saveUrls(guard.organizationId, images);
-    if (updateError) {
-      console.error("[org-aesthetics] failed to remove url:", updateError);
+    const adminClient = createAdminClient();
+    const loaded = await loadOrgAesthetics(adminClient, guard.organizationId);
+    if (!loaded.ok) return jsonError(500, "Failed to load custom aesthetics");
+    const images = removeCustomAestheticUrl(loaded.stored.urls, url);
+    const style =
+      loaded.stored.style.backgroundImage === url
+        ? { ...loaded.stored.style, backgroundImage: images[0] || null }
+        : loaded.stored.style;
+    const stored = { urls: images, style };
+    const updateError = await saveOrgAesthetics(adminClient, guard.organizationId, stored);
+    if (updateError.error) {
+      console.error("[org-aesthetics] failed to remove url:", updateError.error);
       return jsonError(500, "Failed to remove image");
     }
 
-    return NextResponse.json({ images });
+    return NextResponse.json(presentAesthetics(stored));
   } catch (error) {
     console.error("Organization aesthetics delete error:", error);
     return jsonError(500, "Internal server error");

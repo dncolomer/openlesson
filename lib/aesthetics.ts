@@ -1,3 +1,9 @@
+import {
+  EMPTY_SESSION_SIDEBAR_STYLE,
+  parseSessionSidebarStyle,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
+
 export const FALLBACK_AESTHETIC_IMAGES = [
   "/aesthetics/architecture/HHfAOzYWYAAhCDa.jpeg",
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
@@ -324,20 +330,38 @@ export function aestheticPackageVibe(id: string): string {
   return `${name} stills for this session — map, Work, and chrome share the same mood.`;
 }
 
-let inflightAestheticPackages: Promise<AestheticPackage[]> | null = null;
+export type OrgAestheticsPayload = {
+  packages: AestheticPackage[];
+  sidebarStyle: SessionSidebarStyle;
+};
 
-export async function fetchAestheticPackages(): Promise<AestheticPackage[]> {
-  if (!inflightAestheticPackages) {
-    inflightAestheticPackages = fetch("/api/aesthetics", { cache: "no-store" })
+let inflightOrgAesthetics: Promise<OrgAestheticsPayload> | null = null;
+
+export async function fetchOrgAesthetics(): Promise<OrgAestheticsPayload> {
+  if (!inflightOrgAesthetics) {
+    inflightOrgAesthetics = fetch("/api/aesthetics", { cache: "no-store" })
       .then(async (response) => {
-        if (!response.ok) return [];
-        const data = (await response.json()) as { packages?: AestheticPackage[] };
-        return Array.isArray(data.packages) ? data.packages : [];
+        if (!response.ok) {
+          return { packages: [], sidebarStyle: EMPTY_SESSION_SIDEBAR_STYLE };
+        }
+        const data = (await response.json()) as {
+          packages?: AestheticPackage[];
+          sidebarStyle?: unknown;
+        };
+        return {
+          packages: Array.isArray(data.packages) ? data.packages : [],
+          sidebarStyle: parseSessionSidebarStyle(data.sidebarStyle),
+        };
       })
-      .catch(() => [])
+      .catch(() => ({ packages: [], sidebarStyle: EMPTY_SESSION_SIDEBAR_STYLE }))
       .finally(() => {
-        inflightAestheticPackages = null;
+        inflightOrgAesthetics = null;
       });
   }
-  return inflightAestheticPackages;
+  return inflightOrgAesthetics;
+}
+
+export async function fetchAestheticPackages(): Promise<AestheticPackage[]> {
+  const payload = await fetchOrgAesthetics();
+  return payload.packages;
 }

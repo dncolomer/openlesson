@@ -38,6 +38,26 @@ import {
   pickTapBackgroundImage,
 } from "@/lib/tap-score-client-helpers";
 import { resolveWorkspaceCoverImage } from "@/lib/workspace-visual";
+import {
+  CustomAestheticsStyler,
+  SessionSidebarStylePreview,
+} from "@/components/organization/custom-aesthetics-styler";
+import { sidebarStyleUserContent } from "@/lib/organization/sidebar-style-generate";
+import {
+  DEFAULT_SESSION_CANVAS_STYLE,
+  EMPTY_SESSION_SIDEBAR_STYLE,
+  invertSessionCanvasColor,
+  isMissingSidebarStyleColumn,
+  parseSessionCanvasStyle,
+  parseSessionSidebarStyle,
+  sessionCanvasExcalidrawChrome,
+  sessionCanvasHex6,
+  sessionSidebarPreviewStill,
+  sidebarStyleImagePrompt,
+  sessionSidebarStyleCssVars,
+} from "@/lib/session-sidebar-style";
+import { generateXaiImage } from "@/lib/xai-image";
+import { IMAGINE_IMAGE_MODEL } from "@/lib/xai-models";
 
 const ROOT = join(__dirname, "../..");
 
@@ -90,6 +110,196 @@ function listSystemAestheticImages(): string[] {
   }
   return images.sort();
 }
+
+describe("session sidebar style", () => {
+  it("keeps MAGI defaults and only accepts real colors", () => {
+    const parsed = parseSessionSidebarStyle({
+      prompt: "brass on ink",
+      tokens: { background: "#120800", border: "rgba(255,200,80,0.4)", text: "lime", accent: "#f4e1b0" },
+    });
+    expect(parsed.prompt).toBe("brass on ink");
+    expect(parsed.tokens.background).toBe("#120800");
+    expect(parsed.tokens.border).toBe("rgba(255,200,80,0.4)");
+    expect(parsed.tokens.accent).toBe("#f4e1b0");
+    expect(parsed.tokens.text).toBe("#ffffff");
+    expect(sessionSidebarStyleCssVars(parsed)["--session-sidebar-bg"]).toBe("#120800");
+    expect(sessionSidebarStyleCssVars(parsed)["--session-sidebar-wash"]).toBeUndefined();
+    expect(sidebarStyleImagePrompt({ prompt: "brass on ink", assetCount: 2 })).toContain("brass on ink");
+    expect(sidebarStyleImagePrompt({ prompt: "brass on ink", assetCount: 2 })).toContain("16rem");
+    expect(
+      sessionSidebarStyleCssVars({
+        ...parsed,
+        backgroundImage: "https://cdn.example/sidebar.jpg",
+      })["--session-sidebar-wash"],
+    ).toBe("url(https://cdn.example/sidebar.jpg)");
+    expect(
+      sessionSidebarPreviewStill(EMPTY_SESSION_SIDEBAR_STYLE, [
+        "https://cdn.example/a.png",
+        "https://cdn.example/b.webp",
+      ]),
+    ).toBe("https://cdn.example/b.webp");
+    expect(
+      sessionSidebarPreviewStill(
+        { ...EMPTY_SESSION_SIDEBAR_STYLE, backgroundImage: "https://cdn.example/sidebar.jpg" },
+        ["https://cdn.example/a.png"],
+      ),
+    ).toBe("https://cdn.example/sidebar.jpg");
+    expect(parsed.canvas).toEqual(DEFAULT_SESSION_CANVAS_STYLE);
+    expect(parseSessionCanvasStyle({ background: "#112233", stroke: "#abcdef", zenMode: false })).toEqual({
+      background: "#112233",
+      stroke: "#abcdef",
+      zenMode: false,
+    });
+    expect(sessionCanvasHex6("#0a0")).toBe("#00aa00");
+    expect(invertSessionCanvasColor("#1e1e1e")).toBe("#e1e1e1");
+    expect(invertSessionCanvasColor("#e1e1e1")).toBe("#1e1e1e");
+    expect(invertSessionCanvasColor(invertSessionCanvasColor("#0a0a0a"))).toBe("#0a0a0a");
+    expect(sessionCanvasExcalidrawChrome(DEFAULT_SESSION_CANVAS_STYLE).currentItemStrokeColor).toBe(
+      "#1e1e1e",
+    );
+    expect(sessionCanvasExcalidrawChrome(DEFAULT_SESSION_CANVAS_STYLE).zenModeEnabled).toBe(true);
+    expect(sessionCanvasExcalidrawChrome({ background: "#112233", stroke: "#ffffff", zenMode: false })).toEqual({
+      viewBackgroundColor: invertSessionCanvasColor("#112233"),
+      currentItemStrokeColor: invertSessionCanvasColor("#ffffff"),
+      zenModeEnabled: false,
+    });
+  });
+
+  it("sends the prompt and uploaded assets to xAI, and falls back when Imagine has no prompt", async () => {
+    const content = sidebarStyleUserContent({
+      prompt: "brass on ink",
+      assetUrls: ["https://cdn.example/a.png", "https://cdn.example/b.webp"],
+    });
+    expect(content[0]).toEqual({
+      type: "text",
+      text: expect.stringContaining("brass on ink"),
+    });
+    expect((content[0] as { text: string }).text).toContain("Data panel");
+    expect((content[0] as { text: string }).text).toContain("canvasBackground");
+    expect(read("lib/organization/sidebar-style-generate.ts")).toContain("zenMode");
+    expect(read("lib/organization/sidebar-style-generate.ts")).toContain("Data console");
+    expect(content).toContainEqual({
+      type: "image_url",
+      image_url: { url: "https://cdn.example/a.png" },
+    });
+    expect(content).toHaveLength(3);
+    expect(isMissingSidebarStyleColumn({ message: "column sidebar_style does not exist" })).toBe(
+      true,
+    );
+    expect(isMissingSidebarStyleColumn({ message: "custom_aesthetic_urls missing" })).toBe(false);
+    expect(read("lib/xai-image.ts")).toContain("IMAGINE_IMAGE_MODEL");
+    expect(read("lib/xai-models.ts")).toContain(`IMAGINE_IMAGE_MODEL = "${IMAGINE_IMAGE_MODEL}"`);
+    expect(read("lib/xai-image.ts")).toContain("/images/generations");
+    expect(read("lib/xai-image.ts")).toContain("/images/edits");
+    await expect(generateXaiImage("")).resolves.toEqual({
+      ok: false,
+      error: "Image prompt is required",
+    });
+  });
+
+  it("renders a 16rem prompt-and-assets styler", () => {
+    const html = renderToStaticMarkup(
+      createElement(CustomAestheticsStyler, {
+        urls: ["https://cdn.example/a.png"],
+        style: parseSessionSidebarStyle({
+          prompt: "brass on ink",
+          backgroundImage: "https://cdn.example/sidebar.jpg",
+          tokens: { background: "#120800", accent: "#f4e1b0" },
+        }),
+        prompt: "brass on ink",
+        onPromptChange: () => {},
+        uploading: false,
+        generating: false,
+        removingUrl: null,
+        onUpload: () => {},
+        onRemove: () => {},
+        onGenerate: () => {},
+        onReset: () => {},
+        labels: {
+          kicker: "Custom aesthetics",
+          title: "Canvas sidebar styler",
+          helper: "Upload assets, then prompt the look of the 16rem session rail.",
+          prompt: "Style prompt",
+          promptPlaceholder: "Brass on ink",
+          apply: "Style sidebar",
+          applying: "Styling…",
+          reset: "Reset style",
+          upload: "Upload assets",
+          uploading: "Uploading…",
+          empty: "No assets",
+          remove: "Remove",
+          removing: "Removing…",
+          canvas: "Work canvas",
+          canvasHelper: "Board fill",
+          canvasBackground: "Background",
+          canvasStroke: "Stroke",
+          canvasZen: "Zen mode by default",
+        },
+      }),
+    );
+    expect(html).toContain("data-org-custom-aesthetics");
+    expect(html).toContain("data-org-canvas-background");
+    expect(html).toContain("data-org-canvas-stroke");
+    expect(html).toContain("data-org-canvas-zen");
+    expect(html).toContain("data-org-canvas-preview");
+    expect(html).toContain("data-org-sidebar-style-prompt");
+    expect(html).toContain("data-org-sidebar-style-apply");
+    expect(html).toContain("data-org-sidebar-style-reset");
+    expect(html).toContain("data-org-aesthetic-upload");
+    expect(html).toContain("Canvas sidebar styler");
+    expect(html).toContain("width:16rem");
+    expect(html).toContain("https://cdn.example/sidebar.jpg");
+    expect(html).toContain("https://cdn.example/a.png");
+    const uploadedOnly = renderToStaticMarkup(
+      createElement(CustomAestheticsStyler, {
+        urls: ["https://cdn.example/a.png", "https://cdn.example/b.webp"],
+        style: EMPTY_SESSION_SIDEBAR_STYLE,
+        prompt: "",
+        onPromptChange: () => {},
+        uploading: false,
+        generating: false,
+        removingUrl: null,
+        onUpload: () => {},
+        onRemove: () => {},
+        onGenerate: () => {},
+        onReset: () => {},
+        labels: {
+          kicker: "Custom aesthetics",
+          title: "Canvas sidebar styler",
+          helper: "helper",
+          prompt: "Style prompt",
+          promptPlaceholder: "Brass on ink",
+          apply: "Style sidebar",
+          applying: "Styling…",
+          reset: "Reset style",
+          upload: "Upload assets",
+          uploading: "Uploading…",
+          empty: "No assets",
+          remove: "Remove",
+          removing: "Removing…",
+          canvas: "Work canvas",
+          canvasHelper: "Board fill",
+          canvasBackground: "Background",
+          canvasStroke: "Stroke",
+          canvasZen: "Zen mode by default",
+        },
+      }),
+    );
+    expect(uploadedOnly).toContain("data-org-sidebar-style-preview-still");
+    expect(uploadedOnly).toContain("https://cdn.example/b.webp");
+    const preview = renderToStaticMarkup(
+      createElement(SessionSidebarStylePreview, {
+        style: EMPTY_SESSION_SIDEBAR_STYLE,
+        urls: ["https://cdn.example/a.png", "https://cdn.example/b.webp"],
+        topic: "Just war",
+      }),
+    );
+    expect(preview).toContain("data-org-sidebar-style-preview");
+    expect(preview).toContain("data-org-sidebar-style-preview-still");
+    expect(preview).toContain("https://cdn.example/b.webp");
+    expect(preview).toContain("Just war");
+  });
+});
 
 describe("decideActiveAestheticPool", () => {
   const systemImages = listSystemAestheticImages();
@@ -390,17 +600,35 @@ describe("custom aesthetic uploads", () => {
 describe("custom aesthetic surfaces", () => {
   it("wires multi-upload and remove on the org admin surface to the mutation path", () => {
     const dashboard = read("components/OrganizationDashboardTab.tsx");
-    expect(dashboard).toContain('data-org-custom-aesthetics');
-    expect(dashboard).toContain('data-org-aesthetic-upload');
-    expect(dashboard).toContain("multiple");
-    expect(dashboard).toContain('accept="image/png,image/jpeg,image/webp,image/gif"');
-    expect(dashboard).toContain('data-org-aesthetic-remove');
+    const styler = read("components/organization/custom-aesthetics-styler.tsx");
+    expect(dashboard).toContain("CustomAestheticsStyler");
+    expect(styler).toContain('data-org-custom-aesthetics');
+    expect(styler).toContain('data-org-aesthetic-upload');
+    expect(styler).toContain("multiple");
+    expect(styler).toContain('accept="image/png,image/jpeg,image/webp,image/gif"');
+    expect(styler).toContain('data-org-aesthetic-remove');
+    expect(styler).toContain("data-org-sidebar-style-prompt");
+    expect(styler).toContain("data-org-sidebar-style-apply");
+    expect(styler).toContain("data-org-sidebar-style-preview");
     expect(dashboard).toContain('fetch("/api/organization/aesthetics"');
+    expect(dashboard).toContain('"/api/organization/aesthetics/style"');
     expect(dashboard).toContain('method: "POST"');
     expect(dashboard).toContain('method: "DELETE"');
     expect(dashboard).toContain("handleAestheticUpload");
     expect(dashboard).toContain("handleRemoveAesthetic");
+    expect(dashboard).toContain("handleStyleSidebar");
+    expect(dashboard).toContain("handleCanvasStyle");
+    expect(styler).toContain("data-org-canvas-background");
+    expect(styler).toContain("data-org-canvas-stroke");
+    expect(styler).toContain("data-org-canvas-zen");
+    expect(read("app/api/organization/aesthetics/style/route.ts")).toContain("parseSessionCanvasStyle");
+    expect(read("components/ExcalidrawCanvas.tsx")).toContain("sessionCanvasExcalidrawChrome");
+    expect(read("components/ExcalidrawCanvas.tsx")).toContain("useSessionSidebarStyle");
+    expect(dashboard).toContain("ORGANIZATION_SWITCHED_EVENT");
     expect(dashboard).toContain("isOrgAdmin");
+    expect(read("lib/use-session-sidebar-style.ts")).toContain("ORGANIZATION_SWITCHED_EVENT");
+    expect(read("app/api/organization/aesthetics/style/route.ts")).toContain("reset");
+    expect(read("app/api/aesthetics/route.ts")).toContain("sidebarStyle");
 
     const route = read("app/api/organization/aesthetics/route.ts");
     expect(route).toContain("authorizeCustomAestheticEdit");
@@ -411,6 +639,9 @@ describe("custom aesthetic surfaces", () => {
     const migration = read("supabase/migrations/20260923120000_organization_custom_aesthetics.sql");
     expect(migration).toContain("custom_aesthetic_urls");
     expect(migration).toContain("org-aesthetics");
+    expect(read("supabase/migrations/20261126160000_sidebar_style.sql")).toContain("sidebar_style");
+    expect(read("app/api/organization/aesthetics/style/route.ts")).toContain("generateSessionSidebarStyle");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain("sessionSidebarStyleCssVars");
   });
 
 

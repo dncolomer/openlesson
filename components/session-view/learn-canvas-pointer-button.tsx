@@ -2,7 +2,6 @@
 
 import {
   CommandMark,
-  CommandPlate,
   ILE_CANVAS_COMMAND_RAIL_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
@@ -18,14 +17,12 @@ export function IleCanvasPointerButton({
   onToggle,
   plate = false,
   square = false,
-  index = "11",
 }: {
   active: boolean;
   disabled?: boolean;
   onToggle: () => void;
   plate?: boolean;
   square?: boolean;
-  index?: string;
 }) {
   const markClass = plate ? ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS : "h-3.5 w-3.5";
   const className = plate
@@ -45,7 +42,6 @@ export function IleCanvasPointerButton({
       onClick={onToggle}
       className={className}
     >
-      {plate ? <CommandPlate index={index} /> : null}
       <CommandMark id="pointer" label={ILE_CANVAS_POINTER_LABEL} className={markClass} />
       <span className="min-w-0 truncate">{ILE_CANVAS_POINTER_LABEL}</span>
     </button>

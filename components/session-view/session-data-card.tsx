@@ -612,7 +612,11 @@ export function SessionDataCard({
       data-session-data-active={active}
       className="absolute inset-0 flex min-h-0 flex-col overflow-hidden bg-black text-white"
     >
-      <div role="tablist" className="relative z-[70] flex shrink-0 border-b border-white/25 bg-black">
+      <div
+        role="tablist"
+        data-session-data-tabs
+        className="relative z-[70] flex shrink-0 border-b border-white/25 bg-black"
+      >
         {SESSION_DATA_TABS.map((tab) => {
           const selected = active === tab;
           return (
@@ -627,7 +631,6 @@ export function SessionDataCard({
                 selected ? "bg-white text-black" : "bg-black text-neutral-500 hover:text-white"
               }`}
             >
-              <span className={selected ? "text-black/60" : "text-neutral-600"}>{TAB_META[tab].index}</span>
               {TAB_META[tab].label}
             </button>
           );

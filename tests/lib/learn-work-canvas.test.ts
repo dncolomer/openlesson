@@ -313,6 +313,20 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     );
     expect(openedRound.currentItemRoundness).toBe(ILE_WORK_CANVAS_ROUNDNESS);
 
+    const orgZenOff = withIleWorkCanvasGridAppState(
+      {},
+      { chrome: { zenModeEnabled: false, viewBackgroundColor: "#f5f5f5", currentItemStrokeColor: "#00ffaa" } },
+    );
+    expect(orgZenOff.zenModeEnabled).toBe(false);
+    expect(orgZenOff.viewBackgroundColor).toBe("#f5f5f5");
+    expect(orgZenOff.currentItemStrokeColor).toBe("#00ffaa");
+    const keptSceneZen = withIleWorkCanvasGridAppState(
+      { zenModeEnabled: true, currentItemStrokeColor: "#111111" },
+      { chrome: { zenModeEnabled: false, currentItemStrokeColor: "#00ffaa" } },
+    );
+    expect(keptSceneZen.zenModeEnabled).toBe(true);
+    expect(keptSceneZen.currentItemStrokeColor).toBe("#111111");
+
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("withIleWorkCanvasGridAppState");
     expect(canvas).toContain("@/app/learn-excalidraw-theme.css");

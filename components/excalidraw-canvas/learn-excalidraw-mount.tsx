@@ -133,7 +133,7 @@ class IleExcalidrawErrorBoundary extends Component<{ children: ReactNode }, { cr
       return (
         <div
           data-ile-excalidraw-crash
-          className="flex h-full items-center justify-center bg-[#0a0a0a] px-4 text-center font-mono text-[11px] uppercase tracking-wider text-neutral-400"
+          className="flex h-full items-center justify-center bg-inherit px-4 text-center font-mono text-[11px] uppercase tracking-wider text-neutral-400"
         >
           Canvas failed to load.
         </div>

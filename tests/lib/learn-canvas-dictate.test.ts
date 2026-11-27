@@ -275,7 +275,8 @@ describe("canvas dictate button", () => {
     expect(dictate).toContain("data-ile-canvas-dictate-run");
     expect(dictate).toContain("finishAndRun");
     expect(dictate).toContain("onRun");
-    expect(dictate).toContain('ileWorkCanvasCommandIndex("draw")');
+    expect(dictate).not.toContain("ileWorkCanvasCommandIndex");
+    expect(dictate).not.toContain("CommandPlate");
     expect(dictate).toContain('CommandMark id="draw"');
     expect(dictate).not.toContain("data-ile-canvas-dictate-answer");
     expect(dictate).not.toContain("onAnswer");

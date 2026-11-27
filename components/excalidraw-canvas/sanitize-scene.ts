@@ -2,14 +2,18 @@ import { withoutSessionBranchNotes } from "@/lib/session-branch-model";
 import {
   ileWorkCanvasWithScrollToContent,
   withIleWorkCanvasGridAppState,
+  type IleWorkCanvasChrome,
+  type IleWorkCanvasGridAppStateOptions,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
+
+export type SanitizeSceneOptions = IleWorkCanvasGridAppStateOptions;
 
 // Excalidraw's appState contains runtime-only fields like collaborators
 // (a Map) that do not survive JSON storage. Persist only restorable state.
 function sanitizeSceneData(
   scene: Partial<IleWorkCanvasScene> | null | undefined,
-  options?: { migrateLegacyStrokeWidth?: boolean; migrateLegacyRoundness?: boolean },
+  options?: SanitizeSceneOptions,
 ): IleWorkCanvasScene {
   if (!scene) {
     return {
@@ -31,10 +35,12 @@ function sanitizeSceneData(
 export function openCanvasScene(
   scene: IleWorkCanvasScene | null | undefined,
   scrollToContent: boolean,
+  chrome?: IleWorkCanvasChrome | null,
 ) {
   const clean = sanitizeSceneData(scene, {
     migrateLegacyStrokeWidth: true,
     migrateLegacyRoundness: true,
+    chrome,
   });
   const next = {
     ...clean,

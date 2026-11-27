@@ -55,6 +55,7 @@ describe("session guide panel", () => {
     const learn = renderToStaticMarkup(createElement(SessionGuidePanel, { guide: "learn" }));
     expect(learn).toContain('data-session-guide-tab="commands"');
     expect(learn).toContain('data-session-guide-tab="help"');
+    expect(learn).toContain("data-session-guide-tabs");
     expect(learn).toContain('data-session-guide-tab="harness"');
     expect(learn.indexOf('data-session-guide-tab="commands"')).toBeLessThan(
       learn.indexOf('data-session-guide-tab="harness"'),
@@ -72,9 +73,7 @@ describe("session guide panel", () => {
     expect(learn).not.toContain("data-ile-craft-insight");
     expect(learn).toContain("data-ile-canvas-dictate");
     expect(learn).not.toContain("data-session-commit");
-    expect(learn).toContain('data-ile-command-index="08"');
-    expect(learn).toContain('data-ile-command-index="09"');
-    expect(learn).not.toContain('data-ile-command-index="10"');
+    expect(learn).not.toContain("data-ile-command-index");
     expect(learn).toContain('data-session-command="pointer"');
     expect(learn).toContain("data-ile-canvas-pointer");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
@@ -84,8 +83,8 @@ describe("session guide panel", () => {
       expect(learn).toContain("disabled");
     }
     expect(learn).not.toContain("data-accelerando-mark");
-    expect(learn).toContain('data-ile-command-index="01"');
-    expect(learn).toContain('data-ile-command-index="07"');
+    expect(learn).not.toContain(">01<");
+    expect(learn).not.toContain(">02<");
     expect(learn).toContain('data-session-command="auto-layout"');
     expect(learn).not.toContain('data-session-command="developer-mode"');
     expect(learn).toContain('role="switch"');
@@ -173,7 +172,7 @@ describe("session guide panel", () => {
     expect(source).not.toContain("Commands use the marks selected on the canvas.");
     expect(source).not.toContain("Select marks on the canvas first.");
     expect(learn).not.toContain("Select marks on the canvas first.");
-    expect(source).toContain("CommandPlate");
+    expect(source).not.toContain("CommandPlate");
     expect(source).toContain("auto-rows-fr");
     expect(source).toContain("SessionCommandCheatsheet");
     expect(source).toContain("ILE_WORK_CANVAS_CHEATSHEET_LABEL");

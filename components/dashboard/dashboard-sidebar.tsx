@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -8,7 +14,10 @@ import {
   dispatchOrganizationSwitched,
   rememberActiveOrganizationId,
 } from "@/lib/organization/active-organization-client";
-import { type OrganizationMembership } from "@/lib/organization/membership";
+import {
+  visibleOrganizationMemberships,
+  type OrganizationMembership,
+} from "@/lib/organization/membership";
 import {
   clusterDashboardNavItems,
   DASHBOARD_TOP_NAV_ITEMS,
@@ -140,9 +149,15 @@ export function DashboardSidebar({
 
 function OrgSwitcher() {
   const router = useRouter();
+  const { t } = useI18n();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const [organizations, setOrganizations] = useState<OrganizationMembership[]>([]);
   const [activeId, setActiveId] = useState("");
   const [switching, setSwitching] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [highlight, setHighlight] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,10 +188,50 @@ function OrgSwitcher() {
     };
   }, []);
 
+  const visible = useMemo(
+    () => visibleOrganizationMemberships(organizations, query, { activeId }),
+    [organizations, query, activeId],
+  );
+  const activeOrg = organizations.find((org) => org.organizationId === activeId);
+
+  useEffect(() => {
+    setHighlight(0);
+  }, [query, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    searchRef.current?.focus();
+    function onPointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   async function handleChange(organizationId: string) {
-    if (!organizationId || organizationId === activeId) return;
+    if (!organizationId || organizationId === activeId) {
+      setOpen(false);
+      setQuery("");
+      return;
+    }
     const previous = activeId;
     setActiveId(organizationId);
+    setOpen(false);
+    setQuery("");
     setSwitching(true);
     try {
       const response = await fetch("/api/organization/switch", {
@@ -197,28 +252,103 @@ function OrgSwitcher() {
     }
   }
 
+  function onSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHighlight((index) => Math.min(visible.items.length - 1, index + 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlight((index) => Math.max(0, index - 1));
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const chosen = visible.items[highlight];
+      if (chosen) void handleChange(chosen.organizationId);
+    }
+  }
+
   if (organizations.length === 0) return null;
 
   return (
-    <div className="mt-auto px-2 py-2" data-dashboard-org-switcher>
-
+    <div
+      ref={rootRef}
+      className="mt-auto px-2 py-2"
+      data-dashboard-org-switcher
+    >
       <div className="mb-1 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
-        Organization
+        {t("organization.orgSwitcher")}
       </div>
-      <select
-        data-dashboard-org-switcher-select
-        aria-label="Organization"
-        disabled={switching}
-        value={activeId}
-        onChange={(event) => void handleChange(event.target.value)}
-        className="w-full rounded-none border border-white/40 bg-black px-2 py-1 text-[13px] leading-tight text-white focus:border-white/70 focus:outline-none disabled:opacity-50"
-      >
-        {organizations.map((org) => (
-          <option key={org.organizationId} value={org.organizationId}>
-            {org.name}
-          </option>
-        ))}
-      </select>
+      {open ? (
+        <div className="mb-1 max-h-48 overflow-y-auto border border-white/40 bg-black">
+          {visible.items.map((org, index) => {
+            const active = org.organizationId === activeId;
+            const highlighted = index === highlight;
+            return (
+              <button
+                key={org.organizationId}
+                type="button"
+                role="option"
+                aria-selected={active}
+                data-dashboard-org-switcher-option={org.organizationId}
+                disabled={switching}
+                onMouseEnter={() => setHighlight(index)}
+                onClick={() => void handleChange(org.organizationId)}
+                className={`block w-full truncate px-2 py-1 text-left text-[13px] leading-tight ${
+                  highlighted
+                    ? "bg-white/15 text-white"
+                    : active
+                      ? "text-white"
+                      : "text-neutral-300 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {org.name}
+              </button>
+            );
+          })}
+          {visible.total === 0 ? (
+            <p className="px-2 py-1 text-[12px] text-neutral-500">
+              {t("organization.noOrganizationMatches")}
+            </p>
+          ) : null}
+          {visible.truncated ? (
+            <p className="px-2 py-1 font-mono text-[10px] text-neutral-500">
+              {t("organization.organizationSwitcherMore", {
+                remaining: visible.total - visible.items.length,
+              })}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {open ? (
+        <input
+          ref={searchRef}
+          data-dashboard-org-switcher-select
+          data-dashboard-org-switcher-search
+          aria-label={t("organization.searchOrganizations")}
+          aria-expanded="true"
+          disabled={switching}
+          value={query}
+          placeholder={t("organization.searchOrganizations")}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={onSearchKeyDown}
+          className="w-full rounded-none border border-white/40 bg-black px-2 py-1 text-[13px] leading-tight text-white placeholder:text-neutral-500 focus:border-white/70 focus:outline-none disabled:opacity-50"
+        />
+      ) : (
+        <button
+          type="button"
+          data-dashboard-org-switcher-select
+          aria-label={t("organization.orgSwitcher")}
+          aria-expanded="false"
+          disabled={switching}
+          onClick={() => setOpen(true)}
+          className="w-full truncate rounded-none border border-white/40 bg-black px-2 py-1 text-left text-[13px] leading-tight text-white focus:border-white/70 focus:outline-none disabled:opacity-50"
+        >
+          {activeOrg?.name || t("organization.orgSwitcher")}
+        </button>
+      )}
     </div>
   );
 }

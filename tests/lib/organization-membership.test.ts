@@ -6,8 +6,10 @@ import {
   canListAllOrganizations,
   isMissingOrganizationIdColumn,
   isMissingOrganizationMembersTable,
+  ORGANIZATION_SWITCHER_VISIBLE_LIMIT,
   parseOrganizationMemberAdminFlag,
   sortOrganizationMemberships,
+  visibleOrganizationMemberships,
   wouldLeaveOrganizationWithoutAdmin,
 } from "@/lib/organization/membership";
 
@@ -60,6 +62,26 @@ describe("organization membership", () => {
         "a",
       ),
     ).toBe(false);
+  });
+
+  it("caps the org switcher list and filters by name or slug", () => {
+    const orgs = Array.from({ length: 12 }, (_, index) => ({
+      organizationId: `org-${index}`,
+      name: index === 0 ? "Proven" : `Workspace ${index}`,
+      slug: index === 0 ? "proven" : `workspace-${index}`,
+      kind: "team",
+      isOrgAdmin: index === 0,
+      isActive: index === 0,
+    }));
+    const empty = visibleOrganizationMemberships(orgs, "", { activeId: "org-0" });
+    expect(empty.items).toHaveLength(ORGANIZATION_SWITCHER_VISIBLE_LIMIT);
+    expect(empty.items[0]?.name).toBe("Proven");
+    expect(empty.truncated).toBe(true);
+    expect(empty.total).toBe(12);
+
+    const filtered = visibleOrganizationMemberships(orgs, "proven");
+    expect(filtered.items.map((org) => org.slug)).toEqual(["proven"]);
+    expect(filtered.truncated).toBe(false);
   });
 
   it("sorts memberships by name then id", () => {

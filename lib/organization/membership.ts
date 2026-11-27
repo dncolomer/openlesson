@@ -95,3 +95,39 @@ export function sortOrganizationMemberships(
     return a.organizationId.localeCompare(b.organizationId);
   });
 }
+
+/** Max orgs shown in the dashboard switcher list at once. */
+export const ORGANIZATION_SWITCHER_VISIBLE_LIMIT = 8;
+
+export function organizationMembershipMatchesQuery(
+  org: Pick<OrganizationMembership, "name" | "slug">,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return org.name.toLowerCase().includes(q) || org.slug.toLowerCase().includes(q);
+}
+
+export function visibleOrganizationMemberships(
+  organizations: OrganizationMembership[],
+  query: string,
+  options?: { limit?: number; activeId?: string },
+): { items: OrganizationMembership[]; total: number; truncated: boolean } {
+  const limit = Math.max(1, options?.limit ?? ORGANIZATION_SWITCHER_VISIBLE_LIMIT);
+  const matched = organizations.filter((org) =>
+    organizationMembershipMatchesQuery(org, query),
+  );
+  const activeId = String(options?.activeId || "").trim();
+  const ranked =
+    !query.trim() && activeId
+      ? [
+          ...matched.filter((org) => org.organizationId === activeId),
+          ...matched.filter((org) => org.organizationId !== activeId),
+        ]
+      : matched;
+  return {
+    items: ranked.slice(0, limit),
+    total: matched.length,
+    truncated: matched.length > limit,
+  };
+}

@@ -413,9 +413,15 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
       "data-dashboard-nav-group-toggle",
     );
-    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain("aria-expanded");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain("toggleGroup");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain("openGroups");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain("<option");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "data-dashboard-org-switcher-search",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "visibleOrganizationMemberships",
+    );
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("py-1");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:sticky");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:h-full");

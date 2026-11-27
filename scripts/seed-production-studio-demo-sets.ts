@@ -157,7 +157,7 @@ async function seedSet(
     ],
   );
 
-  const encoded = encodeStudioDemoRuns(set);
+  const encoded = await encodeStudioDemoRuns(set);
   const regions = buildStudioDemoRegions(set, encoded);
   const now = Date.now();
   const flowKind = set.flowKind;

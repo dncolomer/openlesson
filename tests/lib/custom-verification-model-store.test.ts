@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createCustomVerificationModelFromVectors } from "@/lib/knowledge-config";
 import {
-  embedTextsToFlowVector,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import {
   computeKnowledgeDistanceForSubject,
   createCustomVerificationModelFromSubjects,
@@ -15,8 +15,8 @@ import { subjectIdentityKey } from "@/lib/pow-api/subject-ref";
 
 type FilterCall = { table: string; method: string; args: unknown[] };
 
-function flowVector(seed: string): number[] {
-  return embedTextsToFlowVector([seed, "flowcfg", "knowledge-region"]);
+async function flowVector(seed: string) : Promise<number[]> {
+  return await encodeTextsToFlowVector([seed, "flowcfg", "knowledge-region"]);
 }
 
 function modelRow(
@@ -197,7 +197,7 @@ function expectLatestIdentityQuery(calls: FilterCall[], identity: string) {
 
 describe("custom verification model store (identity queries)", () => {
   it("evalSubjectAgainstCustomVerificationModel filters embeddings by subject identity", async () => {
-    const vector = flowVector("expert");
+    const vector = await flowVector("expert");
     const spec = createCustomVerificationModelFromVectors({
       name: "SRE bar",
       vectors: [vector],
@@ -217,7 +217,7 @@ describe("custom verification model store (identity queries)", () => {
           workspace_id: "ws-1",
           identity: "other",
           embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-          vector: flowVector("other"),
+          vector: await flowVector("other"),
           created_at: "2026-04-01T00:00:00.000Z",
         },
       ],
@@ -236,7 +236,7 @@ describe("custom verification model store (identity queries)", () => {
   });
 
   it("eval uses guest identity key, not a signed-in user_id", async () => {
-    const vector = flowVector("guest-run");
+    const vector = await flowVector("guest-run");
     const spec = createCustomVerificationModelFromVectors({
       name: "Guest bar",
       vectors: [vector],
@@ -267,7 +267,7 @@ describe("custom verification model store (identity queries)", () => {
   });
 
   it("createCustomVerificationModelFromSubjects loads each subject by identity", async () => {
-    const vector = flowVector("cohort");
+    const vector = await flowVector("cohort");
     const { client, calls, inserts } = makeStoreClient({
       embeddings: [
         {
@@ -296,7 +296,7 @@ describe("custom verification model store (identity queries)", () => {
   });
 
   it("looks up workspaces.user_id when ownerUserId is missing", async () => {
-    const vector = flowVector("cohort");
+    const vector = await flowVector("cohort");
     const { client, inserts } = makeStoreClient({
       embeddings: [
         {
@@ -322,8 +322,8 @@ describe("custom verification model store (identity queries)", () => {
   });
 
   it("computeKnowledgeDistanceForSubject uses the newest embedding for an identity", async () => {
-    const older = flowVector("older-run");
-    const newer = flowVector("newer-run");
+    const older = await flowVector("older-run");
+    const newer = await flowVector("newer-run");
     const spec = createCustomVerificationModelFromVectors({
       name: "Distance bar",
       vectors: [newer],

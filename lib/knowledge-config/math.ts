@@ -65,8 +65,8 @@ export function hashUnit(s: string): number {
 }
 
 /**
- * Fixed pseudo-random projection matrix for semantic residual (JL-style).
- * Seeded so a given (rows, cols, seed) matrix is stable across processes.
+ * Fixed seeded projection matrix for Map of Knowledge 2D/3D views.
+ * A given (rows, cols, seed) matrix is stable across processes.
  */
 export function seededRandomProjection(rows: number, cols: number, seed: string): number[][] {
   const matrix: number[][] = [];

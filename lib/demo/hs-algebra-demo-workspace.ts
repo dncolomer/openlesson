@@ -14,10 +14,10 @@ import {
   type SyntheticRegionProfile,
 } from "@/lib/knowledge-config";
 import {
-  embedTextsToFlowVector,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 
 /** Stable marker for idempotent find/replace on staging. */
 export const HS_ALGEBRA_DEMO_MARKER = "[DEMO:hs-algebra-v1]";
@@ -374,11 +374,11 @@ export function algebraRegionByKey(key: AlgebraRegionKey): AlgebraRegionDefiniti
 }
 
 /** Build one synthetic region via the shipped flowcfg encoder path. */
-export function buildAlgebraRegion(
+export async function buildAlgebraRegion(
   region: AlgebraRegionDefinition,
   workspaceId = "hs-algebra-demo",
-): CustomVerificationModelSpec {
-  const model = createSyntheticKnowledgeRegionFromProfile({
+): Promise<CustomVerificationModelSpec> {
+  const model = await createSyntheticKnowledgeRegionFromProfile({
     name: region.regionName,
     profile: region.profile,
     description: region.description,
@@ -391,10 +391,10 @@ export function buildAlgebraRegion(
 }
 
 /** Exactly the two algebra regions (foundations + advanced). */
-export function buildAllAlgebraRegions(
+export async function buildAllAlgebraRegions(
   workspaceId = "hs-algebra-demo",
-): CustomVerificationModelSpec[] {
-  return HS_ALGEBRA_REGIONS.map((r) => buildAlgebraRegion(r, workspaceId));
+): Promise<CustomVerificationModelSpec[]> {
+  return Promise.all(HS_ALGEBRA_REGIONS.map((r) => buildAlgebraRegion(r, workspaceId)));
 }
 
 export interface EncodedAlgebraGuest {
@@ -420,14 +420,14 @@ export interface EncodedAlgebraGuest {
 /**
  * Encode a guest from faked PoW into a flowcfg-v1-d96 vector.
  */
-export function encodeAlgebraGuest(
+export async function encodeAlgebraGuest(
   subject: AlgebraGuestSubject,
   options?: {
     workspaceId?: string;
     totalBlocks?: number;
     sessionStartMs?: number;
   },
-): EncodedAlgebraGuest {
+): Promise<EncodedAlgebraGuest> {
   const workspaceId = options?.workspaceId ?? "hs-algebra-demo";
   const sessionStartMs = options?.sessionStartMs ?? 1_720_500_000_000;
 
@@ -446,7 +446,7 @@ export function encodeAlgebraGuest(
   }));
 
   const asOfMs = sessionStartMs + Math.max(...subject.powEvents.map((e) => e.offset_ms), 0);
-  const vector = embedTextsToFlowVector([
+  const vector = await encodeTextsToFlowVector([
     workspaceId,
     subject.displayName,
     subject.regionHint,
@@ -473,14 +473,16 @@ export function encodeAlgebraGuest(
   };
 }
 
-export function encodeAllAlgebraGuests(
+export async function encodeAllAlgebraGuests(
   workspaceId = "hs-algebra-demo",
-): EncodedAlgebraGuest[] {
-  return HS_ALGEBRA_GUESTS.map((s, i) =>
-    encodeAlgebraGuest(s, {
-      workspaceId,
-      sessionStartMs: 1_720_500_000_000 + i * 86_400_000,
-    }),
+): Promise<EncodedAlgebraGuest[]> {
+  return Promise.all(
+    HS_ALGEBRA_GUESTS.map((s, i) =>
+      encodeAlgebraGuest(s, {
+        workspaceId,
+        sessionStartMs: 1_720_500_000_000 + i * 86_400_000,
+      }),
+    ),
   );
 }
 

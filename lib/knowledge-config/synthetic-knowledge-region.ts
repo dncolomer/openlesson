@@ -3,10 +3,10 @@
  */
 
 import {
-  embedTextsToFlowVector,
   FLOW_EMBEDDING_MODEL_ID,
   isFlowEmbeddingVector,
 } from "@/lib/flow-embedding";
+import { encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import {
   createCustomVerificationModelFromVectors,
   type CustomVerificationModelSpec,
@@ -52,10 +52,10 @@ function clampScore(n: unknown, fallback: number): number {
 /**
  * Encode a synthetic competency profile into a flowcfg-v1-d96 unit vector.
  */
-export function encodeSyntheticRegionProfile(
+export async function encodeSyntheticRegionProfile(
   profile: SyntheticRegionProfile,
   workspaceId = "synthetic-region",
-): number[] {
+): Promise<number[]> {
   const verification = clampScore(profile.verification_score, 70);
   const augmentation = clampScore(profile.augmentation_score, verification - 5);
   const optimization = clampScore(profile.optimization_score, verification - 10);
@@ -88,7 +88,7 @@ export function encodeSyntheticRegionProfile(
     ...tools,
   ];
 
-  const vector = embedTextsToFlowVector(texts);
+  const vector = await encodeTextsToFlowVector(texts);
   if (!isFlowEmbeddingVector(vector)) {
     throw new CustomVerificationModelError("synthetic encoder produced invalid flowcfg vector");
   }
@@ -98,16 +98,16 @@ export function encodeSyntheticRegionProfile(
 /**
  * Build a custom knowledge region spec from a synthetic profile.
  */
-export function createSyntheticKnowledgeRegionFromProfile(options: {
+export async function createSyntheticKnowledgeRegionFromProfile(options: {
   name: string;
   profile: SyntheticRegionProfile;
   description?: string | null;
   workspaceId?: string;
-}): CustomVerificationModelSpec {
+}): Promise<CustomVerificationModelSpec> {
   const name = options.name.trim();
   if (!name) throw new CustomVerificationModelError("name is required");
 
-  const vector = encodeSyntheticRegionProfile(
+  const vector = await encodeSyntheticRegionProfile(
     options.profile,
     options.workspaceId || "synthetic-region",
   );

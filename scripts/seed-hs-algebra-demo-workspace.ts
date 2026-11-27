@@ -307,7 +307,7 @@ async function main() {
     }
     console.log(`[seed-hs-algebra-demo] guest_subjects=${guestByKey.size}`);
 
-    const encodedGuests = encodeAllAlgebraGuests(workspaceId);
+    const encodedGuests = await encodeAllAlgebraGuests(workspaceId);
 
     let powCount = 0;
     for (const enc of encodedGuests) {
@@ -396,10 +396,12 @@ async function main() {
     }
     console.log(`[seed-hs-algebra-demo] session_embeddings=${snapCount}`);
 
-    const regionRows = HS_ALGEBRA_REGIONS.map((def) => ({
-      def,
-      model: buildAlgebraRegion(def, workspaceId),
-    }));
+    const regionRows = await Promise.all(
+      HS_ALGEBRA_REGIONS.map(async (def) => ({
+        def,
+        model: await buildAlgebraRegion(def, workspaceId),
+      })),
+    );
     if (regionRows.length !== 2) {
       throw new Error(`expected exactly 2 regions, got ${regionRows.length}`);
     }

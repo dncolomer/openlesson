@@ -2,17 +2,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  completeFlowEmbedding,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   flowEmbeddingChannelLabel,
   flowEmbeddingModelIdForChannel,
   recoverFlowEmbeddingRaw,
-  reembedFlowRaw,
   vectorForFlowSpace,
   vectorsMatch,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import {
   mixFlowEmbeddingSpace,
   parseFlowEmbeddingSpace,
@@ -64,8 +63,8 @@ describe("flowcfg-v1-d96 embeddings", () => {
   const model = fixtureModel("Region");
   const eight = fixtureModel("Other region", [4, 40, 90]);
 
-  it("embeds verification walks with a projected policy", () => {
-    const verify = completeFlowEmbedding({
+  it("embeds verification walks with a projected policy", async () => {
+    const verify = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -82,7 +81,7 @@ describe("flowcfg-v1-d96 embeddings", () => {
     ).toBeGreaterThan(0);
 
     for (const flowKind of ["calibrate", "learn", "solve"] as const) {
-      const coerced = completeFlowEmbedding({
+      const coerced = await encodeFlowEmbedding({
         flowKind,
         model,
         sequence: ["r1"],
@@ -92,32 +91,32 @@ describe("flowcfg-v1-d96 embeddings", () => {
     }
   });
 
-  it("changes the path vector when the tree or walk changes; speech only moves path+text", () => {
-    const base = completeFlowEmbedding({
+  it("changes the path vector when the tree or walk changes; speech only moves path+text", async () => {
+    const base = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
-    const otherModel = completeFlowEmbedding({
+    const otherModel = await encodeFlowEmbedding({
       flowKind: "verify",
       model: eight,
       sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
-    const otherPolicy = completeFlowEmbedding({
+    const otherPolicy = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r2"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
-    const otherPow = completeFlowEmbedding({
+    const otherPow = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "beta spoken proof" }],
     });
-    const silent = completeFlowEmbedding({
+    const silent = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -138,15 +137,15 @@ describe("flowcfg-v1-d96 embeddings", () => {
     expect(flowEmbeddingChannelLabel("path_text")).toBe("Path + Text");
     const recovered = recoverFlowEmbeddingRaw(base);
     expect(recovered).toEqual(base.raw);
-    expect(vectorsMatch(reembedFlowRaw(recovered!), base.vector)).toBe(true);
-    expect(vectorsMatch(reembedFlowRaw(recovered!, "path_text"), base.vector_path_text)).toBe(true);
+    expect(vectorsMatch((await encodeFlowRaw(recovered!)).vector, base.vector)).toBe(true);
+    expect(vectorsMatch((await encodeFlowRaw(recovered!)).vector_path_text, base.vector_path_text)).toBe(true);
     expect(
       otherModel.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
     ).toBeGreaterThan(0);
     expect(otherModel.raw.genModel.chapterTitle).toBe("Priced");
   });
 
-  it("names spaces from basis channels and mixes path+audio as Path+Text", () => {
+  it("names spaces from basis channels and mixes path+audio as Path+Text", async () => {
     expect(parseFlowEmbeddingSpace(null)).toEqual({
       ok: true,
       space: "path",
@@ -162,7 +161,7 @@ describe("flowcfg-v1-d96 embeddings", () => {
     const voice = parseFlowEmbeddingSpace("voice");
     expect(voice.ok && voice.space).toBe("path+audio");
     expect(parseFlowEmbeddingSpace("path+foo").ok).toBe(false);
-    const spoken = completeFlowEmbedding({
+    const spoken = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -173,10 +172,10 @@ describe("flowcfg-v1-d96 embeddings", () => {
     expect(
       vectorsMatch(vectorForFlowSpace(spoken, "path+audio"), spoken.vector_path_text),
     ).toBe(true);
-    expect(vectorsMatch(reembedFlowRaw(spoken.raw, "path+audio"), spoken.vector_path_text)).toBe(
+    expect(vectorsMatch(vectorForFlowSpace(spoken, "path+audio"), spoken.vector_path_text)).toBe(
       true,
     );
-    const silent = completeFlowEmbedding({
+    const silent = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -184,7 +183,7 @@ describe("flowcfg-v1-d96 embeddings", () => {
     });
     expect(silent.channel_vectors.audio).toBeUndefined();
     expect(vectorForFlowSpace(silent, "path+audio")).toEqual(silent.vector);
-    const withEeg = completeFlowEmbedding({
+    const withEeg = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -230,7 +229,7 @@ describe("flow embedding store", () => {
     expect(byFlow[0]?.identity).toBe("ada");
     const got = await getFlowEmbedding({ workspaceId: "ws-flow", embeddingId: stored.id });
     expect(got?.raw).toEqual(stored.raw);
-    expect(vectorsMatch(reembedFlowRaw(got!.raw), stored.vector)).toBe(true);
+    expect(vectorsMatch(stored.vector, got!.vector)).toBe(true);
     expect(stored.channel_vectors.path).toEqual(stored.vector);
   });
 
@@ -287,7 +286,7 @@ describe("flow embedding store", () => {
 });
 
 describe("completion paths persist flow embeddings instead of snapshots", () => {
-  it("Verification writes embed+raw and never snapshot", () => {
+  it("Verification writes embed+raw and never snapshot", async () => {
     const results = read("app/api/verification-flow/public/[token]/results/route.ts");
     expect(results).toContain("buildFlowEmbeddingRaw");
     expect(results).toContain("persistCompletedFlowEmbedding");
@@ -310,7 +309,7 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
 });
 
 describe("retired calibrate surfaces", () => {
-  it("live Calibrate sounding UI is gone", () => {
+  it("live Calibrate sounding UI is gone", async () => {
     expect(existsSync(join(ROOT, "components/calibrate/calibrate-live-surface.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/calibrate/calibrate-sounding-surface.tsx"))).toBe(
       false,

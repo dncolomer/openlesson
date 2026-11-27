@@ -259,7 +259,7 @@ async function persistPathTextCompanion(input: {
   kind: ProductFlowKind;
 }): Promise<void> {
   try {
-    const voiceSpec = buildVoiceRegionFromFlowRaws({
+    const voiceSpec = await buildVoiceRegionFromFlowRaws({
       name: input.name,
       embeddings: input.embeddings,
     });
@@ -327,7 +327,7 @@ export async function runRegionSimulation(input: {
     const strategy = strategyById.get(plan.strategyId);
     if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
     const flow = input.flows.find((row) => row.id === plan.flowId);
-    const walk = walkSimulationPlan(plan, flowKind, strategies, flow);
+    const walk = await walkSimulationPlan(plan, flowKind, strategies, flow);
     const stored = await persistRegionSimulationSample({
       ownerUserId,
       workspaceId: flow?.workspaceId || undefined,
@@ -502,7 +502,7 @@ function strategiesFromSimulatedEmbeddings(
   return collectRegionSimulationStrategies(rows);
 }
 
-function walkSimulationPlan(
+async function walkSimulationPlan(
   plan: import("@/lib/region-simulation").RegionSimulationSamplePlan,
   flowKind: import("@/lib/flow-embedding").FlowKind,
   strategies: readonly ExplorationStrategy[],
@@ -1083,7 +1083,7 @@ export async function addRegionSimulationSamples(input: {
     const strategy = adding.find((row) => row.id === plan.strategyId);
     if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
     const flow = ctx.flows.find((row) => row.id === plan.flowId);
-    const walk = walkSimulationPlan(plan, flowKind, adding, flow);
+    const walk = await walkSimulationPlan(plan, flowKind, adding, flow);
     const stored = await persistRegionSimulationSample({
       ownerUserId,
       workspaceId: flow?.workspaceId || undefined,

@@ -382,7 +382,7 @@ export async function createSyntheticCustomVerificationModel(
     (files.length ? `From ${files.map((f) => f.name).join(", ")}` : null) ||
     "";
 
-  const spec = createSyntheticKnowledgeRegionFromProfile({
+  const spec = await createSyntheticKnowledgeRegionFromProfile({
     name,
     profile: { ...profile, name },
     description: sourceDescription,

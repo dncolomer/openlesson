@@ -10,8 +10,8 @@ import {
 import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID, isFlowEmbeddingVector } from "@/lib/flow-embedding";
 
 describe("synthetic knowledge region (shipped flowcfg path)", () => {
-  it("encodes profile into flowcfg-v1-d96 unit vector", () => {
-    const vector = encodeSyntheticRegionProfile({
+  it("encodes profile into flowcfg-v1-d96 unit vector", async () => {
+    const vector = await encodeSyntheticRegionProfile({
       name: "Incident commander",
       verification_score: 88,
       augmentation_score: 80,
@@ -31,8 +31,8 @@ describe("synthetic knowledge region (shipped flowcfg path)", () => {
     expect(norm).toBeLessThan(1.01);
   });
 
-  it("createSyntheticKnowledgeRegionFromProfile yields cohort-compatible region spec", () => {
-    const region = createSyntheticKnowledgeRegionFromProfile({
+  it("createSyntheticKnowledgeRegionFromProfile yields cohort-compatible region spec", async () => {
+    const region = await createSyntheticKnowledgeRegionFromProfile({
       name: "SRE high bar",
       profile: {
         verification_score: 90,
@@ -55,12 +55,12 @@ describe("synthetic knowledge region (shipped flowcfg path)", () => {
     expect(score.validation_score).toBeGreaterThan(50);
   });
 
-  it("projectKnowledgeRegionToOverlay uses real 2D frame (same as trajectory projection)", () => {
-    const regionA = createSyntheticKnowledgeRegionFromProfile({
+  it("projectKnowledgeRegionToOverlay uses real 2D frame (same as trajectory projection)", async () => {
+    const regionA = await createSyntheticKnowledgeRegionFromProfile({
       name: "Overlay A",
       profile: { verification_score: 70, strengths: ["transfer"] },
     });
-    const regionB = createSyntheticKnowledgeRegionFromProfile({
+    const regionB = await createSyntheticKnowledgeRegionFromProfile({
       name: "Overlay B",
       profile: {
         verification_score: 40,
@@ -110,8 +110,8 @@ describe("synthetic knowledge region (shipped flowcfg path)", () => {
     expect(multi[1].name).toBe("Overlay B");
   });
 
-  it("distinct synthetic profiles produce different centroids (multi-region)", () => {
-    const strong = createSyntheticKnowledgeRegionFromProfile({
+  it("distinct synthetic profiles produce different centroids (multi-region)", async () => {
+    const strong = await createSyntheticKnowledgeRegionFromProfile({
       name: "Strong",
       profile: {
         verification_score: 95,
@@ -119,7 +119,7 @@ describe("synthetic knowledge region (shipped flowcfg path)", () => {
         pow_types: ["tool", "speech", "screen"],
       },
     });
-    const weak = createSyntheticKnowledgeRegionFromProfile({
+    const weak = await createSyntheticKnowledgeRegionFromProfile({
       name: "Weak",
       profile: {
         verification_score: 15,

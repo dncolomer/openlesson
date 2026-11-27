@@ -14,10 +14,10 @@ import {
   type SyntheticRegionProfile,
 } from "@/lib/knowledge-config";
 import {
-  embedTextsToFlowVector,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 
 /** Stable marker for idempotent find/replace on staging. */
 export const SAAS_TECH_DEMO_MARKER = "[DEMO:saas-tech-roles-v1]";
@@ -719,16 +719,12 @@ export function roleRegionByKey(key: DemoRoleKey): DemoRoleDefinition {
   return found;
 }
 
-/**
- * Cosine floor for synthetic role regions in this demo.
- * Hash-bag flowcfg centroids sit ~0.68–0.84 cosine for on-role subjects and
- * ~0.35–0.54 for off-role. 0.65 keeps role-aligned subjects in-region.
- */
+/** Cosine floor for synthetic role regions in this demo. */
 export const DEMO_ROLE_REGION_COSINE_THRESHOLD = 0.65;
 
 /** Build a role region via the shipped synthetic profile → flowcfg path. */
-export function buildRoleRegion(role: DemoRoleDefinition, workspaceId = "demo-workspace"): CustomVerificationModelSpec {
-  const region = createSyntheticKnowledgeRegionFromProfile({
+export async function buildRoleRegion(role: DemoRoleDefinition, workspaceId = "demo-workspace"): Promise<CustomVerificationModelSpec> {
+  const region = await createSyntheticKnowledgeRegionFromProfile({
     name: role.regionName,
     profile: role.profile,
     description: role.description,
@@ -742,8 +738,10 @@ export function buildRoleRegion(role: DemoRoleDefinition, workspaceId = "demo-wo
   };
 }
 
-export function buildAllRoleRegions(workspaceId = "demo-workspace"): CustomVerificationModelSpec[] {
-  return DEMO_ROLE_REGIONS.map((role) => buildRoleRegion(role, workspaceId));
+export async function buildAllRoleRegions(
+  workspaceId = "demo-workspace",
+): Promise<CustomVerificationModelSpec[]> {
+  return Promise.all(DEMO_ROLE_REGIONS.map((role) => buildRoleRegion(role, workspaceId)));
 }
 
 export interface EncodedDemoSubject {
@@ -769,14 +767,14 @@ export interface EncodedDemoSubject {
 /**
  * Encode a subject from faked PoW into a flowcfg-v1-d96 vector.
  */
-export function encodeDemoSubject(
+export async function encodeDemoSubject(
   subject: DemoSubjectDefinition,
   options?: {
     workspaceId?: string;
     totalBlocks?: number;
     sessionStartMs?: number;
   },
-): EncodedDemoSubject {
+): Promise<EncodedDemoSubject> {
   const workspaceId = options?.workspaceId ?? "demo-workspace";
   const sessionStartMs = options?.sessionStartMs ?? 1_720_000_000_000;
 
@@ -796,7 +794,7 @@ export function encodeDemoSubject(
   }));
 
   const asOfMs = sessionStartMs + Math.max(...subject.powEvents.map((e) => e.offset_ms), 0);
-  const vector = embedTextsToFlowVector([
+  const vector = await encodeTextsToFlowVector([
     workspaceId,
     subject.displayName,
     subject.roleHint,
@@ -823,33 +821,35 @@ export function encodeDemoSubject(
   };
 }
 
-export function encodeAllDemoSubjects(workspaceId = "demo-workspace"): EncodedDemoSubject[] {
-  // Stagger session starts so trajectories don't collapse to one timestamp.
-  return DEMO_SUBJECTS.map((s, i) =>
-    encodeDemoSubject(s, {
-      workspaceId,
-      sessionStartMs: 1_720_000_000_000 + i * 86_400_000,
-    }),
+export async function encodeAllDemoSubjects(workspaceId = "demo-workspace"): Promise<EncodedDemoSubject[]> {
+  return Promise.all(
+    DEMO_SUBJECTS.map((s, i) =>
+      encodeDemoSubject(s, {
+        workspaceId,
+        sessionStartMs: 1_720_000_000_000 + i * 86_400_000,
+      }),
+    ),
   );
 }
 
 /** Encode the workspace-owner auth subject (same encoder path as guests). */
-export function encodeDemoOwnerSubject(
+export async function encodeDemoOwnerSubject(
   workspaceId = "demo-workspace",
   options?: { sessionStartMs?: number },
-): EncodedDemoSubject {
+): Promise<EncodedDemoSubject> {
   return encodeDemoSubject(DEMO_OWNER_SUBJECT, {
     workspaceId,
-    // After guest sessions so owner timeline sits as a distinct subject cloud.
     sessionStartMs: options?.sessionStartMs ?? 1_720_000_000_000 + DEMO_SUBJECTS.length * 86_400_000,
   });
 }
 
 /** Guests + owner for full multi-subject encode when needed in tests. */
-export function encodeAllDemoSubjectsIncludingOwner(
+export async function encodeAllDemoSubjectsIncludingOwner(
   workspaceId = "demo-workspace",
-): EncodedDemoSubject[] {
-  return [...encodeAllDemoSubjects(workspaceId), encodeDemoOwnerSubject(workspaceId)];
+): Promise<EncodedDemoSubject[]> {
+  const guests = await encodeAllDemoSubjects(workspaceId);
+  const owner = await encodeDemoOwnerSubject(workspaceId);
+  return [...guests, owner];
 }
 
 /**
@@ -944,18 +944,20 @@ export function assertMixedRoleMembership(rows: MembershipRow[]): {
 }
 
 /** Pure self-check used by unit tests and seed summary. */
-export function evaluateDemoMembershipGeometry(workspaceId = "demo-workspace"): {
+export async function evaluateDemoMembershipGeometry(workspaceId = "demo-workspace"): Promise<{
   encoded: EncodedDemoSubject[];
   roleRegions: Array<{ roleKey: DemoRoleKey; model: CustomVerificationModelSpec }>;
   cohort: CustomVerificationModelSpec;
   membership: MembershipRow[];
   mixed: { inRegion: MembershipRow[]; outOfRegion: MembershipRow[] };
-} {
-  const encoded = encodeAllDemoSubjects(workspaceId);
-  const roleRegions = DEMO_ROLE_REGIONS.map((role) => ({
-    roleKey: role.key,
-    model: buildRoleRegion(role, workspaceId),
-  }));
+}> {
+  const encoded = await encodeAllDemoSubjects(workspaceId);
+  const roleRegions = await Promise.all(
+    DEMO_ROLE_REGIONS.map(async (role) => ({
+      roleKey: role.key,
+      model: await buildRoleRegion(role, workspaceId),
+    })),
+  );
   const cohort = buildDemoCohortRegion(encoded, (key) => {
     const s = encoded.find((e) => e.subject.key === key)!.subject;
     return { label: s.displayName, guest_user_id: null, user_id: null };
@@ -982,6 +984,6 @@ export function evaluateDemoMembershipGeometry(workspaceId = "demo-workspace"): 
 }
 
 /** Role centroid vector for a profile (for tests that compare spaces). */
-export function roleProfileVector(role: DemoRoleDefinition, workspaceId = "demo-workspace"): number[] {
+export async function roleProfileVector(role: DemoRoleDefinition, workspaceId = "demo-workspace"): Promise<number[]> {
   return encodeSyntheticRegionProfile(role.profile, workspaceId);
 }

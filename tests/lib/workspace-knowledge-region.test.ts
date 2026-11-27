@@ -36,7 +36,8 @@ import {
   settingsSubviewLabel,
 } from "@/lib/workspace-settings-tabs";
 import { l2Norm } from "@/lib/knowledge-config";
-import { embedTextsToFlowVector, FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
+import { FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
+import { encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import { projectTrajectoryAndRegions } from "@/lib/knowledge-config";
 import {
   assembleSelectedRegionOverlayInputs,
@@ -61,7 +62,7 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("Knowledge Region create mode", () => {
-  it("stays an internal owner-container mode; Learning create is blank-only", () => {
+  it("stays an internal owner-container mode; Learning create is blank-only", async () => {
     expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank"]);
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
     expect(isUiWorkspaceCreateMode("template")).toBe(false);
@@ -122,7 +123,7 @@ describe("Knowledge Region create mode", () => {
 });
 
 describe("Knowledge Region shell", () => {
-  it("leftover kinds parse as Learning sections and do not invent a Goals tab", () => {
+  it("leftover kinds parse as Learning sections and do not invent a Goals tab", async () => {
     const owner = availableWorkspaceSections({
       isOwner: true,
       workspaceKind: "knowledge_region",
@@ -272,7 +273,7 @@ describe("Knowledge Region shell", () => {
 });
 
 describe("Knowledge Region knowledge-link deny", () => {
-  it("allows mint on leftover kinds the same as Learning", () => {
+  it("allows mint on leftover kinds the same as Learning", async () => {
     expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint("calibration")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint("standard")).toBe(true);
@@ -284,9 +285,9 @@ describe("Knowledge Region knowledge-link deny", () => {
 });
 
 describe("Knowledge Region zero-block PoW surfaces", () => {
-  it("encodes a unit flow vector without requiring blocks", () => {
+  it("encodes a unit flow vector without requiring blocks", async () => {
     expect(normalizeGoalText("  Ship PoW  ")).toBe("Ship PoW");
-    const encoded = embedTextsToFlowVector(["kr-ws", "tool cli", "screen", "external pow"]);
+    const encoded = await encodeTextsToFlowVector(["kr-ws", "tool cli", "screen", "external pow"]);
     expect(encoded.every((x) => Number.isFinite(x))).toBe(true);
     expect(Math.abs(l2Norm(encoded) - 1)).toBeLessThan(1e-6);
     expect(encoded).toHaveLength(FLOW_EMBEDDING_DIM);
@@ -294,7 +295,7 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
 });
 
 describe("Knowledge Region embeddings import overlay", () => {
-  it("imports owned-foreign regions into the shipped projector and excludes non-owned", () => {
+  it("imports owned-foreign regions into the shipped projector and excludes non-owned", async () => {
     const caller = "user-owner";
     const current = "ws-current";
     const ownedOther = "ws-owned";

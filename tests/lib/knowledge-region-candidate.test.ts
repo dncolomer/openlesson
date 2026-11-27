@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { completeFlowEmbedding, FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
+import { FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import type { StoredFlowEmbedding } from "@/lib/flow-embedding-store";
 import { l2Distance } from "@/lib/knowledge-config/math";
 import { presentKnowledgeRegionCandidate } from "@/lib/knowledge-region-candidate";
@@ -40,7 +41,7 @@ function fixtureModel() {
   return model;
 }
 
-function stored(input: {
+async function stored(input: {
   id: string;
   identity: string;
   source?: string;
@@ -48,9 +49,9 @@ function stored(input: {
   createdAt: string;
   sequence?: string[];
   pow?: StoredFlowEmbedding["raw"]["pow"];
-}): StoredFlowEmbedding {
+}) : Promise<StoredFlowEmbedding> {
   const model = fixtureModel();
-  const record = completeFlowEmbedding({
+  const record = await encodeFlowEmbedding({
     flowKind: "verify",
     model,
     sequence: input.sequence ?? ["r1"],
@@ -99,14 +100,14 @@ describe("knowledge region candidate render", () => {
     },
   ];
 
-  it("returns unsys averages, cluster L2, chronological path, and a symmetric pairwise matrix", () => {
-    const sim = stored({
+  it("returns unsys averages, cluster L2, chronological path, and a symmetric pairwise matrix", async () => {
+    const sim = await stored({
       id: "sim-1",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",
       createdAt: "2026-03-01T00:00:00.000Z",
     });
-    const first = stored({
+    const first = await stored({
       id: "o1",
       identity: "ada",
       flowId: "flow-a",
@@ -114,7 +115,7 @@ describe("knowledge region candidate render", () => {
       sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "first talk" }],
     });
-    const second = stored({
+    const second = await stored({
       id: "o2",
       identity: "user_ada",
       flowId: "flow-b",
@@ -122,7 +123,7 @@ describe("knowledge region candidate render", () => {
       sequence: ["r1", "r2"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "second talk" }],
     });
-    const other = stored({
+    const other = await stored({
       id: "other",
       identity: "bea",
       createdAt: "2026-03-09T12:00:00.000Z",
@@ -163,7 +164,7 @@ describe("knowledge region candidate render", () => {
     expect(payload.observations.some((row) => row.id === "other")).toBe(false);
   });
 
-  it("returns empty observations for an unknown candidate and mixes path+audio when asked", () => {
+  it("returns empty observations for an unknown candidate and mixes path+audio when asked", async () => {
     const empty = presentKnowledgeRegionCandidate({
       knowledgeRegionId: "parent",
       candidateId: "nobody",
@@ -178,13 +179,13 @@ describe("knowledge region candidate render", () => {
     expect(empty.pairwise.matrix).toEqual([]);
     expect(empty.space).toBe("path+audio+eeg");
 
-    const a = stored({
+    const a = await stored({
       id: "a",
       identity: "ada",
       createdAt: "2026-03-01T00:00:00.000Z",
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken" }],
     });
-    const b = stored({
+    const b = await stored({
       id: "b",
       identity: "ada",
       createdAt: "2026-03-02T00:00:00.000Z",
@@ -209,20 +210,20 @@ describe("knowledge region candidate render", () => {
     expect(audioPayload.pairwise.matrix[0]?.[1]).toBeGreaterThan(0);
   });
 
-  it("keeps public nearest on exploration clusters when an AI-use cluster is closer", () => {
-    const exploit = stored({
+  it("keeps public nearest on exploration clusters when an AI-use cluster is closer", async () => {
+    const exploit = await stored({
       id: "sim-1",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",
       createdAt: "2026-03-01T00:00:00.000Z",
     });
-    const aiCentroid = stored({
+    const aiCentroid = await stored({
       id: "ai-centroid",
       identity: "AI · Claude Sonnet · high",
       source: "simulated",
       createdAt: "2026-03-01T00:00:00.000Z",
     });
-    const human = stored({
+    const human = await stored({
       id: "o1",
       identity: "ada",
       createdAt: "2026-03-01T12:00:00.000Z",
@@ -252,7 +253,7 @@ describe("knowledge region candidate render", () => {
     expect(payload.observations[0]?.cluster_distances[0]?.nearest).toBe(true);
   });
 
-  it("ships the public route and MCP tool", () => {
+  it("ships the public route and MCP tool", async () => {
     const route = join(
       ROOT,
       "app/api/v3/knowledge-regions/[id]/candidates/[candidateId]/route.ts",

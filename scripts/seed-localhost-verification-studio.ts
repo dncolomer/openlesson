@@ -169,7 +169,7 @@ async function main() {
     );
 
     const model = localhostVerificationStudioTree();
-    const encoded = encodeLocalhostVerificationStudioRuns(model);
+    const encoded = await encodeLocalhostVerificationStudioRuns(model);
     const regions = buildLocalhostVerificationStudioRegions(encoded);
     const now = Date.now();
 

@@ -22,7 +22,7 @@ import {
 const root = join(__dirname, "../..");
 
 describe("STEM public workspace catalog", () => {
-  it("covers required major STEM fields with multi-region subdisciplines", () => {
+  it("covers required major STEM fields with multi-region subdisciplines", async () => {
     const summary = assertStemCatalogComplete();
     expect(summary.fieldCount).toBeGreaterThanOrEqual(8);
     expect(summary.minRegionsPerField).toBeGreaterThanOrEqual(3);
@@ -48,10 +48,10 @@ describe("STEM public workspace catalog", () => {
     }
   });
 
-  it("maps each subdiscipline region to a 1:1 workspace block", () => {
+  it("maps each subdiscipline region to a 1:1 workspace block", async () => {
     for (const field of STEM_PUBLIC_FIELDS) {
       const blocks = blocksForStemField(field);
-      const regions = buildAllStemRegionsForField(field, `ws-${field.key}`);
+      const regions = await buildAllStemRegionsForField(field, `ws-${field.key}`);
       expect(blocks.length).toBe(field.subdisciplines.length);
       expect(blocks.length).toBe(regions.length);
       expect(blocks.length).toBeGreaterThan(1);
@@ -71,10 +71,10 @@ describe("STEM public workspace catalog", () => {
     }
   });
 
-  it("builds real flowcfg region vectors via synthetic encoder path", () => {
+  it("builds real flowcfg region vectors via synthetic encoder path", async () => {
     const math = getStemField("mathematics");
     expect(math).toBeTruthy();
-    const regions = buildAllStemRegionsForField(math!, "ws-stem-math-test");
+    const regions = await buildAllStemRegionsForField(math!, "ws-stem-math-test");
     expect(regions.length).toBe(math!.subdisciplines.length);
     expect(regions.length).toBeGreaterThanOrEqual(3);
 
@@ -95,15 +95,15 @@ describe("STEM public workspace catalog", () => {
 
     // Distinct fields should not collapse to identical centroids for first regions
     const physics = getStemField("physics")!;
-    const mathFirst = buildStemSubdisciplineRegion(math!, math!.subdisciplines[0], "ws-a");
-    const physFirst = buildStemSubdisciplineRegion(physics, physics.subdisciplines[0], "ws-b");
+    const mathFirst = await buildStemSubdisciplineRegion(math!, math!.subdisciplines[0], "ws-a");
+    const physFirst = await buildStemSubdisciplineRegion(physics, physics.subdisciplines[0], "ws-b");
     const same = mathFirst.centroid.every(
       (v, i) => Math.abs(v - physFirst.centroid[i]) < 1e-12,
     );
     expect(same).toBe(false);
   });
 
-  it("ships seed and verify scripts with staging-default / explicit prod safety", () => {
+  it("ships seed and verify scripts with staging-default / explicit prod safety", async () => {
     const seed = join(root, "scripts/seed-stem-public-workspaces.ts");
     const verify = join(root, "scripts/verify-stem-public-workspaces.ts");
     expect(existsSync(seed)).toBe(true);

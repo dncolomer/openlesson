@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { completeFlowEmbedding, FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
+import { FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import {
   buildSessionCorpusRecord,
   reembedSessionCorpus,
@@ -40,9 +41,9 @@ function fixtureModel() {
 }
 
 describe("session corpus re-embed", () => {
-  it("rebuilds the Path vector from proof of work and the field model, not from a stored vector", () => {
+  it("rebuilds the Path vector from proof of work and the field model, not from a stored vector", async () => {
     const model = fixtureModel();
-    const original = completeFlowEmbedding({
+    const original = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -83,15 +84,15 @@ describe("session corpus re-embed", () => {
       ],
     });
     expect(corpus.xaiFileIds).toEqual(["file_11111111-1111-1111-1111-111111111111"]);
-    const rebuilt = reembedSessionCorpus(corpus, "verify");
+    const rebuilt = await reembedSessionCorpus(corpus, "verify");
     expect(rebuilt.vector).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(rebuilt.vector).toEqual(original.vector);
     expect(rebuilt.vector_path_text).toEqual(original.vector_path_text);
   });
 
-  it("changes the rebuilt vector when the walk changes", () => {
+  it("changes the rebuilt vector when the walk changes", async () => {
     const model = fixtureModel();
-    const r1 = reembedSessionCorpus(
+    const r1 = await reembedSessionCorpus(
       buildSessionCorpusRecord({
         sessionId: "a",
         kind: "learn",
@@ -103,7 +104,7 @@ describe("session corpus re-embed", () => {
         proofOfWork: [],
       }),
     );
-    const r2 = reembedSessionCorpus(
+    const r2 = await reembedSessionCorpus(
       buildSessionCorpusRecord({
         sessionId: "b",
         kind: "learn",

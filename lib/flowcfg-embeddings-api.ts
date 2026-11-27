@@ -1,7 +1,6 @@
 /**
  * HTTP client for the private flowcfg embeddings host.
- * OpenAI embeddings envelope: POST /v1/embeddings with Bearer auth.
- * input is a JSON string of recoverable Path raw (genModel, projectedPolicy, pow).
+ * Custom POST /v1/embed with Bearer auth and structured Path raw.
  */
 
 import {
@@ -56,7 +55,7 @@ export async function requestFlowcfgEmbeddings(
   if (!origin || !key) {
     throw new Error("FLOWCFG_EMBEDDINGS_BASE_URL and FLOWCFG_EMBEDDINGS_API_KEY are required");
   }
-  const response = await fetch(`${origin}/v1/embeddings`, {
+  const response = await fetch(`${origin}/v1/embed`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
@@ -64,17 +63,20 @@ export async function requestFlowcfgEmbeddings(
     },
     body: JSON.stringify({
       model: FLOWCFG_EMBEDDINGS_MODEL,
-      input: JSON.stringify(embedRequestBody(raw)),
+      raw: embedRequestBody(raw),
     }),
   });
   const payload = (await response.json().catch(() => null)) as {
     model?: unknown;
-    data?: Array<{
-      embedding?: unknown;
-      channel_vectors?: unknown;
-    }>;
+    embedding?: unknown;
+    channel_vectors?: unknown;
+    data?: unknown;
+    object?: unknown;
     error?: { message?: unknown };
   } | null;
+  if (payload && (payload.object !== undefined || payload.data !== undefined)) {
+    throw new Error("flowcfg embeddings: OpenAI envelope is not supported");
+  }
   if (!response.ok) {
     const message =
       payload && typeof payload.error?.message === "string"
@@ -82,15 +84,14 @@ export async function requestFlowcfgEmbeddings(
         : `flowcfg embeddings HTTP ${response.status}`;
     throw new Error(message);
   }
-  const item = payload?.data?.[0];
-  const embedding = Array.isArray(item?.embedding)
-    ? item.embedding.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+  const embedding = Array.isArray(payload?.embedding)
+    ? payload.embedding.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
     : [];
   if (embedding.length !== FLOW_EMBEDDING_DIM) {
     throw new Error(`flowcfg embeddings: expected ${FLOW_EMBEDDING_DIM}-d Path vector`);
   }
   const channel_vectors =
-    parseFlowEmbeddingChannelVectors(item?.channel_vectors) ?? { path: embedding };
+    parseFlowEmbeddingChannelVectors(payload?.channel_vectors) ?? { path: embedding };
   return {
     embedding,
     channel_vectors,

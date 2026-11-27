@@ -1,12 +1,10 @@
 /**
- * CPU test harness for flowcfg-v1-d96: distances, ablations, provisional
- * regions, and a 2D export. Does not train weights.
+ * Distances, mix checks, provisional regions, and a 2D export for hosted
+ * Path numbers. Does not run the production encoder.
  */
 
 import {
-  ablateFlowPathWalk,
   collectFlowPowTranscripts,
-  embedFlowChannels,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
@@ -15,6 +13,7 @@ import {
   type FlowEmbeddingChannel,
   type FlowEmbeddingRaw,
 } from "@/lib/flow-embedding";
+import { encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import {
   createCustomVerificationModelFromVectors,
   scoreAgainstCustomVerificationModel,
@@ -38,14 +37,13 @@ export type { FlowHarnessCase, HarnessRole };
 export type HarnessEmbeddedCase = FlowHarnessCase & {
   path: number[];
   path_text: number[];
-  path_no_walk: number[];
   transcripts: string[];
 };
 
 export type HarnessPair = {
   a: string;
   b: string;
-  channel: FlowEmbeddingChannel | "path_no_walk";
+  channel: FlowEmbeddingChannel;
   cosine: number;
   l2: number;
 };
@@ -67,7 +65,6 @@ export type FlowEmbeddingHarnessReport = {
     role: HarnessRole;
     path: number[];
     path_text: number[];
-    path_no_walk: number[];
     transcripts: string[];
     xy: Point2D;
     xy_path_text: Point2D;
@@ -77,7 +74,6 @@ export type FlowEmbeddingHarnessReport = {
     path_equals_path_text_when_silent: string[];
     path_unchanged_by_transcript: Array<{ a: string; b: string }>;
     path_text_moves_with_transcript: Array<{ a: string; b: string; cosine: number }>;
-    walk_off_changes_path: Array<{ id: string; cosine: number }>;
     determinism: boolean;
   };
   region: {
@@ -94,32 +90,30 @@ export type FlowEmbeddingHarnessReport = {
 
 function vectorFor(
   embedded: HarnessEmbeddedCase,
-  channel: FlowEmbeddingChannel | "path_no_walk",
+  channel: FlowEmbeddingChannel,
 ): number[] {
   if (channel === "path_text") return embedded.path_text;
-  if (channel === "path_no_walk") return embedded.path_no_walk;
   return embedded.path;
 }
 
-export function embedHarnessCase(input: FlowHarnessCase): HarnessEmbeddedCase {
+export async function embedHarnessCase(input: FlowHarnessCase): Promise<HarnessEmbeddedCase> {
   const recovered = recoverFlowEmbeddingRaw(input.raw);
   if (!recovered) {
     throw new Error(`harness case ${input.id} has no recoverable raw payload`);
   }
-  const channels = embedFlowChannels(recovered);
+  const encoded = await encodeFlowRaw(recovered);
   return {
     ...input,
-    raw: channels.raw,
-    path: channels.path,
-    path_text: channels.path_text,
-    path_no_walk: ablateFlowPathWalk(channels.path),
-    transcripts: collectFlowPowTranscripts(channels.raw.pow),
+    raw: encoded.raw,
+    path: encoded.vector,
+    path_text: encoded.vector_path_text,
+    transcripts: collectFlowPowTranscripts(encoded.raw.pow),
   };
 }
 
 export function pairwiseDistances(
   cases: readonly HarnessEmbeddedCase[],
-  channel: FlowEmbeddingChannel | "path_no_walk" = "path",
+  channel: FlowEmbeddingChannel = "path",
 ): HarnessPair[] {
   const pairs: HarnessPair[] = [];
   for (let i = 0; i < cases.length; i += 1) {
@@ -199,15 +193,15 @@ function sameTreeWalkPairs(cases: readonly HarnessEmbeddedCase[]): Array<{ a: st
   return out;
 }
 
-export function runFlowEmbeddingHarness(input: {
+export async function runFlowEmbeddingHarness(input: {
   cases?: readonly FlowHarnessCase[];
   projection?: ProjectionAlgorithmId;
   regionName?: string;
   regionChannel?: FlowEmbeddingChannel;
   regionProblem?: string;
-}): FlowEmbeddingHarnessReport {
+}): Promise<FlowEmbeddingHarnessReport> {
   const source = input.cases?.length ? input.cases : syntheticFlowHarnessCases();
-  const cases = source.map(embedHarnessCase);
+  const cases = await Promise.all(source.map((row) => embedHarnessCase(row)));
   const projection = input.projection ?? "pca";
   const pathCoords = projectVectors2D(
     cases.map((row) => row.path),
@@ -221,8 +215,8 @@ export function runFlowEmbeddingHarness(input: {
   const first = cases[0];
   const determinism =
     !!first &&
-    vectorsMatch(embedHarnessCase(source[0]).path, first.path) &&
-    vectorsMatch(embedHarnessCase(source[0]).path_text, first.path_text);
+    vectorsMatch((await embedHarnessCase(source[0])).path, first.path) &&
+    vectorsMatch((await embedHarnessCase(source[0])).path_text, first.path_text);
 
   const transcriptMoves: Array<{ a: string; b: string; cosine: number }> = [];
   for (const pair of sameTreeWalkPairs(cases)) {
@@ -254,7 +248,6 @@ export function runFlowEmbeddingHarness(input: {
       role: row.role,
       path: row.path,
       path_text: row.path_text,
-      path_no_walk: row.path_no_walk,
       transcripts: row.transcripts,
       xy: pathCoords[index] ?? { x: 0, y: 0 },
       xy_path_text: pathTextCoords[index] ?? { x: 0, y: 0 },
@@ -262,18 +255,11 @@ export function runFlowEmbeddingHarness(input: {
     pairwise: [
       ...pairwiseDistances(cases, "path"),
       ...pairwiseDistances(cases, "path_text"),
-      ...pairwiseDistances(cases, "path_no_walk"),
     ],
     ablations: {
       path_equals_path_text_when_silent: silentIds(cases),
       path_unchanged_by_transcript: sameTreeWalkPairs(cases),
       path_text_moves_with_transcript: transcriptMoves,
-      walk_off_changes_path: cases
-        .filter((row) => (row.raw.projectedPolicy?.sequence.length ?? 0) > 0)
-        .map((row) => ({
-          id: row.id,
-          cosine: cosineSimilarity(row.path, row.path_no_walk),
-        })),
       determinism,
     },
     region: regionBuilt
@@ -302,7 +288,7 @@ export function harnessExportJson(report: FlowEmbeddingHarnessReport): string {
 /** Unit L2 centroid of selected Path vectors (2–5 expert-like trajectories). */
 export function centroidOfCases(
   cases: readonly HarnessEmbeddedCase[],
-  channel: FlowEmbeddingChannel | "path_no_walk" = "path",
+  channel: FlowEmbeddingChannel = "path",
 ): number[] {
   if (!cases.length) return new Array(FLOW_EMBEDDING_DIM).fill(0);
   const dim = vectorFor(cases[0], channel).length;

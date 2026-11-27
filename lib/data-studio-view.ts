@@ -13,11 +13,12 @@ import {
   flowEmbeddingModelIdForChannel,
   parseFlowEmbeddingChannel,
   recoverFlowEmbeddingRaw,
-  reembedFlowRaw,
+  vectorForFlowChannel,
   type FlowEmbeddingChannel,
   type FlowKind,
   type FlowPowRow,
 } from "@/lib/flow-embedding";
+import type { FlowEmbeddingChannelVectors } from "@/lib/flow-embedding-space";
 import type { StoredRecordView } from "@/lib/behavior-record";
 import {
   buildStudioProjectionView,
@@ -82,6 +83,7 @@ export type DataStudioEmbeddingRow = {
   identity?: string | null;
   vector: number[];
   vector_path_text?: number[];
+  channel_vectors?: FlowEmbeddingChannelVectors;
   raw?: unknown;
   embedding_model_id?: string | null;
   created_at?: string | null;
@@ -679,17 +681,10 @@ export function studioRegionsForSpace(
 export function studioEmbeddingVector(
   row: DataStudioEmbeddingRow,
   space: DataStudioSpace | string = "path",
-  extraPow: readonly FlowPowRow[] = [],
 ): number[] {
   const channel = parseDataStudioSpace(space);
-  const recovered = recoverFlowEmbeddingRaw(row.raw);
-  if (recovered) {
-    const pow =
-      channel === "path_text" && extraPow.length
-        ? [...recovered.pow, ...extraPow]
-        : recovered.pow;
-    return reembedFlowRaw({ ...recovered, pow }, channel);
-  }
+  const mixed = vectorForFlowChannel(row, channel);
+  if (mixed.some((n) => n !== 0)) return mixed;
   if (channel === "path_text" && Array.isArray(row.vector_path_text) && row.vector_path_text.length) {
     return row.vector_path_text;
   }

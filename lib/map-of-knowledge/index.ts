@@ -12,8 +12,6 @@ export {
 export {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_SEM_DIM,
-  FLOW_EMBEDDING_STRUCT_DIM,
 } from "@/lib/flow-embedding";
 
 export type {

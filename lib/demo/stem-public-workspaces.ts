@@ -726,12 +726,12 @@ export function stemWorkspaceNotes(field: StemFieldDefinition): string {
 /**
  * Build a real knowledge-config region vector for one subdiscipline.
  */
-export function buildStemSubdisciplineRegion(
+export async function buildStemSubdisciplineRegion(
   field: StemFieldDefinition,
   sub: StemSubdisciplineDefinition,
   workspaceId = `stem-${field.key}`,
-): CustomVerificationModelSpec {
-  const region = createSyntheticKnowledgeRegionFromProfile({
+): Promise<CustomVerificationModelSpec> {
+  const region = await createSyntheticKnowledgeRegionFromProfile({
     name: sub.regionName,
     profile: sub.profile,
     description: sub.description,
@@ -743,12 +743,12 @@ export function buildStemSubdisciplineRegion(
   };
 }
 
-export function buildAllStemRegionsForField(
+export async function buildAllStemRegionsForField(
   field: StemFieldDefinition,
   workspaceId = `stem-${field.key}`,
-): CustomVerificationModelSpec[] {
-  return field.subdisciplines.map((sub) =>
-    buildStemSubdisciplineRegion(field, sub, workspaceId),
+): Promise<CustomVerificationModelSpec[]> {
+  return Promise.all(
+    field.subdisciplines.map((sub) => buildStemSubdisciplineRegion(field, sub, workspaceId)),
   );
 }
 

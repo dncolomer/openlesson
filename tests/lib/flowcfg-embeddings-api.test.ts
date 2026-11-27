@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { embedFlowOutput, FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import { encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import { persistCompletedFlowEmbedding, resetFlowEmbeddingStore } from "@/lib/flow-embedding-store";
 import { requestFlowcfgEmbeddings } from "@/lib/flowcfg-embeddings-api";
 
@@ -93,8 +94,8 @@ describe("flowcfg embeddings persist client", () => {
     resetFlowEmbeddingStore("memory");
   });
 
-  it("persistCompletedFlowEmbedding POSTs /v1/embeddings and stores returned Path", async () => {
-    const local = embedFlowOutput(FIXTURE_RAW);
+  it("persistCompletedFlowEmbedding POSTs /v1/embed with structured raw and stores returned Path", async () => {
+    const local = await encodeFlowRaw(FIXTURE_RAW);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     resetFlowEmbeddingStore("memory");
     const stored = await persistCompletedFlowEmbedding({
@@ -104,19 +105,24 @@ describe("flowcfg embeddings persist client", () => {
       raw: FIXTURE_RAW,
     });
     expect(fetchSpy).toHaveBeenCalled();
-    const call = fetchSpy.mock.calls.find(([input]) => String(input).includes("/v1/embeddings"));
+    const call = fetchSpy.mock.calls.find(([input]) => String(input).includes("/v1/embed"));
     expect(call).toBeTruthy();
-    expect(String(call![0])).toBe("http://flowcfg-embeddings.test/v1/embeddings");
+    expect(String(call![0])).toBe("http://flowcfg-embeddings.test/v1/embed");
+    expect(String(call![0])).not.toContain("/v1/embeddings");
     const init = call![1] as RequestInit;
     expect(init.method).toBe("POST");
     expect(String(init.headers && (init.headers as Record<string, string>).Authorization)).toContain(
       "Bearer ",
     );
-    const body = JSON.parse(String(init.body)) as { model: string; input: string };
+    const body = JSON.parse(String(init.body)) as {
+      model: string;
+      raw: { flowKind?: unknown; genModel?: { rootId?: string } };
+      input?: unknown;
+    };
     expect(body.model).toBe(FLOW_EMBEDDING_MODEL_ID);
-    const parsed = JSON.parse(body.input) as { flowKind?: unknown; genModel?: { rootId?: string } };
-    expect(parsed.flowKind).toBeUndefined();
-    expect(parsed.genModel).toMatchObject({ rootId: "root" });
+    expect(body.input).toBeUndefined();
+    expect(body.raw.flowKind).toBeUndefined();
+    expect(body.raw.genModel).toMatchObject({ rootId: "root" });
     expect(stored.vector).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(stored.vector).toEqual(local.vector);
     expect(stored.channel_vectors.path).toEqual(local.channel_vectors.path);
@@ -124,9 +130,27 @@ describe("flowcfg embeddings persist client", () => {
   });
 
   it("requestFlowcfgEmbeddings returns the service Path numbers", async () => {
-    const local = embedFlowOutput(FIXTURE_RAW);
+    const local = await encodeFlowRaw(FIXTURE_RAW);
     const result = await requestFlowcfgEmbeddings(FIXTURE_RAW);
     expect(result.model).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(result.embedding).toEqual(local.vector);
   });
+
+  it("requestFlowcfgEmbeddings rejects an OpenAI envelope response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        object: "list",
+        model: FLOW_EMBEDDING_MODEL_ID,
+        data: [{ object: "embedding", embedding: localZero(), index: 0 }],
+        usage: { prompt_tokens: 1, total_tokens: 1 },
+      }),
+    );
+    await expect(requestFlowcfgEmbeddings(FIXTURE_RAW)).rejects.toThrow(
+      /OpenAI envelope is not supported/,
+    );
+  });
 });
+
+function localZero(): number[] {
+  return Array.from({ length: FLOW_EMBEDDING_DIM }, () => 0);
+}

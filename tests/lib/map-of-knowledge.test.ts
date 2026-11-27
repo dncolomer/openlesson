@@ -43,7 +43,7 @@ function unitVector(dim: number, axis: number, scale = 1): number[] {
 }
 
 describe("map-of-knowledge pure logic", () => {
-  it("filters to public workspaces only", () => {
+  it("filters to public workspaces only", async () => {
     const rows = [
       { id: "a", is_public: true },
       { id: "b", is_public: false },
@@ -59,7 +59,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(isEligibleMapPublicWorkspace({ is_public: true, status: "paused" })).toBe(false);
   });
 
-  it("placement dropdown only lists public workspaces with expert regions", () => {
+  it("placement dropdown only lists public workspaces with expert regions", async () => {
     const rows = [
       { id: "stem", is_public: true, status: "active", region_count: 6, title: "Mathematics" },
       { id: "toga", is_public: true, status: "active", region_count: 0, title: "Toga to Throne" },
@@ -71,7 +71,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(placement.some((r) => /toga|throne/i.test(r.title))).toBe(false);
   });
 
-  it("projects vectors to 2D via shipped knowledge-config path", () => {
+  it("projects vectors to 2D via shipped knowledge-config path", async () => {
     const vectors = [
       unitVector(8, 0),
       unitVector(8, 1),
@@ -91,7 +91,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(spread).toBe(true);
   });
 
-  it("projects vectors to 3D with finite coordinates for every selectable algorithm", () => {
+  it("projects vectors to 3D with finite coordinates for every selectable algorithm", async () => {
     const vectors = [
       unitVector(8, 0),
       unitVector(8, 1),
@@ -120,7 +120,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(spread || hasZ || coords.length > 0).toBe(true);
   });
 
-  it("reprojects map layout when algorithm changes", () => {
+  it("reprojects map layout when algorithm changes", async () => {
     const vectors = [
       unitVector(8, 0),
       unitVector(8, 1),
@@ -184,7 +184,7 @@ describe("map-of-knowledge pure logic", () => {
     }
   });
 
-  it("toggles region visibility by id set", () => {
+  it("toggles region visibility by id set", async () => {
     const regions = [
       { id: "r1", name: "A" },
       { id: "r2", name: "B" },
@@ -195,7 +195,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(filterEnabledRegions(regions, [])).toEqual([]);
   });
 
-  it("picks at most 3 random regions for default-on state", () => {
+  it("picks at most 3 random regions for default-on state", async () => {
     const ids = ["a", "b", "c", "d", "e", "f"];
     let i = 0;
     // Deterministic pseudo-random for Fisher–Yates
@@ -211,7 +211,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(pickRandomEnabledRegionIds([], 3)).toEqual([]);
   });
 
-  it("defaults to 3 enabled regions from a single randomly chosen workspace", () => {
+  it("defaults to 3 enabled regions from a single randomly chosen workspace", async () => {
     const regions = [
       { id: "m1", workspace_id: "ws-math" },
       { id: "m2", workspace_id: "ws-math" },
@@ -259,7 +259,7 @@ describe("map-of-knowledge pure logic", () => {
     });
   });
 
-  it("builds short user id previews for map labels", () => {
+  it("builds short user id previews for map labels", async () => {
     expect(
       shortUserIdPreview({
         subject_user_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -273,7 +273,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(shortUserIdPreview({ id: "snap-xyz" })).toBe("snapxy");
   });
 
-  it("maps TAP vs TAP Learning to standard vs golden dots", () => {
+  it("maps TAP vs TAP Learning to standard vs golden dots", async () => {
     expect(mapDotKindFromParticipant("ile")).toBe("ile");
     expect(mapDotKindFromParticipant("anonymous_ile_link")).toBe("ile");
     expect(mapDotKindFromParticipant("tap")).toBe("tap");
@@ -285,7 +285,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(mapDotColor("tap")).toBe("#94a3b8");
   });
 
-  it("aggregates PoW stats across public workspaces", () => {
+  it("aggregates PoW stats across public workspaces", async () => {
     const stats = aggregatePublicPowStats([
       {
         workspace_id: "w1",
@@ -319,7 +319,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(speech?.count).toBe(11);
   });
 
-  it("builds map payload excluding private workspaces and projecting points", () => {
+  it("builds map payload excluding private workspaces and projecting points", async () => {
     const payload = buildMapOfKnowledgePayload({
       workspaces: [
         {
@@ -473,11 +473,9 @@ describe("map-of-knowledge pure logic", () => {
     expect(other.embedding_info.dim).toBe(16);
   });
 
-  it("describes and resolves embedding models", () => {
+  it("describes and resolves embedding models", async () => {
     const primary = describeEmbeddingModel(FLOW_EMBEDDING_MODEL_ID);
     expect(primary.dim).toBe(96);
-    expect(primary.struct_dim).toBe(64);
-    expect(primary.sem_dim).toBe(32);
     expect(primary.description.toLowerCase()).toMatch(/96|dimension|flow/);
 
     const catalog = mergeEmbeddingModelCatalog([
@@ -493,7 +491,7 @@ describe("map-of-knowledge pure logic", () => {
 });
 
 describe("STEM mini avatars", () => {
-  it("ships a multi-entry catalog with pregenerated public assets", () => {
+  it("ships a multi-entry catalog with pregenerated public assets", async () => {
     expect(stemMiniAvatarCatalogSize()).toBeGreaterThan(1);
     expect(STEM_MINI_AVATARS.length).toBe(stemMiniAvatarCatalogSize());
     const ids = new Set(STEM_MINI_AVATARS.map((a) => a.id));
@@ -508,7 +506,7 @@ describe("STEM mini avatars", () => {
     }
   });
 
-  it("picks catalog members deterministically from seeds", () => {
+  it("picks catalog members deterministically from seeds", async () => {
     const a = pickStemMiniAvatar(0);
     const b = pickStemMiniAvatar(0);
     expect(a.id).toBe(b.id);
@@ -525,7 +523,7 @@ describe("STEM mini avatars", () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 
-  it("assigns stable avatars for subject ids and guest identity includes avatar", () => {
+  it("assigns stable avatars for subject ids and guest identity includes avatar", async () => {
     const once = stemMiniAvatarForSubjectId("subject-abc");
     const twice = stemMiniAvatarForSubjectId("subject-abc");
     expect(once.id).toBe(twice.id);
@@ -551,7 +549,7 @@ describe("STEM mini avatars", () => {
 });
 
 describe("anonymous guest self-placement", () => {
-  it("generates deterministic guest names from seed", () => {
+  it("generates deterministic guest names from seed", async () => {
     const a = generateAnonymousGuestIdentity(100);
     const b = generateAnonymousGuestIdentity(100);
     expect(a.display_name).toBe(b.display_name);
@@ -559,7 +557,7 @@ describe("anonymous guest self-placement", () => {
     expect(a.avatar_id).toBe(b.avatar_id);
   });
 
-  it("validates public workspace + block for placement", () => {
+  it("validates public workspace + block for placement", async () => {
     const catalog = {
       workspaces: [
         { id: "pub", is_public: true },
@@ -590,7 +588,7 @@ describe("anonymous guest self-placement", () => {
     ).toBe(false);
   });
 
-  it("builds TAP and TAP Learning placement results with correct dot kinds", () => {
+  it("builds TAP and TAP Learning placement results with correct dot kinds", async () => {
     const tap = buildGuestPlacementResult({
       link_kind: "tap",
       private_url: "https://example.com/tap/abc",
@@ -651,7 +649,7 @@ describe("map-of-knowledge product surfaces", () => {
     expect(navLinkSrc).toMatch(/TOP_LINKS[\s\S]*href: "\/science"[\s\S]*label: "Science"/);
   });
 
-  it("groups regions by workspace for collapsible map toggles", () => {
+  it("groups regions by workspace for collapsible map toggles", async () => {
     const groups = groupRegionsByWorkspace([
       {
         id: "r1",

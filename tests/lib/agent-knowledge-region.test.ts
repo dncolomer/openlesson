@@ -12,7 +12,7 @@ import {
   presentAgentSimulationJob,
 } from "@/lib/pow-api/agent-knowledge-region-management";
 import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-tools/evidence-tools";
-import { completeFlowEmbedding } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import { presentKnowledgeRegionDetails } from "@/lib/knowledge-region-details";
 import type { DataStudioEmbeddingRow } from "@/lib/data-studio-view";
 import type { RegionSimulationJobRow } from "@/lib/region-simulation-jobs";
@@ -20,8 +20,8 @@ import { REGION_SIMULATION_WIZARD_STEPS } from "@/lib/region-simulation";
 
 const ROOT = join(__dirname, "../..");
 
-function embeddingRow(id: string, identity: string, source: string): DataStudioEmbeddingRow {
-  const record = completeFlowEmbedding({
+async function embeddingRow(id: string, identity: string, source: string) : Promise<DataStudioEmbeddingRow> {
+  const record = await encodeFlowEmbedding({
     flowKind: "verify",
     pow: [
       {
@@ -65,7 +65,7 @@ const KR_TOOLS = [
 ] as const;
 
 describe("public Knowledge Regions agent API", () => {
-  it("ships CRUD + wizard + retrieve routes", () => {
+  it("ships CRUD + wizard + retrieve routes", async () => {
     const routes = [
       "app/api/v3/knowledge-regions/route.ts",
       "app/api/v3/knowledge-regions/options/route.ts",
@@ -84,7 +84,7 @@ describe("public Knowledge Regions agent API", () => {
     expect(KNOWLEDGE_REGION_JOBS_API_PATH).toBe("/api/v3/knowledge-regions/jobs");
   });
 
-  it("MCP schemas match the dashboard wizard fields", () => {
+  it("MCP schemas match the dashboard wizard fields", async () => {
     const names = agentToolsByFamily("knowledge_region").map((tool) => tool.name);
     expect(names).toEqual([...KR_TOOLS]);
     expect(AGENT_TOOL_SURFACE).toHaveLength(19);
@@ -113,8 +113,8 @@ describe("public Knowledge Regions agent API", () => {
     ]);
   });
 
-  it("presents details without vectors and jobs in snake_case", () => {
-    const simulated = embeddingRow("sim-1", "Simulated · Exploit-heavy", "simulated");
+  it("presents details without vectors and jobs in snake_case", async () => {
+    const simulated = await embeddingRow("sim-1", "Simulated · Exploit-heavy", "simulated");
     const details = presentKnowledgeRegionDetails({
       flowNames: { "flow-a": "Limits" },
       parent: {
@@ -206,7 +206,7 @@ describe("public Knowledge Regions agent API", () => {
     });
   });
 
-  it("documents the family for coding agents", () => {
+  it("documents the family for coding agents", async () => {
     const coding = readFileSync(join(ROOT, "public/coding-agents.md"), "utf8");
     const spec = readFileSync(join(ROOT, "docs/KNOWLEDGE_REGION_API.md"), "utf8");
     for (const src of [coding, spec]) {

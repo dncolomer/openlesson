@@ -15,10 +15,11 @@ import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
-  embedFlowOutput,
   isFlowEmbeddingVector,
   recoverFlowEmbeddingRaw,
+  vectorForFlowSpace,
 } from "@/lib/flow-embedding";
+import { encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import { normalizeSubject, subjectIdentityKey } from "./subject-ref";
 import {
   filterImportableKnowledgeRegions,
@@ -280,7 +281,7 @@ export async function loadLatestFlowVectorForSubject(
 
   const { data, error } = await supabase
     .from("session_embeddings")
-    .select("vector, identity, created_at, embedding_model_id, dim, raw")
+    .select("vector, identity, created_at, embedding_model_id, dim, raw, channel_vectors")
     .eq("workspace_id", workspaceId)
     .eq("identity", identity)
     .eq("embedding_model_id", FLOW_EMBEDDING_MODEL_ID)
@@ -294,13 +295,26 @@ export async function loadLatestFlowVectorForSubject(
     identity?: string | null;
     created_at?: string;
     raw?: unknown;
+    channel_vectors?: unknown;
   };
   const vector = Array.isArray(row.vector)
     ? row.vector.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
     : [];
   if (!isFlowEmbeddingVector(vector)) return null;
+  const mixedPathText = vectorForFlowSpace(
+    { vector, channel_vectors: row.channel_vectors as never },
+    "path+audio",
+  );
+  if (isFlowEmbeddingVector(mixedPathText)) {
+    return {
+      vector,
+      vector_path_text: mixedPathText,
+      as_of_ms: Date.parse(String(row.created_at || "")) || 0,
+      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    };
+  }
   const recovered = recoverFlowEmbeddingRaw(row.raw);
-  const embedded = recovered ? embedFlowOutput(recovered) : null;
+  const embedded = recovered ? await encodeFlowRaw(recovered) : null;
   return {
     vector: embedded?.vector ?? vector,
     vector_path_text: embedded?.vector_path_text ?? vector,

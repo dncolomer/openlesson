@@ -14,7 +14,7 @@ import {
   summarizeGoalsText,
   type GoalCatalogEntry,
 } from "@/lib/pow-api/goals";
-import { embedTextsToFlowVector } from "@/lib/flow-embedding";
+import { encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 
 const wsGoals: GoalCatalogEntry[] = [
   { id: "wg-1", text: "Ship API", scope: "workspace" },
@@ -28,7 +28,7 @@ const blockGoals: GoalCatalogEntry[] = [
 ];
 
 describe("normalizeGoalText", () => {
-  it("trims and caps length", () => {
+  it("trims and caps length", async () => {
     expect(normalizeGoalText("  hello  ")).toBe("hello");
     expect(normalizeGoalText("")).toBeNull();
     expect(normalizeGoalText(null)).toBeNull();
@@ -37,7 +37,7 @@ describe("normalizeGoalText", () => {
 });
 
 describe("resolveEvaluatedGoals — default", () => {
-  it("returns all workspace goals ∪ goals for PoW-related blocks", () => {
+  it("returns all workspace goals ∪ goals for PoW-related blocks", async () => {
     const resolved = resolveEvaluatedGoals({
       selection: { mode: "default" },
       workspaceGoals: wsGoals,
@@ -49,7 +49,7 @@ describe("resolveEvaluatedGoals — default", () => {
     expect(resolved.every((g) => g.text.length > 0)).toBe(true);
   });
 
-  it("excludes block goals when no PoW block links", () => {
+  it("excludes block goals when no PoW block links", async () => {
     const resolved = resolveEvaluatedGoals({
       selection: { mode: "default" },
       workspaceGoals: wsGoals,
@@ -59,7 +59,7 @@ describe("resolveEvaluatedGoals — default", () => {
     expect(resolved.map((g) => g.id).sort()).toEqual(["wg-1", "wg-2"]);
   });
 
-  it("handles empty catalogs", () => {
+  it("handles empty catalogs", async () => {
     expect(
       resolveEvaluatedGoals({
         selection: { mode: "default" },
@@ -70,7 +70,7 @@ describe("resolveEvaluatedGoals — default", () => {
     ).toEqual([]);
   });
 
-  it("handles partial catalogs (workspace only)", () => {
+  it("handles partial catalogs (workspace only)", async () => {
     const resolved = resolveEvaluatedGoals({
       selection: { mode: "default" },
       workspaceGoals: [wsGoals[0]],
@@ -83,7 +83,7 @@ describe("resolveEvaluatedGoals — default", () => {
 });
 
 describe("resolveEvaluatedGoals — custom selected + adhoc", () => {
-  it("selects workspace + block goal ids", () => {
+  it("selects workspace + block goal ids", async () => {
     const resolved = resolveEvaluatedGoals({
       selection: { mode: "selected", goal_ids: ["wg-2", "bg-2", "missing"] },
       workspaceGoals: wsGoals,
@@ -93,7 +93,7 @@ describe("resolveEvaluatedGoals — custom selected + adhoc", () => {
     expect(resolved.find((g) => g.id === "bg-2")?.scope).toBe("block");
   });
 
-  it("adhoc single NL goal", () => {
+  it("adhoc single NL goal", async () => {
     const resolved = resolveEvaluatedGoals({
       selection: { mode: "adhoc", adhoc_goal: "  Demo readiness  " },
       workspaceGoals: wsGoals,
@@ -104,7 +104,7 @@ describe("resolveEvaluatedGoals — custom selected + adhoc", () => {
     ]);
   });
 
-  it("adhoc empty returns empty", () => {
+  it("adhoc empty returns empty", async () => {
     expect(
       resolveEvaluatedGoals({
         selection: { mode: "adhoc", adhoc_goal: "   " },
@@ -116,7 +116,7 @@ describe("resolveEvaluatedGoals — custom selected + adhoc", () => {
 });
 
 describe("fingerprints + snapshot identity", () => {
-  it("stable goals fingerprint regardless of order", () => {
+  it("stable goals fingerprint regardless of order", async () => {
     const a = fingerprintGoals([
       { id: "wg-1", text: "Ship API", scope: "workspace" },
       { id: "bg-1", text: "Auth", scope: "block", block_id: "b1" },
@@ -128,13 +128,13 @@ describe("fingerprints + snapshot identity", () => {
     expect(a).toBe(b);
   });
 
-  it("different goals → different fingerprint", () => {
+  it("different goals → different fingerprint", async () => {
     const a = fingerprintGoals([{ id: "1", text: "A", scope: "workspace" }]);
     const b = fingerprintGoals([{ id: "1", text: "B", scope: "workspace" }]);
     expect(a).not.toBe(b);
   });
 
-  it("stable PoW fingerprint + composite identity", () => {
+  it("stable PoW fingerprint + composite identity", async () => {
     const powA = fingerprintPowSet(["p2", "p1"]);
     const powB = fingerprintPowSet(["p1", "p2"]);
     expect(powA).toBe(powB);
@@ -156,7 +156,7 @@ describe("fingerprints + snapshot identity", () => {
 });
 
 describe("parseGoalSelectionFromBody + helpers", () => {
-  it("parses default / adhoc / selected from request bodies", () => {
+  it("parses default / adhoc / selected from request bodies", async () => {
     expect(parseGoalSelectionFromBody({}).mode).toBe("default");
     expect(parseGoalSelectionFromBody({ adhoc_goal: "X" }).mode).toBe("adhoc");
     expect(parseGoalSelectionFromBody({ goal_ids: ["a"] }).mode).toBe("selected");
@@ -165,7 +165,7 @@ describe("parseGoalSelectionFromBody + helpers", () => {
     ]);
   });
 
-  it("blockIdsFromProofOfWork extracts unique block ids", () => {
+  it("blockIdsFromProofOfWork extracts unique block ids", async () => {
     expect(
       blockIdsFromProofOfWork([
         { block_id: "a" },
@@ -176,7 +176,7 @@ describe("parseGoalSelectionFromBody + helpers", () => {
     ).toEqual(["a", "b"]);
   });
 
-  it("summarizeGoalsText joins multi goals", () => {
+  it("summarizeGoalsText joins multi goals", async () => {
     expect(
       summarizeGoalsText([
         { id: "1", text: "A", scope: "workspace" },
@@ -187,12 +187,12 @@ describe("parseGoalSelectionFromBody + helpers", () => {
 });
 
 describe("flowcfg encode includes evaluated goals", () => {
-  it("two embeddings that differ only by goals produce different vectors", () => {
+  it("two embeddings that differ only by goals produce different vectors", async () => {
     const base = ["ws-1", "tool git"];
-    const embA = embedTextsToFlowVector([...base, "Ship the API"]);
-    const embB = embedTextsToFlowVector([...base, "Pass the certification exam"]);
+    const embA = await encodeTextsToFlowVector([...base, "Ship the API"]);
+    const embB = await encodeTextsToFlowVector([...base, "Pass the certification exam"]);
     expect(embA).not.toEqual(embB);
-    const embA2 = embedTextsToFlowVector([...base, "Ship the API"]);
+    const embA2 = await encodeTextsToFlowVector([...base, "Ship the API"]);
     expect(embA).toEqual(embA2);
   });
 });

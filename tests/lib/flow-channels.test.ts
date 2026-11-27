@@ -19,7 +19,8 @@ import {
   productFlowWizardCanAdvance,
   productFlowWizardSteps,
 } from "@/lib/product-flow";
-import { completeFlowEmbedding, powRowsForCanvasEmbedding } from "@/lib/flow-embedding";
+import { powRowsForCanvasEmbedding } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import { scoredTapBriefingStep, prepareBriefingStep } from "@/lib/practice-voice-challenge";
 import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
 
@@ -30,7 +31,7 @@ function read(rel: string): string {
 }
 
 describe("flow enforced channels", () => {
-  it("defaults to Audio on for null or missing values", () => {
+  it("defaults to Audio on for null or missing values", async () => {
     expect(parseFlowEnforcedChannels(null)).toEqual(DEFAULT_FLOW_ENFORCED_CHANNELS);
     expect(parseFlowEnforcedChannels(undefined)).toEqual({
       audio: true,
@@ -43,13 +44,13 @@ describe("flow enforced channels", () => {
     expect(sessionEnforcedChannels({ enforcedChannels: { audio: false } }).audio).toBe(false);
   });
 
-  it("keeps the current value when a PATCH omits channels", () => {
+  it("keeps the current value when a PATCH omits channels", async () => {
     const current = parseFlowEnforcedChannels({ audio: false, muse: true });
     expect(nextFlowEnforcedChannels(current, undefined)).toEqual(current);
     expect(nextFlowEnforcedChannels(current, { audio: true }).audio).toBe(true);
   });
 
-  it("stamps session metadata with camelCase enforcedChannels", () => {
+  it("stamps session metadata with camelCase enforcedChannels", async () => {
     const stamped = withEnforcedChannelsMetadata(
       { block_id: "b1" },
       parseFlowEnforcedChannels({ audio: false }),
@@ -64,7 +65,7 @@ describe("flow enforced channels", () => {
     expect(FLOW_CHANNEL_LABELS.muse).toBe("Muse (EEG)");
   });
 
-  it("inserts a channels step between model and publish", () => {
+  it("inserts a channels step between model and publish", async () => {
     expect(PRODUCT_FLOW_WIZARD_STEPS).toEqual([
       "name",
       "author",
@@ -95,7 +96,7 @@ describe("flow enforced channels", () => {
     ).toBe(true);
   });
 
-  it("shows enforced channels on Protocol authoring", () => {
+  it("shows enforced channels on Protocol authoring", async () => {
     expect(flowAuthorShowsEnforcedChannels()).toBe(true);
     expect(flowAuthorShowsEnforcedChannels("calibration")).toBe(true);
     expect(productFlowWizardSteps()).toEqual([
@@ -115,7 +116,7 @@ describe("flow enforced channels", () => {
     );
   });
 
-  it("skips the voice challenge when audio is not enforced", () => {
+  it("skips the voice challenge when audio is not enforced", async () => {
     expect(
       scoredTapBriefingStep({
         choice: "topic",
@@ -140,20 +141,20 @@ describe("flow enforced channels", () => {
     ).toBe(false);
   });
 
-  it("drops spoken PoW so Path+Text matches Path when audio is off", () => {
+  it("drops spoken PoW so Path+Text matches Path when audio is off", async () => {
     const pow = powRowsForCanvasEmbedding([
       { type: "tool", tool_name: "speech-segment", tool_action: "speech_stop", payload: "hello" },
       { type: "tool", tool_name: "tap-draw", tool_action: "draw", payload: "{}" },
     ]);
     expect(pow).toHaveLength(1);
     expect(pow[0]?.tool_name).toBe("tap-draw");
-    const withSpeech = completeFlowEmbedding({
+    const withSpeech = await encodeFlowEmbedding({
       flowKind: "solve",
       pow: [
         { type: "tool", tool_name: "speech-segment", tool_action: "speech_stop", payload: "hello" },
       ],
     });
-    const canvasOnly = completeFlowEmbedding({
+    const canvasOnly = await encodeFlowEmbedding({
       flowKind: "solve",
       audioEnforced: false,
       pow: [

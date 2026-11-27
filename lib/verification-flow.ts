@@ -22,14 +22,14 @@ import {
 } from "@/lib/flow-artifacts";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
-  completeFlowEmbedding,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   isFlowEmbeddingVector,
   recoverFlowEmbeddingRaw,
-  reembedFlowRaw,
+  vectorForFlowSpace,
   type FlowEmbeddingChannel,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
@@ -315,19 +315,25 @@ export function buildRegionFromFlowEmbeddings(input: {
 }
 
 /** Path + Text companion from recoverable flow raws for the same cohort. */
-export function buildVoiceRegionFromFlowRaws(input: {
+export async function buildVoiceRegionFromFlowRaws(input: {
   name: string;
-  embeddings: readonly { raw?: unknown }[];
-}): CustomVerificationModelSpec | null {
+  embeddings: readonly { raw?: unknown; channel_vectors?: unknown; vector?: number[] }[];
+}): Promise<CustomVerificationModelSpec | null> {
   const pathName = input.name.trim();
   const name = voiceRegionName(pathName);
   if (!pathName || name === pathName) return null;
-  const vectors = input.embeddings
-    .map((row) => {
-      const recovered = recoverFlowEmbeddingRaw(row.raw);
-      return recovered ? reembedFlowRaw(recovered, "path_text") : null;
-    })
-    .filter(isFlowEmbeddingVector);
+  const vectors: number[][] = [];
+  for (const row of input.embeddings) {
+    const mixed = vectorForFlowSpace(row as { vector?: number[]; channel_vectors?: never }, "path+audio");
+    if (isFlowEmbeddingVector(mixed) && mixed.some((n) => n !== 0)) {
+      vectors.push(mixed);
+      continue;
+    }
+    const recovered = recoverFlowEmbeddingRaw(row.raw);
+    if (!recovered) continue;
+    const encoded = await encodeFlowRaw(recovered);
+    vectors.push(encoded.vector_path_text);
+  }
   if (!vectors.length) return null;
   return createCustomVerificationModelFromVectors({
     name,
@@ -386,22 +392,20 @@ export function parseSyntheticPowModelOutput(raw: unknown): SyntheticPowItem[] {
 }
 
 /**
- * Flowcfg vector for one verification proof.
- * Default `path` is the hidden-state tree and walk. `path_text` mixes spoken
- * transcripts. Synthetic text-only items have no walk, so they use path_text.
+ * Host Path numbers for one verification proof. Default `path` is the Path
+ * channel. `path_text` mixes stored audio at read. Synthetic text-only items
+ * use path_text.
  */
-export function verificationProofEmbedding(input: {
+export async function verificationProofEmbedding(input: {
   prompt: string;
   source?: "runner" | "skill" | "synthetic";
   workspaceId?: string;
   channel?: FlowEmbeddingChannel;
-  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
-  /** Prepared tree and the hidden-state path. The embedding then includes the policy distance. */
   policy?: { model: SessionBranchModel; sequence: readonly string[] } | null;
-}): number[] {
+}): Promise<number[]> {
   const source = input.source ?? "runner";
-  const record = completeFlowEmbedding({
+  const record = await encodeFlowEmbedding({
     flowKind: "verify",
     model: input.policy?.model ?? null,
     sequence: input.policy?.sequence ?? null,
@@ -431,20 +435,23 @@ export function localVerificationOpening(input: {
 }
 
 /** Embeddings of generated proof text, in returned order. Invented coordinates are not used. */
-export function regionEmbeddingsFromSyntheticItems(
+export async function regionEmbeddingsFromSyntheticItems(
   items: readonly { text?: string | null }[],
-): number[][] {
-  return items
-    .map((item) => String(item.text || "").trim())
-    .filter((text) => text.length > 0)
-    .map((text) =>
-      verificationProofEmbedding({
+): Promise<number[][]> {
+  const vectors: number[][] = [];
+  for (const item of items) {
+    const text = String(item.text || "").trim();
+    if (!text) continue;
+    vectors.push(
+      await verificationProofEmbedding({
         prompt: text,
         source: "synthetic",
         workspaceId: "synthetic-agents",
         channel: "path_text",
       }),
     );
+  }
+  return vectors;
 }
 
 export async function generateSyntheticPowItems(input: {
@@ -462,17 +469,17 @@ export async function generateSyntheticPowItems(input: {
   return {
     request,
     items,
-    embeddings: regionEmbeddingsFromSyntheticItems(items),
+    embeddings: await regionEmbeddingsFromSyntheticItems(items),
   };
 }
 
-export function buildRegionFromSyntheticItems(input: {
+export async function buildRegionFromSyntheticItems(input: {
   name: string;
   items: readonly SyntheticPowItem[];
-}): CustomVerificationModelSpec {
+}): Promise<CustomVerificationModelSpec> {
   return createCustomVerificationModelFromVectors({
     name: input.name,
-    vectors: regionEmbeddingsFromSyntheticItems(input.items),
+    vectors: await regionEmbeddingsFromSyntheticItems(input.items),
     subjects: input.items.map((item) => ({ label: item.text.slice(0, 80) })),
     embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   });

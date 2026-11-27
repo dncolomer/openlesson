@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  completeFlowEmbedding,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import {
   filterFlowEmbeddingRows,
   flowEmbeddingDistanceToRegion,
@@ -21,7 +21,7 @@ import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
 import { projectTrajectoryAndRegions } from "@/lib/knowledge-config";
 import { projectStudioEmbeddings } from "@/lib/data-studio-view";
 
-function row(input: {
+async function row(input: {
   id: string;
   identity?: string | null;
   flowId?: string | null;
@@ -29,13 +29,13 @@ function row(input: {
   prompt: string;
   modelId?: string;
   vector?: number[];
-}): FlowEmbeddingViewRow {
+}) : Promise<FlowEmbeddingViewRow> {
   const vector =
     input.vector ??
-    completeFlowEmbedding({
+    (await encodeFlowEmbedding({
       flowKind: "verify",
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: input.prompt }],
-    }).vector;
+    })).vector;
   return {
     id: input.id,
     flow_kind: "verify",
@@ -49,20 +49,20 @@ function row(input: {
 }
 
 describe("flow embedding knowledge view", () => {
-  it("maps stored flowcfg rows onto the Knowledge payload with identity subjects", () => {
-    const ada = row({
+  it("maps stored flowcfg rows onto the Knowledge payload with identity subjects", async () => {
+    const ada = await row({
       id: "e1",
       identity: "ada",
       createdAt: "2026-10-01T00:00:00.000Z",
       prompt: "epsilon proof",
     });
-    const bea = row({
+    const bea = await row({
       id: "e2",
       identity: "bea",
       createdAt: "2026-10-02T00:00:00.000Z",
       prompt: "series proof",
     });
-    const knowledgecfg = row({
+    const knowledgecfg = await row({
       id: "e3",
       identity: "old",
       createdAt: "2026-10-03T00:00:00.000Z",
@@ -87,17 +87,17 @@ describe("flow embedding knowledge view", () => {
     expect(filterFlowEmbeddingRows([ada, knowledgecfg], { flowId: "flow-a" })).toEqual([ada]);
   });
 
-  it("keeps calibrate rows for Calibration Knowledge and verify rows for Verification Knowledge", () => {
-    const verify = row({
+  it("keeps calibrate rows for Calibration Knowledge and verify rows for Verification Knowledge", async () => {
+    const verify = await row({
       id: "v1",
       identity: "ada",
       createdAt: "2026-10-01T00:00:00.000Z",
       prompt: "epsilon proof",
     });
-    const calibrateVector = completeFlowEmbedding({
+    const calibrateVector = (await encodeFlowEmbedding({
       flowKind: "calibrate",
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "gap" }],
-    }).vector;
+    })).vector;
     const calibrate: FlowEmbeddingViewRow = {
       ...verify,
       id: "c1",
@@ -124,11 +124,11 @@ describe("flow embedding knowledge view", () => {
     ).toBe(false);
   });
 
-  it("keeps 96D overlay regions and drops knowledgecfg centroids", () => {
-    const centroid = completeFlowEmbedding({
+  it("keeps 96D overlay regions and drops knowledgecfg centroids", async () => {
+    const centroid = (await encodeFlowEmbedding({
       flowKind: "verify",
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "region" }],
-    }).vector;
+    })).vector;
     expect(
       regionMatchesFlowEmbeddingSpace({
         embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
@@ -169,14 +169,14 @@ describe("flow embedding knowledge view", () => {
     expect(distance.in_region).toBe(true);
   });
 
-  it("keeps subject-key identity so an empty list does not retrigger loads", () => {
+  it("keeps subject-key identity so an empty list does not retrigger loads", async () => {
     const empty: string[] = [];
     expect(reconcileSelectedSubjectKeys(empty, [])).toBe(empty);
     const prev = ["g:ada"];
     expect(reconcileSelectedSubjectKeys(prev, ["g:ada"])).toBe(prev);
     expect(reconcileSelectedSubjectKeys(prev, ["g:bea"])).toEqual(["g:bea"]);
     expect(sameFlowEmbeddingList([], [])).toBe(true);
-    const ada = row({
+    const ada = await row({
       id: "e1",
       identity: "ada",
       createdAt: "2026-10-01T00:00:00.000Z",
@@ -186,7 +186,7 @@ describe("flow embedding knowledge view", () => {
     expect(sameFlowEmbeddingList([ada], [])).toBe(false);
   });
 
-  it("projects flowcfg points and overlay regions in ℝ⁹⁶", () => {
+  it("projects flowcfg points and overlay regions in ℝ⁹⁶", async () => {
     const model = normalizeSessionBranchModel(
       {
         premise: "A priced field.",
@@ -198,18 +198,18 @@ describe("flow embedding knowledge view", () => {
       "Priced",
     );
     if (!model) throw new Error("projection tree was refused");
-    const a = completeFlowEmbedding({
+    const a = (await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
-    }).vector;
-    const b = completeFlowEmbedding({
+    })).vector;
+    const b = (await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r2"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "b" }],
-    }).vector;
+    })).vector;
     const layout = projectTrajectoryAndRegions({
       points: [
         { t: "t0", as_of_ms: 1, vector: a, confidence: 1 },

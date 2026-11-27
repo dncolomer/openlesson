@@ -186,7 +186,7 @@ async function seedField(
     ]);
   }
 
-  const regions = buildAllStemRegionsForField(field, workspaceId);
+  const regions = await buildAllStemRegionsForField(field, workspaceId);
   if (regions.length !== blockDefs.length) {
     throw new Error(
       `field ${field.key}: regions ${regions.length} != blocks ${blockDefs.length}`,

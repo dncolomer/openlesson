@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  completeFlowEmbedding,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import {
   inspectStudioEmbedding,
   type DataStudioEmbeddingRow,
@@ -14,7 +14,7 @@ import {
   presentKnowledgeRegionDetails,
 } from "@/lib/knowledge-region-details";
 
-function embeddingRow(input: {
+async function embeddingRow(input: {
   id: string;
   identity: string;
   source: string;
@@ -22,8 +22,8 @@ function embeddingRow(input: {
   runId?: string;
   flowKind?: string;
   prompt: string;
-}): DataStudioEmbeddingRow {
-  const record = completeFlowEmbedding({
+}) : Promise<DataStudioEmbeddingRow> {
+  const record = await encodeFlowEmbedding({
     flowKind: (input.flowKind as "verify" | "calibrate" | "solve") || "verify",
     pow: [
       {
@@ -53,7 +53,7 @@ function embeddingRow(input: {
 }
 
 describe("knowledge region details", () => {
-  it("parses the persisted simulation description", () => {
+  it("parses the persisted simulation description", async () => {
     expect(
       parseRegionSimulationDescription(
         "region-simulation: 2 flows · Exploit-heavy, Balanced · 3/strategy · 1 real",
@@ -66,36 +66,36 @@ describe("knowledge region details", () => {
     });
   });
 
-  it("presents name, flows, strategies, samples, and clusters for one region", () => {
-    const simulated = embeddingRow({
+  it("presents name, flows, strategies, samples, and clusters for one region", async () => {
+    const simulated = await embeddingRow({
       id: "sim-1",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",
       runId: "sim_exploit-heavy_0_seed",
       prompt: "agent walk",
     });
-    const balanced = embeddingRow({
+    const balanced = await embeddingRow({
       id: "sim-2",
       identity: "Simulated · Balanced",
       source: "simulated",
       runId: "sim_balanced_0_seed",
       prompt: "balanced walk",
     });
-    const human = embeddingRow({
+    const human = await embeddingRow({
       id: "human-1",
       identity: "ada",
       source: "runner",
       runId: "human-1",
       prompt: "real proof",
     });
-    const outsider = embeddingRow({
+    const outsider = await embeddingRow({
       id: "other-sim",
       identity: "Simulated · Novelty-seeking",
       source: "simulated",
       runId: "sim_novelty-seeking_0_seed",
       prompt: "other region",
     });
-    const otherRegionSameStrategy = embeddingRow({
+    const otherRegionSameStrategy = await embeddingRow({
       id: "sim-other-region",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",
@@ -104,7 +104,7 @@ describe("knowledge region details", () => {
       prompt: "other region's exploit walk",
     });
     otherRegionSameStrategy.vector = simulated.vector;
-    const otherFlowHuman = embeddingRow({
+    const otherFlowHuman = await embeddingRow({
       id: "ada-other-flow",
       identity: "ada",
       source: "runner",
@@ -114,7 +114,7 @@ describe("knowledge region details", () => {
     });
     otherFlowHuman.vector = simulated.vector;
     const humanInRegion = { ...human, vector: simulated.vector };
-    const candidate = embeddingRow({
+    const candidate = await embeddingRow({
       id: "human-2",
       identity: "bea",
       source: "runner",
@@ -224,15 +224,15 @@ describe("knowledge region details", () => {
     expect(realInspect).toEqual(studioReal);
   });
 
-  it("keeps AI-use samples when only exploration clusters exist and hides ai-use clusters by default", () => {
-    const simulated = embeddingRow({
+  it("keeps AI-use samples when only exploration clusters exist and hides ai-use clusters by default", async () => {
+    const simulated = await embeddingRow({
       id: "sim-1",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",
       prompt: "agent walk",
     });
     const aiUse = {
-      ...embeddingRow({
+      ...await embeddingRow({
         id: "ai-1",
         identity: "AI · Claude Sonnet · high",
         source: "simulated",
@@ -293,8 +293,8 @@ describe("knowledge region details", () => {
     ).toEqual(["c-ai"]);
   });
 
-  it("presents Solve regions without falling through to verification", () => {
-    const simulated = embeddingRow({
+  it("presents Solve regions without falling through to verification", async () => {
+    const simulated = await embeddingRow({
       id: "sim-s",
       identity: "Simulated · Exploit-heavy",
       source: "simulated",

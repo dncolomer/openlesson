@@ -102,8 +102,8 @@ A finished run writes:
 3. `proof_of_work` rows (already written during the run)
 4. `session_embeddings` derived from (2) + (3) under a registry model id
 
-Re-embed: load corpus → `completeFlowEmbedding` / family model → insert a new
-embedding row. Never overwrite proof of work.
+Re-embed: load corpus → hosted `POST /v1/embed` → insert a new embedding row.
+Never overwrite proof of work.
 
 ## Open Questions
 

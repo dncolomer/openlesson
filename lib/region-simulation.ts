@@ -8,11 +8,11 @@
  */
 
 import {
-  completeFlowEmbedding,
   type FlowEmbeddingRecord,
   type FlowKind,
   type FlowPowRow,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import { cosineSimilarity, hashUnit } from "@/lib/knowledge-config/math";
 import {
   normalizeSessionBranchModel,
@@ -820,12 +820,12 @@ export function regionSimulationPow(input: {
   ];
 }
 
-export function runRegionSimulationSample(
+export async function runRegionSimulationSample(
   plan: RegionSimulationSamplePlan,
   flowKind: FlowKind = "verify",
   catalog: readonly ExplorationStrategy[] = EXPLORATION_STRATEGIES,
   referenceModel?: SessionBranchModel | null,
-): RegionSimulationWalk {
+): Promise<RegionSimulationWalk> {
   const strategy =
     catalog.find((row) => row.id === plan.strategyId) ?? explorationStrategyById(plan.strategyId);
   if (!strategy) {
@@ -846,7 +846,7 @@ export function runRegionSimulationSample(
     seed: plan.seed,
     sequence,
   });
-  const embedding = completeFlowEmbedding({
+  const embedding = await encodeFlowEmbedding({
     flowKind,
     model,
     sequence,

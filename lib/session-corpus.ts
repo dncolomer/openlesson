@@ -4,14 +4,14 @@
  */
 
 import {
-  completeFlowEmbedding,
-  embedFlowOutput,
+  buildFlowEmbeddingRaw,
   recoverFlowEmbeddingRaw,
   type FlowEmbeddingRaw,
   type FlowEmbeddingRecord,
   type FlowKind,
   type FlowPowRow,
 } from "@/lib/flow-embedding";
+import { encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   embeddingModelIdForFamily,
@@ -116,12 +116,12 @@ export function corpusRecordToFlowRaw(
   const kind: FlowKind = "verify";
   const pow = corpusPowToFlowRows(record.proofOfWork);
   if (record.fieldModel) {
-    return completeFlowEmbedding({
+    return buildFlowEmbeddingRaw({
       flowKind: kind,
       model: record.fieldModel,
       sequence: record.sequence,
       pow,
-    }).raw;
+    });
   }
   const recovered = recoverFlowEmbeddingRaw({
     flowKind: kind,
@@ -138,22 +138,21 @@ export function corpusRecordToFlowRaw(
       projectedPolicy: recovered.projectedPolicy,
     };
   }
-  return completeFlowEmbedding({
+  return buildFlowEmbeddingRaw({
     flowKind: kind,
     sequence: record.sequence,
     pow,
-  }).raw;
+  });
 }
 
 /**
- * Rebuild Path / Path+Text vectors from the raw corpus.
- * Does not read a previous embedding vector. Always flowcfg-v1-d96.
+ * Rebuild Path / Path+Text vectors from the raw corpus via the embeddings host.
  */
-export function reembedSessionCorpus(
+export async function reembedSessionCorpus(
   record: SessionCorpusRecord,
   family: EmbeddingFamily | SessionKind = record.kind,
-): FlowEmbeddingRecord {
-  return embedFlowOutput(corpusRecordToFlowRaw(record, family));
+): Promise<FlowEmbeddingRecord> {
+  return encodeFlowRaw(corpusRecordToFlowRaw(record, family));
 }
 
 export function corpusEmbeddingFamilyId(family: EmbeddingFamily): string {

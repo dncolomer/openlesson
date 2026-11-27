@@ -6,7 +6,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildFlowEmbeddingRaw,
-  embedFlowOutput,
   recoverFlowEmbeddingRaw,
   type FlowEmbeddingRaw,
   type FlowKind,
@@ -14,10 +13,7 @@ import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
-import {
-  flowcfgEmbeddingsConfigured,
-  requestFlowcfgEmbeddings,
-} from "@/lib/flowcfg-embeddings-api";
+import { requestFlowcfgEmbeddings } from "@/lib/flowcfg-embeddings-api";
 import {
   mixFlowEmbeddingSpace,
   parseFlowEmbeddingChannelVectors,
@@ -122,15 +118,13 @@ function text(value: unknown): string {
 function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
   const raw = recoverFlowEmbeddingRaw(row.raw);
   if (!raw) return null;
-  const embedded = embedFlowOutput(raw);
   const storedChannels = parseFlowEmbeddingChannelVectors(row.channel_vectors);
   const vector = Array.isArray(row.vector)
     ? row.vector.filter((value): value is number => typeof value === "number" && Number.isFinite(value))
     : [];
-  const channel_vectors = storedChannels ?? {
-    ...embedded.channel_vectors,
-    path: vector.length === FLOW_EMBEDDING_DIM ? vector : embedded.vector,
-  };
+  const path = vector.length === FLOW_EMBEDDING_DIM ? vector : storedChannels?.path;
+  if (!path || path.length !== FLOW_EMBEDDING_DIM) return null;
+  const channel_vectors = storedChannels ?? { path };
   const kind = raw.flowKind;
   return {
     id: String(row.id),
@@ -166,23 +160,18 @@ export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedd
       raw: recovered ?? row.raw,
     };
   }
-  if (!recovered) {
-    return {
-      ...row,
-      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-      dim: FLOW_EMBEDDING_DIM,
-      channel_vectors: row.channel_vectors ?? { path: row.vector },
-    };
-  }
-  const embedded = embedFlowOutput(recovered);
+  const path = Array.isArray(row.vector) && row.vector.length === FLOW_EMBEDDING_DIM
+    ? row.vector
+    : new Array(FLOW_EMBEDDING_DIM).fill(0);
+  const channel_vectors = { path, ...(row.channel_vectors ?? {}) };
   return {
     ...row,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
-    vector: embedded.vector,
-    vector_path_text: embedded.vector_path_text,
-    channel_vectors: embedded.channel_vectors,
-    raw: recovered,
+    vector: path,
+    vector_path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
+    channel_vectors,
+    raw: recovered ?? row.raw,
   };
 }
 
@@ -202,16 +191,7 @@ export async function persistCompletedFlowEmbedding(
         pow: input.pow,
         audioEnforced: input.audioEnforced,
       });
-  const encoded = flowcfgEmbeddingsConfigured()
-    ? await requestFlowcfgEmbeddings(raw)
-    : (() => {
-        const record = embedFlowOutput(raw);
-        return {
-          embedding: record.vector,
-          channel_vectors: record.channel_vectors,
-          model: FLOW_EMBEDDING_MODEL_ID,
-        };
-      })();
+  const encoded = await requestFlowcfgEmbeddings(raw);
   const stored: StoredFlowEmbedding = {
     id: text(input.id) || makeId(),
     workspace_id: workspaceId,

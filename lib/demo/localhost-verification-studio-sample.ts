@@ -4,12 +4,12 @@
  */
 
 import {
-  completeFlowEmbedding,
   flowEmbeddingModelIdForChannel,
   parseFlowEmbeddingChannel,
   type FlowEmbeddingChannel,
   type FlowEmbeddingRecord,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import {
   createCustomVerificationModelFromVectors,
   voiceRegionName,
@@ -181,11 +181,11 @@ export function localhostVerificationStudioTree(): SessionBranchModel {
   return model;
 }
 
-export function encodeLocalhostVerificationStudioRun(
+export async function encodeLocalhostVerificationStudioRun(
   run: LocalhostStudioRunDef,
   model: SessionBranchModel = localhostVerificationStudioTree(),
-): FlowEmbeddingRecord {
-  return completeFlowEmbedding({
+): Promise<FlowEmbeddingRecord> {
+  return encodeFlowEmbedding({
     flowKind: "verify",
     model,
     sequence: run.sequence,
@@ -208,17 +208,19 @@ export function encodeLocalhostVerificationStudioRun(
   });
 }
 
-export function encodeLocalhostVerificationStudioRuns(
+export async function encodeLocalhostVerificationStudioRuns(
   model: SessionBranchModel = localhostVerificationStudioTree(),
-): Array<LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord }> {
-  return LOCALHOST_VERIFICATION_STUDIO_RUNS.map((run) => ({
-    ...run,
-    embedding: encodeLocalhostVerificationStudioRun(run, model),
-  }));
+): Promise<Array<LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord }>> {
+  return Promise.all(
+    LOCALHOST_VERIFICATION_STUDIO_RUNS.map(async (run) => ({
+      ...run,
+      embedding: await encodeLocalhostVerificationStudioRun(run, model),
+    })),
+  );
 }
 
 export function buildLocalhostVerificationStudioRegion(
-  encoded: readonly (LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord })[] = encodeLocalhostVerificationStudioRuns(),
+  encoded: readonly (LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord })[],
   channel: FlowEmbeddingChannel | string = "path",
 ): CustomVerificationModelSpec {
   const space = parseFlowEmbeddingChannel(channel);
@@ -245,7 +247,7 @@ export function buildLocalhostVerificationStudioRegion(
 }
 
 export function buildLocalhostVerificationStudioRegions(
-  encoded: readonly (LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord })[] = encodeLocalhostVerificationStudioRuns(),
+  encoded: readonly (LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord })[],
 ): { path: CustomVerificationModelSpec; voice: CustomVerificationModelSpec } {
   return {
     path: buildLocalhostVerificationStudioRegion(encoded, "path"),

@@ -322,8 +322,8 @@ async function main() {
     console.log(`[seed-saas-tech-demo] guest_subjects=${guestByKey.size}`);
 
     // Encode embeddings (pure) — guests + workspace owner (auth user)
-    const encodedGuests = encodeAllDemoSubjects(workspaceId);
-    const encodedOwner = encodeDemoOwnerSubject(workspaceId);
+    const encodedGuests = await encodeAllDemoSubjects(workspaceId);
+    const encodedOwner = await encodeDemoOwnerSubject(workspaceId);
     console.log(
       `[seed-saas-tech-demo] owner_subject=${DEMO_OWNER_SUBJECT.key} display=${DEMO_OWNER_SUBJECT.displayName}`,
     );
@@ -495,11 +495,13 @@ async function main() {
     );
 
     // Role regions (synthetic tag)
-    const roleRegions = DEMO_ROLE_REGIONS.map((role) => ({
-      roleKey: role.key,
-      model: buildRoleRegion(role, workspaceId),
-      description: role.description,
-    }));
+    const roleRegions = await Promise.all(
+      DEMO_ROLE_REGIONS.map(async (role) => ({
+        roleKey: role.key,
+        model: await buildRoleRegion(role, workspaceId),
+        description: role.description,
+      })),
+    );
     for (const { model, description } of roleRegions) {
       await client.query(
         `INSERT INTO public.knowledge_regions (

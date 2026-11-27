@@ -6,8 +6,6 @@
 import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_SEM_DIM,
-  FLOW_EMBEDDING_STRUCT_DIM,
 } from "@/lib/flow-embedding";
 
 /** Catalog entry for embedding models shown on the Map of Knowledge. */
@@ -15,10 +13,6 @@ export interface EmbeddingModelInfo {
   id: string;
   label: string;
   dim: number;
-  /** Structural feature dims when hybrid (e.g. flowcfg). */
-  struct_dim?: number | null;
-  /** Semantic feature dims when hybrid. */
-  sem_dim?: number | null;
   description: string;
   notes?: string[];
   /** How many public user points use this model in the current load. */
@@ -36,10 +30,8 @@ export const EMBEDDING_MODEL_CATALOG: readonly EmbeddingModelInfo[] = [
     id: FLOW_EMBEDDING_MODEL_ID,
     label: "Flow config v1 (D=96)",
     dim: FLOW_EMBEDDING_DIM,
-    struct_dim: FLOW_EMBEDDING_STRUCT_DIM,
-    sem_dim: FLOW_EMBEDDING_SEM_DIM,
     description:
-      "Completed knowledge verification protocols embeddings: tree + priced edges + policy Distance + proof of work, L2-normalized in a fixed 96-D space.",
+      "Completed knowledge verification protocol Path numbers (96-d). Basis channels mix at read time.",
     notes: [
       "Axes are shared globally for this model id.",
       "Regions (custom verification models) live in the same frame when built from this model.",

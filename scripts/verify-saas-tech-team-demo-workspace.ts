@@ -239,11 +239,15 @@ async function main() {
     }
 
     // Pure recompute also shows mixed (sanity vs pure helpers)
-    const pureRegions = DEMO_ROLE_REGIONS.map((role) => ({
-      roleKey: role.key,
-      model: buildRoleRegion(role, workspaceId),
-    }));
-    const pureEncoded = DEMO_SUBJECTS.map((s) => encodeDemoSubject(s, { workspaceId }));
+    const pureRegions = await Promise.all(
+      DEMO_ROLE_REGIONS.map(async (role) => ({
+        roleKey: role.key,
+        model: await buildRoleRegion(role, workspaceId),
+      })),
+    );
+    const pureEncoded = await Promise.all(
+      DEMO_SUBJECTS.map((s) => encodeDemoSubject(s, { workspaceId })),
+    );
     const pureMembership = scoreSubjectsAgainstRoleRegions(pureEncoded, pureRegions);
     const mixed = assertMixedRoleMembership(pureMembership);
     console.log(

@@ -15,7 +15,7 @@ import {
 } from "@/lib/flow-canvas-capture";
 import { ileWorkCanvasMermaid, ileWorkCanvasMermaidDocument } from "@/lib/learn-work-canvas-mermaid";
 import { serializeIleWorkCanvasScene } from "@/lib/learn-work-canvas-scene";
-import { completeFlowEmbedding } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import { storedRecordFileKind } from "@/lib/behavior-record";
 import { acceptProductFlowPublish, emptyProductFlowDraft } from "@/lib/product-flow";
 import { applyVerificationCommand, emptyVerificationState } from "@/lib/verification-flow";
@@ -32,7 +32,7 @@ function scene(elements: Array<Record<string, unknown>>) {
 }
 
 describe("flow canvas capture", () => {
-  it("defaults off and clamps every-actions", () => {
+  it("defaults off and clamps every-actions", async () => {
     expect(parseFlowCanvasCapture(null)).toEqual(DEFAULT_FLOW_CANVAS_CAPTURE);
     expect(parseFlowCanvasCapture({ enabled: true, every_actions: 1 }).everyActions).toBe(2);
     expect(parseFlowCanvasCapture({ enabled: true, everyActions: 99 }).everyActions).toBe(48);
@@ -44,7 +44,7 @@ describe("flow canvas capture", () => {
     expect(stamped.canvasCapture).toEqual({ enabled: true, everyActions: 8 });
   });
 
-  it("fires once each time the action count crosses a multiple", () => {
+  it("fires once each time the action count crosses a multiple", async () => {
     const clock = new FlowCanvasCaptureClock();
     clock.setCapture({ enabled: true, everyActions: 3 });
     expect(clock.note(2)).toBe(false);
@@ -56,7 +56,7 @@ describe("flow canvas capture", () => {
     expect(off.note(8)).toBe(false);
   });
 
-  it("renders mermaid nodes and arrow bindings", () => {
+  it("renders mermaid nodes and arrow bindings", async () => {
     const mermaid = ileWorkCanvasMermaid(
       scene([
         { id: "a", type: "rectangle", x: 0, y: 0, width: 40, height: 20, text: "Start" },
@@ -83,7 +83,7 @@ describe("flow canvas capture", () => {
     expect(doc).toContain("every 8");
   });
 
-  it("stores mermaid as a markdown document row", () => {
+  it("stores mermaid as a markdown document row", async () => {
     const item = buildCanvasMermaidDocumentUploadItem("sess-1", scene([]), {
       actionCount: 8,
       everyActions: 8,
@@ -102,11 +102,11 @@ describe("flow canvas capture", () => {
     })).toBe("document");
   });
 
-  it("keeps canvas documents out of the embedding bag", () => {
+  it("keeps canvas documents out of the embedding bag", async () => {
     expect(isCanvasContentPowRow({ tool_action: "canvas_draw" })).toBe(true);
     expect(isCanvasContentPowRow({ tool_action: CANVAS_DOCUMENT_TOOL_ACTION })).toBe(true);
     expect(isCanvasContentPowRow({ tool_action: "draw_text" })).toBe(false);
-    const withDoc = completeFlowEmbedding({
+    const withDoc = await encodeFlowEmbedding({
       flowKind: "verify",
       pow: [
         {
@@ -117,13 +117,13 @@ describe("flow canvas capture", () => {
         },
       ],
     });
-    const empty = completeFlowEmbedding({ flowKind: "verify", pow: [] });
+    const empty = await encodeFlowEmbedding({ flowKind: "verify", pow: [] });
     expect(withDoc.vector).toEqual(empty.vector);
     expect(withDoc.vector_path_text).toEqual(empty.vector_path_text);
     expect(JSON.stringify(withDoc.raw.pow)).not.toContain("secret lemma");
   });
 
-  it("publishes default-off and persists on Protocol create", () => {
+  it("publishes default-off and persists on Protocol create", async () => {
     const accepted = acceptProductFlowPublish({
       ...emptyProductFlowDraft(),
       name: "Limits",
@@ -175,7 +175,7 @@ describe("flow canvas capture", () => {
     ]).percent).toBe(20);
   });
 
-  it("classifies canvas actions for Unsys even when capture is off", () => {
+  it("classifies canvas actions for Unsys even when capture is off", async () => {
     const learn = read("components/session-view/use-session-field.ts");
     const logIdx = learn.indexOf('logTool("canvas"');
     const clockIdx = learn.indexOf("clock.note(events.length)");

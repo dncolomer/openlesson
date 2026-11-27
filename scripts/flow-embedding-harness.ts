@@ -57,7 +57,7 @@ async function main() {
   if (!cases.length) {
     throw new Error("No harness cases. Pass --synthetic or --in sessions.jsonl");
   }
-  const report = runFlowEmbeddingHarness({
+  const report = await runFlowEmbeddingHarness({
     cases,
     projection: parseProjectionAlgorithmId(argValue("--projection") || "pca"),
     regionName: argValue("--region-name") || "provisional expert region",

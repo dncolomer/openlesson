@@ -157,7 +157,7 @@ function referenceModelFor(
   });
 }
 
-function walkExploration(plan: RegionSimulationSamplePlan, kind: ProductFlowKind, strategies: readonly ExplorationStrategy[], flow?: RegionSimulationFlowInput) {
+async function walkExploration(plan: RegionSimulationSamplePlan, kind: ProductFlowKind, strategies: readonly ExplorationStrategy[], flow?: RegionSimulationFlowInput) {
   const fk = flowKindFor(kind);
   const model = referenceModelFor(flow, plan);
   if (regionSimulationCanvasFaithfulEnabled()) {
@@ -437,7 +437,7 @@ async function persistExplorationItem(
   const flow = job.plan.flows.find((row) => row.id === plan.flowId);
   const strategy = job.plan.strategies.find((row) => row.id === plan.strategyId);
   if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
-  const walk = walkExploration(plan, job.plan.kind, job.plan.strategies, flow);
+  const walk = await walkExploration(plan, job.plan.kind, job.plan.strategies, flow);
   await persistRegionSimulationSample({
     ownerUserId: job.owner_user_id,
     workspaceId: flow?.workspaceId,

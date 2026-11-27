@@ -2,7 +2,8 @@
  * Canvas-faithful exploration actor: board ops then occupancy, never session_policy clicks.
  */
 
-import { completeFlowEmbedding, type FlowKind } from "@/lib/flow-embedding";
+import { type FlowKind } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import {
   applyBoardOp,
   boardNoteTexts,
@@ -112,7 +113,7 @@ export function pickExplorationOp(input: {
   return { type: "breakdown" };
 }
 
-export function runCanvasFaithfulExplorationSample(
+export async function runCanvasFaithfulExplorationSample(
   plan: RegionSimulationSamplePlan,
   flowKind: FlowKind = "verify",
   catalog: readonly ExplorationStrategy[] = EXPLORATION_STRATEGIES,
@@ -209,7 +210,7 @@ export function runCanvasFaithfulExplorationSample(
     ...runtime.pow,
     compactScreenPow(runtime),
   ];
-  const embedding = completeFlowEmbedding({
+  const embedding = await encodeFlowEmbedding({
     flowKind,
     model,
     sequence: walkSequence,

@@ -1,18 +1,10 @@
 /**
- * Deterministic embeddings for a completed knowledge verification protocol run.
- * Path (`flowcfg-v1-d96` stored `vector`) is the hidden-state tree and priced
- * walk. Extra basis channels (audio, eeg, video, screen) store independently
- * and mix into named spaces at read time. `path_text` is the legacy name for
- * space `path+audio`. Identity, event logs, and UI tool counts stay off-vector
- * in recoverable raw.
+ * Recoverable Path raw and read-time mixing of stored basis channels.
+ * Encoding lives only on the private flowcfg-embeddings host. OpenLesson
+ * packs raw, persists host `channel_vectors`, and mixes named spaces
+ * (path+audio, path+eeg, …) at read.
  */
 
-import {
-  hashUnit,
-  l2Normalize,
-  projectWithMatrix,
-  seededRandomProjection,
-} from "@/lib/knowledge-config/math";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import { scorePolicySequence } from "@/lib/session-policy-score";
 import {
@@ -31,8 +23,6 @@ export {
 export const FLOW_EMBEDDING_MODEL_ID = "flowcfg-v1-d96" as const;
 export const FLOW_EMBEDDING_PATH_TEXT_MODEL_ID = "flowcfg-pathtext-v1-d96" as const;
 export const FLOW_EMBEDDING_DIM = 96 as const;
-export const FLOW_EMBEDDING_STRUCT_DIM = 64 as const;
-export const FLOW_EMBEDDING_SEM_DIM = 32 as const;
 export const FLOW_EMBEDDING_CHANNELS = ["path", "path_text"] as const;
 export type FlowEmbeddingChannel = (typeof FLOW_EMBEDDING_CHANNELS)[number];
 export const FLOW_EMBEDDING_CHANNEL_LABELS: Record<FlowEmbeddingChannel, string> = {
@@ -87,18 +77,11 @@ export type FlowEmbeddingRaw = {
 export type FlowEmbeddingRecord = {
   embedding_model_id: typeof FLOW_EMBEDDING_MODEL_ID;
   dim: typeof FLOW_EMBEDDING_DIM;
-  /** Path space: hidden-state tree + walk. Default stored vector. */
   vector: number[];
-  /** Path + Text space: walk mixed with spoken and written transcripts. */
   vector_path_text: number[];
-  /** Independent basis channels for named spaces. Path is always present. */
   channel_vectors: FlowEmbeddingChannelVectors;
   raw: FlowEmbeddingRaw;
 };
-
-const SEM_BAG_DIM = 96;
-const WALK_PROJECTION = seededRandomProjection(32, 10, `${FLOW_EMBEDDING_MODEL_ID}:hidden-walk`);
-const TREE_BAG_PROJECTION = seededRandomProjection(32, 8, `${FLOW_EMBEDDING_MODEL_ID}:hidden-tree`);
 
 const FLOW_KINDS = new Set<FlowKind>(["verify"]);
 
@@ -113,31 +96,6 @@ function numberOf(value: unknown, fallback = 0): number {
 
 function parseFlowKind(value: unknown): FlowKind {
   return FLOW_KINDS.has(value as FlowKind) ? (value as FlowKind) : "verify";
-}
-
-function clip01(n: number): number {
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(1, n));
-}
-
-function hashBag(texts: readonly string[]): number[] {
-  const bag = new Array(SEM_BAG_DIM).fill(0);
-  for (const text of texts) {
-    const clean = text.trim();
-    if (!clean) continue;
-    const tokens = clean.toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean);
-    const pieces = tokens.length ? tokens : [clean.toLowerCase()];
-    for (const piece of pieces) {
-      bag[Math.floor(hashUnit(`${FLOW_EMBEDDING_MODEL_ID}:${piece}`) * SEM_BAG_DIM)] += 1;
-    }
-  }
-  const max = Math.max(1, ...bag);
-  return bag.map((n) => n / max);
-}
-
-/** Hash free text into a unit flowcfg-v1-d96 vector (synthetic regions, demo seeds). */
-export function embedTextsToFlowVector(texts: readonly string[]): number[] {
-  return l2Normalize(hashBag(texts));
 }
 
 function compactEdges(rawEdges: unknown, rawActions?: unknown): Array<{ toId: string; price: number }> {
@@ -193,16 +151,21 @@ function compactPow(rows: readonly FlowPowRow[] | null | undefined): FlowPowRow[
   const compacted = (rows ?? [])
     .filter((row) => !isCanvasContentPowRow(row))
     .map((row, index) => ({
-    type: textOf(row.type) || "tool",
-    tool_name: textOf(row.tool_name) || null,
-    tool_action: textOf(row.tool_action) || null,
-    timestamp_ms: Number.isFinite(Number(row.timestamp_ms)) ? Number(row.timestamp_ms) : index + 1,
-    payload: textOf(row.payload) || null,
-    metadata: row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
-      ? row.metadata
-      : null,
-  }));
-  compacted.sort((a, b) => (a.timestamp_ms ?? 0) - (b.timestamp_ms ?? 0) || textOf(a.tool_name).localeCompare(textOf(b.tool_name)));
+      type: textOf(row.type) || "tool",
+      tool_name: textOf(row.tool_name) || null,
+      tool_action: textOf(row.tool_action) || null,
+      timestamp_ms: Number.isFinite(Number(row.timestamp_ms)) ? Number(row.timestamp_ms) : index + 1,
+      payload: textOf(row.payload) || null,
+      metadata:
+        row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+          ? row.metadata
+          : null,
+    }));
+  compacted.sort(
+    (a, b) =>
+      (a.timestamp_ms ?? 0) - (b.timestamp_ms ?? 0) ||
+      textOf(a.tool_name).localeCompare(textOf(b.tool_name)),
+  );
   return compacted;
 }
 
@@ -243,11 +206,9 @@ export function powRowsForCanvasEmbedding(
 export function buildFlowEmbeddingRaw(input: {
   flowKind: FlowKind | string;
   model?: SessionBranchModel | null;
-  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
-  /** When false, spoken PoW is omitted so Path+Text equals Path. */
   audioEnforced?: boolean;
 }): FlowEmbeddingRaw {
   const flowKind = parseFlowKind(input.flowKind);
@@ -322,139 +283,14 @@ export function flowEmbeddingChannelLabel(channel: FlowEmbeddingChannel | string
   return FLOW_EMBEDDING_CHANNEL_LABELS[parseFlowEmbeddingChannel(channel)];
 }
 
-export function flowEmbeddingModelIdForChannel(
-  channel: FlowEmbeddingChannel | string,
-): string {
+export function flowEmbeddingModelIdForChannel(channel: FlowEmbeddingChannel | string): string {
   return parseFlowEmbeddingChannel(channel) === "path_text"
     ? FLOW_EMBEDDING_PATH_TEXT_MODEL_ID
     : FLOW_EMBEDDING_MODEL_ID;
 }
 
-function mean(values: readonly number[]): number {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function stdev(values: readonly number[]): number {
-  if (values.length < 2) return 0;
-  const m = mean(values);
-  return Math.sqrt(values.reduce((sum, value) => sum + (value - m) ** 2, 0) / values.length);
-}
-
-function nodeFeature(branch: FlowGenModelRaw["branches"][number]): number[] {
-  const prices = branch.edges.map((edge) => edge.price);
-  return [
-    clip01(branch.depth / 4),
-    clip01(mean(prices) / 100),
-    clip01(branch.edges.length / 8),
-    branch.status === "open" ? 1 : branch.status === "closed" ? 0.3 : 0.6,
-    branch.parentId ? 1 : 0,
-    clip01((prices.length ? Math.min(...prices) : 0) / 100),
-    clip01(Math.max(0, ...prices) / 100),
-    clip01(branch.depth === 0 ? 0 : 1),
-  ];
-}
-
-function edgePriceIndex(branches: FlowGenModelRaw["branches"]): Map<string, number> {
-  const index = new Map<string, number>();
-  for (const branch of branches) {
-    for (const edge of branch.edges) {
-      index.set(`${branch.id}>${edge.toId}`, edge.price);
-    }
-  }
-  return index;
-}
-
-function treeSketch(raw: FlowEmbeddingRaw): number[] {
-  const branches = raw.genModel.branches;
-  const prices = branches.flatMap((branch) => branch.edges.map((edge) => edge.price));
-  const depths = branches.map((branch) => branch.depth);
-  const scalars = new Array(32).fill(0);
-  scalars[0] = 1;
-  scalars[1] = clip01(branches.length / 200);
-  scalars[2] = clip01(prices.length / 64);
-  scalars[3] = clip01(mean(prices) / 100);
-  scalars[4] = clip01(stdev(prices) / 50);
-  scalars[5] = clip01(mean(depths) / 4);
-  scalars[6] = clip01(
-    branches.filter((branch) => branch.status === "open").length / Math.max(1, branches.length),
-  );
-  scalars[7] = clip01(
-    branches.filter((branch) => branch.depth >= 2).length / Math.max(1, branches.length),
-  );
-  scalars[8] = branches.some((branch) => branch.id === raw.genModel.rootId) ? 1 : 0;
-  scalars[9] = clip01((depths.length ? Math.max(...depths) : 0) / 8);
-  const leaves = branches.filter((branch) => branch.edges.length === 0).length;
-  scalars[10] = clip01(leaves / Math.max(1, branches.length));
-  scalars[11] = clip01(mean(branches.map((branch) => branch.edges.length)) / 8);
-  scalars[12] = clip01((prices.length ? Math.min(...prices) : 0) / 100);
-  scalars[13] = clip01((prices.length ? Math.max(...prices) : 0) / 100);
-  scalars[14] = clip01(Math.log1p(branches.length) / 6);
-  scalars[15] = raw.projectedPolicy ? 1 : 0;
-
-  const bag = new Array(8).fill(0);
-  for (const branch of branches) {
-    const feat = nodeFeature(branch);
-    for (let i = 0; i < feat.length; i += 1) bag[i] += feat[i];
-  }
-  const treeBag = l2Normalize(projectWithMatrix(bag, TREE_BAG_PROJECTION));
-  return [...scalars, ...treeBag];
-}
-
-function walkSketch(raw: FlowEmbeddingRaw): number[] {
-  const branches = raw.genModel.branches;
-  const byId = new Map(branches.map((branch) => [branch.id, branch]));
-  const prices = edgePriceIndex(branches);
-  const sequence = raw.projectedPolicy?.sequence ?? [];
-  const policy = raw.projectedPolicy;
-  const unique = new Set(sequence);
-  const takenPrices: number[] = [];
-  let cursor = raw.genModel.rootId;
-  const walk = new Array(10).fill(0);
-  const decay = 0.85;
-  for (let t = 0; t < sequence.length; t += 1) {
-    const id = sequence[t];
-    const branch = byId.get(id);
-    const price = prices.get(`${cursor}>${id}`) ?? 0;
-    takenPrices.push(price);
-    const weight = decay ** (sequence.length - 1 - t);
-    const feat = branch ? nodeFeature(branch) : new Array(8).fill(0);
-    const step = [...feat, clip01(price / 100), clip01((t + 1) / Math.max(1, sequence.length))];
-    const projected = projectWithMatrix(step, WALK_PROJECTION);
-    for (let i = 0; i < walk.length && i < projected.length; i += 1) {
-      walk[i] += projected[i] * weight;
-    }
-    cursor = id;
-  }
-  const last = sequence.length ? byId.get(sequence[sequence.length - 1]) : null;
-  const scalars = [
-    policy ? 1 : 0,
-    clip01((policy?.steps ?? sequence.length) / 32),
-    clip01((policy?.distance ?? 0) / 100),
-    clip01((policy?.excess ?? 0) / 400),
-    clip01(unique.size / Math.max(1, branches.length)),
-    clip01(sequence.length / 32),
-    sequence[0] === raw.genModel.rootId ? 1 : 0,
-    clip01((last?.depth ?? 0) / 4),
-  ];
-  const walk32 = sequence.length
-    ? l2Normalize(projectWithMatrix(pad(walk, 10), WALK_PROJECTION))
-    : new Array(32).fill(0);
-  return [...scalars, ...walk32.slice(0, 24)];
-}
-
-function pad(values: number[], dim: number): number[] {
-  if (values.length >= dim) return values.slice(0, dim);
-  return [...values, ...new Array(dim - values.length).fill(0)];
-}
-
-function pathVector(raw: FlowEmbeddingRaw): number[] {
-  const tree = pad(treeSketch(raw), FLOW_EMBEDDING_STRUCT_DIM);
-  const walk = pad(walkSketch(raw), FLOW_EMBEDDING_SEM_DIM);
-  return l2Normalize([...tree, ...walk]);
-}
-
-function collectPowTranscripts(pow: readonly FlowPowRow[]): string[] {
+/** Transcripts extracted from PoW for UI. Encoding of those texts is on the host. */
+export function collectFlowPowTranscripts(pow: readonly FlowPowRow[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   const push = (value: unknown) => {
@@ -464,7 +300,7 @@ function collectPowTranscripts(pow: readonly FlowPowRow[]): string[] {
     if (next.startsWith("{") || next.startsWith("[")) {
       try {
         const parsed = JSON.parse(next) as unknown;
-        collectFromUnknown(parsed, out, seen, 0);
+        collectFromUnknown(parsed, 0);
       } catch {
         return;
       }
@@ -473,20 +309,20 @@ function collectPowTranscripts(pow: readonly FlowPowRow[]): string[] {
     seen.add(next);
     out.push(next);
   };
-  const collectFromUnknown = (value: unknown, into: string[], had: Set<string>, depth: number) => {
+  const collectFromUnknown = (value: unknown, depth: number) => {
     if (depth > 5 || value == null) return;
     if (typeof value === "string") {
       push(value);
       return;
     }
     if (Array.isArray(value)) {
-      for (const item of value) collectFromUnknown(item, into, had, depth + 1);
+      for (const item of value) collectFromUnknown(item, depth + 1);
       return;
     }
     if (typeof value === "object") {
       const record = value as Record<string, unknown>;
       for (const key of ["transcript_snapshot", "transcript", "text", "prompt", "speech", "dictation"]) {
-        if (key in record) collectFromUnknown(record[key], into, had, depth + 1);
+        if (key in record) collectFromUnknown(record[key], depth + 1);
       }
     }
   };
@@ -519,182 +355,43 @@ function collectPowTranscripts(pow: readonly FlowPowRow[]): string[] {
   return out;
 }
 
-function textVector(raw: FlowEmbeddingRaw): number[] {
-  const texts = collectPowTranscripts(raw.pow);
-  if (!texts.length) return new Array(FLOW_EMBEDDING_DIM).fill(0);
-  return l2Normalize(hashBag(texts));
+export function isFlowEmbeddingVector(value: unknown): value is number[] {
+  return (
+    Array.isArray(value) &&
+    value.length === FLOW_EMBEDDING_DIM &&
+    value.every((n) => typeof n === "number" && Number.isFinite(n))
+  );
 }
 
-function collectTypedPowBag(pow: readonly FlowPowRow[], type: "eeg" | "video" | "screen"): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  const push = (value: unknown) => {
-    if (typeof value !== "string") return;
-    const next = value.trim();
-    if (!next || next.length > 4000 || seen.has(next)) return;
-    seen.add(next);
-    out.push(next);
-  };
-  for (const row of pow) {
-    if (textOf(row.type).toLowerCase() !== type) continue;
-    push(textOf(row.tool_name));
-    push(textOf(row.tool_action));
-    const payload = textOf(row.payload);
-    if (payload && payload.length <= 4000) push(payload);
-    const meta =
-      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
-        ? row.metadata
-        : null;
-    if (!meta) continue;
-    for (const value of Object.values(meta)) {
-      if (typeof value === "string") push(value);
-    }
-  }
-  return out;
-}
-
-function typedChannelVector(raw: FlowEmbeddingRaw, type: "eeg" | "video" | "screen"): number[] {
-  const texts = collectTypedPowBag(raw.pow, type);
-  if (!texts.length) return new Array(FLOW_EMBEDDING_DIM).fill(0);
-  return l2Normalize(hashBag(texts));
-}
-
-export function embedFlowBasis(rawInput: FlowEmbeddingRaw): {
-  raw: FlowEmbeddingRaw;
-  channel_vectors: FlowEmbeddingChannelVectors;
-} {
-  const recovered = recoverFlowEmbeddingRaw(rawInput);
-  const raw = recovered ?? rawInput;
-  const path = pathVector(raw);
-  const channel_vectors: FlowEmbeddingChannelVectors = { path };
-  const audio = textVector(raw);
-  if (!audio.every((value) => value === 0)) channel_vectors.audio = audio;
-  const eeg = typedChannelVector(raw, "eeg");
-  if (!eeg.every((value) => value === 0)) channel_vectors.eeg = eeg;
-  const video = typedChannelVector(raw, "video");
-  if (!video.every((value) => value === 0)) channel_vectors.video = video;
-  const screen = typedChannelVector(raw, "screen");
-  if (!screen.every((value) => value === 0)) channel_vectors.screen = screen;
-  return { raw, channel_vectors };
-}
-
-export function embedFlowChannels(rawInput: FlowEmbeddingRaw): {
-  raw: FlowEmbeddingRaw;
-  path: number[];
-  path_text: number[];
-  channel_vectors: FlowEmbeddingChannelVectors;
-} {
-  const { raw, channel_vectors } = embedFlowBasis(rawInput);
-  return {
-    raw,
-    path: channel_vectors.path,
-    path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
-    channel_vectors,
-  };
-}
-
-export function embedFlowOutput(rawInput: FlowEmbeddingRaw): FlowEmbeddingRecord {
-  const { raw, path, path_text, channel_vectors } = embedFlowChannels(rawInput);
-  return {
-    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-    dim: FLOW_EMBEDDING_DIM,
-    vector: path,
-    vector_path_text: path_text,
-    channel_vectors,
-    raw,
-  };
-}
-
-/** Transcripts extracted from PoW (same rules as Path + Text). */
-export function collectFlowPowTranscripts(pow: readonly FlowPowRow[]): string[] {
-  return collectPowTranscripts(pow);
-}
-
-/** 64-d tree sketch used by Path. Does not include walk or transcripts. */
-export function flowEmbeddingTreeSketch(raw: FlowEmbeddingRaw): number[] {
-  const recovered = recoverFlowEmbeddingRaw(raw) ?? raw;
-  return pad(treeSketch(recovered), FLOW_EMBEDDING_STRUCT_DIM);
-}
-
-/** 32-d walk sketch used by Path. Empty sequence is zeros. */
-export function flowEmbeddingWalkSketch(raw: FlowEmbeddingRaw): number[] {
-  const recovered = recoverFlowEmbeddingRaw(raw) ?? raw;
-  return pad(walkSketch(recovered), FLOW_EMBEDDING_SEM_DIM);
-}
-
-/** 96-d hashed transcript bag. Empty transcripts are a zero vector. */
-export function flowEmbeddingTextVector(raw: FlowEmbeddingRaw): number[] {
-  const recovered = recoverFlowEmbeddingRaw(raw) ?? raw;
-  return textVector(recovered);
-}
-
-/** Zero the walk portion of a Path vector and re-normalize (ablation). */
-export function ablateFlowPathWalk(path: readonly number[]): number[] {
-  const tree = pad(Array.from(path.slice(0, FLOW_EMBEDDING_STRUCT_DIM)), FLOW_EMBEDDING_STRUCT_DIM);
-  return l2Normalize([...tree, ...new Array(FLOW_EMBEDDING_SEM_DIM).fill(0)]);
-}
-
-export function completeFlowEmbedding(input: {
-  flowKind: FlowKind | string;
-  model?: SessionBranchModel | null;
-  /** Ignored. Catalog size is no longer part of the gen model. */
-  catalogSize?: unknown;
-  sequence?: readonly string[] | null;
-  pow?: readonly FlowPowRow[] | null;
-  audioEnforced?: boolean;
-}): FlowEmbeddingRecord {
-  return embedFlowOutput(buildFlowEmbeddingRaw(input));
-}
-
-function resolveChannelVectors(
-  record: {
-    vector?: number[];
-    vector_path_text?: number[];
-    raw?: FlowEmbeddingRaw | unknown;
-    channel_vectors?: FlowEmbeddingChannelVectors | null;
-  },
-): FlowEmbeddingChannelVectors {
+function storedChannelVectors(record: {
+  vector?: number[];
+  channel_vectors?: FlowEmbeddingChannelVectors | null;
+}): FlowEmbeddingChannelVectors {
   const stored = parseFlowEmbeddingChannelVectors(record.channel_vectors);
   if (stored) return stored;
-  const recovered = recoverFlowEmbeddingRaw(record.raw);
-  if (recovered) return embedFlowBasis(recovered).channel_vectors;
   const path = isFlowEmbeddingVector(record.vector)
     ? record.vector
     : new Array(FLOW_EMBEDDING_DIM).fill(0);
   return { path };
 }
 
-export function reembedFlowRaw(
-  raw: FlowEmbeddingRaw,
-  channel: FlowEmbeddingChannel | string = "path",
-): number[] {
-  const { channel_vectors } = embedFlowBasis(raw);
-  const parsed = parseFlowEmbeddingSpace(channel);
-  if (parsed.ok) return mixFlowEmbeddingSpace(channel_vectors, parsed.space);
-  return parseFlowEmbeddingChannel(channel) === "path_text"
-    ? mixFlowEmbeddingSpace(channel_vectors, "path+audio")
-    : channel_vectors.path;
-}
-
 export function vectorForFlowSpace(
   record: {
     vector?: number[];
     vector_path_text?: number[];
-    raw?: FlowEmbeddingRaw | unknown;
     channel_vectors?: FlowEmbeddingChannelVectors | null;
   },
   space: string = "path",
 ): number[] {
   const parsed = parseFlowEmbeddingSpace(space);
   const canonical = parsed.ok ? parsed.space : "path";
-  return mixFlowEmbeddingSpace(resolveChannelVectors(record), canonical);
+  return mixFlowEmbeddingSpace(storedChannelVectors(record), canonical);
 }
 
 export function vectorForFlowChannel(
   record: {
     vector?: number[];
     vector_path_text?: number[];
-    raw?: FlowEmbeddingRaw | unknown;
     channel_vectors?: FlowEmbeddingChannelVectors | null;
   },
   channel: FlowEmbeddingChannel | string = "path",
@@ -709,18 +406,27 @@ export function vectorForFlowChannel(
   return vectorForFlowSpace(record, "path");
 }
 
-export function isFlowEmbeddingVector(value: unknown): value is number[] {
-  return (
-    Array.isArray(value) &&
-    value.length === FLOW_EMBEDDING_DIM &&
-    value.every((n) => typeof n === "number" && Number.isFinite(n))
-  );
-}
-
 export function vectorsMatch(a: readonly number[], b: readonly number[], eps = 1e-9): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     if (Math.abs(a[i] - b[i]) > eps) return false;
   }
   return true;
+}
+
+export function flowEmbeddingRecordFromHost(input: {
+  raw: FlowEmbeddingRaw;
+  embedding: number[];
+  channel_vectors: FlowEmbeddingChannelVectors;
+}): FlowEmbeddingRecord {
+  const channel_vectors =
+    parseFlowEmbeddingChannelVectors(input.channel_vectors) ?? { path: input.embedding };
+  return {
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    dim: FLOW_EMBEDDING_DIM,
+    vector: channel_vectors.path,
+    vector_path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
+    channel_vectors,
+    raw: input.raw,
+  };
 }

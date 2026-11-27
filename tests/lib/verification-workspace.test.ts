@@ -7,11 +7,11 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  completeFlowEmbedding,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import { resolveTapStartingTopicsFromLlm } from "@/lib/tap-score";
 import { availableWorkspaceSections } from "@/lib/workspace-sections";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -70,7 +70,7 @@ const tapBrief = {
 };
 
 describe("verification flow question selection", () => {
-  it("refuses an empty pool and does not pad to three topics", () => {
+  it("refuses an empty pool and does not pad to three topics", async () => {
     expect(pickVerificationFlowQuestion([], () => 0)).toEqual({
       ok: false,
       reason: "empty_pool",
@@ -82,7 +82,7 @@ describe("verification flow question selection", () => {
     expect(start.topics).toEqual([]);
   });
 
-  it("picks the only question from a pool of one", () => {
+  it("picks the only question from a pool of one", async () => {
     const pool = [{ id: "only", text: "State the derivative of x^2." }];
     const picked = pickVerificationFlowQuestion(pool, () => 0.9);
     expect(picked.ok).toBe(true);
@@ -95,7 +95,7 @@ describe("verification flow question selection", () => {
     expect(start.topics[0]?.openingQuestion).toBe(pool[0].text);
   });
 
-  it("offers every pooled question as a starting topic", () => {
+  it("offers every pooled question as a starting topic", async () => {
     const pool = [
       { id: "a", text: "Question A" },
       { id: "b", text: "Question B" },
@@ -112,7 +112,7 @@ describe("verification flow question selection", () => {
     ]);
   });
 
-  it("lists the whole pool on start and never invents a topic", () => {
+  it("lists the whole pool on start and never invents a topic", async () => {
     const pool = ["One", "Two", "Three", "Four", "Five"].map((text, index) => ({
       id: `q-${index}`,
       text,
@@ -135,7 +135,7 @@ describe("verification flow question selection", () => {
 });
 
 describe("standard TAP starting topics", () => {
-  it("still resolves to exactly three topics", () => {
+  it("still resolves to exactly three topics", async () => {
     expect(resolveTapStartingTopicsFromLlm(null, tapBrief)).toHaveLength(3);
     expect(
       resolveTapStartingTopicsFromLlm(
@@ -147,7 +147,7 @@ describe("standard TAP starting topics", () => {
 });
 
 describe("verification flow identity and result membership", () => {
-  it("accepts a non-empty identity and lets the same person claim again", () => {
+  it("accepts a non-empty identity and lets the same person claim again", async () => {
     expect(acceptParticipantIdentity("  ")).toEqual({ ok: false, reason: "empty" });
     expect(acceptParticipantIdentity("  ada ")).toEqual({ ok: true, identity: "ada" });
     expect(acceptParticipantIdentity("ada")).toEqual({ ok: true, identity: "ada" });
@@ -214,7 +214,7 @@ describe("verification flow identity and result membership", () => {
     expect(ada.map((item) => item.prompt)).toEqual(["first run", "second run"]);
   });
 
-  it("keeps runner and skill results on their flow", () => {
+  it("keeps runner and skill results on their flow", async () => {
     let state = emptyVerificationState();
     for (const flow of [
       { id: "flow-a", token: "token-a", topic: "Limits" },
@@ -289,7 +289,7 @@ describe("verification flow identity and result membership", () => {
 });
 
 describe("region embeddings from a verification flow and synthetic agents", () => {
-  it("builds a region from the selected flow's embeddings only", () => {
+  it("builds a region from the selected flow's embeddings only", async () => {
     const items = [
       { id: "a1", flowId: "flow-a", embedding: axis(0) },
       { id: "a2", flowId: "flow-a", embedding: axis(0) },
@@ -304,14 +304,14 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(spec.centroid[0]).toBeGreaterThan(0.99);
     expect(Math.abs(spec.centroid[1] || 0)).toBeLessThan(1e-6);
     expect(spec.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
-    const voice = buildVoiceRegionFromFlowRaws({
+    const voice = await buildVoiceRegionFromFlowRaws({
       name: "Limits region",
       embeddings: [
-        completeFlowEmbedding({
+        await encodeFlowEmbedding({
           flowKind: "verify",
           pow: [{ type: "speech", timestamp_ms: 1, payload: "epsilon delta" }],
         }),
-        completeFlowEmbedding({
+        await encodeFlowEmbedding({
           flowKind: "verify",
           pow: [{ type: "speech", timestamp_ms: 1, payload: "same walk different words" }],
         }),
@@ -320,7 +320,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(voice?.name).toBe("Limits region · Path + Text");
     expect(voice?.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
     expect(voice?.subject_count).toBe(2);
-    expect(buildVoiceRegionFromFlowRaws({ name: "Limits region", embeddings: [] })).toBeNull();
+    expect(await buildVoiceRegionFromFlowRaws({ name: "Limits region", embeddings: [] })).toBeNull();
   });
 
   it("asks xAI for proof of work with the optional modifier and builds from the returned items", async () => {
@@ -378,18 +378,18 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(bare.asksForProofOfWork).toBe(true);
   });
 
-  it("keeps runner and skill on the same path without a walk; path+text follows spoken proof", () => {
-    const runnerA = verificationProofEmbedding({
+  it("keeps runner and skill on the same path without a walk; path+text follows spoken proof", async () => {
+    const runnerA = await verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "runner",
       workspaceId: "flow-token",
     });
-    const runnerB = verificationProofEmbedding({
+    const runnerB = await verificationProofEmbedding({
       prompt: "photosynthesis calvin cycle",
       source: "runner",
       workspaceId: "flow-token",
     });
-    const skill = verificationProofEmbedding({
+    const skill = await verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "skill",
       workspaceId: "flow-token",
@@ -397,19 +397,19 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(runnerA).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(runnerA).toEqual(runnerB);
     expect(runnerA).toEqual(skill);
-    const runnerAText = verificationProofEmbedding({
+    const runnerAText = await verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "runner",
       workspaceId: "flow-token",
       channel: "path_text",
     });
-    const runnerBText = verificationProofEmbedding({
+    const runnerBText = await verificationProofEmbedding({
       prompt: "photosynthesis calvin cycle",
       source: "runner",
       workspaceId: "flow-token",
       channel: "path_text",
     });
-    const skillText = verificationProofEmbedding({
+    const skillText = await verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "skill",
       workspaceId: "flow-token",
@@ -418,7 +418,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(runnerAText).not.toEqual(runnerBText);
     expect(runnerAText).not.toEqual(skillText);
     expect(
-      verificationProofEmbedding({
+      await verificationProofEmbedding({
         prompt: "epsilon delta limit proof",
         source: "runner",
         workspaceId: "flow-token",
@@ -432,7 +432,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
 });
 
 describe("knowledge subtab verification-flow filter", () => {
-  it("keeps the selected flow's rows and returns every row when no flow is selected", () => {
+  it("keeps the selected flow's rows and returns every row when no flow is selected", async () => {
     const results: VerificationFlowResult[] = [
       {
         id: "r1",
@@ -579,7 +579,7 @@ describe("knowledge subtab verification-flow filter", () => {
     ).toEqual([{ subjectKey: "u:ada" }]);
   });
 
-  it("emits every selected-flow row when only one row matches a workspace card", () => {
+  it("emits every selected-flow row when only one row matches a workspace card", async () => {
     const cards: KnowledgeRankingCard[] = [
       {
         rank: 1,
@@ -719,7 +719,7 @@ describe("knowledge subtab verification-flow filter", () => {
     ).toEqual({ userId: "ada", guestUserId: "" });
   });
 
-  it("restores the signed-in profile when a cleared flow was showing a proof-only guest", () => {
+  it("restores the signed-in profile when a cleared flow was showing a proof-only guest", async () => {
     const flowSubjects = [
       {
         user_id: null,
@@ -780,7 +780,7 @@ describe("knowledge subtab verification-flow filter", () => {
 });
 
 describe("verification workspace shell gates", () => {
-  it("exposes Verification Flows only on this workspace kind", () => {
+  it("exposes Verification Flows only on this workspace kind", async () => {
     expect(isKnowledgeRegionWorkspace("knowledge_region")).toBe(false);
     const owner = availableWorkspaceSections({
       isOwner: true,
@@ -812,7 +812,7 @@ describe("verification workspace shell gates", () => {
   });
 
 
-  it("refuses to update or remove a flow from another workspace", () => {
+  it("refuses to update or remove a flow from another workspace", async () => {
     const first = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
       workspaceId: "workspace-a",

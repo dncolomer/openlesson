@@ -32,7 +32,7 @@ async function main() {
     if (!trimmed) continue;
     const record = JSON.parse(trimmed) as SessionCorpusRecord;
     const family = parseSessionKind(record.kind) ?? "learn";
-    const embedded = reembedSessionCorpus(record, family);
+    const embedded = await reembedSessionCorpus(record, family);
     output.write(
       `${JSON.stringify({
         sessionId: record.sessionId,

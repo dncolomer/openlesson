@@ -28,7 +28,7 @@ import {
 import { parseSaasTechDemoSeedTarget } from "../../scripts/saas-tech-demo-target";
 
 describe("hs-algebra demo workspace (pure helpers)", () => {
-  it("workspace copy is high-school algebra scoped with stable demo marker", () => {
+  it("workspace copy is high-school algebra scoped with stable demo marker", async () => {
     expect(HS_ALGEBRA_DEMO_WORKSPACE.title).toMatch(/algebra/i);
     expect(HS_ALGEBRA_DEMO_WORKSPACE.title).toMatch(/high\s*school/i);
     expect(HS_ALGEBRA_DEMO_WORKSPACE.root_topic).toMatch(/algebra/i);
@@ -39,7 +39,7 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(HS_ALGEBRA_BLOCKS.some((b) => b.is_start)).toBe(true);
   });
 
-  it("assertHsAlgebraCatalogShape enforces exactly 2 regions and ≥3 multi-event guests", () => {
+  it("assertHsAlgebraCatalogShape enforces exactly 2 regions and ≥3 multi-event guests", async () => {
     const shape = assertHsAlgebraCatalogShape();
     expect(shape.regionCount).toBe(2);
     expect(shape.guestCount).toBeGreaterThanOrEqual(3);
@@ -49,8 +49,8 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(shape.guestNames.length).toBe(shape.guestCount);
   });
 
-  it("exactly two region builders produce valid flowcfg-v1-d96 centroids with synthetic label", () => {
-    const regions = buildAllAlgebraRegions("unit-hs-algebra");
+  it("exactly two region builders produce valid flowcfg-v1-d96 centroids with synthetic label", async () => {
+    const regions = await buildAllAlgebraRegions("unit-hs-algebra");
     expect(regions).toHaveLength(2);
 
     for (const region of regions) {
@@ -69,11 +69,11 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(names.size).toBe(2);
   });
 
-  it("buildAlgebraRegion uses createSyntheticKnowledgeRegionFromProfile path (no hardcoded vectors)", () => {
+  it("buildAlgebraRegion uses createSyntheticKnowledgeRegionFromProfile path (no hardcoded vectors)", async () => {
     const foundations = algebraRegionByKey("foundations");
     const advanced = algebraRegionByKey("advanced");
-    const a = buildAlgebraRegion(foundations, "unit-ws-a");
-    const b = buildAlgebraRegion(advanced, "unit-ws-b");
+    const a = await buildAlgebraRegion(foundations, "unit-ws-a");
+    const b = await buildAlgebraRegion(advanced, "unit-ws-b");
     const cos = a.centroid.reduce((s, v, i) => s + v * b.centroid[i], 0);
     // Distinct algebra competency profiles must not collapse to identical vectors.
     expect(cos).toBeLessThan(0.999);
@@ -82,7 +82,7 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(b.name).toMatch(/Advanced|Procedure/i);
   });
 
-  it("at least three guest subjects each expose ≥2 PoW events with distinct tool_name / file metadata", () => {
+  it("at least three guest subjects each expose ≥2 PoW events with distinct tool_name / file metadata", async () => {
     expect(HS_ALGEBRA_GUESTS.length).toBeGreaterThanOrEqual(3);
 
     for (const guest of HS_ALGEBRA_GUESTS) {
@@ -117,9 +117,9 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     );
   });
 
-  it("encodeAlgebraGuest uses real flowcfg path (flowcfg-v1-d96)", () => {
+  it("encodeAlgebraGuest uses real flowcfg path (flowcfg-v1-d96)", async () => {
     const guest = HS_ALGEBRA_GUESTS[0];
-    const encoded = encodeAlgebraGuest(guest, { workspaceId: "unit-ws" });
+    const encoded = await encodeAlgebraGuest(guest, { workspaceId: "unit-ws" });
     expect(encoded.embedding.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(encoded.embedding.dim).toBe(FLOW_EMBEDDING_DIM);
     expect(isFlowEmbeddingVector(encoded.vector)).toBe(true);
@@ -134,8 +134,8 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(norm).toBeLessThan(1.01);
   });
 
-  it("distinct guests produce non-identical embeddings (no hardcoded vectors)", () => {
-    const encoded = encodeAllAlgebraGuests("unit-ws");
+  it("distinct guests produce non-identical embeddings (no hardcoded vectors)", async () => {
+    const encoded = await encodeAllAlgebraGuests("unit-ws");
     expect(encoded.length).toBe(HS_ALGEBRA_GUESTS.length);
     const a = encoded[0];
     const b = encoded[encoded.length - 1];
@@ -144,7 +144,7 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(cos).toBeGreaterThan(-1);
   });
 
-  it("guest emails use demo domain and distinct local parts", () => {
+  it("guest emails use demo domain and distinct local parts", async () => {
     const emails = HS_ALGEBRA_GUESTS.map((g) => hsAlgebraGuestEmail(g.emailLocalPart));
     expect(new Set(emails).size).toBe(emails.length);
     for (const email of emails) {
@@ -153,7 +153,7 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     }
   });
 
-  it("seed and verify scripts exist and target parser defaults to staging", () => {
+  it("seed and verify scripts exist and target parser defaults to staging", async () => {
     const root = process.cwd();
     expect(existsSync(join(root, "lib/demo/hs-algebra-demo-workspace.ts"))).toBe(true);
     expect(existsSync(join(root, "scripts/seed-hs-algebra-demo-workspace.ts"))).toBe(true);

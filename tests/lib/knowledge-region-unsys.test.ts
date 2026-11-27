@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { completeFlowEmbedding } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import type { StoredFlowEmbedding } from "@/lib/flow-embedding-store";
 import {
   presentKnowledgeRegionUncertaintyModel,
@@ -51,7 +51,7 @@ function tree(): SessionBranchModel {
 }
 
 describe("presentUnsysWalkOverlay", () => {
-  it("marks every hidden state and stamps 1-based walk order", () => {
+  it("marks every hidden state and stamps 1-based walk order", async () => {
     const overlay = presentUnsysWalkOverlay({
       reference: tree(),
       walk: ["root", "visited-a", "visited-b"],
@@ -74,7 +74,7 @@ describe("presentUnsysWalkOverlay", () => {
     expect(overlay.walk).toEqual(["root", "visited-a", "visited-b"]);
   });
 
-  it("keeps the full tree when the walk is empty", () => {
+  it("keeps the full tree when the walk is empty", async () => {
     const overlay = presentUnsysWalkOverlay({
       reference: tree(),
       walk: [],
@@ -101,7 +101,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
 
   function stored(sequence: string[]): StoredFlowEmbedding {
     const model = tree();
-    const record = completeFlowEmbedding({
+    const record = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence,
@@ -126,7 +126,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
     };
   }
 
-  it("returns the reference tree and the mapped walk for a known run", () => {
+  it("returns the reference tree and the mapped walk for a known run", async () => {
     const embedding = stored(["root", "visited-a"]);
     const payload = presentKnowledgeRegionUncertaintyModel({
       knowledgeRegionId: "parent",
@@ -147,7 +147,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
     expect(payload.mapped).not.toHaveProperty("pow");
   });
 
-  it("returns an empty mapped walk for an unknown candidate without throwing", () => {
+  it("returns an empty mapped walk for an unknown candidate without throwing", async () => {
     const payload = presentKnowledgeRegionUncertaintyModel({
       knowledgeRegionId: "parent",
       candidateId: "nobody",
@@ -161,7 +161,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
     expect(payload.overlay.hidden_states.every((row) => row.sequence == null)).toBe(true);
   });
 
-  it("ships the v3 and dashboard routes", () => {
+  it("ships the v3 and dashboard routes", async () => {
     const v3 = join(
       ROOT,
       "app/api/v3/knowledge-regions/[id]/candidates/[candidateId]/uncertainty-model/route.ts",

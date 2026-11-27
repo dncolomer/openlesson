@@ -3,12 +3,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  completeFlowEmbedding,
   FLOW_EMBEDDING_MODEL_ID,
   recoverFlowEmbeddingRaw,
-  reembedFlowRaw,
   vectorsMatch,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
 
 function tree() {
@@ -29,14 +28,14 @@ function tree() {
 }
 
 describe("shipped flow embedding consumer", () => {
-  it("embeds Calibrate-shaped and Verify-shaped raw to distinct recoverable vectors", () => {
+  it("embeds Calibrate-shaped and Verify-shaped raw to distinct recoverable vectors", async () => {
     const model = tree();
-    const calibrate = completeFlowEmbedding({
+    const calibrate = await encodeFlowEmbedding({
       flowKind: "calibrate",
       model,
       pow: [{ type: "tool", tool_name: "probe", tool_action: "sounding", timestamp_ms: 1, payload: "coverage" }],
     });
-    const verify = completeFlowEmbedding({
+    const verify = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
@@ -54,7 +53,7 @@ describe("shipped flow embedding consumer", () => {
     const recoveredVerify = recoverFlowEmbeddingRaw(verify);
     expect(recoveredCalibrate).toEqual(calibrate.raw);
     expect(recoveredVerify).toEqual(verify.raw);
-    expect(vectorsMatch(reembedFlowRaw(recoveredCalibrate!), calibrate.vector)).toBe(true);
-    expect(vectorsMatch(reembedFlowRaw(recoveredVerify!), verify.vector)).toBe(true);
+    expect(vectorsMatch((await encodeFlowRaw(recoveredCalibrate!)).vector, calibrate.vector)).toBe(true);
+    expect(vectorsMatch((await encodeFlowRaw(recoveredVerify!)).vector, verify.vector)).toBe(true);
   });
 });

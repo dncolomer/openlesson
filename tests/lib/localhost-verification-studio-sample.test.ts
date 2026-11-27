@@ -20,11 +20,11 @@ import {
 const ROOT = join(__dirname, "../..");
 
 describe("localhost verification Data Studio sample", () => {
-  it("builds a priced hidden-state tree, distinct walks, and a Path region", () => {
+  it("builds a priced hidden-state tree, distinct walks, and a Path region", async () => {
     const model = localhostVerificationStudioTree();
     expect(model.branches.find((branch) => branch.id === "root")?.edges.length).toBeGreaterThan(0);
     expect(model.branches.some((branch) => branch.id === "r1-c1")).toBe(true);
-    const encoded = encodeLocalhostVerificationStudioRuns(model);
+    const encoded = await encodeLocalhostVerificationStudioRuns(model);
     expect(encoded).toHaveLength(LOCALHOST_VERIFICATION_STUDIO_RUNS.length);
     const ada = encoded.find((run) => run.key === "ada")!;
     const bea = encoded.find((run) => run.key === "bea")!;
@@ -50,7 +50,7 @@ describe("localhost verification Data Studio sample", () => {
     expect(LOCALHOST_VERIFICATION_STUDIO_FLOW.questions[0]?.text.endsWith("?")).toBe(true);
   });
 
-  it("seeds only localhost/staging and writes recoverable flow embeddings", () => {
+  it("seeds only localhost/staging and writes recoverable flow embeddings", async () => {
     const seed = readFileSync(
       join(ROOT, "scripts/seed-localhost-verification-studio.ts"),
       "utf8",

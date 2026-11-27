@@ -5,13 +5,13 @@
  */
 
 import {
-  completeFlowEmbedding,
   flowEmbeddingModelIdForChannel,
   parseFlowEmbeddingChannel,
   type FlowEmbeddingChannel,
   type FlowEmbeddingRecord,
   type FlowKind,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import {
   createCustomVerificationModelFromVectors,
   voiceRegionName,
@@ -576,13 +576,13 @@ function soundModel(
   };
 }
 
-export function encodeStudioDemoRun(
+export async function encodeStudioDemoRun(
   set: StudioDemoSetDef,
   run: StudioDemoRunDef,
   model: SessionBranchModel = set.tree(),
-): FlowEmbeddingRecord {
+): Promise<FlowEmbeddingRecord> {
   const sounded = model;
-  return completeFlowEmbedding({
+  return encodeFlowEmbedding({
     flowKind: set.flowKind,
     model: sounded,
     sequence: run.sequence,
@@ -605,21 +605,21 @@ export function encodeStudioDemoRun(
   });
 }
 
-export function encodeStudioDemoRuns(
+export async function encodeStudioDemoRuns(
   set: StudioDemoSetDef,
-): Array<StudioDemoRunDef & { embedding: FlowEmbeddingRecord }> {
+): Promise<Array<StudioDemoRunDef & { embedding: FlowEmbeddingRecord }>> {
   const model = set.tree();
-  return set.runs.map((run) => ({
-    ...run,
-    embedding: encodeStudioDemoRun(set, run, model),
-  }));
+  return Promise.all(
+    set.runs.map(async (run) => ({
+      ...run,
+      embedding: await encodeStudioDemoRun(set, run, model),
+    })),
+  );
 }
 
 export function buildStudioDemoRegion(
   set: StudioDemoSetDef,
-  encoded: readonly (StudioDemoRunDef & { embedding: FlowEmbeddingRecord })[] = encodeStudioDemoRuns(
-    set,
-  ),
+  encoded: readonly (StudioDemoRunDef & { embedding: FlowEmbeddingRecord })[],
   channel: FlowEmbeddingChannel | string = "path",
 ): CustomVerificationModelSpec {
   const space = parseFlowEmbeddingChannel(channel);
@@ -647,9 +647,7 @@ export function buildStudioDemoRegion(
 
 export function buildStudioDemoRegions(
   set: StudioDemoSetDef,
-  encoded: readonly (StudioDemoRunDef & { embedding: FlowEmbeddingRecord })[] = encodeStudioDemoRuns(
-    set,
-  ),
+  encoded: readonly (StudioDemoRunDef & { embedding: FlowEmbeddingRecord })[],
 ): { path: CustomVerificationModelSpec; voice: CustomVerificationModelSpec } {
   return {
     path: buildStudioDemoRegion(set, encoded, "path"),

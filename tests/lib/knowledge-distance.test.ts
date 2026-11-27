@@ -8,10 +8,10 @@ import {
   scoreAgainstCustomVerificationModel,
 } from "@/lib/knowledge-config";
 import {
-  embedTextsToFlowVector,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
+import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
@@ -20,8 +20,8 @@ function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-function userVector(score: number, seed: number): number[] {
-  return embedTextsToFlowVector([
+async function userVector(score: number, seed: number) : Promise<number[]> {
+  return await encodeTextsToFlowVector([
     "ws-kd",
     `score ${score}`,
     `seed ${seed}`,
@@ -32,8 +32,8 @@ function userVector(score: number, seed: number): number[] {
 }
 
 describe("computeKnowledgeDistance (shipped geometry)", () => {
-  it("identical user vector and region centroid → near-zero Knowledge distance", () => {
-    const v = userVector(88, 1);
+  it("identical user vector and region centroid → near-zero Knowledge distance", async () => {
+    const v = await userVector(88, 1);
     const region = createCustomVerificationModelFromVectors({
       name: "Self region",
       vectors: [v],
@@ -51,15 +51,15 @@ describe("computeKnowledgeDistance (shipped geometry)", () => {
     expect(region.centroid).toHaveLength(FLOW_EMBEDDING_DIM);
   });
 
-  it("farther user from region yields larger Knowledge distance", () => {
-    const experts = [userVector(90, 10), userVector(92, 11), userVector(88, 12)];
+  it("farther user from region yields larger Knowledge distance", async () => {
+    const experts = [await userVector(90, 10), await userVector(92, 11), await userVector(88, 12)];
     const region = createCustomVerificationModelFromVectors({
       name: "Expert bar",
       vectors: experts,
     });
 
-    const close = computeKnowledgeDistance(userVector(91, 10), region);
-    const far = computeKnowledgeDistance(userVector(12, 99), region);
+    const close = computeKnowledgeDistance(experts[0]!, region);
+    const far = computeKnowledgeDistance(await userVector(12, 99), region);
 
     expect(Number.isFinite(close.knowledge_distance)).toBe(true);
     expect(Number.isFinite(far.knowledge_distance)).toBe(true);
@@ -67,8 +67,8 @@ describe("computeKnowledgeDistance (shipped geometry)", () => {
     expect(far.cosine_similarity).toBeLessThan(close.cosine_similarity);
   });
 
-  it("scoreAgainstCustomVerificationModel includes Knowledge distance fields", () => {
-    const region = createSyntheticKnowledgeRegionFromProfile({
+  it("scoreAgainstCustomVerificationModel includes Knowledge distance fields", async () => {
+    const region = await createSyntheticKnowledgeRegionFromProfile({
       name: "Synth",
       profile: { verification_score: 80, strengths: ["ops"], pow_types: ["tool"] },
     });
@@ -81,14 +81,14 @@ describe("computeKnowledgeDistance (shipped geometry)", () => {
 });
 
 describe("Knowledge distance surfaces", () => {
-  it("retired Snapshot API knowledge-distance route is gone", () => {
+  it("retired Snapshot API knowledge-distance route is gone", async () => {
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts")),
     ).toBe(false);
   });
 
 
-  it("Embeddings overlay UI shows Knowledge distance (not Settings region cards)", () => {
+  it("Embeddings overlay UI shows Knowledge distance (not Settings region cards)", async () => {
     const embeddings = readKnowledgePanelSurface();
     expect(embeddings).toContain("Knowledge distance");
     expect(embeddings).toContain("data-knowledge-distance");
@@ -104,7 +104,7 @@ describe("Knowledge distance surfaces", () => {
     expect(settings).not.toContain('action: "eval"');
   });
 
-  it("public agent docs do not catalog knowledge-distance as an agent API", () => {
+  it("public agent docs do not catalog knowledge-distance as an agent API", async () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
     expect(docs).not.toContain("knowledge-distance");
     expect(docs).toContain("create_protocol");

@@ -5,6 +5,8 @@ import { loadOrgAesthetics, saveOrgAesthetics } from "@/lib/organization/aesthet
 import {
   isProtocolSettingsError,
   presentProtocolSettingJson,
+  protocolSettingLocked,
+  PROTOCOL_SETTING_DEFAULT_LOCKED,
 } from "@/lib/organization/protocol-settings";
 import { resolveProtocolSettingsRequest } from "@/lib/organization/protocol-settings-request";
 import {
@@ -29,6 +31,9 @@ export async function POST(
     if (!loaded.ok) return jsonError(500, "Failed to load custom aesthetics");
     const current = await getProtocolSetting(ctx.admin, ctx.organizationId, id);
     if (!current) return jsonError(404, "Protocol setting not found");
+    if (protocolSettingLocked(current)) {
+      return jsonError(403, PROTOCOL_SETTING_DEFAULT_LOCKED);
+    }
 
     const applied = await applySidebarStyleBody({
       admin: ctx.admin,

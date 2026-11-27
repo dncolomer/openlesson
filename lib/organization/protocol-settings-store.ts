@@ -8,7 +8,9 @@ import {
   parseProtocolSettingId,
   presentProtocolSetting,
   protocolSettingDeleteBlocked,
+  protocolSettingLocked,
   protocolSettingNamesEqual,
+  PROTOCOL_SETTING_DEFAULT_LOCKED,
   PROTOCOL_SETTINGS_TABLE_UNAVAILABLE,
   ProtocolSettingsError,
   sortProtocolSettings,
@@ -244,11 +246,13 @@ export async function updateProtocolSetting(
     throw new ProtocolSettingsError(404, "Protocol setting not found");
   }
   if (!listed.tableAvailable) {
-    if (input.style) {
-      await writeThroughDefaultStyle(admin, orgId, input.style);
-      return syntheticDefault(orgId, input.style);
-    }
-    throw new ProtocolSettingsError(503, PROTOCOL_SETTINGS_TABLE_UNAVAILABLE);
+    throw new ProtocolSettingsError(403, PROTOCOL_SETTING_DEFAULT_LOCKED);
+  }
+  if (
+    protocolSettingLocked(current) &&
+    (input.name !== undefined || input.style !== undefined)
+  ) {
+    throw new ProtocolSettingsError(403, PROTOCOL_SETTING_DEFAULT_LOCKED);
   }
   const patch: Record<string, unknown> = { updated_at: nowIso() };
   if (input.name !== undefined) {
@@ -300,6 +304,9 @@ export async function deleteProtocolSetting(
   }
   const current = listed.settings.find((row) => row.id === parseProtocolSettingId(settingId));
   if (!current) throw new ProtocolSettingsError(404, "Protocol setting not found");
+  if (protocolSettingLocked(current)) {
+    throw new ProtocolSettingsError(403, PROTOCOL_SETTING_DEFAULT_LOCKED);
+  }
   if (protocolSettingDeleteBlocked(listed.settings.length)) {
     throw new ProtocolSettingsError(400, "Keep at least one protocol setting");
   }
@@ -330,19 +337,11 @@ export async function saveProtocolSettingStyle(
 }
 
 export async function syncDefaultProtocolSettingStyle(
-  admin: SupabaseClient,
-  organizationId: string,
-  style: SessionSidebarStyle,
+  _admin: SupabaseClient,
+  _organizationId: string,
+  _style: SessionSidebarStyle,
 ): Promise<void> {
-  const listed = await listProtocolSettings(admin, organizationId);
-  if (!listed.tableAvailable) return;
-  const current = listed.settings.find((row) => row.isDefault) ?? listed.settings[0];
-  if (!current?.id) return;
-  await admin
-    .from("protocol_settings")
-    .update({ style, updated_at: nowIso() })
-    .eq("id", current.id)
-    .eq("organization_id", organizationId);
+  // Default is locked. Leftover /aesthetics/style must not write through.
 }
 
 export async function resolveSidebarStyleForProtocol(

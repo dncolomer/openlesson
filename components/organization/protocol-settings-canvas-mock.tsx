@@ -9,7 +9,11 @@ import { SessionTopicCard } from "@/components/session-view/learn-work-dock-bar"
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { protocolSettingsPreviewScene } from "@/lib/organization/protocol-settings-preview";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
-import type { SessionSidebarStyle } from "@/lib/session-sidebar-style";
+import {
+  parseSessionCanvasStyle,
+  parseSessionSidebarStyle,
+  type SessionSidebarStyle,
+} from "@/lib/session-sidebar-style";
 
 const LiveExcalidrawCanvas = dynamic(
   () => import("@/components/ExcalidrawCanvas").then((mod) => mod.ExcalidrawCanvas),
@@ -19,24 +23,34 @@ const LiveExcalidrawCanvas = dynamic(
 export function ProtocolSettingsCanvasMock({
   style,
   urls,
+  viewOnly = false,
 }: {
   style: SessionSidebarStyle;
   urls: readonly string[];
+  viewOnly?: boolean;
 }) {
   const initialScene = useMemo(() => protocolSettingsPreviewScene(), []);
+  const boardStyle = useMemo(() => {
+    const next = parseSessionSidebarStyle(style);
+    if (viewOnly) return next;
+    return {
+      ...next,
+      canvas: { ...parseSessionCanvasStyle(next.canvas), zenMode: false },
+    };
+  }, [style, viewOnly]);
   return (
     <div data-org-protocol-settings-preview className="flex h-full min-h-0 min-w-0 flex-1">
       <SessionCommandBridgeProvider>
         <SessionWorkSurface
           mode="verification-tap"
           stackBelow
-          sidebarStyle={style}
+          sidebarStyle={boardStyle}
           chapters={
             <SessionTopicCard
               id="protocol-settings"
               title="Protocol"
               customUrls={urls}
-              sidebarStyle={style}
+              sidebarStyle={boardStyle}
             />
           }
           focus={<SessionGuidePanel guide="verification" />}
@@ -60,9 +74,9 @@ export function ProtocolSettingsCanvasMock({
           stage={
             <LiveExcalidrawCanvas
               boardId="protocol-settings-preview"
-              sessionMarkMode="verification"
-              sidebarStyle={style}
+              sidebarStyle={boardStyle}
               liveCanvasChrome
+              viewModeEnabled={viewOnly}
               initialSceneData={initialScene}
             />
           }

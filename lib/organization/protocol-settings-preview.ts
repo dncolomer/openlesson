@@ -18,7 +18,10 @@ export function protocolSettingsPreviewScene(): IleWorkCanvasScene {
   });
   return {
     elements: note.elements,
-    appState: withIleWorkCanvasGridAppState({}),
+    appState: withIleWorkCanvasGridAppState(
+      {},
+      { chrome: { zenModeEnabled: false } },
+    ),
     files: {},
   };
 }

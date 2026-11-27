@@ -270,12 +270,16 @@ describe("session sidebar style", () => {
     expect(html).not.toContain("data-org-canvas-preview");
     const editor = read("components/organization/protocol-settings-editor.tsx");
     expect(editor).toContain("data-org-protocol-settings-editor");
-    expect(editor).toContain("ExcalidrawCanvas");
-    expect(editor).toContain("liveCanvasChrome");
-    expect(editor).toContain("protocolSettingsPreviewScene");
-    expect(editor).not.toContain("SessionWorkSurface");
+    expect(editor).toContain("ProtocolSettingsCanvasMock");
+    expect(editor).toContain("data-org-protocol-settings-preview-frame");
+    expect(editor).toContain("CustomAestheticsStyler");
     expect(editor).not.toContain("SessionSidebar");
-    expect(editor).not.toContain("SessionGuidePanel");
+    const mock = read("components/organization/protocol-settings-canvas-mock.tsx");
+    expect(mock).toContain("ExcalidrawCanvas");
+    expect(mock).toContain("liveCanvasChrome");
+    expect(mock).toContain("protocolSettingsPreviewScene");
+    expect(mock).toContain("SessionWorkSurface");
+    expect(mock).toContain("SessionGuidePanel");
     const scene = protocolSettingsPreviewScene();
     expect(scene.elements.length).toBeGreaterThan(0);
     expect(scene.appState).toBeTruthy();
@@ -632,7 +636,7 @@ describe("custom aesthetic surfaces", () => {
     );
     expect(page).toContain("ProtocolSettingsTab");
     expect(page).toContain('activeTab === "protocol_settings"');
-    expect(page).toContain("protocolSettingsEditorOpen");
+    expect(page).not.toContain("protocolSettingsEditorOpen");
     expect(page).toContain("overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8");
     expect(styler).toContain('data-org-custom-aesthetics');
     expect(styler).toContain('data-org-aesthetic-upload');
@@ -642,6 +646,9 @@ describe("custom aesthetic surfaces", () => {
     expect(styler).toContain("data-org-sidebar-style-prompt");
     expect(styler).toContain("data-org-sidebar-style-apply");
     expect(styler).not.toContain("ProtocolSettingsCanvasMock");
+    expect(read("components/organization/protocol-settings-editor.tsx")).toContain(
+      "ProtocolSettingsCanvasMock",
+    );
     expect(styler).toContain("data-org-canvas-grid");
     expect(hook).toContain('fetch("/api/organization/aesthetics"');
     expect(hook).toContain("/api/organization/protocol-settings");

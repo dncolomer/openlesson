@@ -12,6 +12,7 @@ import {
 import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 import {
   presentProtocolSetting,
+  protocolSettingLocked,
   type ProtocolSettingRecord,
 } from "@/lib/organization/protocol-settings";
 import {
@@ -231,6 +232,7 @@ export function useOrgProtocolStyle() {
   };
 
   const handleStyleSidebar = async () => {
+    if (protocolSettingLocked(selected)) return;
     const prompt = sidebarPrompt.trim();
     if (!prompt) return;
     setStylingSidebar(true);
@@ -255,6 +257,7 @@ export function useOrgProtocolStyle() {
   };
 
   const handleCanvasStyle = async (canvas: SessionCanvasStyle) => {
+    if (protocolSettingLocked(selected)) return;
     const nextCanvas = parseSessionCanvasStyle(canvas);
     setSidebarStyle((prev) => ({ ...prev, canvas: nextCanvas }));
     try {
@@ -276,6 +279,7 @@ export function useOrgProtocolStyle() {
   };
 
   const handleResetSidebarStyle = async () => {
+    if (protocolSettingLocked(selected)) return;
     setStylingSidebar(true);
     try {
       const res = await fetch(stylePath(selected?.id || "default"), {
@@ -325,13 +329,17 @@ export function useOrgProtocolStyle() {
     }
   };
 
-  const handleRenameSetting = async (id: string, name: string) => {
+  const handleSaveSetting = async (id: string, name: string) => {
+    const row = settings.find((item) => item.id === id);
+    if (protocolSettingLocked(row)) return;
+    const nextName = name.trim();
+    if (!nextName) return;
     setMutatingSettings(true);
     try {
       const res = await fetch(`/api/organization/protocol-settings/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: nextName, style: sidebarStyle }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -339,10 +347,10 @@ export function useOrgProtocolStyle() {
         return;
       }
       const updated = presentProtocolSetting(data.setting);
-      setSettings((current) => current.map((row) => (row.id === updated.id ? updated : row)));
+      setSettings((current) => current.map((item) => (item.id === updated.id ? updated : item)));
       if (selectedId === updated.id) applySetting(updated);
-    } catch (renameErr) {
-      console.error("Rename protocol setting error:", renameErr);
+    } catch (saveErr) {
+      console.error("Save protocol setting error:", saveErr);
       alert(t("organization.protocolSettingsSaveError"));
     } finally {
       setMutatingSettings(false);
@@ -378,6 +386,8 @@ export function useOrgProtocolStyle() {
   };
 
   const handleDeleteSetting = async (id: string) => {
+    const row = settings.find((item) => item.id === id);
+    if (protocolSettingLocked(row)) return;
     if (!window.confirm(t("organization.protocolSettingsDeleteConfirm"))) return;
     setMutatingSettings(true);
     try {
@@ -434,7 +444,7 @@ export function useOrgProtocolStyle() {
     handleCanvasStyle,
     handleResetSidebarStyle,
     handleCreateSetting,
-    handleRenameSetting,
+    handleSaveSetting,
     handleSetDefault,
     handleDeleteSetting,
   };

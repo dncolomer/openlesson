@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
+import { useState } from "react";
 import { CustomAestheticsStyler } from "@/components/organization/custom-aesthetics-styler";
+import { ProtocolSettingsCanvasMock } from "@/components/organization/protocol-settings-canvas-mock";
 import type { OrgProtocolStyleController } from "@/components/organization/use-org-protocol-style";
 import {
   FLOW_PRIMARY_BTN,
   FLOW_SECONDARY_BTN,
 } from "@/components/product-flow/product-flow-form";
 import { useI18n } from "@/lib/i18n";
-import { protocolSettingsPreviewScene } from "@/lib/organization/protocol-settings-preview";
+import { protocolSettingLocked } from "@/lib/organization/protocol-settings";
 
 export function ProtocolSettingsEditor({
   style,
@@ -20,106 +20,123 @@ export function ProtocolSettingsEditor({
 }) {
   const { t } = useI18n();
   const [name, setName] = useState(style.selected?.name || "");
-  const initialScene = useMemo(() => protocolSettingsPreviewScene(), []);
+  const locked = protocolSettingLocked(style.selected);
+  const canEdit = style.isOrgAdmin && !locked;
 
   return (
     <div
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden border border-white/40 bg-black"
+      className="flex min-h-0 flex-col gap-4 lg:h-[calc(100dvh-6rem)] lg:flex-row"
       data-org-protocol-settings-editor=""
     >
-      <div
-        className="absolute inset-x-3 top-3 z-20 max-h-[min(46vh,28rem)] overflow-y-auto border border-white/40 bg-black/90 p-3"
-        data-org-protocol-settings-editor-actions=""
+      <section
+        className="console-copy relative min-h-[36rem] flex-1 overflow-hidden lg:min-h-0"
+        data-org-protocol-settings-preview-frame=""
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="absolute inset-0">
+          <ProtocolSettingsCanvasMock
+            style={style.sidebarStyle}
+            urls={style.aestheticUrls}
+            viewOnly={locked}
+          />
+        </div>
+      </section>
+      <aside
+        className="console-copy flex w-full shrink-0 flex-col gap-4 overflow-y-auto px-4 py-4 lg:w-[18rem]"
+        data-org-protocol-settings-rail=""
+      >
+        <div className="flex flex-col gap-2" data-org-protocol-settings-name="">
           <button
             type="button"
-            className={FLOW_SECONDARY_BTN}
+            className={`${FLOW_SECONDARY_BTN} w-full`}
             onClick={onBack}
             data-org-protocol-settings-back=""
           >
             {t("organization.protocolSettingsBack")}
           </button>
-          {style.isOrgAdmin && style.selected?.id ? (
+          {canEdit && style.selected?.id ? (
             <form
-              className="flex min-w-0 flex-1 items-center gap-2"
+              className="flex flex-col gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                const next = name.trim();
-                if (!next || !style.selected?.id) return;
-                void style.handleRenameSetting(style.selected.id, next);
+                if (!style.selected?.id) return;
+                void style.handleSaveSetting(style.selected.id, name);
               }}
             >
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                data-org-protocol-setting-rename=""
-                className="h-12 min-w-0 flex-1 rounded-none border border-white/40 bg-black px-3 text-sm text-white placeholder-neutral-500 focus:border-white/70 focus:outline-none"
+                data-org-protocol-setting-name=""
+                className="h-12 w-full rounded-none border border-white/40 bg-black px-3 text-sm text-white placeholder-neutral-500 focus:border-white/70 focus:outline-none"
               />
               <button
                 type="submit"
-                className={FLOW_PRIMARY_BTN}
-                disabled={style.mutatingSettings || !name.trim() || name.trim() === style.selected.name}
+                className={`${FLOW_PRIMARY_BTN} w-full`}
+                data-org-protocol-settings-save=""
+                disabled={style.mutatingSettings || style.stylingSidebar || !name.trim()}
               >
-                {t("organization.protocolSettingsRename")}
+                {t("organization.protocolSettingsSaveStyle")}
               </button>
             </form>
           ) : (
             <p className="text-sm text-white">{style.selected?.name}</p>
           )}
+          {canEdit ? (
+            <button
+              type="button"
+              className={`${FLOW_SECONDARY_BTN} w-full`}
+              data-org-protocol-settings-reset-default=""
+              disabled={style.stylingSidebar}
+              onClick={() => void style.handleResetSidebarStyle()}
+            >
+              {t("organization.protocolSettingsResetToDefault")}
+            </button>
+          ) : null}
         </div>
-        <div className="mt-3">
+        <div data-org-protocol-settings-editor-actions="">
           <CustomAestheticsStyler
-            compact
-            urls={style.aestheticUrls}
-            style={style.sidebarStyle}
-            prompt={style.sidebarPrompt}
-            onPromptChange={style.setSidebarPrompt}
-            uploading={style.uploadingAesthetics}
-            generating={style.stylingSidebar}
-            removingUrl={style.removingAestheticUrl}
-            onUpload={(files) => void style.handleAestheticUpload(files)}
-            onRemove={(url) => void style.handleRemoveAesthetic(url)}
-            onCanvasChange={(canvas) => void style.handleCanvasStyle(canvas)}
-            onGenerate={() => void style.handleStyleSidebar()}
-            onReset={() => void style.handleResetSidebarStyle()}
-            editable={style.isOrgAdmin}
-            memberNote={t("organization.protocolSettingsMemberNote")}
-            labels={{
-              kicker: t("organization.protocolSettings"),
-              title: style.selected?.name || t("organization.protocolSettingsTitle"),
-              helper: t("organization.protocolSettingsEditorHelper"),
-              prompt: t("organization.sidebarStylePrompt"),
-              promptPlaceholder: t("organization.sidebarStylePromptPlaceholder"),
-              apply: t("organization.sidebarStyleApply"),
-              applying: t("organization.sidebarStyleApplying"),
-              reset: t("organization.sidebarStyleReset"),
-              upload: t("organization.uploadAesthetics"),
-              uploading: t("organization.uploadingAesthetics"),
-              empty: t("organization.noCustomAesthetics"),
-              remove: t("organization.removeAesthetic"),
-              removing: t("organization.removingAesthetic"),
-              canvas: t("organization.canvasStyle"),
-              canvasHelper: t("organization.canvasStyleHelper"),
-              canvasBackground: t("organization.canvasBackground"),
-              canvasStroke: t("organization.canvasStroke"),
-              canvasZen: t("organization.canvasZenMode"),
-              canvasGrid: t("organization.canvasGridMode"),
-            }}
-          />
+              compact
+              urls={style.aestheticUrls}
+              style={style.sidebarStyle}
+              prompt={style.sidebarPrompt}
+              onPromptChange={style.setSidebarPrompt}
+              uploading={style.uploadingAesthetics}
+              generating={style.stylingSidebar}
+              removingUrl={style.removingAestheticUrl}
+              onUpload={(files) => void style.handleAestheticUpload(files)}
+              onRemove={(url) => void style.handleRemoveAesthetic(url)}
+              onCanvasChange={(canvas) => void style.handleCanvasStyle(canvas)}
+              onGenerate={() => void style.handleStyleSidebar()}
+              onReset={() => void style.handleResetSidebarStyle()}
+              editable={canEdit}
+              memberNote={
+                locked
+                  ? t("organization.protocolSettingsDefaultLocked")
+                  : t("organization.protocolSettingsMemberNote")
+              }
+              labels={{
+                kicker: t("organization.protocolSettings"),
+                title: style.selected?.name || t("organization.protocolSettingsTitle"),
+                helper: t("organization.protocolSettingsEditorHelper"),
+                prompt: t("organization.sidebarStylePrompt"),
+                promptPlaceholder: t("organization.sidebarStylePromptPlaceholder"),
+                apply: t("organization.sidebarStyleApply"),
+                applying: t("organization.sidebarStyleApplying"),
+                reset: t("organization.protocolSettingsResetToDefault"),
+                upload: t("organization.uploadAesthetics"),
+                uploading: t("organization.uploadingAesthetics"),
+                empty: t("organization.noCustomAesthetics"),
+                remove: t("organization.removeAesthetic"),
+                removing: t("organization.removingAesthetic"),
+                canvas: t("organization.canvasStyle"),
+                canvasHelper: t("organization.canvasStyleHelper"),
+                canvasBackground: t("organization.canvasBackground"),
+                canvasStroke: t("organization.canvasStroke"),
+                canvasZen: t("organization.canvasZenMode"),
+                canvasGrid: t("organization.canvasGridMode"),
+              }}
+            />
         </div>
-      </div>
-      <div className="relative min-h-0 flex-1" data-ile-canvas-stage="">
-        <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col">
-          <ExcalidrawCanvas
-            boardId={`protocol-settings-${style.selected?.id || "preview"}`}
-            sessionMarkMode="verification"
-            sidebarStyle={style.sidebarStyle}
-            liveCanvasChrome
-            initialSceneData={initialScene}
-          />
-        </div>
-      </div>
+      </aside>
     </div>
   );
 }

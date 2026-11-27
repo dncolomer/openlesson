@@ -11,7 +11,10 @@ import {
   FLOW_PRIMARY_BTN,
 } from "@/components/product-flow/product-flow-form";
 import { dashboardProtocolSettingsHref } from "@/lib/dashboard-nav";
-import { nextUntitledProtocolSettingName } from "@/lib/organization/protocol-settings";
+import {
+  nextUntitledProtocolSettingName,
+  protocolSettingLocked,
+} from "@/lib/organization/protocol-settings";
 
 const chipClass =
   "console-chip px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-300";
@@ -27,7 +30,8 @@ export function ProtocolSettingsTab({ settingId }: { settingId?: string | null }
   useEffect(() => {
     if (!editorId || loading) return;
     if (selectedId === editorId) return;
-    if (settings.some((row) => row.id === editorId)) selectSetting(editorId);
+    const row = settings.find((item) => item.id === editorId);
+    if (row) selectSetting(editorId);
   }, [editorId, loading, selectedId, selectSetting, settings]);
 
   const openSetting = (id: string) => {
@@ -174,7 +178,16 @@ export function ProtocolSettingsTab({ settingId }: { settingId?: string | null }
                   </td>
                   {style.isOrgAdmin ? (
                     <td className="px-4 py-3 text-right">
-                      {canMutate && row.id ? (
+                      {row.id && protocolSettingLocked(row) ? (
+                        <button
+                          type="button"
+                          className={FLOW_GHOST_BTN}
+                          data-org-protocol-settings-view=""
+                          onClick={() => openSetting(row.id)}
+                        >
+                          {t("organization.protocolSettingsView")}
+                        </button>
+                      ) : canMutate && row.id ? (
                         <div className="flex flex-wrap justify-end gap-2">
                           <button
                             type="button"
@@ -185,16 +198,14 @@ export function ProtocolSettingsTab({ settingId }: { settingId?: string | null }
                           >
                             {t("organization.protocolSettingsEdit")}
                           </button>
-                          {!row.isDefault ? (
-                            <button
-                              type="button"
-                              className={FLOW_GHOST_BTN}
-                              disabled={style.mutatingSettings}
-                              onClick={() => void style.handleSetDefault(row.id)}
-                            >
-                              {t("organization.protocolSettingsSetDefault")}
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            className={FLOW_GHOST_BTN}
+                            disabled={style.mutatingSettings}
+                            onClick={() => void style.handleSetDefault(row.id)}
+                          >
+                            {t("organization.protocolSettingsSetDefault")}
+                          </button>
                           {canDelete ? (
                             <button
                               type="button"

@@ -9,7 +9,9 @@ import {
   parseProtocolSettingId,
   presentProtocolSetting,
   protocolSettingDeleteBlocked,
+  protocolSettingLocked,
   protocolSettingNamesEqual,
+  PROTOCOL_SETTING_DEFAULT_LOCKED,
   PROTOCOL_SETTING_NAME_MAX,
   nextUntitledProtocolSettingName,
   sortProtocolSettings,
@@ -37,6 +39,10 @@ describe("named protocol settings", () => {
     expect(protocolSettingNamesEqual("Default", "default")).toBe(true);
     expect(protocolSettingDeleteBlocked(1)).toBe(true);
     expect(protocolSettingDeleteBlocked(2)).toBe(false);
+    expect(protocolSettingLocked({ isDefault: true })).toBe(true);
+    expect(protocolSettingLocked({ isDefault: false })).toBe(false);
+    expect(protocolSettingLocked(null)).toBe(false);
+    expect(PROTOCOL_SETTING_DEFAULT_LOCKED).toContain("cannot be edited");
     expect(isMissingProtocolSettingsTable({ code: "42P01" })).toBe(true);
     expect(isDuplicateProtocolSettingName({ code: "23505", message: "protocol_settings_org_name_uidx" })).toBe(
       true,
@@ -95,13 +101,60 @@ describe("named protocol settings", () => {
     expect(tab).toContain("handleSetDefault");
     expect(tab).toContain("ProtocolSettingsEditor");
     expect(tab).toContain("data-org-protocol-settings-edit");
+    expect(tab).toContain("protocolSettingLocked");
+    expect(tab).toContain("protocolSettingsView");
+    expect(tab).toContain("data-org-protocol-settings-view");
+    expect(tab).not.toContain("if (row && protocolSettingLocked(row))");
     expect(tab).not.toContain("CustomAestheticsStyler");
     const editor = read("components/organization/protocol-settings-editor.tsx");
     expect(editor).toContain("data-org-protocol-settings-editor");
+    expect(editor).toContain("data-org-protocol-settings-name");
+    expect(editor).toContain("data-org-protocol-settings-preview-frame");
     expect(editor).toContain("data-org-protocol-settings-editor-actions");
-    expect(editor).toContain("ExcalidrawCanvas");
-    expect(editor).toContain("liveCanvasChrome");
-    expect(editor).not.toContain("SessionWorkSurface");
+    expect(editor).toContain("data-org-protocol-settings-rail");
+    expect(editor).toContain("lg:w-[18rem]");
+    expect(editor).toContain("lg:h-[calc(100dvh-6rem)]");
+    expect(editor.match(/className="console-copy/g)?.length).toBe(2);
+    expect(editor).toContain("ProtocolSettingsCanvasMock");
+    expect(editor).toContain("CustomAestheticsStyler");
+    expect(editor).toContain("compact");
+    expect(editor).toContain("viewOnly={locked}");
+    expect(editor).toContain("editable={canEdit}");
+    expect(editor).toContain("protocolSettingsDefaultLocked");
+    expect(editor).not.toContain("pointer-events-none");
+    expect(editor).toContain("data-org-protocol-settings-reset-default");
+    expect(editor).toContain("handleResetSidebarStyle");
+    expect(editor).toContain("protocolSettingsResetToDefault");
+    expect(editor).toContain("data-org-protocol-settings-save");
+    expect(editor).toContain("handleSaveSetting");
+    expect(editor).toContain("protocolSettingsSaveStyle");
+    expect(editor).not.toContain("handleRenameSetting");
+    expect(editor).not.toContain("protocolSettingsRename");
+    const factory = read("supabase/migrations/20261127140000_protocol_settings_factory_default.sql");
+    expect(factory).toContain("WHERE is_default");
+    expect(factory).toContain('"background": "#000000"');
+    expect(factory).toContain('"background": "#0a0a0a"');
+    expect(factory).toContain('"stroke": "#e1e1e1"');
+    expect(factory).toContain("UPDATE public.organizations");
+    const mock = read("components/organization/protocol-settings-canvas-mock.tsx");
+    expect(mock).toContain("SessionWorkSurface");
+    expect(mock).toContain("ExcalidrawCanvas");
+    expect(mock).toContain("liveCanvasChrome");
+    expect(mock).toContain("viewModeEnabled={viewOnly}");
+    expect(mock).toContain("zenMode: false");
+    expect(mock).not.toContain("sessionMarkMode");
+    const page = read("app/dashboard/page.tsx");
+    expect(page).toContain("overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8");
+    expect(page).not.toContain("protocolSettingsEditorOpen");
+    const store = read("lib/organization/protocol-settings-store.ts");
+    expect(store).toContain("PROTOCOL_SETTING_DEFAULT_LOCKED");
+    expect(store).toContain("protocolSettingLocked");
+    expect(read("components/organization/use-org-protocol-style.ts")).toContain(
+      "protocolSettingLocked",
+    );
+    expect(read("app/api/organization/protocol-settings/[id]/style/route.ts")).toContain(
+      "protocolSettingLocked",
+    );
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("ProtocolSettingSelect");
     expect(read("components/product-flow/product-flow-page.tsx")).toContain("ProtocolSettingSelect");
     expect(read("components/product-flow/protocol-setting-select.tsx")).toContain(

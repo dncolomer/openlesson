@@ -527,9 +527,6 @@ export default function DashboardPage() {
   const accessKnown = usageData != null;
   const hasPaidAccess = usageData?.hasPaidAccess === true;
 
-  const protocolSettingsEditorOpen =
-    activeTab === "protocol_settings" && Boolean(searchParams.get("setting")?.trim());
-
   const setDashboardTab = (tab: DashboardTab) => {
     const next = accessKnown ? clampDashboardTabForAccess(tab, hasPaidAccess) : tab;
     setActiveTab(next);
@@ -576,20 +573,8 @@ export default function DashboardPage() {
         hasPaidAccess={hasPaidAccess}
       />
 
-      <div
-        className={
-          protocolSettingsEditorOpen
-            ? "flex min-h-[36rem] min-w-0 flex-col md:h-full md:min-h-0 md:overflow-hidden"
-            : "min-w-0 md:min-h-0 md:overflow-y-auto"
-        }
-      >
-      <main
-        className={
-          protocolSettingsEditorOpen
-            ? "flex h-full min-h-0 flex-col overflow-hidden p-0"
-            : "overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8"
-        }
-      >
+      <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
+      <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <DashboardSessionsTab

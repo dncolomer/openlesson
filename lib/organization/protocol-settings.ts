@@ -123,6 +123,15 @@ export function protocolSettingDeleteBlocked(count: number): boolean {
   return count <= 1;
 }
 
+export const PROTOCOL_SETTING_DEFAULT_LOCKED =
+  "The default protocol setting cannot be edited";
+
+export function protocolSettingLocked(
+  setting: { isDefault?: boolean } | null | undefined,
+): boolean {
+  return setting?.isDefault === true;
+}
+
 export function nextUntitledProtocolSettingName(
   existing: readonly { name?: string | null }[],
 ): string {

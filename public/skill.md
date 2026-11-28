@@ -4902,7 +4902,7 @@ Render one candidate in a knowledge region (unsys distance, cluster L2, pairwise
 - `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
 - `knowledge_region_id` (required, string)
 - `candidate_id` (required, string)
-- `space` (optional, string · Named mix of basis channels, default path. Example: path+audio.)
+- `space` (optional, string · Embedding space. This client reads Path (flowcfg-v1-d96) only.)
 
 **Input JSON Schema**
 
@@ -4922,7 +4922,7 @@ Render one candidate in a knowledge region (unsys distance, cluster L2, pairwise
     },
     "space": {
       "type": "string",
-      "description": "Named mix of basis channels, default path. Example: path+audio."
+      "description": "Embedding space. This client reads Path (flowcfg-v1-d96) only."
     }
   },
   "required": [

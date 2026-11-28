@@ -39,12 +39,11 @@ Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP c
 | Framework | Next.js (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
-| State | Zustand |
-| Database & Auth | Supabase (PostgreSQL + RLS + Auth) |
-| LLM + STT + Files | xAI (api.x.ai) |
+| State | React Hooks & Context |
+| Database & Auth | Supabase (PostgreSQL + RLS + Auth), WorkOS SSO, LTI 1.3 |
+| LLM + STT + Files | xAI (api.x.ai) / OpenRouter |
 | Payments | Stripe |
-| Graph Visualization | React Flow (@xyflow/react) |
-| Code Editor | Monaco Editor |
+| Canvas | Excalidraw (`@excalidraw/excalidraw`) |
 | EEG | Muse headband via Web Bluetooth |
 | Face Tracking | MediaPipe |
 | Deployment | Vercel |
@@ -53,7 +52,7 @@ Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP c
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.9+
 - A Supabase project
 - An xAI API key (https://console.x.ai)
 
@@ -100,7 +99,11 @@ Optional:
 | `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | OpenAI-compatible Chat Completions (default: xAI) |
 | `BLOB_STORE` / `BLOB_STORE_DIR` | `xai` (default) or `fs` with a disk directory for local/on-prem blobs |
 
-4. Set up the database by running the schema in `supabase/schema.sql` against your Supabase project (or apply `supabase/migrations`).
+4. Set up the database by applying timestamped migrations in `supabase/migrations/`:
+
+```bash
+npm run db:migrate:staging # or npm run db:migrate for production
+```
 
 5. Start the development server:
 
@@ -122,7 +125,7 @@ The app will be available at `http://localhost:3000`.
 │   └── docs/             # Interactive Learning Map API reference
 ├── components/           # React components
 │   ├── SessionView.tsx   # Learn session UI
-│   ├── WorkspaceView.tsx # Workspace shell (map vs Verification Workspace)
+│   ├── product-flow/     # Protocol & Knowledge Region views
 │   └── thought-ui/       # Shared dialogue / thought components
 ├── lib/                  # Product runtime (PoW, Calibrate/Learn/Verify, xAI, maps, billing)
 │   ├── pow-api/          # PoW / Snapshot / Stash / MCP

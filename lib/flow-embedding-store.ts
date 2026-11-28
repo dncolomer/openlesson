@@ -6,6 +6,7 @@
 import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import {
   buildFlowEmbeddingRaw,
+  isFlowEmbeddingVector,
   recoverFlowEmbeddingRaw,
   type FlowEmbeddingRaw,
   type FlowKind,
@@ -143,7 +144,7 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
   };
 }
 
-export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedding {
+export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedding | null {
   const recovered = recoverFlowEmbeddingRaw(row.raw);
   const storedChannels = parseFlowEmbeddingChannelVectors(row.channel_vectors);
   if (storedChannels) {
@@ -157,9 +158,10 @@ export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedd
       raw: recovered ?? row.raw,
     };
   }
-  const path = Array.isArray(row.vector) && row.vector.length === FLOW_EMBEDDING_DIM
-    ? row.vector
-    : new Array(FLOW_EMBEDDING_DIM).fill(0);
+  if (!isFlowEmbeddingVector(row.vector)) {
+    return null;
+  }
+  const path = row.vector;
   const channel_vectors = { ...(row.channel_vectors ?? {}), path };
   return {
     ...row,
@@ -294,7 +296,8 @@ export async function listFlowEmbeddingsForOwner(input: {
         if (flowId && row.flow_id !== flowId) return false;
         return true;
       })
-      .map(presentFlowEmbedding);
+      .map(presentFlowEmbedding)
+      .filter((row): row is StoredFlowEmbedding => row !== null);
   }
   const supabase = createAdminClient();
   let query = supabase
@@ -309,7 +312,8 @@ export async function listFlowEmbeddingsForOwner(input: {
   return (data || [])
     .map((row) => mapRow(row as Record<string, unknown>))
     .filter((row): row is StoredFlowEmbedding => !!row)
-    .map(presentFlowEmbedding);
+    .map(presentFlowEmbedding)
+    .filter((row): row is StoredFlowEmbedding => row !== null);
 }
 
 export async function listFlowEmbeddingsForWorkspaces(input: {
@@ -330,7 +334,8 @@ export async function listFlowEmbeddingsForWorkspaces(input: {
         if (flowId && row.flow_id !== flowId) return false;
         return true;
       })
-      .map(presentFlowEmbedding);
+      .map(presentFlowEmbedding)
+      .filter((row): row is StoredFlowEmbedding => row !== null);
   }
   const supabase = createAdminClient();
   let query = supabase
@@ -345,7 +350,8 @@ export async function listFlowEmbeddingsForWorkspaces(input: {
   return (data || [])
     .map((row) => mapRow(row as Record<string, unknown>))
     .filter((row): row is StoredFlowEmbedding => !!row)
-    .map(presentFlowEmbedding);
+    .map(presentFlowEmbedding)
+    .filter((row): row is StoredFlowEmbedding => row !== null);
 }
 
 export async function getFlowEmbedding(input: {

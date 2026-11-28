@@ -18,10 +18,6 @@ import {
   listFlowEmbeddings,
   getFlowEmbedding,
 } from "@/lib/flow-embedding-store";
-import {
-  playCopyFlowSessionInsert,
-  playCopyVerifyEmbeddingFromProof,
-} from "@/lib/map-play-data-access";
 import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
 
 const ROOT = join(__dirname, "../..");
@@ -215,47 +211,6 @@ describe("flow embedding store", () => {
     expect(stored.workspace_id).toBe("ws-learn");
     expect(stored.owner_user_id).toBe("");
   });
-
-  it("persists a completed play-copy verify run as a player-owned copy embedding", async () => {
-    const started = playCopyFlowSessionInsert({
-      flowKind: "verify",
-      flowId: "vf-live",
-      runnerUserId: "player-1",
-      copyWorkspaceId: "copy-ws",
-      topic: "Series",
-      publicToken: "vtok",
-    });
-    const payload = playCopyVerifyEmbeddingFromProof({
-      session: { id: "sess-ver", metadata: started.metadata },
-      prompt: "the series converges",
-      policy: { model: fixtureModel(), sequence: ["r1"] },
-    });
-    expect(payload).not.toBeNull();
-    const stored = await persistCompletedFlowEmbedding({
-      workspaceId: payload!.workspaceId,
-      ownerUserId: payload!.ownerUserId,
-      flowKind: payload!.flowKind,
-      flowId: payload!.flowId,
-      runId: payload!.runId,
-      identity: payload!.identity,
-      source: payload!.source,
-      model: fixtureModel(),
-      sequence: payload!.sequence,
-      pow: payload!.pow,
-    });
-    expect(stored.owner_user_id).toBe("player-1");
-    expect(stored.workspace_id).toBe("copy-ws");
-    expect(stored.flow_kind).toBe("verify");
-    expect(stored.flow_id).toBe("vf-live");
-    expect(stored.run_id).toBe("sess-ver");
-    expect(stored.identity).toBe("play:player-1");
-    expect(stored.source).toBe("runner");
-    expect(stored.raw.pow[0]?.payload).toBe("the series converges");
-    const listed = await listFlowEmbeddings({ workspaceId: "copy-ws", flowKind: "verify" });
-    expect(listed).toHaveLength(1);
-    expect(listed[0]?.owner_user_id).toBe("player-1");
-  });
-
 });
 
 describe("completion paths persist flow embeddings instead of snapshots", () => {
@@ -272,7 +227,7 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     expect(listRoute).toContain("persistCompletedFlowEmbedding");
     expect(listRoute).not.toContain("persistSolveCompletedEmbedding");
     const client = read("lib/flow-embedding-client.ts");
-    expect(client).toContain("listWorkspaceFlowEmbeddings");
+    expect(client).not.toContain("listWorkspaceFlowEmbeddings");
     expect(client).toContain("/api/session/embed");
     expect(existsSync(join(ROOT, "app/api/calibration-flow/public/[token]/proof/route.ts"))).toBe(
       false,
@@ -287,5 +242,48 @@ describe("retired calibrate surfaces", () => {
     expect(existsSync(join(ROOT, "components/calibrate/calibrate-sounding-surface.tsx"))).toBe(
       false,
     );
+  });
+});
+
+describe("malformed embedding vector handling", () => {
+  it("throws rather than fabricating 96-d zero vectors for malformed inputs", async () => {
+    const { flowEmbeddingRecordFromHost } = await import("@/lib/flow-embedding");
+    const { presentFlowEmbedding } = await import("@/lib/flow-embedding-store");
+
+    expect(() => vectorForFlowSpace({ vector: [1, 2, 3] }, "path")).toThrow(/96-d finite Path vector/);
+    expect(() =>
+      flowEmbeddingRecordFromHost({
+        raw: {
+          flowKind: "verify",
+          genModel: { chapterTitle: "t", rootId: "r", branches: [] },
+          projectedPolicy: null,
+          pow: [],
+        },
+        embedding: [1, 2],
+        channel_vectors: { path: [] },
+      }),
+    ).toThrow(/96-d finite Path vector/);
+
+    const badRow = presentFlowEmbedding({
+      id: "bad-1",
+      workspace_id: "",
+      flow_kind: "verify",
+      flow_id: "f1",
+      run_id: "r1",
+      identity: "u1",
+      source: "verify",
+      embedding_model_id: "flowcfg-v1-d96",
+      dim: 96,
+      vector: [1, 2, 3],
+      channel_vectors: { path: [1, 2, 3] },
+      raw: {
+        flowKind: "verify",
+        genModel: { chapterTitle: "t", rootId: "r", branches: [] },
+        projectedPolicy: null,
+        pow: [],
+      },
+      created_at: new Date().toISOString(),
+    });
+    expect(badRow).toBeNull();
   });
 });

@@ -359,10 +359,12 @@ function storedChannelVectors(record: {
 }): FlowEmbeddingChannelVectors {
   const stored = parseFlowEmbeddingChannelVectors(record.channel_vectors);
   if (stored) return stored;
-  const path = isFlowEmbeddingVector(record.vector)
-    ? record.vector
-    : new Array(FLOW_EMBEDDING_DIM).fill(0);
-  return { path };
+  if (isFlowEmbeddingVector(record.vector)) {
+    return { path: record.vector };
+  }
+  throw new Error(
+    `Invalid flow embedding: expected ${FLOW_EMBEDDING_DIM}-d finite Path vector`,
+  );
 }
 
 export function vectorForFlowSpace(
@@ -400,11 +402,15 @@ export function flowEmbeddingRecordFromHost(input: {
   embedding: number[];
   channel_vectors: FlowEmbeddingChannelVectors;
 }): FlowEmbeddingRecord {
+  const stored = parseFlowEmbeddingChannelVectors(input.channel_vectors);
   const path = isFlowEmbeddingVector(input.embedding)
     ? input.embedding
-    : parseFlowEmbeddingChannelVectors(input.channel_vectors)?.path ??
-      new Array(FLOW_EMBEDDING_DIM).fill(0);
-  const stored = parseFlowEmbeddingChannelVectors(input.channel_vectors);
+    : stored?.path ?? null;
+  if (!path) {
+    throw new Error(
+      `Invalid host flow embedding: expected ${FLOW_EMBEDDING_DIM}-d finite Path vector`,
+    );
+  }
   const channel_vectors: FlowEmbeddingChannelVectors = stored
     ? { ...stored, path }
     : { path };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FilesetResolver, FaceLandmarker } from "@mediapipe/tasks-vision";
+import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 import { useI18n } from "../lib/i18n";
 
 if (typeof window !== "undefined") {
@@ -406,10 +406,13 @@ export function FaceTracker({ isEnabled, onDataPoint, onError }: FaceTrackerProp
 
     const init = async () => {
       try {
-        const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        const { FilesetResolver, FaceLandmarker: FaceLandmarkerCtor } = await import(
+          "@mediapipe/tasks-vision"
         );
-        const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
+        );
+        const faceLandmarker = await FaceLandmarkerCtor.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
             delegate: "GPU"

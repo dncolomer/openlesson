@@ -119,8 +119,14 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[300] focus:border focus:border-white focus:bg-black focus:px-3 focus:py-2 focus:text-xs focus:text-white"
+        >
+          Skip to main content
+        </a>
         <I18nProvider>
-          {children}
+          <div id="main-content">{children}</div>
           <InsufficientCreditsIceHost />
         </I18nProvider>
         <Analytics />

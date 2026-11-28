@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
@@ -37,6 +37,9 @@ export type DialogFrameProps = {
   testId?: string;
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function DialogFrame({
   open,
   onClose,
@@ -51,15 +54,59 @@ export function DialogFrame({
   portal = true,
   testId,
 }: DialogFrameProps) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    if (!open || !closeOnEscape) return;
+    if (!open) return;
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const panel = panelRef.current;
+    if (panel) {
+      const focusable = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      const first = focusable[0] ?? panel;
+      first.focus();
+    }
+
     const handler = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      onClose();
+      if (event.key === "Escape" && closeOnEscape) {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key === "Tab" && panel) {
+        const focusable = Array.from(
+          panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+        ).filter((el) => el.offsetParent !== null);
+        if (focusable.length === 0) {
+          event.preventDefault();
+          panel.focus();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (event.shiftKey) {
+          if (!active || active === first || !panel.contains(active)) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else if (!active || active === last || !panel.contains(active)) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      const prev = previouslyFocusedRef.current;
+      if (prev && typeof prev.focus === "function" && prev.isConnected) {
+        prev.focus();
+      }
+    };
   }, [open, closeOnEscape, onClose]);
 
   if (!open) return null;
@@ -79,8 +126,10 @@ export function DialogFrame({
         onClick={closeOnOverlay ? onClose : undefined}
       />
       <div
+        ref={panelRef}
+        tabIndex={-1}
         data-console-frame=""
-        className={`relative z-10 w-full ${DIALOG_SIZE[size]} overflow-hidden rounded-none border border-white/40 bg-black shadow-2xl ${panelClassName ?? ""}`}
+        className={`relative z-10 w-full ${DIALOG_SIZE[size]} overflow-hidden rounded-none border border-white/40 bg-black shadow-2xl focus:outline-none ${panelClassName ?? ""}`}
       >
         <SessionConsoleScan />
         <SessionConsoleMarks />

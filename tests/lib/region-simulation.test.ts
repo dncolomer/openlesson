@@ -334,6 +334,9 @@ describe("region simulation", () => {
     expect(flags).toContain('process.env.REGION_SIM_JOBS === "0"');
     expect(read("lib/region-simulation-jobs.ts")).toContain("await refreshAfterTick(job)");
     expect(read("lib/region-simulation-jobs.ts")).not.toContain("/* next tick retries */");
+    const persist = read("lib/region-simulation-run.ts");
+    expect(persist).toContain("verify_flow_id: input.flowId");
+    expect(persist).not.toContain("product: input.kind");
   });
 
   it("advances create-region wizard steps with the same chrome as protocol create", () => {

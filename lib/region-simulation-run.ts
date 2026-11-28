@@ -163,7 +163,6 @@ function knowledgeRegionWriteRow(input: {
   return {
     workspace_id: input.workspaceId,
     owner_user_id: input.ownerUserId,
-    product: input.kind,
     name: input.spec.name,
     description: input.description,
     embedding_model_id: input.spec.embedding_model_id,

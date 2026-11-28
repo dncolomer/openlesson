@@ -1,30 +1,67 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, Suspense } from 'react';
- 
-const en = require('../messages/en.json');
- 
-const vi = require('../messages/vi.json');
- 
-const zh = require('../messages/zh.json');
- 
-const es = require('../messages/es.json');
- 
-const de = require('../messages/de.json');
- 
-const pl = require('../messages/pl.json');
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  Suspense,
+} from 'react';
+import en from '../messages/en.json';
 
-type Locale = 'en' | 'vi' | 'zh' | 'es' | 'de' | 'pl';
+export type Locale = 'en' | 'vi' | 'zh' | 'es' | 'de' | 'pl';
 
- 
-const messages: Record<Locale, any> = {
-  en,
-  vi,
-  zh,
-  es,
-  de,
-  pl,
+type MessageTree = {
+  [key: string]: string | MessageTree;
 };
+
+const supportedLocales: Locale[] = ['en', 'vi', 'zh', 'es', 'de', 'pl'];
+
+const loadedBundles: Partial<Record<Locale, MessageTree>> = {
+  en: en as MessageTree,
+};
+
+const pendingLoads: Partial<Record<Locale, Promise<MessageTree>>> = {};
+
+const localeLoaders: Record<Exclude<Locale, 'en'>, () => Promise<{ default: unknown }>> = {
+  vi: () => import('../messages/vi.json'),
+  zh: () => import('../messages/zh.json'),
+  es: () => import('../messages/es.json'),
+  de: () => import('../messages/de.json'),
+  pl: () => import('../messages/pl.json'),
+};
+
+export function isSupportedLocale(value: string | null | undefined): value is Locale {
+  return typeof value === 'string' && (supportedLocales as string[]).includes(value);
+}
+
+/**
+ * Lazily load and cache a locale bundle on demand so non-English bundles
+ * are code-split out of the initial root client chunk.
+ */
+export async function loadLocaleBundle(locale: string): Promise<MessageTree> {
+  if (!isSupportedLocale(locale) || locale === 'en') {
+    return loadedBundles.en as MessageTree;
+  }
+  const cached = loadedBundles[locale];
+  if (cached) return cached;
+  let pending = pendingLoads[locale];
+  if (!pending) {
+    pending = localeLoaders[locale]()
+      .then((mod) => {
+        const bundle = (mod.default ?? mod) as MessageTree;
+        loadedBundles[locale] = bundle;
+        return bundle;
+      })
+      .finally(() => {
+        delete pendingLoads[locale];
+      });
+    pendingLoads[locale] = pending;
+  }
+  return pending;
+}
 
 interface I18nContextType {
   locale: Locale;
@@ -32,8 +69,6 @@ interface I18nContextType {
   t: (key: string, params?: Record<string, string | number>) => string;
   supportedLocales: Locale[];
 }
-
-const supportedLocales: Locale[] = ['en', 'vi', 'zh', 'es', 'de', 'pl'];
 
 const I18nContext = createContext<I18nContextType>({
   locale: 'en',
@@ -50,8 +85,8 @@ export function useI18n() {
  * Translate a key against an explicit locale, independent of the active
  * UI locale. Useful for content that should follow the tutoring language
  * (e.g. the tutor's welcome greeting) rather than the UI chrome language.
- * Falls back to English if the requested locale is unknown or the key is
- * missing in that locale.
+ * Falls back to English if the requested locale is unknown, not yet loaded,
+ * or missing the key.
  */
 export function translateWithLocale(
   locale: string,
@@ -59,13 +94,12 @@ export function translateWithLocale(
   params?: Record<string, string | number>,
 ): string {
   const tryResolve = (loc: string): string | null => {
-     
-    const bundle: any = (messages as Record<string, any>)[loc];
+    const bundle = isSupportedLocale(loc) ? loadedBundles[loc] : undefined;
     if (!bundle) return null;
-    let value: unknown = bundle;
+    let value: string | MessageTree | undefined = bundle;
     for (const k of key.split('.')) {
       if (value && typeof value === 'object' && k in value) {
-        value = (value as Record<string, unknown>)[k];
+        value = value[k];
       } else {
         return null;
       }
@@ -85,45 +119,78 @@ export function translateWithLocale(
 
 function I18nProviderInner({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en');
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [bundleVersion, setBundleVersion] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlLang = params.get('lang');
-    const stored = localStorage.getItem('locale') as Locale;
-    
+    const stored = (() => {
+      try {
+        return localStorage.getItem('locale');
+      } catch {
+        return null;
+      }
+    })();
+
     let newLocale: Locale = 'en';
-    
-    if (urlLang && supportedLocales.includes(urlLang as Locale)) {
-      newLocale = urlLang as Locale;
-    } else if (stored && supportedLocales.includes(stored)) {
+    if (isSupportedLocale(urlLang)) {
+      newLocale = urlLang;
+    } else if (isSupportedLocale(stored)) {
       newLocale = stored;
     } else {
       const browserLang = navigator.language.split('-')[0];
-      if (supportedLocales.includes(browserLang as Locale)) {
-        newLocale = browserLang as Locale;
+      if (isSupportedLocale(browserLang)) {
+        newLocale = browserLang;
       }
     }
-    
+
     setLocaleState(newLocale);
-    setIsInitialized(true);
   }, []);
 
-  const setLocale = (newLocale: Locale) => {
-    setLocaleState(newLocale);
-    localStorage.setItem('locale', newLocale);
-    
-    const params = new URLSearchParams(window.location.search);
-    params.set('lang', newLocale);
-    window.location.search = params.toString();
-  };
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = locale;
+    }
+    if (locale === 'en' || loadedBundles[locale]) return;
+    let cancelled = false;
+    void loadLocaleBundle(locale).then(() => {
+      if (!cancelled) {
+        setBundleVersion((v) => v + 1);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    return translateWithLocale(locale, key, params);
-  };
+  const setLocale = useCallback((newLocale: Locale) => {
+    setLocaleState(newLocale);
+    try {
+      localStorage.setItem('locale', newLocale);
+    } catch {
+      // Ignore storage quota/privacy-mode errors
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', newLocale);
+    window.history.replaceState(null, '', url.toString());
+  }, []);
+
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>): string => {
+      void bundleVersion;
+      return translateWithLocale(locale, key, params);
+    },
+    [locale, bundleVersion],
+  );
+
+  const contextValue = useMemo<I18nContextType>(
+    () => ({ locale, setLocale, t, supportedLocales }),
+    [locale, setLocale, t],
+  );
 
   return (
-    <I18nContext.Provider value={{ locale, setLocale, t, supportedLocales }}>
+    <I18nContext.Provider value={contextValue}>
       {children}
     </I18nContext.Provider>
   );

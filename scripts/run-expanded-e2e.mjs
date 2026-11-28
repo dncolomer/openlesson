@@ -332,7 +332,7 @@ async function main() {
     const createKey = await webFetch("/api/v3/pow/keys", teamsJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["workspaces:read", "tap:read"] }),
+      body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["protocols:read", "knowledge-regions:read"] }),
     });
     const keyLimitMessage = String(createKey.body?.error?.message || "");
     const keyCreated =

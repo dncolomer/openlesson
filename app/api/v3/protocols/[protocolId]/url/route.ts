@@ -11,7 +11,7 @@ interface RouteProps {
 }
 
 export async function GET(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "workspaces:read");
+  const result = await authenticateRequest(req, "protocols:read");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const org = await requireAgentRequestOrganization(req, auth);

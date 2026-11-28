@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const result = await authenticateRequest(req, "workspaces:read");
+  const result = await authenticateRequest(req, "protocols:read");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const org = await requireAgentRequestOrganization(req, auth);

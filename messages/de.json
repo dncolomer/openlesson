@@ -308,7 +308,7 @@
     "mcpCopyConfig": "Copy client config",
     "mcpNewKeyConfig": "Ready-made MCP client config — copy before you close this panel:",
     "mcpToolsTitle": "MCP tools (parity with REST)",
-    "mcpScopeNote": "Scopes: workspaces:read, workspaces:write on your API key. Create and edit protocols via REST or MCP; key CRUD is browser-session only.",
+    "mcpScopeNote": "Scopes: protocols:read, protocols:write, knowledge-regions:read, knowledge-regions:write on your API key. Create and edit protocols via REST or MCP; key CRUD is browser-session only.",
     "mcpWorkflowTitle": "Recommended agent workflow",
     "mcpWorkflowSteps": "1. list_protocols — knowledge verification protocols\n2. upload_protocol_file (optional Protocol Challenge context files)\n3. generate_protocol_unsys_seed (optional Unsys model)\n4. create_protocol with challenge, artifacts, answers_model_seed, exact_problem_on_canvas, enforced_channels, duration_minutes. Do not send kind.\n5. get_protocol\n6. update_protocol\n7. delete_protocol when a protocol should be removed\n8. get_knowledge_region_options → create_knowledge_region → get_knowledge_region (optional AI-use and strategy simulation)",
     "mcpDualNote": "REST and MCP stay in parity for protocol management under /api/v3/protocols and knowledge regions under /api/v3/knowledge-regions.",

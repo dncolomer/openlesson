@@ -10,7 +10,7 @@ interface RouteProps {
 }
 
 export async function GET(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "workspaces:read");
+  const result = await authenticateRequest(req, "knowledge-regions:read");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const ownerUserId = String(auth.user_id || "").trim();

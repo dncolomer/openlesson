@@ -66,7 +66,7 @@ export function authContextFromTapAccess(
     organization_id: access.organizationId,
     is_org_admin: false,
     key_id: keyId,
-    scopes: ["workspaces:write"],
+    scopes: ["sessions:write"],
   };
 }
 

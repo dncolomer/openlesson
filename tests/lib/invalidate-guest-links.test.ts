@@ -28,7 +28,7 @@ const ownerAuth: AuthContext = {
   organization_id: null,
   is_org_admin: false,
   key_id: "web",
-  scopes: ["tap:write", "workspaces:write"],
+  scopes: ["sessions:write", "protocols:write"],
 };
 
 function read(rel: string) {

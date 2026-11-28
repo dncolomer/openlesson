@@ -19,14 +19,14 @@ export async function GET(req: NextRequest) {
     return mcpEndpointDiscoveryResponse(resourceUri);
   }
 
-  const authResult = await authenticateMcpRequest(req, "workspaces:read");
+  const authResult = await authenticateMcpRequest(req);
   if (authResult instanceof NextResponse) return authResult;
 
   return mcpEndpointDiscoveryResponse(resourceUri);
 }
 
 export async function POST(req: NextRequest) {
-  const authResult = await authenticateMcpRequest(req, "workspaces:read");
+  const authResult = await authenticateMcpRequest(req);
   if (authResult instanceof NextResponse) return authResult;
 
   const { auth, supabase } = authResult;

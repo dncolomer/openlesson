@@ -46,9 +46,11 @@ describe("parseProofOfWorkSchemaRequest", () => {
 
 
 describe("ENDPOINT_SCOPES", () => {
-  it("registers new evidence planning endpoints", () => {
-    expect(ENDPOINT_SCOPES["POST /workspaces/:id/proof-of-work-schema"]).toBe("workspaces:read");
-    expect(ENDPOINT_SCOPES["POST /workspaces/:id/integration-skill"]).toBe("workspaces:read");
+  it("registers canonical verification API scopes", () => {
+    expect(ENDPOINT_SCOPES["GET /api/v3/protocols"]).toBe("protocols:read");
+    expect(ENDPOINT_SCOPES["POST /api/v3/protocols"]).toBe("protocols:write");
+    expect(ENDPOINT_SCOPES["GET /api/v3/knowledge-regions"]).toBe("knowledge-regions:read");
+    expect(ENDPOINT_SCOPES["POST /api/v3/knowledge-regions"]).toBe("knowledge-regions:write");
   });
 });
 

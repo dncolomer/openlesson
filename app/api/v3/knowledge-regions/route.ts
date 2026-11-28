@@ -18,7 +18,7 @@ function scheduleTicks(schedule: AgentSimulationSchedule) {
 }
 
 export async function GET(req: NextRequest) {
-  const result = await authenticateRequest(req, "workspaces:read");
+  const result = await authenticateRequest(req, "knowledge-regions:read");
   if (result instanceof NextResponse) return result;
   const ownerUserId = String(result.auth.user_id || "").trim();
   if (!ownerUserId) return errorResponse(401, "auth_required", "Not authenticated");
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const result = await authenticateRequest(req, "workspaces:write");
+  const result = await authenticateRequest(req, "knowledge-regions:write");
   if (result instanceof NextResponse) return result;
   const ownerUserId = String(result.auth.user_id || "").trim();
   if (!ownerUserId) return errorResponse(401, "auth_required", "Not authenticated");

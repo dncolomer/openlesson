@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { errorResponse } from "@/lib/pow-api/auth";
 import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
+import { parseRequestedApiKeyScopes } from "@/lib/pow-api/scopes";
 import type { ApiKeyScope } from "@/lib/pow-api/types";
 
 export async function PATCH(
@@ -40,7 +41,17 @@ export async function PATCH(
       return errorResponse(400, "validation_error", "Invalid key ID format");
     }
 
-    const validatedScopes: ApiKeyScope[] = ["*"];
+    let body: { scopes?: unknown } = {};
+    try {
+      body = (await req.json()) as { scopes?: unknown };
+    } catch {
+      // Empty body defaults to wildcard scope
+    }
+    const parsedScopes = parseRequestedApiKeyScopes(body.scopes);
+    if (!parsedScopes.ok) {
+      return errorResponse(400, "validation_error", parsedScopes.message);
+    }
+    const validatedScopes: ApiKeyScope[] = parsedScopes.scopes;
 
     // ── Verify key ownership and active status ──────────────────
     const { data: existing, error: lookupError } = await supabase

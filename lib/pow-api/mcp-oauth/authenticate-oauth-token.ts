@@ -13,7 +13,7 @@ export function isOAuthAccessToken(token: string): boolean {
 
 export async function authenticateOAuthAccessToken(
   accessToken: string,
-  requiredScope: ApiKeyScope
+  requiredScope?: ApiKeyScope
 ): Promise<{ auth: AuthContext; supabase: SupabaseClient } | NextResponse> {
   const { getServiceClient } = await import("../auth");
   const supabase = await getServiceClient();

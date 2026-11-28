@@ -6,6 +6,7 @@ import {
   DEFAULT_API_KEY_SCOPES,
   GUEST_API_KEY_SCOPES,
   hasScope,
+  parseRequestedApiKeyScopes,
   requiresOrgAdminScope,
   validateAssignableScopes,
 } from "@/lib/pow-api/scopes";
@@ -19,7 +20,7 @@ describe("createdByApiKeyId", () => {
         guest_user_id: null,
         organization_id: null,
         is_org_admin: false,
-        scopes: ["tap:write"],
+        scopes: ["protocols:write"],
         auth_method: "api_key",
       })
     ).toBe("key-uuid");
@@ -33,7 +34,7 @@ describe("createdByApiKeyId", () => {
         guest_user_id: null,
         organization_id: null,
         is_org_admin: false,
-        scopes: ["tap:write"],
+        scopes: ["protocols:write"],
         auth_method: "oauth",
       })
     ).toBeNull();
@@ -43,12 +44,27 @@ describe("createdByApiKeyId", () => {
 describe("hasScope", () => {
   it("allows wildcard", () => {
     expect(hasScope(["*"], "org:write")).toBe(true);
+    expect(hasScope(["*"], "protocols:write")).toBe(true);
+    expect(hasScope(["*"], "knowledge-regions:read")).toBe(true);
   });
 
-  it("requires exact scope", () => {
-    expect(hasScope(["workspaces:read"], "tap:write")).toBe(true);
-    expect(hasScope(["tap:write"], "tap:write")).toBe(true);
-    expect(hasScope(["tap:read"], "tap:read")).toBe(true);
+  it("enforces exact scope matching and rejects missing or legacy scopes", () => {
+    expect(hasScope(["protocols:read"], "protocols:read")).toBe(true);
+    expect(hasScope(["protocols:read"], "protocols:write")).toBe(false);
+    expect(hasScope(["protocols:read"], "knowledge-regions:read")).toBe(false);
+    expect(hasScope(["knowledge-regions:write"], "knowledge-regions:write")).toBe(true);
+    expect(hasScope([], "protocols:read")).toBe(false);
+  });
+
+  it("validates requested scopes and rejects legacy workspaces:* scopes", () => {
+    expect(parseRequestedApiKeyScopes(undefined)).toEqual({ ok: true, scopes: ["*"] });
+    expect(parseRequestedApiKeyScopes(["protocols:read", "knowledge-regions:write"])).toEqual({
+      ok: true,
+      scopes: ["protocols:read", "knowledge-regions:write"],
+    });
+    expect(parseRequestedApiKeyScopes(["workspaces:read"]).ok).toBe(false);
+    expect(parseRequestedApiKeyScopes(["workspaces:write"]).ok).toBe(false);
+    expect(parseRequestedApiKeyScopes(["tap:read"]).ok).toBe(false);
   });
 });
 
@@ -70,10 +86,11 @@ describe("scope assignment", () => {
     expect(canAssignApiKeyScopes({ is_org_admin: true })).toBe(true);
   });
 
-  it("issues guest keys with workspaces:write for workspace management and proof-of-work", () => {
+  it("issues guest keys with wildcard scope for protocol and region operations", () => {
     expect(GUEST_API_KEY_SCOPES).toContain("*");
     expect(GUEST_API_KEY_SCOPES).not.toContain("org:write");
-    expect(hasScope(GUEST_API_KEY_SCOPES, "workspaces:write")).toBe(true);
+    expect(hasScope(GUEST_API_KEY_SCOPES, "protocols:write")).toBe(true);
+    expect(hasScope(GUEST_API_KEY_SCOPES, "knowledge-regions:read")).toBe(true);
   });
 });
 

@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       organization_id: access.organizationId,
       is_org_admin: false,
       key_id: "tap-complete",
-      scopes: ["workspaces:write"],
+      scopes: ["sessions:write"],
     };
 
     if (sessionQuality === "impure") {

@@ -34,13 +34,10 @@ function namesRetiredProduct(text: string) {
 const FORMER_PRODUCT_SLOTS = [
   "app/layout.tsx",
   "app/skill-verification/SkillVerificationLanding.tsx",
-  "lib/seo/platform-page.ts",
   "lib/seo/product-page.ts",
-  "lib/seo/products.ts",
   "lib/prompt-kernel/ontology.ts",
   "lib/prompt-kernel/surfaces/learn.ts",
   "lib/prompt-kernel/surfaces/tap.ts",
-  "lib/sales/platform-pitch-deck.ts",
   "lib/marketing/verification-product.ts",
 ];
 
@@ -56,14 +53,11 @@ const LIVE_SURFACES = [
   "lib/session-instructions.ts",
   "lib/pow-api/agent-tool-surface.ts",
   "lib/pow-api/mcp-tools/evidence-tools.ts",
-  "lib/pow-api/pow-model-agent-contract.ts",
   "lib/prompt-kernel/surfaces/score-context.ts",
   "app/docs/proof-of-work-api/layout.tsx",
   "app/docs/proof-of-work-api/page.tsx",
   "components/tap-score/tap-score-phases.tsx",
   "components/tap-score/use-tap-score-flow.ts",
-  "components/SessionItem.tsx",
-  "components/CustomVerificationModelsPanel.tsx",
 ];
 
 function read(rel: string) {
@@ -183,31 +177,12 @@ describe("retired product language is gone from shipped prose", () => {
       const data = JSON.parse(read(`messages/${code}.json`)) as {
         tap: { welcome: { panelIntro: string } };
         onboardingGuide: { tap: { title: string } };
-        welcome: { panelIntro: string };
       };
       expect(data.tap.welcome.panelIntro, code).toMatch(/^Welcome to Verify\./);
       expect(data.tap.welcome.panelIntro, code).not.toMatch(tapWord);
       expect(data.tap.welcome.panelIntro, code).not.toContain("TAP Learning");
       expect(data.tap.welcome.panelIntro, code).not.toContain("Think Aloud Protocol");
       expect(data.onboardingGuide.tap.title, code).toBe("Verify");
-      expect(data.welcome.panelIntro, code).toMatch(/^Welcome to Learn\./);
-    }
-  });
-
-  it("locale product rows name knowledge verification protocols", () => {
-    const lineup = "knowledge verification protocols";
-    for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
-      const data = JSON.parse(read(`messages/${code}.json`)) as {
-        planView: Record<string, string>;
-        welcome: { panelIntro: string };
-      };
-      const plan = data.planView;
-      expect(plan.productIle, code).toBe("Learn");
-      expect(plan.productIleHint, code).toBe(lineup);
-      expect(plan.guestLinksFilterKindTap, code).toBe("Protocols");
-      expect(plan.guestLinksFilterKindIle, code).toBe("Learn");
-      expect(plan.productIle, code).not.toContain("TAP");
-      expect(data.welcome.panelIntro.startsWith("Welcome to Learn.")).toBe(true);
     }
   });
 
@@ -216,15 +191,12 @@ describe("retired product language is gone from shipped prose", () => {
       const data = JSON.parse(read(`messages/${code}.json`)) as {
         dashboard: { emptyWorkspacesBody: string };
         tap: { welcome: { play: string; callToAction: string; panelIntro: string } };
-        scout: { thankYou: { drill: string } };
       };
       expect(data.dashboard.emptyWorkspacesBody, code).toContain("knowledge verification protocols");
       expect(data.dashboard.emptyWorkspacesBody, code).not.toContain("Drill");
       expect(data.tap.welcome.play, code).toBe("Start");
       expect(data.tap.welcome.callToAction, code).not.toMatch(/\bPlay\b/);
       expect(data.tap.welcome.panelIntro, code).not.toContain("Drill");
-      expect(data.scout.thankYou.drill, code).toContain("Verify");
-      expect(data.scout.thankYou.drill, code).not.toContain("Drill");
     }
   });
 
@@ -233,22 +205,5 @@ describe("retired product language is gone from shipped prose", () => {
     expect(read("lib/prompt-kernel/scores.ts")).not.toContain("TAP Learning");
     expect(read("public/skill.md")).toContain("full-access");
     expect(read("public/skill.md")).not.toContain("tap:read");
-  });
-
-  it("every locale welcome follows the English Learn wording", () => {
-    const en = JSON.parse(read("messages/en.json")) as {
-      welcome: { panelIntro: string; panelIntroMobile: string };
-    };
-    expect(en.welcome.panelIntro.startsWith("Welcome to Learn.")).toBe(true);
-    expect(en.welcome.panelIntroMobile.startsWith("Welcome to Learn.")).toBe(true);
-    expect(en.welcome.panelIntro).not.toMatch(/\bTAP\b/);
-    expect(en.welcome.panelIntroMobile).not.toMatch(/\bTAP\b/);
-    for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
-      const data = JSON.parse(read(`messages/${code}.json`)) as {
-        welcome: { panelIntro: string; panelIntroMobile: string };
-      };
-      expect(data.welcome.panelIntro, code).toBe(en.welcome.panelIntro);
-      expect(data.welcome.panelIntroMobile, code).toBe(en.welcome.panelIntroMobile);
-    }
   });
 });

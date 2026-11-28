@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
-import { translateWithLocale } from "@/lib/i18n";
+import { loadLocaleBundle, translateWithLocale } from "@/lib/i18n";
 import { ileWorkspaceStartAllowed } from "@/lib/practice-voice-challenge";
 import {
   clampIleSessionInsightGoal,
@@ -171,7 +171,20 @@ export function SessionOnboardingGuide({
   audioEnforced = true,
 }: SessionOnboardingGuideProps) {
   const [step, setStep] = useState(0);
+  const [, setLocaleLoaded] = useState(0);
   const lang = language ?? "en";
+
+  useEffect(() => {
+    if (lang === "en") return;
+    let cancelled = false;
+    void loadLocaleBundle(lang).then(() => {
+      if (!cancelled) setLocaleLoaded((v) => v + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
+
   const prefix = `onboardingGuide.${variant}`;
   const insightCount = clampIleSessionInsightGoal(insightGoalCount);
 

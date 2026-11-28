@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     const admin = createAdminClient();
     const { data: row } = await admin
       .from("proof_of_work")
-      .select("workspace_id, session_id, user_id, mime_type, proof_of_work_type")
+      .select("session_id, user_id, organization_id, mime_type, proof_of_work_type")
       .eq("xai_file_id", fileId)
       .limit(1)
       .maybeSingle();
@@ -45,19 +45,10 @@ export async function GET(req: NextRequest) {
       return jsonError(404, "File not found");
     }
 
-    let allowed = row.user_id === auth.user.id;
-    if (!allowed && row.workspace_id) {
-      const { data: workspace } = await auth.supabase
-        .from("workspaces")
-        .select("id, user_id, organization_id")
-        .eq("id", row.workspace_id)
-        .maybeSingle();
-      const workspaceOrg = String(workspace?.organization_id || "").trim();
-      const inOrg = Boolean(
-        org.organizationId && workspaceOrg && workspaceOrg === org.organizationId,
-      );
-      allowed = Boolean(workspace && (workspace.user_id === auth.user.id || inOrg));
-    }
+    const rowOrg = String(row.organization_id || "").trim();
+    let allowed =
+      row.user_id === auth.user.id ||
+      Boolean(org.organizationId && rowOrg && rowOrg === org.organizationId);
     if (!allowed && row.session_id) {
       const { data: owned } = await admin
         .from("session_embeddings")
@@ -71,7 +62,7 @@ export async function GET(req: NextRequest) {
 
     const organizationId =
       org.organizationId ||
-      (await organizationIdFromWorkspace(admin, row.workspace_id)) ||
+      rowOrg ||
       (await organizationIdFromSession(
         admin,
         typeof row.session_id === "string" ? row.session_id : null,

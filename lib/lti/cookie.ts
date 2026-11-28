@@ -3,13 +3,29 @@ import { LTI_LAUNCH_COOKIE, type LtiLaunchSession } from "@/lib/lti/session";
 
 const COOKIE_MAX_AGE = 60 * 60 * 12;
 
+let warnedLtiFallback = false;
+
 function cookieSecret(): Uint8Array {
-  const raw =
-    process.env.LTI_COOKIE_SECRET ||
-    process.env.ORG_SECRETS_ENCRYPTION_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "lti-dev-cookie-secret";
-  return new TextEncoder().encode(raw);
+  const dedicated =
+    process.env.LTI_COOKIE_SECRET || process.env.ORG_SECRETS_ENCRYPTION_KEY;
+  if (dedicated) {
+    return new TextEncoder().encode(dedicated);
+  }
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (process.env.NODE_ENV === "production" && !warnedLtiFallback) {
+      warnedLtiFallback = true;
+      console.warn(
+        "[lti-cookie] LTI_COOKIE_SECRET is not set; falling back to SUPABASE_SERVICE_ROLE_KEY. Set a dedicated LTI_COOKIE_SECRET in production.",
+      );
+    }
+    return new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "LTI_COOKIE_SECRET must be set in production (refusing to use dev fallback secret).",
+    );
+  }
+  return new TextEncoder().encode("lti-dev-cookie-secret");
 }
 
 export async function encodeLaunchCookie(session: LtiLaunchSession): Promise<string> {

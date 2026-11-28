@@ -1,5 +1,9 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
+
+const ROOT = join(__dirname, "../..");
 import {
   DASHBOARD_NAV_GROUPS,
   DASHBOARD_TOP_NAV_ITEMS,
@@ -49,35 +53,25 @@ import {
 } from "@/lib/product-flow";
 
 describe("dashboard nav", () => {
-  it("parses sidebar tabs and aliases retired map/shop/help tabs to Home", () => {
+  it("parses canonical sidebar tabs and falls back to Home for unknown values", () => {
     expect(parseDashboardTab("home")).toBe("home");
+    expect(parseDashboardTab("protocols")).toBe("protocols");
+    expect(parseDashboardTab("regions")).toBe("regions");
+    expect(parseDashboardTab("usage")).toBe("usage");
+    expect(parseDashboardTab("organization")).toBe("organization");
+    expect(parseDashboardTab("protocol_settings")).toBe("protocol_settings");
+    expect(parseDashboardTab("integrations")).toBe("integrations");
+    expect(parseDashboardTab("config")).toBe("config");
+    // Legacy/retired aliases no longer redirect to another tab; they default to Home
     expect(parseDashboardTab("learning")).toBe("home");
-    expect(parseDashboardTab("insights")).toBe("home");
-    expect(parseDashboardTab("verification")).toBe("protocols");
-    expect(parseDashboardTab("calibration")).toBe("protocols");
-    expect(parseDashboardTab("solve")).toBe("protocols");
-    expect(parseDashboardTab("solve_regions")).toBe("regions");
-    expect(parseDashboardTab("solve_studio")).toBe("regions");
-    expect(parseDashboardTab("shop")).toBe("home");
-    expect(parseDashboardTab("verification_regions")).toBe("regions");
-    expect(parseDashboardTab("calibration_regions")).toBe("regions");
+    expect(parseDashboardTab("verification")).toBe("home");
+    expect(parseDashboardTab("calibration")).toBe("home");
+    expect(parseDashboardTab("solve")).toBe("home");
     expect(parseDashboardTab("browse_maps")).toBe("home");
-    expect(parseDashboardTab("practice")).toBe("protocols");
-    expect(parseDashboardTab("practice_studio")).toBe("regions");
-    expect(parseDashboardTab("practice_performance")).toBe("protocols");
-    expect(parseDashboardTab("learning_studio")).toBe("home");
-    expect(parseDashboardTab("verification_studio")).toBe("regions");
-    expect(parseDashboardTab("calibration_studio")).toBe("regions");
-    expect(parseDashboardTab("help")).toBe("home");
-    expect(parseDashboardTab("plans")).toBe("home");
+    expect(parseDashboardTab("style")).toBe("home");
+    expect(parseDashboardTab("upgrade")).toBe("home");
     expect(parseDashboardTab("unknown")).toBe("home");
     expect(parseDashboardTab(null)).toBe("home");
-    expect(parseDashboardTab("style")).toBe("protocol_settings");
-    expect(parseDashboardTab("aesthetics")).toBe("protocol_settings");
-    expect(parseDashboardTab("custom_aesthetics")).toBe("protocol_settings");
-    expect(parseDashboardTab("sidebar_style")).toBe("protocol_settings");
-    expect(parseDashboardTab("protocol_settings")).toBe("protocol_settings");
-    expect(parseDashboardTab("upgrade")).toBe("usage");
   });
 
   it("maps product tabs to type filters and create deep-links", () => {
@@ -88,7 +82,7 @@ describe("dashboard nav", () => {
     expect(isDashboardRegionsTab("regions")).toBe(true);
     expect(isDashboardRegionsTab("verification_regions")).toBe(false);
     expect(dashboardFrameLabel("regions")).toBe("Knowledge Regions");
-    expect(dashboardFrameLabel(parseDashboardTab("calibration_studio"))).toBe("Knowledge Regions");
+    expect(dashboardFrameLabel(parseDashboardTab("regions"))).toBe("Knowledge Regions");
     expect(dashboardCreateHref()).toBe("/protocols/new");
     expect(dashboardCreateHref("protocol")).toBe("/protocols/new");
     expect(dashboardCreateHref("protocol")).toBe(productFlowNewPath());
@@ -187,7 +181,7 @@ describe("dashboard nav", () => {
     expect(dashboardFrameLabel("protocol_settings")).toBe("Protocol Settings");
     expect(dashboardNavGroupIdForTab("protocol_settings")).toBe("account");
     expect(account?.items.some((item) => item.id === "upgrade")).toBe(false);
-    expect(parseDashboardTab("upgrade")).toBe("usage");
+    expect(parseDashboardTab("upgrade")).toBe("home");
     expect(parseDashboardTab("usage")).toBe("usage");
     expect(dashboardFrameLabel("usage")).toBe("Usage");
     expect(dashboardNavGroupIdForTab("usage")).toBe("account");
@@ -370,8 +364,8 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("DashboardDataStudioTab");
     expect(dashSrc).not.toContain("DashboardPracticePerformanceTab");
     expect(dashSrc).not.toContain("DashboardPracticeTab");
-    expect(dashboardFrameLabel(parseDashboardTab("solve_studio"))).toBe("Knowledge Regions");
-    expect(dashboardFrameLabel(parseDashboardTab("practice_performance"))).toBe("Protocols");
+    expect(dashboardFrameLabel(parseDashboardTab("regions"))).toBe("Knowledge Regions");
+    expect(dashboardFrameLabel(parseDashboardTab("protocols"))).toBe("Protocols");
     expect(dashSrc).not.toContain("isDashboardStudioTab");
     expect(dashSrc).not.toContain("data-dashboard-data-studio");
     expect(dashSrc).not.toContain("md:row-span-2");
@@ -625,7 +619,7 @@ describe("dashboard platform surface", () => {
       "data-console-frame-label",
     );
     expect(readRepo("app/protocols/[id]/page.tsx")).toContain("ProductFlowPage");
-    expect(readRepo("app/workspace/[[...slug]]/page.tsx")).toContain("RetiredProductPage");
+    expect(existsSync(join(ROOT, "app/workspace/[[...slug]]/page.tsx"))).toBe(false);
     expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
       "dashboardCreateLabel()",
     );
@@ -784,12 +778,10 @@ describe("dashboard platform surface", () => {
 });
 
 describe("workspace create query mode", () => {
-  it("retired workspace create routes render the contact screen", () => {
+  it("retired workspace create routes are removed", () => {
     expect(workspaceCreateModeFromQuery("knowledge_region")).toBeNull();
     expect(workspaceCreateModeFromQuery("calibration")).toBeNull();
     expect(workspaceCreateModeFromQuery("blank")).toBe("blank");
-    const page = readRepo("app/workspace/[[...slug]]/page.tsx");
-    expect(page).toContain("RetiredProductPage");
-    expect(page).not.toContain("createBlankMap");
+    expect(existsSync(join(ROOT, "app/workspace/[[...slug]]/page.tsx"))).toBe(false);
   });
 });

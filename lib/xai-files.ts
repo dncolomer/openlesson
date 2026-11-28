@@ -15,7 +15,6 @@ const XAI_BASE_URL = "https://api.x.ai";
 function filesRoot(): string {
   if (typeof window === "undefined") {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { getContextualBlobBaseURL } = require("@/lib/xai-context") as {
         getContextualBlobBaseURL: () => string | null;
       };
@@ -35,7 +34,6 @@ function getApiKey(override?: string | null): string {
   if (override) return override;
   if (typeof window === "undefined") {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const ctx = require("@/lib/xai-context") as {
         getContextualBlobApiKey: () => string | null;
         getContextualXaiApiKey: () => string | null;

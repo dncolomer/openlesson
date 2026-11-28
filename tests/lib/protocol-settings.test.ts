@@ -67,7 +67,7 @@ describe("named protocol settings", () => {
       { ...presented, id: "a", name: "Alpha", isDefault: true },
     ]).map((row) => row.id)).toEqual(["a", "b"]);
     expect(DEFAULT_PROTOCOL_SETTING_NAME).toBe("Uncertain Systems");
-    const rename = read("supabase/migrations/20261127150000_protocol_settings_uncertain_systems.sql");
+    const rename = read("supabase/archive/migrations-pre-20261128/20261127150000_protocol_settings_uncertain_systems.sql");
     expect(rename).toContain("Uncertain Systems");
     expect(rename).toContain("lower(ps.name) = 'default'");
     expect(emptyProtocolDraft().protocolSettingId).toBeNull();
@@ -83,7 +83,7 @@ describe("named protocol settings", () => {
   });
 
   it("ships the protocol_settings table and protocol FK", () => {
-    const sql = read("supabase/migrations/20261127120000_protocol_settings.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261127120000_protocol_settings.sql");
     expect(sql).toContain("CREATE TABLE IF NOT EXISTS public.protocol_settings");
     expect(sql).toContain("protocol_settings_org_name_uidx");
     expect(sql).toContain("protocol_settings_org_default_uidx");
@@ -149,7 +149,7 @@ describe("named protocol settings", () => {
     expect(editor).not.toContain("FLOW_PRIMARY_BTN");
     expect(editor).not.toContain("handleRenameSetting");
     expect(editor).not.toContain("protocolSettingsRename");
-    const factory = read("supabase/migrations/20261127140000_protocol_settings_factory_default.sql");
+    const factory = read("supabase/archive/migrations-pre-20261128/20261127140000_protocol_settings_factory_default.sql");
     expect(factory).toContain("WHERE is_default");
     expect(factory).toContain('"background": "#000000"');
     expect(factory).toContain('"background": "#0a0a0a"');

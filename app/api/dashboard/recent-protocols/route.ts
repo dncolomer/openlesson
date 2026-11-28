@@ -36,20 +36,20 @@ export async function GET(req: NextRequest) {
     let verificationRes = organizationId
       ? await admin
           .from("verify_flows")
-          .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+          .select("id, owner_user_id, name, topic, questions, public_token, created_at")
           .eq("organization_id", organizationId)
           .order("created_at", { ascending: false })
           .limit(FLOW_LIMIT)
       : await admin
           .from("verify_flows")
-          .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+          .select("id, owner_user_id, name, topic, questions, public_token, created_at")
           .eq("owner_user_id", auth.user.id)
           .order("created_at", { ascending: false })
           .limit(FLOW_LIMIT);
     if (verificationRes.error && organizationId && isMissingOrganizationIdColumn(verificationRes.error)) {
       verificationRes = await admin
         .from("verify_flows")
-        .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+        .select("id, owner_user_id, name, topic, questions, public_token, created_at")
         .eq("owner_user_id", auth.user.id)
         .order("created_at", { ascending: false })
         .limit(FLOW_LIMIT);
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
             id: row.id,
             name: (row as { name?: unknown }).name,
             title: row.topic,
-            workspaceId: row.workspace_id,
+            workspaceId: null,
             workspaceTitle: productFlowOwnerTitle(),
             createdAt: row.created_at,
             publicToken: row.public_token,

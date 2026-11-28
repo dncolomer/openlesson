@@ -13,7 +13,6 @@ import {
 } from "@/lib/flow-embedding";
 import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import { cosineThresholdToL2, l2Distance, l2Normalize } from "@/lib/knowledge-config/math";
-import { availableWorkspaceSections } from "@/lib/workspace-sections";
 import { DASHBOARD_NAV_GROUPS } from "@/lib/dashboard-nav";
 import {
   buildDataStudioProjectionView,
@@ -48,12 +47,6 @@ import {
   visibleStudioRegions,
   type DataStudioEmbeddingRow,
 } from "@/lib/data-studio-view";
-import {
-  includeAuthorStudioEmbedding,
-  parseMapPlayDataAccessFlags,
-  persistMapPlayDataAccessUpdates,
-  playCopyContributionEmbeddingInput,
-} from "@/lib/map-play-data-access";
 
 const ROOT = join(__dirname, "../..");
 
@@ -165,7 +158,7 @@ describe("data studio overlay retired", () => {
     const dash = readFileSync(join(ROOT, "app/dashboard/page.tsx"), "utf8");
     expect(dash).not.toContain("DashboardDataStudioTab");
     expect(dash).toContain("DashboardKnowledgeRegionsTab");
-    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
+    expect(existsSync(join(ROOT, "lib/workspace-sections.ts"))).toBe(false);
     expect(
       DASHBOARD_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.label)),
     ).not.toContain("Data Studio");
@@ -600,85 +593,6 @@ describe("studio flow/run filters, inspect, projection", () => {
     });
     expect(members.get("p1")?.inRegion).toBe(true);
     expect(members.get("p2")?.inRegion).toBe(false);
-  });
-
-  it("author studio keeps invite and contributed Path rows and hides private play-copy rows", async () => {
-    expect(
-      persistMapPlayDataAccessUpdates({ playSharePow: true }),
-    ).toEqual({ play_share_path: true, play_share_pow: true });
-    const flags = parseMapPlayDataAccessFlags({
-      play_share_path: true,
-      play_share_pow: false,
-    });
-    expect(flags).toEqual({
-      playSharePath: true,
-      playSharePow: false,
-      playShareInsights: false,
-    });
-    const contribution = playCopyContributionEmbeddingInput({
-      flags,
-      playerUserId: "player-1",
-      authorUserId: "author-1",
-      flowKind: "verify",
-      flowId: "sf1",
-      runId: "run-play",
-      identity: "play:player-1",
-      raw: { flowKind: "verify", pow: [{ payload: "secret transcript" }] },
-    });
-    expect(contribution?.ownerUserId).toBe("author-1");
-    expect(contribution?.source).toBe("play_path");
-    expect((contribution?.raw as { pow?: unknown[] }).pow).toEqual([]);
-    expect(
-      playCopyContributionEmbeddingInput({
-        flags: parseMapPlayDataAccessFlags({}),
-        playerUserId: "player-1",
-        authorUserId: "author-1",
-        flowKind: "verify",
-        flowId: "sf1",
-        runId: "run-play",
-        raw: {},
-      }),
-    ).toBeNull();
-
-    const invite = await studioRow({
-      id: "invite-1",
-      flowKind: "verify",
-      prompt: "invite run",
-      ownerUserId: "author-1",
-      userId: "author-1",
-    });
-    const privatePlay = await studioRow({
-      id: "play-private",
-      flowKind: "verify",
-      prompt: "player only",
-      ownerUserId: "player-1",
-      userId: "player-1",
-    });
-    const contributed = await studioRow({
-      id: "play-path",
-      flowKind: "verify",
-      prompt: "shared path",
-      ownerUserId: "author-1",
-      userId: "author-1",
-    });
-    expect(
-      includeAuthorStudioEmbedding({
-        viewerUserId: "author-1",
-        embedding: invite,
-      }),
-    ).toBe(true);
-    expect(
-      includeAuthorStudioEmbedding({
-        viewerUserId: "author-1",
-        embedding: privatePlay,
-      }),
-    ).toBe(false);
-    expect(
-      includeAuthorStudioEmbedding({
-        viewerUserId: "author-1",
-        embedding: contributed,
-      }),
-    ).toBe(true);
   });
 });
 

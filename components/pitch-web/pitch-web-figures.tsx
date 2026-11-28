@@ -242,13 +242,13 @@ export function PitchWebHiddenStateMap() {
       <StateDot {...fractions} />
 
       <text x="286" y="64" fill={MUTED} fontSize="13" fontFamily="ui-monospace, Menlo, monospace" letterSpacing="1.6">
-        // MEANING
+        {"// MEANING"}
       </text>
       <text x="88" y="232" fill={MUTED} fontSize="13" fontFamily="ui-monospace, Menlo, monospace" letterSpacing="1.6">
-        // SETUP
+        {"// SETUP"}
       </text>
       <text x="590" y="214" fill={MUTED} fontSize="13" fontFamily="ui-monospace, Menlo, monospace" letterSpacing="1.6">
-        // TECHNIQUE
+        {"// TECHNIQUE"}
       </text>
 
       <text x="504" y="68" fill="#dce7ee" fontSize="13" fontFamily="ui-monospace, Menlo, monospace">

@@ -45,11 +45,14 @@ export async function POST(
     ],
   });
   const link = await getFlowLinkByToken(token);
+  const runId =
+    typeof body.runId === "string" && body.runId.trim() ? body.runId.trim() : null;
   const stored = await persistCompletedFlowEmbedding({
     workspaceId: flow.workspaceId,
     ownerUserId: flow.ownerUserId,
     flowKind: "verify",
     flowId: flow.id,
+    runId,
     identity: String(body.identity || ""),
     source,
     linkLabel: link?.label ?? null,

@@ -6,52 +6,9 @@ import {
   type SessionStatus,
   isUuid,
 } from "@/lib/domain/types";
+import { mapDbProbe, mapDbSession } from "@/lib/storage/session-mappers";
 import { logToolUsage } from "@/lib/storage/media";
 import { isIleSessionUnsavedExit } from "@/lib/learn-session-name";
-
-// ---- Helpers: map DB rows → Session ----
-
- 
-function mapDbSession(s: any, probes: Probe[] = []): Session {
-  const metadata = s.metadata || {};
-  const storedObjectives = metadata.objectives;
-  return {
-    id: s.id,
-    problem: s.problem,
-    startedAt: s.created_at,
-    endedAt: s.ended_at ?? undefined,
-    durationMs: s.duration_ms || 0,
-    status: s.status || "completed",
-    probes,
-    objectives: Array.isArray(storedObjectives) ? storedObjectives : [],
-    hasAudio: false,
-    audioPath: undefined,
-    report: undefined,
-    reportGeneratedAt: undefined,
-    transcript: undefined,
-    workspaceTitle: metadata.title ?? undefined,
-    planningPrompt: s.planning_prompt ?? undefined,
-    metadata: metadata,
-  };
-}
-
- 
-function mapDbProbe(p: any): Probe {
-  return {
-    id: p.id,
-    timestamp: p.timestamp_ms,
-    gapScore: p.gap_score,
-    signals: p.signals || [],
-    text: p.text,
-    expandedText: p.expanded_text ?? undefined,
-    starred: p.starred ?? false,
-    isRevealed: p.is_revealed ?? false,
-    requestType: p.request_type ?? "question",
-    planStepId: p.plan_step_id ?? undefined,
-    archived: p.archived ?? false,
-    focused: p.focused ?? false,
-  };
-}
 
 // ---- Session CRUD ----
 
@@ -79,11 +36,8 @@ export async function createSession(
       user_id: user.id,
       problem,
       status: "active",
-      kind: "learn",
-      workspace_id: workspaceId || null,
-      planning_prompt: planningPrompt || null,
+      kind: "verify",
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      probes: [],
     })
     .select()
     .single();
@@ -134,9 +88,9 @@ export async function getSessions(): Promise<Session[]> {
 async function readSessionProbeRows(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
-): Promise<any[]> {
+): Promise<Record<string, unknown>[]> {
   const { data } = await supabase.from("sessions").select("probes").eq("id", sessionId).maybeSingle();
-  return Array.isArray(data?.probes) ? data.probes : [];
+  return Array.isArray(data?.probes) ? (data.probes as Record<string, unknown>[]) : [];
 }
 
 async function writeSessionProbeRows(
@@ -232,7 +186,7 @@ export async function addProbe(
 async function patchProbeById(
   probeId: string,
   patch: Record<string, unknown>,
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   const supabase = createClient();
   const { data: sessions } = await supabase
     .from("sessions")
@@ -274,7 +228,7 @@ export async function archiveProbe(probeId: string): Promise<void> {
   const archivedAt = Date.now();
     
   await logToolUsage(
-    probe.session_id,
+    String(probe.session_id),
     "probe",
     "archive",
     archivedAt,
@@ -318,8 +272,6 @@ export async function restartSession(id: string): Promise<void> {
   await supabase
     .from("sessions")
     .update({
-      probes: [],
-      chapter_map: null,
       status: "active",
       duration_ms: 0,
       ended_at: null,

@@ -1,7 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   computeDataBounds,
   computeProjectionFitBounds,
@@ -152,35 +149,5 @@ describe("projection-view helpers (shipped)", () => {
     expect(latest!.maxX).toBeGreaterThanOrEqual(5 + 1 - 1e-9);
     expect(latest!.minY).toBeLessThanOrEqual(0 - 1 + 1e-9);
     expect(latest!.maxY).toBeGreaterThanOrEqual(1);
-  });
-});
-
-describe("projection widget surface (Embeddings)", () => {
-  it("mounts professional projection markers, large canvas, and latest-mode toggle", () => {
-    const src = readKnowledgePanelSurface();
-    expect(src).toContain("ProjectionSpaceWidget");
-    expect(src).toContain("data-projection-widget");
-    expect(src).toContain("data-projection-professional");
-    expect(src).toContain("data-projection-grid");
-    // Axes / tick chrome removed — shared infinite grid only
-    expect(src).not.toContain("data-projection-axes");
-    expect(src).not.toContain("data-projection-tick-x");
-    expect(src).toContain("data-map-infinite-grid");
-    expect(src).toContain("MAP_INFINITE_GRID");
-    expect(src).toContain("data-projection-zoom-controls");
-    expect(src).toContain("data-projection-canvas");
-    expect(src).toContain("data-projection-display-toggle");
-    expect(src).toContain("data-projection-mode-latest");
-    expect(src).toContain("data-projection-mode-trajectory");
-    expect(src).toContain("data-projection-latest-position");
-    // Multi-subject display uses panel-local selectDisplayCoords (latest-per-subject).
-    expect(src).toContain("selectDisplayCoords");
-    expect(src).toContain("computeProjectionFitBounds");
-    expect(src).toContain("resolveEmbeddingsSubjectSelection");
-    expect(src).toContain("data-embeddings-user-multiselect");
-    expect(src).toContain("min-h-[28rem]");
-    expect(src).not.toMatch(/className="h-56 w-full rounded-xl border border-neutral-800 bg-neutral-950\/80"/);
-    expect(src).toContain("fitViewTransform");
-    expect(src).toContain("zoomViewTransform");
   });
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
 import { MarketingDirectoryHero } from "@/components/marketing/MarketingDirectoryHero";
-import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
+import { AYCL_HACKATHONS } from "@/lib/marketing/hackathons";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import {
   COMMUNITY_EVENTS_COPY,

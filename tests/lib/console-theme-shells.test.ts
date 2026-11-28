@@ -250,13 +250,13 @@ describe("console theme shells", () => {
     expect(shell).not.toContain("data-console-frame-label");
     expect(shell).not.toContain("dashboardFrameLabel");
 
-    expect(read("app/community/page.tsx")).toContain("RetiredProductPage");
+    expect(existsSync(join(ROOT, "app/community/page.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/support/page.tsx"))).toBe(false);
     expect(read("app/community-events/page.tsx")).toContain("MarketingPageShell");
     for (const rel of [
       "app/pricing/page.tsx",
       "app/legal/page.tsx",
       "app/pricing/success/page.tsx",
-      "components/ScienceWhitepaperPage.tsx",
       "app/invite/[token]/page.tsx",
     ]) {
       const src = read(rel);
@@ -269,7 +269,6 @@ describe("console theme shells", () => {
     }
     expect(read("app/pricing/page.tsx")).toContain("UNIFIED_PRICING_COPY.title");
     expect(read("app/pricing/success/page.tsx")).toContain("pricing.allSet");
-    expect(read("components/ScienceWhitepaperPage.tsx")).toContain("data-science-whitepaper");
     expect(read("components/marketing/MarketingChrome.tsx")).not.toContain("overflow-hidden");
     for (const rel of [
       "components/TapbenchShell.tsx",

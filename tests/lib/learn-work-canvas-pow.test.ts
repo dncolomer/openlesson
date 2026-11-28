@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surface-source";
+import { readExcalidrawSurface } from "../helpers/surface-source";
 import {
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
@@ -44,6 +44,7 @@ import {
   buildTapWorkCanvasPowPostBody,
   classifyTapWorkCanvasSceneDiff,
 } from "@/lib/tap-work-canvas";
+import { tmpdir } from "node:os";
 import { ILE_SPEECH_TOOL_NAME, ILE_TRACE_TOOL_NAME } from "@/lib/learn-thought-traces";
 import { TAP_SPEECH_TOOL_NAME } from "@/lib/tap-speech-proof-of-work";
 import { TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
@@ -52,7 +53,7 @@ import { POW_MODEL_VERSION } from "@/lib/pow-api/workspace-proof-of-work";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-3133c6a14ea7/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-3133c6a14ea7/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -61,7 +62,6 @@ function writeScratch(name: string, body: string) {
 
 function read(rel: string) {
   if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
-  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");

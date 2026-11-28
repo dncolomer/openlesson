@@ -496,7 +496,7 @@ export function RegionSimulationSetup({
         {result && summary ? (
           <FlowFormCard data-region-simulation-result="">
             <p className="text-sm text-neutral-300" data-region-simulation-origin="simulated">
-              Simulated points are always labelled simulated. They are never shown as a real person's result.
+              {"Simulated points are always labelled simulated. They are never shown as a real person's result."}
             </p>
             <dl className="grid gap-3 text-sm text-neutral-300 sm:grid-cols-2" data-region-simulation-summary="">
               <div>

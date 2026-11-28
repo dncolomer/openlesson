@@ -9,10 +9,6 @@ import {
   type DashboardNavGroup,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
-import {
-  DASHBOARD_PLAY_KINDS,
-  type DashboardPlayKind,
-} from "@/lib/dashboard-play";
 
 /** Max sessions a Free account may start in one UTC week. */
 export const FREE_WEEKLY_SESSION_LIMIT = 3;
@@ -30,12 +26,11 @@ const FREE_TIER_DENIED_PREFIXES = [] as const;
 
 const FREE_TIER_ALLOWED_PREFIXES = [
   "/dashboard",
-  "/session",
-  "/play",
-  "/verification",
   "/protocols",
-  "/v/",
+  "/v",
+  "/verify/session",
   "/regions",
+  "/organization",
 ] as const;
 
 export type UtcMondayWeekWindow = {
@@ -120,13 +115,6 @@ export function dashboardNavGroupsForAccess(
     ...group,
     items: [...group.items],
   }));
-}
-
-/** Play start kinds. Free and paid both run leftover Learn and Verification. */
-export function dashboardPlayKindsForAccess(
-  _hasPaidAccess?: boolean,
-): DashboardPlayKind[] {
-  return [...DASHBOARD_PLAY_KINDS];
 }
 
 export function isFreeTierAllowedPath(pathname: string): boolean {

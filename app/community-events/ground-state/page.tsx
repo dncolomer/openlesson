@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
 import { MarketingDirectoryHero } from "@/components/marketing/MarketingDirectoryHero";
-import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
+import { AYCL_HACKATHONS } from "@/lib/marketing/hackathons";
 import { COMMUNITY_EVENTS_DIRECTORY } from "@/lib/marketing/projects";
 import { MARKETING_MEDIA_FILL_CLASS, MARKETING_MEDIA_STAGE_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";

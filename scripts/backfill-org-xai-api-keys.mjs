@@ -17,11 +17,12 @@ import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { connectTarget, loadEnvFile } from "./db-connection.mjs";
+import { tmpdir } from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRATCH =
   process.env.GOAL_SCRATCH_DIR ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b775a328de9c/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-b775a328de9c/implementer");
 
 const MANAGEMENT_BASE = "https://management-api.x.ai";
 const ALGO = "aes-256-gcm";

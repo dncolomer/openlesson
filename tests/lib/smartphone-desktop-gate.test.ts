@@ -62,27 +62,17 @@ describe("isSmartphone pure helpers", () => {
 });
 
 describe("TAP and TAP Learning mount desktop-only smartphone gate", () => {
-  it("TapScoreClient and SessionView (TAP Learning) show MobileBlockScreen on smartphone", () => {
+  it("TapScoreClient shows MobileBlockScreen on smartphone", () => {
     expect(existsSync(join(ROOT, "lib/is-smartphone.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "components/MobileBlockScreen.tsx"))).toBe(true);
 
     const tap = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
-    const session = readSessionViewSurface();
-    const ile = readFileSync(join(ROOT, "components/LearnGuestSessionClient.tsx"), "utf8");
     const block = readFileSync(join(ROOT, "components/MobileBlockScreen.tsx"), "utf8");
 
     expect(tap).toContain("isSmartphoneClient");
     expect(tap).toContain("MobileBlockScreen");
     expect(tap).toContain('product="tap"');
     expect(tap).toMatch(/if\s*\(\s*isMobile\s*\)/);
-
-    expect(session).toContain("isSmartphoneClient");
-    expect(session).toContain("MobileBlockScreen");
-    expect(session).toContain('product={ileToken ? "ile" : "session"}');
-
-    // TAP Learning guest path is SessionView
-    expect(ile).toContain("SessionView");
-    expect(ile).toContain("ileToken");
 
     expect(block).toContain("data-mobile-block-screen");
     expect(block).toContain("Please switch to a desktop browser");

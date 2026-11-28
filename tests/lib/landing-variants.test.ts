@@ -38,8 +38,7 @@ describe("live landing hero", () => {
     expect(heroes).toContain("PUBLIC_FIELD_STILLS");
     expect(heroes).not.toContain("AccelerandoRun");
     expect(sitemap).not.toContain("/marketing/lp-variants");
-    expect(nextConfig).toContain('source: "/marketing/lp-variants"');
-    expect(nextConfig).toContain('destination: "/"');
+    expect(nextConfig).not.toContain('source: "/marketing/lp-variants"');
   });
 
   it("ships medium-length copy and a combined editorial hero", () => {

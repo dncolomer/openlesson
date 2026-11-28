@@ -21,7 +21,7 @@ function scheduleTicks(schedule: AgentSimulationSchedule) {
 }
 
 export async function POST(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "workspaces:write");
+  const result = await authenticateRequest(req, "knowledge-regions:write");
   if (result instanceof NextResponse) return result;
   const ownerUserId = String(result.auth.user_id || "").trim();
   if (!ownerUserId) return errorResponse(401, "auth_required", "Not authenticated");

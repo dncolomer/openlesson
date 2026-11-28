@@ -21,37 +21,15 @@ export function stubBillingWorkspace(input: {
 }
 
 export async function loadBillingWorkspaceForProof(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   input: {
     workspaceId?: string | null;
     ownerUserId?: string | null;
     organizationId?: string | null;
   },
 ): Promise<UploadWorkspaceProofOfWorkWorkspace> {
-  const workspaceId = String(input.workspaceId || "").trim();
-  if (isProofWorkspaceId(workspaceId)) {
-    const { data } = await supabase
-      .from("workspaces")
-      .select(
-        "id, user_id, organization_id, evaluation_mode, protocol_config, external_refs, title, root_topic",
-      )
-      .eq("id", workspaceId)
-      .maybeSingle();
-    if (data) {
-      return {
-        id: String(data.id),
-        user_id: data.user_id ? String(data.user_id) : null,
-        organization_id: data.organization_id ? String(data.organization_id) : null,
-        evaluation_mode: (data as { evaluation_mode?: string | null }).evaluation_mode,
-        protocol_config: (data as { protocol_config?: unknown }).protocol_config,
-        external_refs: (data as { external_refs?: unknown }).external_refs,
-        title: (data as { title?: string | null }).title,
-        root_topic: (data as { root_topic?: string | null }).root_topic,
-      };
-    }
-  }
   return stubBillingWorkspace({
-    workspaceId,
+    workspaceId: String(input.workspaceId || "").trim(),
     userId: input.ownerUserId || null,
     organizationId: input.organizationId || null,
   });

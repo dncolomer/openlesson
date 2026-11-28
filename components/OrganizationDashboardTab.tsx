@@ -15,18 +15,12 @@ import {
   organizationIdJsonBody,
   withOrganizationId,
 } from "@/lib/organization/active-organization-client";
-import type { OrgBackendPublic } from "@/lib/organization/org-backends";
-
-function apiErrorMessage(body: unknown, fallback: string): string {
-  if (!body || typeof body !== "object") return fallback;
-  const err = (body as { error?: unknown }).error;
-  if (typeof err === "string" && err.trim()) return err.trim();
-  if (err && typeof err === "object") {
-    const message = (err as { message?: unknown }).message;
-    if (typeof message === "string" && message.trim()) return message.trim();
-  }
-  return fallback;
-}
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import {
+  OrgInvitesSection,
+  type OrgInviteRow,
+} from "@/components/organization/org-invites-section";
+import { useOrgBackendsForm } from "@/components/organization/use-org-backends-form";
 
 const cardClass = "console-copy";
 const cardPaddedClass = `${cardClass} p-5 sm:p-6`;
@@ -61,13 +55,7 @@ interface Member {
   subscription_status: string;
 }
 
-interface Invite {
-  id: string;
-  token: string;
-  used_by: string | null;
-  used_at: string | null;
-  created_at: string;
-}
+type Invite = OrgInviteRow;
 
 /** Organization management panel for the Dashboard Organization tab. */
 export function OrganizationDashboardTab() {
@@ -91,36 +79,28 @@ export function OrganizationDashboardTab() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
   const [orgIdCopied, setOrgIdCopied] = useState(false);
-  const [backends, setBackends] = useState<OrgBackendPublic | null>(null);
-  const [llmMode, setLlmMode] = useState<"platform" | "custom">("platform");
-  const [llmProvider, setLlmProvider] = useState<"xai" | "openai-compatible">("xai");
-  const [llmBaseUrl, setLlmBaseUrl] = useState("");
-  const [llmApiKey, setLlmApiKey] = useState("");
-  const [llmModel, setLlmModel] = useState("");
-  const [blobMode, setBlobMode] = useState<"platform" | "custom">("platform");
-  const [blobProvider, setBlobProvider] = useState<"xai" | "openai-compatible">("xai");
-  const [blobBaseUrl, setBlobBaseUrl] = useState("");
-  const [blobApiKey, setBlobApiKey] = useState("");
-  const [openrouterApiKey, setOpenrouterApiKey] = useState("");
-  const [openrouterClearKey, setOpenrouterClearKey] = useState(false);
-  const [savingBackends, setSavingBackends] = useState(false);
+  const {
+    state: backendForm,
+    applyBackends,
+    setField: setBackendField,
+    setSavingBackends,
+  } = useOrgBackendsForm();
+  const {
+    backends,
+    llmMode,
+    llmProvider,
+    llmBaseUrl,
+    llmApiKey,
+    llmModel,
+    blobMode,
+    blobProvider,
+    blobBaseUrl,
+    blobApiKey,
+    openrouterApiKey,
+    openrouterClearKey,
+    savingBackends,
+  } = backendForm;
   const [ssoLoading, setSsoLoading] = useState(false);
-
-  const applyBackends = (next: OrgBackendPublic | null | undefined) => {
-    if (!next) return;
-    setBackends(next);
-    setLlmMode(next.llm.mode);
-    setLlmProvider(next.llm.provider === "openai-compatible" ? "openai-compatible" : "xai");
-    setLlmBaseUrl(next.llm.baseUrl || "");
-    setLlmModel(next.llm.model || "");
-    setLlmApiKey("");
-    setBlobMode(next.blob.mode);
-    setBlobProvider(next.blob.provider === "openai-compatible" ? "openai-compatible" : "xai");
-    setBlobBaseUrl(next.blob.baseUrl || "");
-    setBlobApiKey("");
-    setOpenrouterApiKey("");
-    setOpenrouterClearKey(false);
-  };
 
   const loadOrganization = async () => {
     try {
@@ -238,7 +218,7 @@ export function OrganizationDashboardTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.changeRoleError")));
+        alert(errorMessageFromBody(data, t("organization.changeRoleError")));
         return;
       }
       void loadOrganization();
@@ -366,7 +346,7 @@ export function OrganizationDashboardTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.backendsSaveError")));
+        alert(errorMessageFromBody(data, t("organization.backendsSaveError")));
         return;
       }
       applyBackends(data.backends);
@@ -384,7 +364,7 @@ export function OrganizationDashboardTab() {
       const res = await fetch("/api/organization/workos/sso", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(apiErrorMessage(data, t("organization.ssoError")));
+        alert(errorMessageFromBody(data, t("organization.ssoError")));
         return;
       }
       const setupUrl = String(data.setupUrl || "").trim();
@@ -577,7 +557,7 @@ export function OrganizationDashboardTab() {
                     name="org-llm-mode"
                     data-org-llm-mode="platform"
                     checked={llmMode === "platform"}
-                    onChange={() => setLlmMode("platform")}
+                    onChange={() => setBackendField("llmMode", "platform")}
                   />
                   {t("organization.llmBackendPlatform")}
                 </label>
@@ -587,7 +567,7 @@ export function OrganizationDashboardTab() {
                     name="org-llm-mode"
                     data-org-llm-mode="custom"
                     checked={llmMode === "custom"}
-                    onChange={() => setLlmMode("custom")}
+                    onChange={() => setBackendField("llmMode", "custom")}
                   />
                   {t("organization.llmBackendCustom")}
                 </label>
@@ -603,7 +583,10 @@ export function OrganizationDashboardTab() {
                       className={inputClass}
                       value={llmProvider}
                       onChange={(e) =>
-                        setLlmProvider(e.target.value === "openai-compatible" ? "openai-compatible" : "xai")
+                        setBackendField(
+                          "llmProvider",
+                          e.target.value === "openai-compatible" ? "openai-compatible" : "xai",
+                        )
                       }
                     >
                       <option value="xai">{t("organization.llmProviderXai")}</option>
@@ -618,7 +601,7 @@ export function OrganizationDashboardTab() {
                       data-org-llm-base-url
                       className={inputClass}
                       value={llmBaseUrl}
-                      onChange={(e) => setLlmBaseUrl(e.target.value)}
+                      onChange={(e) => setBackendField("llmBaseUrl", e.target.value)}
                       placeholder="https://api.x.ai/v1"
                     />
                   </label>
@@ -632,7 +615,7 @@ export function OrganizationDashboardTab() {
                       autoComplete="off"
                       className={inputClass}
                       value={llmApiKey}
-                      onChange={(e) => setLlmApiKey(e.target.value)}
+                      onChange={(e) => setBackendField("llmApiKey", e.target.value)}
                       placeholder={t("organization.llmApiKeyPlaceholder")}
                     />
                     <p className="mt-1 text-xs text-neutral-500">
@@ -649,7 +632,7 @@ export function OrganizationDashboardTab() {
                       data-org-llm-model
                       className={inputClass}
                       value={llmModel}
-                      onChange={(e) => setLlmModel(e.target.value)}
+                      onChange={(e) => setBackendField("llmModel", e.target.value)}
                       placeholder="grok-4.5"
                     />
                   </label>
@@ -666,7 +649,7 @@ export function OrganizationDashboardTab() {
                     name="org-blob-mode"
                     data-org-blob-mode="platform"
                     checked={blobMode === "platform"}
-                    onChange={() => setBlobMode("platform")}
+                    onChange={() => setBackendField("blobMode", "platform")}
                   />
                   {t("organization.blobBackendPlatform")}
                 </label>
@@ -676,7 +659,7 @@ export function OrganizationDashboardTab() {
                     name="org-blob-mode"
                     data-org-blob-mode="custom"
                     checked={blobMode === "custom"}
-                    onChange={() => setBlobMode("custom")}
+                    onChange={() => setBackendField("blobMode", "custom")}
                   />
                   {t("organization.blobBackendCustom")}
                 </label>
@@ -692,7 +675,10 @@ export function OrganizationDashboardTab() {
                       className={inputClass}
                       value={blobProvider}
                       onChange={(e) =>
-                        setBlobProvider(e.target.value === "openai-compatible" ? "openai-compatible" : "xai")
+                        setBackendField(
+                          "blobProvider",
+                          e.target.value === "openai-compatible" ? "openai-compatible" : "xai",
+                        )
                       }
                     >
                       <option value="xai">{t("organization.llmProviderXai")}</option>
@@ -707,7 +693,7 @@ export function OrganizationDashboardTab() {
                       data-org-blob-base-url
                       className={inputClass}
                       value={blobBaseUrl}
-                      onChange={(e) => setBlobBaseUrl(e.target.value)}
+                      onChange={(e) => setBackendField("blobBaseUrl", e.target.value)}
                       placeholder="https://api.x.ai"
                     />
                   </label>
@@ -721,7 +707,7 @@ export function OrganizationDashboardTab() {
                       autoComplete="off"
                       className={inputClass}
                       value={blobApiKey}
-                      onChange={(e) => setBlobApiKey(e.target.value)}
+                      onChange={(e) => setBackendField("blobApiKey", e.target.value)}
                       placeholder={t("organization.llmApiKeyPlaceholder")}
                     />
                     <p className="mt-1 text-xs text-neutral-500">
@@ -751,7 +737,7 @@ export function OrganizationDashboardTab() {
                   autoComplete="off"
                   className={inputClass}
                   value={openrouterApiKey}
-                  onChange={(e) => setOpenrouterApiKey(e.target.value)}
+                  onChange={(e) => setBackendField("openrouterApiKey", e.target.value)}
                   placeholder={t("organization.llmApiKeyPlaceholder")}
                 />
                 <p className="mt-1 text-xs text-neutral-500">
@@ -766,7 +752,7 @@ export function OrganizationDashboardTab() {
                     type="checkbox"
                     data-org-openrouter-clear
                     checked={openrouterClearKey}
-                    onChange={(e) => setOpenrouterClearKey(e.target.checked)}
+                    onChange={(e) => setBackendField("openrouterClearKey", e.target.checked)}
                   />
                   {t("organization.openrouterClearKey")}
                 </label>
@@ -919,85 +905,35 @@ export function OrganizationDashboardTab() {
       )}
 
       {isOrgAdmin && (
-        <section className={`${cardClass} overflow-hidden`}>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-5 py-4 sm:px-6">
-            <div>
-              <p className={labelClass}>{t("organization.inviteLinks")}</p>
-              <h3 className="mt-1 text-sm font-medium text-white">
-                Share single-use links to add members
-              </h3>
-            </div>
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className={primaryBtnClass}
-            >
-              {t("organization.generateInvites")}
-            </button>
-          </div>
-
-          {invites.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-neutral-500 sm:px-6">
-              {t("organization.noInvitesYet")}
-            </div>
-          ) : (
-            <div className="divide-y divide-neutral-800/60">
-              {unusedInvites.map((invite) => (
-                <div
-                  key={invite.id}
-                  className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
-                >
-                  <div className="min-w-0">
-                    <code className="console-chip break-all px-2 py-1 font-mono text-xs text-white">
-                      {invite.token}
-                    </code>
-                    <p className="mt-1.5 text-xs text-neutral-500">
-                      {t("organization.created", {
-                        date: formatDate(invite.created_at),
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      onClick={() => copyInviteLink(invite.id, invite.token)}
-                      className={secondaryBtnClass}
-                    >
-                      {linkCopiedId === invite.id
-                        ? t("common.copied")
-                        : t("organization.copyLink")}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteInvite(invite.id)}
-                      className={dangerBtnClass}
-                    >
-                      {t("organization.revoke")}
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {usedInvites.map((invite) => (
-                <div
-                  key={invite.id}
-                  className="flex flex-col gap-2 px-5 py-4 opacity-55 sm:flex-row sm:items-center sm:justify-between sm:px-6"
-                >
-                  <div className="min-w-0">
-                    <code className="console-chip break-all px-2 py-1 font-mono text-xs text-neutral-500 line-through">
-                      {invite.token}
-                    </code>
-                    <p className="mt-1.5 text-xs text-neutral-600">
-                      {t("organization.usedOn", {
-                        date: formatDate(invite.used_at),
-                      })}
-                    </p>
-                  </div>
-                  <span className={`${chipClass} text-neutral-500`}>
-                    {t("organization.used")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <OrgInvitesSection
+          invites={invites}
+          unusedInvites={unusedInvites}
+          usedInvites={usedInvites}
+          linkCopiedId={linkCopiedId}
+          showInviteModal={showInviteModal}
+          inviteCount={inviteCount}
+          generatingInvites={generatingInvites}
+          onOpenModal={() => setShowInviteModal(true)}
+          onCloseModal={() => {
+            setShowInviteModal(false);
+            setInviteCount(1);
+          }}
+          onInviteCountChange={setInviteCount}
+          onGenerateInvites={handleGenerateInvites}
+          onCopyInviteLink={copyInviteLink}
+          onDeleteInvite={handleDeleteInvite}
+          formatDate={formatDate}
+          t={t}
+          classes={{
+            cardClass,
+            labelClass,
+            primaryBtnClass,
+            secondaryBtnClass,
+            dangerBtnClass,
+            inputClass,
+            chipClass,
+          }}
+        />
       )}
 
       {!isOrgAdmin && (
@@ -1014,57 +950,6 @@ export function OrganizationDashboardTab() {
             {t("organization.leaveOrganization")}
           </button>
         </section>
-      )}
-
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className={`${cardClass} w-full max-w-md p-6`}>
-            <p className={labelClass}>Invites</p>
-            <h3 className="mt-1 text-xl font-medium tracking-[-0.5px] text-white">
-              {t("organization.generateInviteModal")}
-            </h3>
-            <div className="mt-6">
-              <label className="mb-2 block text-sm text-neutral-400">
-                {t("organization.numberOfInvites")}
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={inviteCount}
-                onChange={(e) =>
-                  setInviteCount(
-                    Math.min(50, Math.max(1, parseInt(e.target.value, 10) || 1))
-                  )
-                }
-                className={inputClass}
-              />
-              <p className="mt-1.5 text-xs text-neutral-500">
-                {t("organization.inviteHelper")}
-              </p>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => {
-                  setShowInviteModal(false);
-                  setInviteCount(1);
-                }}
-                className={`${secondaryBtnClass} flex-1`}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                onClick={handleGenerateInvites}
-                disabled={generatingInvites}
-                className={`${primaryBtnClass} flex-1`}
-              >
-                {generatingInvites
-                  ? t("organization.generating")
-                  : t("organization.generate")}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

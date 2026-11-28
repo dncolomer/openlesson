@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       organization_id: access.organizationId,
       is_org_admin: false,
       key_id: "tap-complete",
-      scopes: ["workspaces:write"],
+      scopes: ["sessions:write"],
     };
 
     if (sessionQuality === "impure") {
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
           access.sessionTable,
           resolvedTapSessionId,
           sessionPayload,
-          "id, workspace_id, block_id, status, guest_link",
+          "id, status, guest_link",
         )
       : await insertGuestSession(
           access.supabase,
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
             interaction_kind: write.interaction_kind,
             session_shell: write.session_shell,
           },
-          "id, workspace_id, block_id, status, guest_link",
+          "id, status, guest_link",
         );
     const row = written.data;
     const writeError = written.error as { message?: string } | null;

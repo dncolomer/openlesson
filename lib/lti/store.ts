@@ -3,7 +3,7 @@
  * Supabase when the service role exists; otherwise process memory for tests.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { generateLtiToolKey, publicJwksFromKeys, type LtiToolKeyPair } from "@/lib/lti/keys";
 import type { LtiOidcState } from "@/lib/lti/oidc";
 import type { LtiPlatformRegistration } from "@/lib/lti/platform";
@@ -47,9 +47,7 @@ export function resetLtiStore(backend: "unknown" | "memory" = "unknown"): void {
   next.backend = backend;
 }
 
-function hasSupabase(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+const hasSupabase = isSupabaseAdminConfigured;
 
 async function backend(): Promise<"supabase" | "memory"> {
   const mem = store();

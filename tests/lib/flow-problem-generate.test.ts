@@ -164,10 +164,7 @@ describe("generate problem from artifacts", () => {
     expect(read("app/api/dashboard/protocols/route.ts")).toContain("generateProblemOnOpen");
     expect(read("app/api/dashboard/protocols/[id]/route.ts")).toContain("generateProblemOnOpen");
     expect(read("lib/verification-flow-repository.ts")).toContain("generate_problem_on_open");
-    const session = read("app/api/learn/session-branch-model/route.ts");
-    expect(session).toContain("openingWorkFromArtifactProblem");
-    expect(session).toContain("generateProblemOnOpen");
-    const sql = read("supabase/migrations/20261121160000_flow_generate_problem_on_open.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261121160000_flow_generate_problem_on_open.sql");
     expect(sql).toContain("solve_flows");
     expect(sql).toContain("verify_flows");
     expect(sql).toContain("calibrate_flows");

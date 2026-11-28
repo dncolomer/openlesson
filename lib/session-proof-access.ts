@@ -66,7 +66,7 @@ function authFromParticipant(input: {
     organization_id: input.organizationId,
     is_org_admin: false,
     key_id: input.keyId,
-    scopes: ["workspaces:write"],
+    scopes: ["sessions:write"],
   };
 }
 
@@ -262,7 +262,7 @@ export async function requireSessionProofAccess(
         workspace.organization_id,
       is_org_admin: profile?.is_org_admin === true || profile?.is_admin === true,
       key_id: "ui-session",
-      scopes: ["workspaces:read", "workspaces:write"],
+      scopes: ["sessions:read", "sessions:write"],
     },
     billingUserId: user.id,
     ownerUserId,

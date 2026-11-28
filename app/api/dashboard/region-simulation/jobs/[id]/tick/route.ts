@@ -1,4 +1,4 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
@@ -37,9 +37,6 @@ export async function POST(
       return jsonError(404, "Job not found");
     }
     const ticked = await tickRegionSimulationJob(id);
-    if (ticked.shouldContinue) after(() => tickRegionSimulationJob(id));
-    const followUpId = ticked.followUpJobId;
-    if (followUpId) after(() => tickRegionSimulationJob(followUpId));
     return NextResponse.json(jobsPublicPayload(ticked.job));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to tick job";

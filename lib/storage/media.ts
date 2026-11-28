@@ -439,8 +439,7 @@ export async function getAllAudioChunks(sessionId: string): Promise<RecentAudioC
 
 export async function getUserCalibration(
   userId: string,
-   
-  supabaseClient?: any
+  supabaseClient?: ReturnType<typeof createClient>
 ): Promise<UserCalibration> {
   const supabase = supabaseClient || createClient();
 
@@ -488,8 +487,7 @@ export async function getUserCalibration(
   const allSignals: string[] = [];
 
   for (const session of sessions) {
-     
-    const probes = session.probes as any[];
+    const probes = session.probes;
     if (probes) {
       for (const probe of probes) {
         totalGapScore += probe.gap_score || 0;
@@ -547,8 +545,7 @@ function calculateAvgGap(sessions: { probes: { gap_score: number }[] }[]): numbe
   let total = 0;
   let count = 0;
   for (const session of sessions) {
-     
-    const probes = session.probes as any[];
+    const probes = session.probes;
     if (probes) {
       for (const probe of probes) {
         total += probe.gap_score || 0;

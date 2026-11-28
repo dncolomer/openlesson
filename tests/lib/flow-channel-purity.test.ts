@@ -60,26 +60,16 @@ describe("enforced channel purity", () => {
     expect(mediaStreamLive(null)).toBe(false);
   });
 
-  it("wires sensor idle into Learn, Verify, and Calibration", () => {
-    const learn = read("components/SessionView.tsx");
+  it("wires sensor idle into Verify", () => {
     const tap = read("components/TapScoreClient.tsx");
-    const hook = read("components/session-view/use-learn-session-purity.ts");
     const signals = read("components/session-view/session-signals.tsx");
-    expect(learn).toContain("sessionPurityArmed(enforcedChannels)");
-    expect(learn).toContain("getSensorLive");
     expect(tap).toContain("sessionPurityArmed(enforcedChannelsRef.current)");
     expect(tap).toContain("enforcedSensorChannelsMissing");
-    expect(hook).toContain("shouldPenalizeEnforcedChannelIdle");
-    expect(hook).toContain("if (!channels.audio) return");
     expect(signals).toContain("channels.muse");
     expect(signals).toContain("channels.video");
     expect(signals).toContain("channels.screenshots");
     expect(tap).toContain("enforcedChannelsRef.current");
     expect(tap).toContain("enforcedChannelsKey");
-    const chrome = read("components/session-view/session-chrome.tsx");
-    expect(chrome).toContain("enforcedChannels.muse");
-    expect(chrome).toContain("enforcedChannels.video");
-    expect(chrome).toContain("enforcedChannels.screenshots");
     expect(read("components/VerificationFlowRunner.tsx")).toContain(
       "enforcedChannels={enforcedChannels}",
     );

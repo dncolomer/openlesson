@@ -28,7 +28,7 @@ const ownerAuth: AuthContext = {
   organization_id: null,
   is_org_admin: false,
   key_id: "web",
-  scopes: ["tap:write", "workspaces:write"],
+  scopes: ["sessions:write", "protocols:write"],
 };
 
 function read(rel: string) {
@@ -527,7 +527,7 @@ describe("access resolution rejects revoked links", () => {
 
 describe("static wiring: migration, APIs, UI", () => {
   it("migration allows TAP status revoked", () => {
-    const mig = read("supabase/migrations/20260724140000_tap_session_status_revoked.sql");
+    const mig = read("supabase/archive/migrations-pre-20261128/20260724140000_tap_session_status_revoked.sql");
     expect(mig).toContain("revoked");
     expect(mig).toContain("workspace_tap_sessions");
     expect(mig).toContain("workspace_tap_sessions_status_check");
@@ -553,19 +553,4 @@ describe("static wiring: migration, APIs, UI", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
-  it("i18n keys exist for invalidate actions", () => {
-    const en = JSON.parse(read("messages/en.json")) as {
-      planView: Record<string, string>;
-    };
-    for (const key of [
-      "tapLinksInvalidate",
-      "tapLinksInvalidateAll",
-      "tapLinksRevokedHint",
-      "ileLinksInvalidate",
-      "ileLinksInvalidateAll",
-      "ileLinksRevokedHint",
-    ]) {
-      expect(en.planView[key], key).toBeTruthy();
-    }
-  });
 });

@@ -22,6 +22,7 @@ import {
   findCalibrateOrVerifySessionByToken,
   type CalibrateVerifyTable,
 } from "@/lib/guest-session-tables";
+import { UNIFIED_SESSIONS_TABLE } from "@/lib/unified-sessions";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -49,7 +50,7 @@ export interface ResolvedTapSessionContext {
 export const TAP_SESSION_SELECT = GUEST_SESSION_SELECT;
 
 const TAP_SESSION_SELECT_NO_JOIN =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link";
+  "id, user_id, guest_user_id, assigned_user_id, organization_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link";
 
 export function authContextFromTapAccess(
   access: {
@@ -65,7 +66,7 @@ export function authContextFromTapAccess(
     organization_id: access.organizationId,
     is_org_admin: false,
     key_id: keyId,
-    scopes: ["workspaces:write"],
+    scopes: ["sessions:write"],
   };
 }
 
@@ -267,7 +268,7 @@ export async function resolveTapSessionAccess(input: {
         });
         guestUserId = created.id;
         await supabase
-          .from(sessionTable)
+          .from(UNIFIED_SESSIONS_TABLE)
           .update({ guest_user_id: guestUserId })
           .eq("id", sessionRow.id);
         sessionRow.guest_user_id = guestUserId;
@@ -347,13 +348,11 @@ export async function resolveTapSessionAccess(input: {
 
   const resolvedWorkspaceId =
     workspaceId || String(existingSession?.workspace_id || "").trim();
-  const { data: workspaceRow } = resolvedWorkspaceId
-    ? await supabase
-        .from("workspaces")
-        .select("user_id, organization_id")
-        .eq("id", resolvedWorkspaceId)
-        .maybeSingle()
-    : { data: null };
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", user.id)
+    .maybeSingle();
 
   return {
     supabase,
@@ -361,8 +360,11 @@ export async function resolveTapSessionAccess(input: {
     userId: user.id,
     guestUserId: null,
     assignedUserId: existingSession?.assigned_user_id?.toString() || null,
-    workspaceOwnerUserId: workspaceRow?.user_id || user.id,
-    organizationId: workspaceRow?.organization_id || null,
+    workspaceOwnerUserId: user.id,
+    organizationId:
+      existingSession?.organization_id?.toString() ||
+      profileRow?.organization_id ||
+      null,
     blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,
     tapSessionId: tapSessionId || "",

@@ -70,7 +70,7 @@ describe("flow row optional columns", () => {
       expect(src).toContain("@/lib/flow-row-write");
     }
     const sql = readFileSync(
-      join(ROOT, "supabase/migrations/20261121120000_flow_workspace_id.sql"),
+      join(ROOT, "supabase/archive/migrations-pre-20261128/20261121120000_flow_workspace_id.sql"),
       "utf8",
     );
     expect(sql).toContain("verify_flows");

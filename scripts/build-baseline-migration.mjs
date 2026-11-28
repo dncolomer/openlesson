@@ -6,7 +6,7 @@ import { loadEnvFile, projectRefFromUrl, parseDbPassword } from "./db-connection
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const BASELINE_VERSION = "20260711120000_baseline";
+const BASELINE_VERSION = "20261128120000_baseline";
 const pgDump =
   process.env.PG_DUMP_PATH || "/opt/homebrew/opt/libpq/bin/pg_dump";
 

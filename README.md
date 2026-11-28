@@ -28,9 +28,8 @@ Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP c
 - **Embeddable Knowledge Verification Protocols** — public protocol runs with The Protocol Challenge
 - **Knowledge Regions** — domain geometry for protocols, without a type field
 - **Public agent APIs + MCP** — Protocol API (`/api/v3/protocols`) and Knowledge Regions API (`/api/v3/knowledge-regions`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
-- **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
-- **Muse EEG and face tracking** — optional biosignals on session proof of work
-- **unsys** — practice dialogue in Learn sessions and workspace chat
+- **Work Canvas** — Excalidraw-based verification canvas with capture and proof-of-work tracking
+- **Muse EEG** — optional biosignal channel on verification proof of work
 
 ## Tech Stack
 
@@ -39,21 +38,19 @@ Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP c
 | Framework | Next.js (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
-| State | Zustand |
-| Database & Auth | Supabase (PostgreSQL + RLS + Auth) |
-| LLM + STT + Files | xAI (api.x.ai) |
+| State | React Hooks & Context |
+| Database & Auth | Supabase (PostgreSQL + RLS + Auth), WorkOS SSO, LTI 1.3 |
+| LLM + STT + Files | xAI (api.x.ai) / OpenRouter |
 | Payments | Stripe |
-| Graph Visualization | React Flow (@xyflow/react) |
-| Code Editor | Monaco Editor |
+| Canvas | Excalidraw (`@excalidraw/excalidraw`) |
 | EEG | Muse headband via Web Bluetooth |
-| Face Tracking | MediaPipe |
 | Deployment | Vercel |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.9+
 - A Supabase project
 - An xAI API key (https://console.x.ai)
 
@@ -100,7 +97,11 @@ Optional:
 | `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | OpenAI-compatible Chat Completions (default: xAI) |
 | `BLOB_STORE` / `BLOB_STORE_DIR` | `xai` (default) or `fs` with a disk directory for local/on-prem blobs |
 
-4. Set up the database by running the schema in `supabase/schema.sql` against your Supabase project (or apply `supabase/migrations`).
+4. Set up the database by applying timestamped migrations in `supabase/migrations/`:
+
+```bash
+npm run db:migrate:staging # or npm run db:migrate for production
+```
 
 5. Start the development server:
 
@@ -114,45 +115,28 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # REST/MCP routes (workspaces, Calibrate/Learn/Verify, PoW/Snapshot/Stash, admin)
-│   ├── workspace/        # Workspace views; create at /workspace/new
-│   ├── session/          # Learn tutoring session pages
-│   ├── tap/              # Legacy Calibrate/Verify session redirects
+│   ├── api/              # REST/MCP routes (protocols, knowledge-regions, verify, orgs, billing, LTI)
+│   ├── protocols/        # Protocol authoring & management
+│   ├── regions/          # Knowledge Region authoring, inspection & simulation
+│   ├── v/                # Public verification protocol runner
+│   ├── verify/           # Guest verification session runner
 │   ├── dashboard/        # User dashboard & API key management
-│   └── docs/             # Interactive Learning Map API reference
+│   └── docs/             # Interactive Proof-of-Work & Protocol API reference
 ├── components/           # React components
-│   ├── SessionView.tsx   # Learn session UI
-│   ├── WorkspaceView.tsx # Workspace shell (map vs Verification Workspace)
+│   ├── TapScoreClient.tsx # Verification session runner UI
+│   ├── ExcalidrawCanvas.tsx # Verification work canvas
+│   ├── product-flow/     # Protocol & Knowledge Region views
 │   └── thought-ui/       # Shared dialogue / thought components
 ├── lib/                  # Product runtime (PoW, Calibrate/Learn/Verify, xAI, maps, billing)
 │   ├── pow-api/          # PoW / Snapshot / Stash / MCP
 │   ├── xai-client.ts     # xAI API client
 │   └── workspace-kind.ts # standard vs knowledge_region
-├── utilities/            # Operator CLIs (not product features) — see utilities/README.md
-│   └── import-think-aloud-pow/
 ├── scripts/              # Ops: migrations, seeds, e2e, one-off backfills
 ├── docs/                 # Design notes and API docs
 ├── supabase/             # Database schema & migrations
-├── tests/                # Vitest (tests/lib mirrors lib/; tests/utilities mirrors utilities/)
-└── public/               # Static assets; skill.md for standard-workspace agent integrations
+├── tests/                # Vitest (tests/lib and tests/api)
+└── public/               # Static assets; skill.md for protocol & knowledge-region agent integrations
 ```
-
-`utilities/` vs `scripts/`: new operator tools (think-aloud import) go in `utilities/<name>/`. `scripts/` is ops automation (DB, CI, seeds). Product code stays in `app/`, `components/`, and `lib/`.
-
-## Operator utilities
-
-These are **not** Calibrate/Learn/Verify/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
-
-### Import think-aloud PoW (Learn Explore Solo)
-
-Turns a think-aloud video or audio file into Learn Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
-
-```bash
-npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id>
-npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id> --dry-run
-```
-
-Requires `XAI_API_KEY` (STT + action inference). Persist also needs Supabase service-role env. Video stills need `ffmpeg`; without it, traces still write. Full flags: `npm run import:think-aloud-pow -- --help`.
 
 ## Public agent APIs (v3)
 

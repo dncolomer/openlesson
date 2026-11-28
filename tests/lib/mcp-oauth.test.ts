@@ -13,7 +13,13 @@ describe("mcp oauth metadata", () => {
     const metadata = buildProtectedResourceMetadata("https://uncertain.systems");
     expect(metadata.resource).toBe("https://uncertain.systems/api/mcp");
     expect(metadata.authorization_servers).toEqual(["https://uncertain.systems"]);
+    expect(metadata.scopes_supported).toContain("protocols:read");
+    expect(metadata.scopes_supported).toContain("protocols:write");
+    expect(metadata.scopes_supported).toContain("knowledge-regions:read");
+    expect(metadata.scopes_supported).toContain("knowledge-regions:write");
     expect(metadata.scopes_supported).toContain("*");
+    expect(metadata.scopes_supported).not.toContain("workspaces:read");
+    expect(metadata.scopes_supported).not.toContain("workspaces:write");
   });
 
   it("exposes authorization server metadata with OAuth endpoints", () => {
@@ -43,7 +49,12 @@ describe("mcp oauth helpers", () => {
     expect(verifyPkceChallenge("wrong", challenge, "S256")).toBe(false);
   });
 
-  it("defaults requested scopes when none are provided", () => {
+  it("defaults requested scopes when none are provided and rejects legacy workspaces:* scopes", () => {
     expect(parseRequestedScopes(undefined)).toEqual(["*"]);
+    expect(parseRequestedScopes("protocols:read knowledge-regions:write")).toEqual([
+      "protocols:read",
+      "knowledge-regions:write",
+    ]);
+    expect(parseRequestedScopes("workspaces:read workspaces:write")).toEqual([]);
   });
 });

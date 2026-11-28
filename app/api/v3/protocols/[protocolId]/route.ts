@@ -14,7 +14,7 @@ interface RouteProps {
 }
 
 export async function GET(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "workspaces:read");
+  const result = await authenticateRequest(req, "protocols:read");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const org = await requireAgentRequestOrganization(req, auth);
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "workspaces:write");
+  const result = await authenticateRequest(req, "protocols:write");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const { protocolId } = await params;
@@ -64,7 +64,7 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
 }
 
 export async function DELETE(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "workspaces:write");
+  const result = await authenticateRequest(req, "protocols:write");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const org = await requireAgentRequestOrganization(req, auth);

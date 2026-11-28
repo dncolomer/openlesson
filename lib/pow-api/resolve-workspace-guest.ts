@@ -47,7 +47,7 @@ export async function assertReusableWorkspaceGuest(
 
   const { data: guest, error } = await supabase
     .from("organization_guest_users")
-    .select("id, organization_id, workspace_id, status")
+    .select("id, organization_id, status")
     .eq("id", guestUserId)
     .maybeSingle();
 
@@ -67,14 +67,9 @@ export async function assertReusableWorkspaceGuest(
   }
 
   if (input.allowWorkspaceScopedReuse) {
-    if (guest.workspace_id === input.workspaceId) {
-      return guest.id;
-    }
-
     const { data: tapHit } = await supabase
       .from("sessions")
       .select("id")
-      .eq("workspace_id", input.workspaceId)
       .eq("guest_user_id", guestUserId)
       .in("kind", ["calibrate", "verify", "learn"])
       .limit(1)

@@ -7,9 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readSessionStageSurface } from "../helpers/surface-source";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
-import { IleSessionImpureScreen } from "@/components/session-view/learn-silence-lock-screen";
 import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   ILE_SILENCE_LOCK_MINUTES_MIN,
@@ -44,12 +42,10 @@ import {
   voiceChallengeStartSucceeded,
 } from "@/lib/practice-voice-challenge";
 import { applyIlePregameDifficultyPreset } from "@/lib/learn-pregame-settings";
-import { scoutThinkAloudEnabled } from "@/lib/scout-session";
 
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string) {
-  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
@@ -298,15 +294,6 @@ describe("TAP Learning silence lock", () => {
     expect(muted.holding).toBe(true);
     expect(muted.outcome).toBe("rest");
     expect(muted.speech).toBe("");
-
-    const hook = read("components/session-view/use-learn-session-purity.ts");
-    const view = read("components/SessionView.tsx");
-    expect(hook).toContain("TAP_SILENCE_AUTO_STASH_MS");
-    expect(hook).toContain("shouldAutoStashOnSilence");
-    expect(hook).not.toContain("advanceIleSilenceClock");
-    expect(view).toContain("formingText: sessionThoughtInterface.crystallizableText");
-    expect(view).toContain("useIleSessionPurity");
-    expect(view).toContain("mountIleSilenceScreen");
   });
 
   it("lock 1 and 2 are rest-and-unlock and lock 3 is impurity without another return to work", () => {
@@ -377,73 +364,8 @@ describe("shipped voice-challenge UI wiring", () => {
       createElement(PracticeVoiceChallenge, { onPass: () => {}, framing: "rest", variant: "ile" }),
     );
     expect(spoken).not.toContain("data-practice-voice-local-skip");
-    expect(read("components/session-view/learn-silence-lock-screen.tsx")).not.toContain(
-      "PracticeVoiceChallenge",
-    );
-    expect(read("components/session-view/learn-silence-lock-screen.tsx")).toContain(
-      "function IleSessionImpureScreen",
-    );
-  });
-
-  it("TAP Learning start/help is a full-viewport surface with multi-sentence placeholders and the voice challenge wired to workspace start", () => {
-    const chrome = read("components/session-view/session-chrome.tsx");
-    const guide = read("components/SessionOnboardingGuide.tsx");
-    const view = read("components/SessionView.tsx");
-    const helpAt = chrome.indexOf('data-ile-help-fullscreen=""');
-    expect(helpAt).toBeGreaterThan(-1);
-    expect(chrome.slice(helpAt, helpAt + 400)).toContain("h-full w-full");
-    expect(chrome.slice(helpAt, helpAt + 400)).not.toContain("max-h-[min(88vh,44rem)]");
-    expect(guide).toContain("PracticeVoiceChallenge");
-    expect(guide).toContain("ileWorkspaceStartAllowed");
-    expect(guide).toContain("onStart?.()");
-    expect(view).toContain("onStart={() => { void handleWelcomePlay(); }}");
+    expect(existsSync(join(ROOT, "components/session-view/learn-silence-lock-screen.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/session-view/learn-insight-trophies.tsx"))).toBe(false);
-    const spoken = renderToStaticMarkup(createElement(PracticeVoiceChallenge, { onPass: () => {} }));
-    const ileSpoken = renderToStaticMarkup(
-      createElement(PracticeVoiceChallenge, { onPass: () => {}, variant: "ile" }),
-    );
-    expect(spoken).toContain("data-practice-voice-challenge");
-    expect(spoken).toContain('data-practice-voice-variant="tap"');
-    expect(spoken).toContain("Read this aloud to start");
-    expect(spoken).toContain("data-practice-voice-word");
-    expect(spoken).toContain('data-practice-voice-light="idle"');
-    expect(spoken).toContain("Accepted");
-    expect(spoken).toContain("Rejected");
-    expect(spoken).toContain("Not checked");
-    expect(spoken).toContain("data-practice-voice-check");
-    expect(spoken).toContain("Start");
-    expect(spoken).not.toContain("data-heard");
-    expect(spoken).not.toContain("data-practice-voice-fill");
-    expect(spoken).not.toContain("data-ile-sample-insight-card");
-    expect(spoken).toContain("data-practice-voice-retry");
-    expect(spoken).toContain("data-practice-voice-audio");
-    expect(spoken).toContain("data-session-audio-monitor");
-    expect(spoken).toContain("data-session-data-audio");
-    expect(spoken).toContain("MIC-01");
-    expect(spoken).toContain("Try again");
-    expect(spoken).not.toContain("data-practice-voice-local-skip");
-    expect(ileSpoken).not.toContain("data-practice-voice-local-skip");
-    expect(ileSpoken).toContain('data-practice-voice-variant="ile"');
-    expect(ileSpoken.replace(/<[^>]+>/g, "")).toContain("In this session I will work on the canvas");
-    expect(ileSpoken).toContain('data-practice-voice-sentence="2"');
-    expect(ileSpoken).not.toContain("data-ile-sample-insight-card");
-    expect(ileSpoken).not.toContain("data-ile-sample-insight-bar");
-    expect(ileSpoken).not.toContain("Sample insight");
-    expect(ileSpoken).not.toContain("A finished idea from one area of the map.");
-    const challenge = read("components/PracticeVoiceChallenge.tsx");
-    expect(challenge).toContain("data-practice-voice-loading");
-    expect(challenge).toContain("<IleStartLoading");
-    expect(read("components/session-view/learn-start-loading.tsx")).toContain("data-ile-start-tips");
-    expect(challenge).toContain("Starting the session");
-    expect(challenge).toContain('framing === "rest" ? "Continuing"');
-    expect(challenge).not.toContain("animate-spin");
-    expect(challenge).not.toContain("min-h-52");
-    expect(read("components/session-view/learn-silence-lock-screen.tsx")).not.toContain(
-      'framing="rest"',
-    );
-    expect(read("components/PracticeVoiceChallenge.tsx")).not.toContain("speechSynthesis");
-    expect(read("components/SessionOnboardingGuide.tsx")).toContain("data-ile-voice-challenge");
-    expect(read("components/SessionOnboardingGuide.tsx")).toContain("max-w-xl");
   });
 
   it("TAP briefing renders topic pick before the challenge and does not start from the pick", () => {
@@ -464,56 +386,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(pass).not.toContain("practice: true");
     expect(pass).toContain("scoredTapBriefingStep");
     expect(pass).toContain('step !== "live"');
-  });
-
-
-  it("Learn settings have no silence-minutes control; live uses TAP purity", () => {
-    const welcome = read("components/session-view/session-welcome-modal.tsx");
-    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
-    expect(welcome).not.toContain("ILE_SILENCE_LOCK_MINUTES_DESC");
-    expect(read("components/SessionView.tsx")).not.toContain("silenceLockMinutes={silenceLockMinutes}");
-    expect(read("components/SessionView.tsx")).toContain("useIleSessionPurity");
-    expect(read("components/session-view/use-learn-session-purity.ts")).toContain(
-      "TAP_SILENCE_AUTO_STASH_MS",
-    );
-  });
-
-  it("the impurity screen is TAP Session Invalidated with Try again", () => {
-    const screen = read("components/session-view/learn-silence-lock-screen.tsx");
-    const view = read("components/SessionView.tsx");
-    expect(screen).toContain("data-ile-session-impure");
-    expect(screen).toContain("data-ile-impure-retry");
-    expect(screen).toContain("tap.postSession.impureTitle");
-    expect(screen).toContain("tap.postSession.impureBody");
-    expect(screen).toContain("tap.postSession.impureTryAgain");
-    expect(screen).not.toContain("data-ile-silence-rest");
-    expect(screen).not.toContain("data-ile-impurity-save");
-    expect(screen).not.toContain("PracticeVoiceChallenge");
-    const impurity = renderToStaticMarkup(
-      createElement(IleSessionImpureScreen, {
-        onTryAgain: () => {},
-      }),
-    );
-    expect(impurity).toContain("data-ile-session-impure");
-    expect(impurity).toContain("data-ile-impure-retry");
-    expect(impurity).not.toContain("data-console-frame-label");
-    expect(impurity).not.toContain("data-practice-voice-challenge");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("startListening");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("getUserMedia");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("SessionAudioMonitor");
-    expect(view).not.toContain("pauseLiveSpeech()");
-    expect(view).not.toContain("silenceRest");
-    expect(view).toContain("useIleSessionPurity");
-    expect(view).not.toContain("slotCount={minInsightsPerChapter}");
-    expect(view).not.toContain("IleInsightEmptySlots");
-    expect(view).toContain("IleSessionImpureScreen");
-    expect(view).not.toContain("IleSilenceRestScreen");
-    expect(view).not.toContain("setShowSaveExitNameDialog");
-    expect(read("components/session-view/session-chrome.tsx")).not.toContain(
-      'testId="ile-save-exit-name"',
-    );
-    expect(read("components/session-view/session-chrome.tsx")).not.toContain("data-ile-session-name");
-    expect(view).toContain("void pauseAndGoToDashboard()");
-    expect(view).toContain("{ impure: true }");
   });
 });

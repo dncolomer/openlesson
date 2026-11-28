@@ -332,7 +332,7 @@ async function main() {
     const createKey = await webFetch("/api/v3/pow/keys", teamsJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["workspaces:read", "tap:read"] }),
+      body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["protocols:read", "knowledge-regions:read"] }),
     });
     const keyLimitMessage = String(createKey.body?.error?.message || "");
     const keyCreated =
@@ -535,7 +535,7 @@ async function main() {
 
         if (privateUrl) {
           const token = privateUrl.split("/").pop();
-          const page = await fetch(`${baseUrl}/tap/session/${token}`);
+          const page = await fetch(`${baseUrl}/verify/session/${token}`);
           record("tap-flow", "private session page", page.status === 200, `HTTP ${page.status}`);
 
           const chat = await fetch(`${baseUrl}/api/verify/session/chat`, {
@@ -666,7 +666,7 @@ async function main() {
 
             if (guestPrivateUrl) {
               const guestToken = guestPrivateUrl.split("/").pop();
-              const guestPage = await fetch(`${baseUrl}/tap/session/${guestToken}`);
+              const guestPage = await fetch(`${baseUrl}/verify/session/${guestToken}`);
               const guestPageText = await guestPage.text();
               record(
                 "tap-flow",

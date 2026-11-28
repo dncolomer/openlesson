@@ -1,5 +1,3 @@
-"use client";
-
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import {

@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
-  const result = await authenticateRequest(req, "workspaces:read");
+  const result = await authenticateRequest(req, "protocols:read");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   const ownerUserId = String(auth.user_id || "").trim();
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const result = await authenticateRequest(req, "workspaces:write");
+  const result = await authenticateRequest(req, "protocols:write");
   if (result instanceof NextResponse) return result;
   const { auth } = result;
   let body: Record<string, unknown>;

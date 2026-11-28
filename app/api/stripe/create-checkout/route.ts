@@ -1,6 +1,9 @@
+import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import Stripe from "stripe";
+import { parseJsonBody } from "@/lib/api/parse-body";
+import type Stripe from "stripe";
+import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
 import {
   creditPackCheckoutPriceData,
@@ -13,12 +16,6 @@ import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-c
 
 export const runtime = "nodejs";
 
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-  });
-}
-
 const GUEST_CHECKOUT_TYPES = new Set<CheckoutPriceType>([
   ...PUBLIC_MODULE_CHECKOUT_PRICE_TYPES,
 ]);
@@ -28,6 +25,14 @@ const CHECKOUT_PRICE_TYPES: CheckoutPriceType[] = [
   "api_metered",
 ];
 
+const createCheckoutBodySchema = z.object({
+  priceType: z
+    .string()
+    .refine((v): v is CheckoutPriceType => CHECKOUT_PRICE_TYPES.includes(v as CheckoutPriceType), {
+      message: "Invalid price type",
+    }),
+});
+
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
   try {
@@ -36,13 +41,13 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const body = await request.json();
-    const { priceType } = body as { priceType?: string };
-
-    if (!priceType || !CHECKOUT_PRICE_TYPES.includes(priceType as CheckoutPriceType)) {
-      return jsonError(400, "Invalid price type");
+    const parsedBody = await parseJsonBody(request, createCheckoutBodySchema, {
+      fallbackMessage: "Invalid price type",
+    });
+    if (!parsedBody.ok) {
+      return parsedBody.response;
     }
-    const priceTypeResolved = priceType as CheckoutPriceType;
+    const priceTypeResolved = parsedBody.data.priceType;
 
     const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceTypeResolved) && !user;
 

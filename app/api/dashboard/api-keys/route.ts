@@ -11,7 +11,7 @@ import { errorResponse } from "@/lib/pow-api/auth";
 import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-entity";
 import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_API_KEY_SCOPES } from "@/lib/pow-api/scopes";
+import { DEFAULT_API_KEY_SCOPES, parseRequestedApiKeyScopes } from "@/lib/pow-api/scopes";
 import type { ApiKeyScope } from "@/lib/pow-api/types";
 
 const MAX_KEYS_PER_USER = 10;
@@ -162,7 +162,11 @@ export async function POST(req: NextRequest) {
       return errorResponse(400, "validation_error", "Label must be a string with at most 128 characters");
     }
 
-    const scopes: ApiKeyScope[] = DEFAULT_SCOPES;
+    const parsedScopes = parseRequestedApiKeyScopes(body.scopes);
+    if (!parsedScopes.ok) {
+      return errorResponse(400, "validation_error", parsedScopes.message);
+    }
+    const scopes: ApiKeyScope[] = parsedScopes.scopes;
 
     // Validate expires_in_days
     if (expires_in_days !== undefined) {

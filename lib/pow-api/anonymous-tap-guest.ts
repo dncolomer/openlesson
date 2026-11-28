@@ -11,7 +11,7 @@ function isUuid(value: string | null | undefined): value is string {
 export async function createAnonymousTapGuest(
   supabase: SupabaseClient,
   input: {
-    workspaceId: string;
+    workspaceId?: string | null;
     organizationId: string | null;
     createdByUserId: string;
     createdByApiKeyId?: string | null;
@@ -22,9 +22,6 @@ export async function createAnonymousTapGuest(
     guestType?: "anonymous_tap_link" | "anonymous_ile_link";
   }
 ): Promise<{ id: string }> {
-  if (!isUuid(input.workspaceId)) {
-    throw new Error("workspaceId is required");
-  }
   if (!isUuid(input.createdByUserId)) {
     throw new Error("createdByUserId is required");
   }
@@ -41,11 +38,13 @@ export async function createAnonymousTapGuest(
     .from("organization_guest_users")
     .insert({
       organization_id: input.organizationId,
-      workspace_id: input.workspaceId,
       email,
       created_by_user_id: input.createdByUserId,
       created_by_api_key_id: input.createdByApiKeyId || null,
-      metadata: { type: guestType },
+      metadata: {
+        type: guestType,
+        ...(isUuid(input.workspaceId) ? { workspace_id: input.workspaceId } : {}),
+      },
     })
     .select("id")
     .single();

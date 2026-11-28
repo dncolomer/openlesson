@@ -176,13 +176,12 @@ export function buildTapThoughtTracePayload(input: {
 export async function fetchTapSessionTraces(
   supabase: SupabaseClient,
   tapSessionId: string,
-  workspaceId: string,
+  _workspaceId?: string,
 ): Promise<TapTraceEvidenceRow[]> {
   const { data, error } = await queryWorkspaceProofOfWorkRows<TapTraceEvidenceRow>(
     supabase
       .from("proof_of_work")
       .select("xai_file_id, metadata, timestamp_ms, tool_action")
-      .eq("workspace_id", workspaceId)
       .eq("tool_name", TAP_TRACE_TOOL_NAME)
       .contains("metadata", { tap_session_id: tapSessionId })
       .order("timestamp_ms", { ascending: true })
@@ -224,16 +223,14 @@ export async function flagTapSessionProofOfWorkPractice(
 
 async function patchTapSessionProofOfWorkMetadata(
   supabase: SupabaseClient,
-  workspaceId: string,
+  _workspaceId: string,
   tapSessionId: string,
   patch: Record<string, unknown>,
 ): Promise<number> {
-  const scopedWorkspaceId = String(workspaceId || "").trim();
-  let query = supabase
+  const query = supabase
     .from("proof_of_work")
     .select("id, metadata")
     .contains("metadata", { tap_session_id: tapSessionId });
-  if (scopedWorkspaceId) query = query.eq("workspace_id", scopedWorkspaceId);
 
   const { data, error } = await queryWorkspaceProofOfWorkRows<{
     id: string;
@@ -249,9 +246,10 @@ async function patchTapSessionProofOfWorkMetadata(
       ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
       ...patch,
     };
-    let update = supabase.from("proof_of_work").update({ metadata: nextMetadata }).eq("id", row.id);
-    if (scopedWorkspaceId) update = update.eq("workspace_id", scopedWorkspaceId);
-    const { error: updateError } = await update;
+    const { error: updateError } = await supabase
+      .from("proof_of_work")
+      .update({ metadata: nextMetadata })
+      .eq("id", row.id);
     if (!updateError) updated += 1;
   }
   return updated;

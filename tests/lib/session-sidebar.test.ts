@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/learn-voice-bar";
 import { IleWorkCanvasTimer, SessionSidebar } from "@/components/session-view/session-sidebar";
 import { applySessionPress, emptySessionMarkState, freezeMistakeList } from "@/lib/session-marks";
 import { SessionDataCard } from "@/components/session-view/session-data-card";
@@ -55,14 +54,18 @@ const TAP_SECTIONS: SessionSidebarSection[] = [
 ];
 
 function voiceBar() {
-  return createElement(IleVoiceBar, { thought });
+  return createElement("div", { "data-test-voice-bar": "" }, thought.crystallizableText);
 }
 
 function voiceActions(mode: SessionSidebarMode) {
-  return createElement(IleVoiceBarActions, {
-    onBackToDashboard: () => {},
-    showSave: sessionSidebarHasSection(mode, "save"),
-  });
+  return createElement(
+    "div",
+    { "data-ile-voice-bar-actions": "" },
+    sessionSidebarHasSection(mode, "save")
+      ? createElement("button", { "data-ile-bar-save": "" }, "Save")
+      : null,
+    createElement("button", { "data-ile-bar-exit": "" }, "Exit"),
+  );
 }
 
 const TOPIC_TITLE = "Just war";
@@ -339,10 +342,6 @@ describe("session sidebar mode configuration", () => {
       join(ROOT, "components/session-view/session-sidebar.tsx"),
       "utf8",
     );
-    const chromeSource = readFileSync(
-      join(ROOT, "components/session-view/session-chrome.tsx"),
-      "utf8",
-    );
     expect(existsSync(join(ROOT, "components/session-view/session-mark-controls.tsx"))).toBe(false);
     expect(sidebarSource).toContain("useState(false)");
     expect(sidebarSource).toContain('mode === "ile"');
@@ -354,11 +353,6 @@ describe("session sidebar mode configuration", () => {
     expect(sidebarSource).not.toContain("onOpenGlobalResources");
     expect(sidebarSource).not.toContain("aria-pressed");
     expect(sidebarSource).not.toContain("py-2.5");
-    expect(chromeSource).toContain("SessionPolicyProvider");
-    expect(chromeSource).toContain('<SessionGuidePanel guide="learn" />');
-    expect(chromeSource).toContain('id="actions"');
-    expect(chromeSource).not.toContain("SessionActionsPanel");
-    expect(chromeSource).not.toContain('focusLabel="actions"');
     expect(collapsed).not.toContain("data-session-policy-tab");
     expect(collapsed).not.toContain("data-session-assert-tab");
     expect(collapsed).not.toContain('data-session-sidebar-section="policy"');
@@ -645,22 +639,9 @@ describe("session sidebar mode configuration", () => {
     expect(readFileSync(join(ROOT, "components/thought-ui/ThoughtMemoryPanel.tsx"), "utf8")).not.toContain(
       "Search traces",
     );
-    const chrome = readFileSync(
-      join(ROOT, "components/session-view/session-chrome.tsx"),
-      "utf8",
-    );
-    expect(chrome).toContain('mode="ile"');
-    expect(chrome).not.toContain('mode="tap"');
-    expect(chrome).not.toContain('mode="verification-tap"');
-    expect(chrome).toContain("<SessionTopicCard");
-    expect(chrome).toContain("sessionSidebarTopic");
-    expect(chrome).not.toContain("<IleWorkDockBar");
-    expect(chrome).not.toContain("onFocusOpenWork");
     expect(tap.match(/<SessionTopicChapter/g)).toHaveLength(1);
-    for (const src of [tap, chrome]) {
-      expect(src).not.toContain("data-ile-chapter-dock-chapters");
-      expect(src).not.toContain(">Chapters<");
-    }
+    expect(tap).not.toContain("data-ile-chapter-dock-chapters");
+    expect(tap).not.toContain(">Chapters<");
     const one = sessionSidebarTopic([
       { id: "a", label: "Ch 1", keyword: "Alpha" },
       { id: "b", label: "Ch 2", keyword: "Beta", focused: true },

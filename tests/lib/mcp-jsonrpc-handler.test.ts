@@ -11,7 +11,7 @@ const auth: AuthContext = {
   guest_user_id: null,
   organization_id: null,
   is_org_admin: false,
-  scopes: ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
+  scopes: ["protocols:read", "protocols:write", "knowledge-regions:read", "knowledge-regions:write"],
 };
 
 describe("mcp-jsonrpc-handler", () => {

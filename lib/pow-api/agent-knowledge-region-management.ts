@@ -84,9 +84,9 @@ import {
 } from "@/lib/verification-flow-repository";
 
 const REGION_LIST_SELECT =
-  "id, workspace_id, owner_user_id, organization_id, name, description, subject_count, created_at, embedding_model_id";
+  "id, owner_user_id, organization_id, name, description, subject_count, created_at, embedding_model_id";
 const REGION_DETAIL_SELECT =
-  "id, workspace_id, owner_user_id, organization_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id";
+  "id, owner_user_id, organization_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id";
 const FLOW_TABLE = "verify_flows";
 const POW_SELECT =
   "proof_of_work_type, tool_name, tool_action, timestamp_ms, metadata, file_name, session_id, xai_file_id, mime_type, file_size";
@@ -817,7 +817,7 @@ export async function getAgentKnowledgeRegionRun(input: {
   const pow = (data || []).map((row) => flowPowFromWorkspaceRow(row));
   const orgId =
     text(input.organizationId) ||
-    (await organizationIdFromWorkspace(admin, text(region.workspace_id) || null)) ||
+    text(region.organization_id) ||
     (await organizationIdFromUser(admin, owner));
   const bodies = await loadStoredRecordBodies(pow, async (fileId) => {
     const upstream = await getOrgScopedFileContentResponse(fileId, orgId);

@@ -109,7 +109,7 @@ describe("core data model contract", () => {
 
   it("foundation migration registers models, session result columns, and drops empty leftover tables", () => {
     const sql = readFileSync(
-      join(ROOT, "supabase/migrations/20261025200000_core_data_model_foundation.sql"),
+      join(ROOT, "supabase/archive/migrations-pre-20261128/20261025200000_core_data_model_foundation.sql"),
       "utf8",
     );
     expect(sql).toContain("create table if not exists public.embedding_models");
@@ -124,7 +124,7 @@ describe("core data model contract", () => {
 
   it("adds owner-scoped Solve flows and session/region foreign keys", () => {
     const sql = readFileSync(
-      join(ROOT, "supabase/migrations/20261030200000_solve_flows.sql"),
+      join(ROOT, "supabase/archive/migrations-pre-20261128/20261030200000_solve_flows.sql"),
       "utf8",
     );
     expect(sql).toContain("create table if not exists public.solve_flows");
@@ -138,7 +138,7 @@ describe("core data model contract", () => {
 
   it("drops retired AYCL shop tables and Stripe Connect payout columns", () => {
     const sql = readFileSync(
-      join(ROOT, "supabase/migrations/20261110120000_drop_learning_map_shop_payouts.sql"),
+      join(ROOT, "supabase/archive/migrations-pre-20261128/20261110120000_drop_learning_map_shop_payouts.sql"),
       "utf8",
     );
     expect(sql).toContain("drop table if exists public.aycl_purchases cascade");

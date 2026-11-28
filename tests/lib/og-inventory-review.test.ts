@@ -21,11 +21,12 @@ import {
   UNSYS_STANDARD_SHARE_TITLE,
   standardShareSocialMetadata,
 } from "@/lib/og/standard";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6c95ab69b7c0/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-6c95ab69b7c0/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -51,7 +52,7 @@ function walkOgRoutes(dir: string, acc: string[] = []): string[] {
 describe("OG share inventory (one unsys standard)", () => {
   it("lists all registry surfaces with identical unsys standard title, description, aesthetic", () => {
     const surfaces = listOgSurfaces();
-    expect(surfaces.length).toBe(8);
+    expect(surfaces.length).toBe(4);
     expect(Object.keys(OG_SURFACES).sort()).toEqual(
       [...REQUIRED_SHARE_SURFACE_IDS].sort(),
     );
@@ -117,11 +118,10 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(openGraphImagePathForRoute("/docs/proof-of-work-api")).toBe(
       "/docs/proof-of-work-api/opengraph-image",
     );
-    expect(openGraphImagePathForRoute("/docs/learning-map-api")).toBe(
-      "/docs/learning-map-api/opengraph-image",
-    );
-    expect(OG_SURFACES.insight.path).toContain("[id]");
-    expect(OG_SURFACES["public-workspace"].path).toContain("[id]");
+    expect(OG_SURFACES.vision).toBeUndefined();
+    expect(OG_SURFACES["docs-learning-map-api"]).toBeUndefined();
+    expect(OG_SURFACES.insight).toBeUndefined();
+    expect(OG_SURFACES["public-workspace"]).toBeUndefined();
   });
 
   it("discovers every dedicated opengraph-image / twitter-image route under app/", () => {
@@ -129,12 +129,10 @@ describe("OG share inventory (one unsys standard)", () => {
     const expected = [
       "docs/proof-of-work-api/opengraph-image.tsx",
       "opengraph-image.tsx",
-      "p/[id]/[slug]/opengraph-image.tsx",
       "pricing/opengraph-image.tsx",
       "pricing/twitter-image.tsx",
       "science/opengraph-image.tsx",
       "twitter-image.tsx",
-      "vision/opengraph-image.tsx",
     ].sort();
     expect(routes).toEqual(expected);
 
@@ -144,15 +142,10 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(read("app/pricing/opengraph-image.tsx")).toContain(
       'createStaticOgImageHandler("pricing")',
     );
-    expect(read("app/vision/opengraph-image.tsx")).toContain('"vision"');
     expect(read("app/science/opengraph-image.tsx")).toContain('"science"');
     expect(read("app/docs/proof-of-work-api/opengraph-image.tsx")).toContain(
       "docs-proof-of-work-api",
     );
-
-    const publicOg = read("app/p/[id]/[slug]/opengraph-image.tsx");
-    expect(publicOg).toContain("composeStandardOgImage");
-    expect(publicOg).not.toContain("planData?.title");
   });
 
   it("twitter-image routes re-export opengraph-image where present", () => {
@@ -185,10 +178,6 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(pricing).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(pricing).toMatch(/twitter:\s*standardSocial\.twitter/);
 
-    const vision = read("app/vision/page.tsx");
-    expect(vision).toContain("standardShareSocialMetadata");
-    expect(vision).not.toContain("/vision/opengraph-image");
-
     const science = read("app/science/page.tsx");
     expect(science).toContain("standardShareSocialMetadata");
     expect(science).not.toContain("/science/opengraph-image");
@@ -201,9 +190,6 @@ describe("OG share inventory (one unsys standard)", () => {
     const docs = read("app/docs/proof-of-work-api/layout.tsx");
     expect(docs).toContain("standardShareSocialMetadata");
 
-    const publicPage = read("app/p/[id]/[slug]/page.tsx");
-    expect(publicPage).toContain("standardShareSocialMetadata");
-
     expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
 
     const hack = read("app/community-events/page.tsx");
@@ -215,8 +201,6 @@ describe("OG share inventory (one unsys standard)", () => {
 
     // SEO helpers
     expect(read("lib/seo/product-page.ts")).toContain("standardShareSocialMetadata");
-    expect(read("lib/seo/use-case-page.ts")).toContain("standardShareSocialMetadata");
-    expect(read("lib/seo/platform-page.ts")).toContain("standardShareSocialMetadata");
 
     // Standard module is the single source of share title/description/image
     expect(UNSYS_STANDARD_SHARE.imagePath).toBe("/opengraph-image");

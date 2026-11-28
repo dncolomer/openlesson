@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
-import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
+import { encodeFlowEmbedding, encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import {
   inspectStudioEmbedding,
   type DataStudioEmbeddingRow,

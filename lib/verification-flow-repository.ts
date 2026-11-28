@@ -8,7 +8,9 @@
  * `applyVerificationCommand`.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { randomBytes, randomUUID } from "node:crypto";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
+import { hashPrivateToken } from "@/lib/tap-score";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize } from "@/lib/learning-model";
 import {
@@ -40,7 +42,19 @@ import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { parseProtocolSettingId } from "@/lib/organization/protocol-settings";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
-import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
+import { billedUserIdForSession } from "@/lib/credits/ledger";
+
+function inviteFlowSessionOwner(input: {
+  flowOwnerUserId: string;
+  runnerUserId?: string | null;
+}): { user_id: string; billedUserId: string; workspace_id: null } {
+  const ownerUserId = String(input.flowOwnerUserId || "").trim();
+  const billedUserId = billedUserIdForSession({
+    runnerUserId: input.runnerUserId,
+    ownerUserId,
+  });
+  return { user_id: ownerUserId, billedUserId, workspace_id: null };
+}
 import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
 import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
 
@@ -75,11 +89,7 @@ export function resetVerificationFlowRepository(): void {
   store.backend = "unknown";
 }
 
-function supabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-}
+const supabaseConfigured = isSupabaseAdminConfigured;
 
 async function resolveBackend(): Promise<"supabase" | "memory"> {
   const store = verificationRepositoryGlobal();
@@ -177,7 +187,7 @@ async function loadSupabaseState(filter: {
   if (ids.length === 0) return emptyVerificationState();
   const { data: sessionRows } = await supabase
     .from("sessions")
-    .select("id, verify_flow_id, identity, result, workspace_id")
+    .select("id, verify_flow_id, identity, result")
     .eq("kind", "verify")
     .in("verify_flow_id", ids);
   const identityRows = (sessionRows || [])
@@ -192,7 +202,7 @@ async function loadSupabaseState(filter: {
       results.push(
         mapResultFromAnswer(
           String(row.verify_flow_id || ""),
-          String(row.workspace_id || ""),
+          "",
           answer as Record<string, unknown>,
           null,
         ),
@@ -212,14 +222,13 @@ async function loadSupabaseState(filter: {
 async function persistCommand(
   command: VerificationCommand,
   value: Extract<VerificationCommandResult, { ok: true }>,
-): Promise<void> {
+): Promise<{ sessionId?: string; privateToken?: string } | void> {
   const supabase = createAdminClient();
   if (command.type === "create" && value.flow) {
     const { error } = await writeVerificationFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
       owner_user_id: nullableId(value.flow.ownerUserId),
       organization_id: nullableId(value.flow.organizationId),
-      workspace_id: nullableId(value.flow.workspaceId),
       name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
@@ -286,44 +295,56 @@ async function persistCommand(
     });
     const mapped = flow ? mapFlow(flow as Record<string, unknown>) : null;
     const topic = String(mapped?.topic || "").trim();
-    const { error } = await supabase.from("sessions").insert({
-      kind: "verify",
-      problem: mapped?.exactProblemOnCanvas && topic ? topic : "Verify",
-      status: "pending",
-      user_id: owner.user_id,
-      verify_flow_id: command.flowId,
-      identity: value.identity,
-      result: {
+    const privateToken = randomBytes(32).toString("hex");
+    const privateTokenHash = hashPrivateToken(privateToken);
+    const { data: inserted, error } = await supabase
+      .from("sessions")
+      .insert({
         kind: "verify",
-        projectedPolicy: null,
-        knowledgeRegionId: null,
-        answers: [],
-      },
-      metadata: withCanvasCaptureMetadata(
-        withEnforcedChannelsMetadata(
-          withFlowLinkMetadata(
-            {
-              ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
-              ...(mapped?.openingCanvasScene
-                ? { openingCanvasScene: mapped.openingCanvasScene }
-                : {}),
-              ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
-            },
-            {
-              id: command.flowLinkId,
-              label: command.flowLinkLabel,
-            },
+        problem: mapped?.exactProblemOnCanvas && topic ? topic : "Verify",
+        status: "pending",
+        user_id: owner.user_id,
+        organization_id: flow?.organization_id ?? null,
+        verify_flow_id: command.flowId,
+        identity: value.identity,
+        access_mode: "private",
+        private_token_hash: privateTokenHash,
+        result: {
+          kind: "verify",
+          projectedPolicy: null,
+          knowledgeRegionId: null,
+          answers: [],
+        },
+        metadata: withCanvasCaptureMetadata(
+          withEnforcedChannelsMetadata(
+            withFlowLinkMetadata(
+              {
+                ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+                ...(mapped?.openingCanvasScene
+                  ? { openingCanvasScene: mapped.openingCanvasScene }
+                  : {}),
+                ...(mapped?.generateProblemOnOpen ? { generateProblemOnOpen: true } : {}),
+              },
+              {
+                id: command.flowLinkId,
+                label: command.flowLinkLabel,
+              },
+            ),
+            parseFlowEnforcedChannels(mapped?.enforcedChannels),
           ),
-          parseFlowEnforcedChannels(mapped?.enforcedChannels),
+          parseFlowCanvasCapture(mapped?.canvasCapture),
         ),
-        parseFlowCanvasCapture(mapped?.canvasCapture),
-      ),
-    });
+      })
+      .select("id")
+      .single();
     if (error) {
       await refundClaimedFlowSession(charged?.billedUserId);
       throw new Error(error.message);
     }
-    return;
+    return {
+      sessionId: inserted?.id ? String(inserted.id) : undefined,
+      privateToken,
+    };
   }
   if (command.type === "addResult" && value.result) {
     const answer = {
@@ -407,16 +428,23 @@ async function stateFor(command: VerificationCommand): Promise<VerificationState
 
 export async function runVerificationCommand(
   command: VerificationCommand,
-): Promise<VerificationCommandResult> {
+): Promise<VerificationCommandResult & { sessionId?: string; privateToken?: string }> {
   const state = await stateFor(command);
   const next = applyVerificationCommand(state, command);
   if (!next.ok) return next;
   if ((await resolveBackend()) === "memory") {
     verificationRepositoryGlobal().memory = next.state;
+    if (command.type === "claim") {
+      return {
+        ...next,
+        sessionId: randomUUID(),
+        privateToken: randomBytes(32).toString("hex"),
+      };
+    }
     return next;
   }
-  await persistCommand(command, next);
-  return next;
+  const persisted = await persistCommand(command, next);
+  return persisted ? { ...next, ...persisted } : next;
 }
 
 function presentFlow(flow: VerificationFlow): VerificationFlow {
@@ -445,7 +473,6 @@ async function writeVerificationFlow(
       "duration_minutes",
       "owner_user_id",
       "organization_id",
-      "workspace_id",
       "archived_at",
       "artifacts",
       "exact_problem_on_canvas",
@@ -592,7 +619,14 @@ export async function claimPublicIdentity(
   });
   if (!claimed.ok) return { ok: false as const, reason: claimed.reason };
   const choices = startChoicesForFlow(flow);
-  return { ok: true as const, flow, identity: claimed.identity, choices };
+  return {
+    ok: true as const,
+    flow,
+    identity: claimed.identity,
+    choices,
+    sessionId: claimed.sessionId ?? null,
+    privateToken: claimed.privateToken ?? null,
+  };
 }
 
 export async function addPublicFlowResult(input: {

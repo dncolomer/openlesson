@@ -11,7 +11,7 @@ import type { FlowPowRow } from "@/lib/flow-embedding";
 import { persistCompletedFlowEmbedding, type StoredFlowEmbedding } from "@/lib/flow-embedding-store";
 import { insertWorkspaceProofOfWorkRow } from "@/lib/pow-api/workspace-proof-of-work";
 import { REGION_SIMULATION_SOURCE } from "@/lib/region-simulation";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import type { FlowKind } from "@/lib/flow-embedding";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
@@ -28,9 +28,7 @@ export function applyProofOfWorkRunIdFilter<T>(query: T, runId: string): T {
   return next.contains("metadata", { tap_session_id: id });
 }
 
-function supabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+const supabaseConfigured = isSupabaseAdminConfigured;
 
 function jsonBytes(value: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(value));
@@ -74,7 +72,6 @@ export async function persistRegionSimulationProof(input: {
     const { error } = await insertWorkspaceProofOfWorkRow(supabase, {
       session_id: null,
       user_id: ownerUserId,
-      workspace_id: input.workspaceId || null,
       proof_of_work_type: row.type === "screen" ? "screen" : "tool",
       pow_model_version: POW_MODEL_VERSION,
       file_name: `${runId}-${index}.json`,

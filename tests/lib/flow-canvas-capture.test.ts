@@ -145,7 +145,7 @@ describe("flow canvas capture", () => {
   });
 
   it("wires authoring, claim, and run progress bars", () => {
-    expect(existsSync(join(root, "supabase/migrations/20261125140000_flow_canvas_capture.sql"))).toBe(
+    expect(existsSync(join(root, "supabase/archive/migrations-pre-20261128/20261125140000_flow_canvas_capture.sql"))).toBe(
       true,
     );
     expect(read("components/product-flow/flow-channels-fields.tsx")).toContain("data-flow-canvas-capture");
@@ -154,17 +154,11 @@ describe("flow canvas capture", () => {
     expect(read("components/product-flow/flow-publish-review.tsx")).toContain("Capture Canvas every");
     expect(read("lib/verification-flow-repository.ts")).toContain("canvas_capture");
     expect(read("lib/verification-flow-repository.ts")).toContain("withCanvasCaptureMetadata");
-    expect(read("components/session-view/use-session-field.ts")).toContain(
-      "buildCanvasMermaidDocumentUploadItem",
-    );
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
       "buildCanvasMermaidDocumentUploadItem",
     );
     expect(read("components/tap-score/tap-score-phases.tsx")).not.toContain(
       "buildTapCanvasSnapshotUploadItem",
-    );
-    expect(read("components/session-view/use-session-runtime.ts")).not.toContain(
-      "buildIleCanvasUploadItem",
     );
     expect(read("components/product-flow/region-simulation-setup.tsx")).toContain(
       "data-region-simulation-progress-overall",
@@ -176,11 +170,6 @@ describe("flow canvas capture", () => {
   });
 
   it("classifies canvas actions for Unsys even when capture is off", async () => {
-    const learn = read("components/session-view/use-session-field.ts");
-    const logIdx = learn.indexOf('logTool("canvas"');
-    const clockIdx = learn.indexOf("clock.note(events.length)");
-    expect(logIdx).toBeGreaterThan(0);
-    expect(clockIdx).toBeGreaterThan(logIdx);
     const tap = read("components/tap-score/tap-score-phases.tsx");
     const tapUploadIdx = tap.indexOf("buildTapWorkCanvasActionUploadItem");
     const tapClockIdx = tap.indexOf("clock.note(events.length)");

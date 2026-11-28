@@ -16,10 +16,7 @@ const GATE_FILES = [
   "app/dashboard/page.tsx",
   "app/organization/page.tsx",
   "app/invite/[token]/page.tsx",
-  "app/session/page.tsx",
-  "app/session/analytics/page.tsx",
   "app/login/page.tsx",
-  "components/SessionView.tsx",
 ] as const;
 
 describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {

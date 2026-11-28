@@ -206,58 +206,7 @@ describe("TAP client wires purity UX", () => {
     expect(complete).toContain('sessionQuality === "impure"');
   });
 
-  it("Learn SessionView uses the same session purity auto-stash and impure close", () => {
-    const ile = readSessionViewSurface();
-    expect(ile).toContain("tap-session-purity");
-    expect(ile).toContain("TAP_SILENCE_AUTO_STASH_MS");
-    expect(ile).toContain("useIleSessionPurity");
-    expect(ile).toContain("sessionPurityArmed(enforcedChannels)");
-    expect(ile).toContain("getSensorLive");
-    expect(ile).toContain("shouldAutoStashOnSilence");
-    expect(ile).toContain("shouldPenalizeEmptyBarSilence");
-    expect(ile).toContain("shouldEvaluateSessionPurity");
-    expect(ile).toContain("isWithinTapPurityGrace");
-    expect(ile).toContain("waitingForHelios: isSendingRef.current");
-    expect(ile).toContain("canvasLoading: canvasLoadingRef.current");
-    expect(ile).toContain("waitingForXaiReply: xaiReplyWaitRef.current");
-    expect(ile).toContain('stashRef.current({ auto: true })');
-    expect(ile).toContain("applyPurityHit");
-    expect(ile).toContain("data-ile-session-impure");
-    expect(ile).toContain("data-ile-impure-retry");
-    expect(ile).toContain("window.location.reload()");
-    expect(ile).toContain("tap.postSession.impureTitle");
-    expect(ile).toContain("{ impure: true }");
-    expect(ile).not.toContain("data-ile-silence-lock-minutes");
-    expect(ile).not.toContain("IleSilenceRestScreen");
-    expect(ile).not.toContain("useIleSilenceLock");
-    const phase = fs.readFileSync(
-      path.join(ROOT, "components/session-view/use-session-phase.ts"),
-      "utf8",
-    );
-    expect(phase).toContain("flagIleSessionProofOfWorkImpure");
-    expect(phase).toContain("withImpurePoWData");
-    expect(phase).toContain("stayOnScreen: impure");
-    const impureRoute = fs.readFileSync(
-      path.join(ROOT, "app/api/session/proof-of-work/impure/route.ts"),
-      "utf8",
-    );
-    expect(impureRoute).toContain("flagIleSessionProofOfWorkImpure");
-    expect(impureRoute).toContain("requireSessionProofAccess");
-  });
-
-  it("Learn purity is off on a development loopback host and stays on in production and Verify", () => {
-    const hook = fs.readFileSync(
-      path.join(ROOT, "components/session-view/use-learn-session-purity.ts"),
-      "utf8",
-    );
-    expect(hook).toContain("practiceVoiceChallengeLocalSkipAllowed");
-    expect(hook).toContain("process.env.NODE_ENV");
-    expect(hook).toContain("window.location.hostname");
-    expect(hook).toContain("localSkip");
-    const tickGuard = hook.indexOf("if (!input.armed || sessionEndedImpure || localSkip)");
-    const tickEval = hook.indexOf("shouldEvaluateSessionPurity({");
-    expect(tickGuard).toBeGreaterThan(-1);
-    expect(tickEval).toBeGreaterThan(tickGuard);
+  it("TAP purity stays on in production and Verify without localhost bypass", () => {
     const tap = fs.readFileSync(
       path.join(ROOT, "components/TapScoreClient.tsx"),
       "utf8",

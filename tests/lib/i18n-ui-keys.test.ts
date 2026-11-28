@@ -75,13 +75,10 @@ describe("UI i18n surface keys resolve in en.json", () => {
 
   it("new keys exist on every locale file (parity for filled surface holes)", () => {
     const required = [
-      "chapterMap.complete",
       "common.signIn",
       "dashboard.noApiKeysYet",
       "probes.pressToToggle",
-      "sessionEnd.returnToWorkspace",
       "session.initialChaptersPickRandom",
-      "planMode.initialChaptersPickRandom",
       "organization.organizationId",
       "organization.copyId",
     ];

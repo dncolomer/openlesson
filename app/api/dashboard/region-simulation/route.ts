@@ -2,7 +2,7 @@
  * Owner dashboard: configure and run a knowledge-region simulation
  * for knowledge verification protocols.
  */
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { flowOwnedByUser, productFlowEmbeddingKind } from "@/lib/product-flow";
@@ -32,7 +32,10 @@ import {
   tickRegionSimulationJob,
 } from "@/lib/region-simulation-jobs";
 import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
-import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
+import {
+  loadOpenRouterApiKeyForOrganization,
+  loadOpenRouterApiKeyForOwnerUser,
+} from "@/lib/organization/org-backend-runtime";
 import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import { problemsForSimulationFlow, runRegionSimulation } from "@/lib/region-simulation-run";
 import { resolveDashboardOrganizationId } from "@/lib/organization/dashboard-organization";
@@ -173,10 +176,6 @@ export async function POST(req: NextRequest) {
     const includeHumanData = body.includeHumanData === true;
     const aiUseCatalogIds = parseAiUseCatalogIds(body.aiUseCatalogIds);
     const samplesPerAiUse = clampSamplesPerAiUse(body.samplesPerAiUse);
-    if (aiUseCatalogIds.length) {
-      const openRouterKey = await loadOpenRouterApiKeyForOwnerUser(auth.user.id);
-      if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
-    }
     const selectedFlows = aiUseCatalogIds.length ? protocolIds.slice(0, 1) : protocolIds;
     const org = await resolveDashboardOrganizationId({
       req,
@@ -186,6 +185,12 @@ export async function POST(req: NextRequest) {
     });
     if (!org.ok) return org.response;
     const organizationId = org.organizationId;
+    if (aiUseCatalogIds.length) {
+      const openRouterKey =
+        (await loadOpenRouterApiKeyForOrganization(organizationId)) ||
+        (await loadOpenRouterApiKeyForOwnerUser(auth.user.id));
+      if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
+    }
 
     const flows: Array<{
       id: string;
@@ -216,9 +221,6 @@ export async function POST(req: NextRequest) {
           : null,
       });
       const ticked = await tickRegionSimulationJob(job.id);
-      if (ticked.shouldContinue) after(() => tickRegionSimulationJob(job.id));
-      const followUpId = ticked.followUpJobId;
-      if (followUpId) after(() => tickRegionSimulationJob(followUpId));
       return NextResponse.json({
         ...jobsPublicPayload(ticked.job),
         explorationJobId: job.id,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import Stripe from "stripe";
+import { enforceIpRateLimit } from "@/lib/api/rate-limit";
+import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getPendingCheckoutBySessionId,
@@ -11,13 +12,10 @@ import { emailFromCheckoutSession, isGuestCheckoutPriceType, planIdFromPriceType
 
 export const runtime = "nodejs";
 
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-  });
-}
-
 export async function GET(request: NextRequest) {
+  const limited = await enforceIpRateLimit(request, "stripe-verify-session", 60);
+  if (limited) return limited;
+
   try {
     const sessionId = new URL(request.url).searchParams.get("session_id");
     if (!sessionId) {

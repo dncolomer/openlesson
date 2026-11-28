@@ -4,7 +4,13 @@ import { DEFAULT_API_KEY_SCOPES } from "../scopes";
 
 export const MCP_OAUTH_RESOURCE_PATH = "/api/mcp";
 
-export const MCP_OAUTH_SCOPES: ApiKeyScope[] = ["*"];
+export const MCP_OAUTH_SCOPES: ApiKeyScope[] = [
+  "protocols:read",
+  "protocols:write",
+  "knowledge-regions:read",
+  "knowledge-regions:write",
+  "*",
+];
 
 export const MCP_OAUTH_DEFAULT_SCOPES: ApiKeyScope[] = DEFAULT_API_KEY_SCOPES;
 

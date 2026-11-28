@@ -25,7 +25,7 @@ import {
   FLOW_EMBEDDING_MODEL_ID,
   type FlowEmbeddingChannel,
 } from "@/lib/flow-embedding";
-import { encodeFlowEmbedding, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
@@ -377,9 +377,6 @@ export async function verificationProofEmbedding(input: {
   catalogSize?: unknown;
   policy?: { model: SessionBranchModel; sequence: readonly string[] } | null;
 }): Promise<number[]> {
-  if (input.source === "synthetic") {
-    return encodeTextsToFlowVector([input.prompt]);
-  }
   const source = input.source ?? "runner";
   const record = await encodeFlowEmbedding({
     flowKind: "verify",

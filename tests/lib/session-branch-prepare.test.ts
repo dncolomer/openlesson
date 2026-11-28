@@ -174,10 +174,6 @@ describe("session branch prepare", () => {
       }),
     ).toMatchObject({ chapterTitle: "Fallback" });
     expect(learnSessionFieldInput({ problem: "A cause" })).toBeNull();
-    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
-      "fallbackTitle",
-    );
-    expect(read("components/SessionView.tsx")).not.toContain("fallbackTitle");
     expect(
       sessionSidebarTopic([
         {
@@ -253,33 +249,18 @@ describe("session branch prepare", () => {
         problem: "P",
       }),
     ).not.toHaveProperty("catalogSize");
-    const route = read("app/api/learn/session-branch-model/route.ts");
-    expect(route).not.toContain("resolveCatalogSize");
-    expect(route).toContain("generateSessionBranchOpening");
-    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
-      "session-plan/create",
-    );
-    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
-      "session-plan/translate",
-    );
     expect(read("lib/session-branch-model-generate.ts")).not.toContain("catalogSize");
     expect(read("lib/session-branch-model-generate.ts")).toContain("SESSION_BRANCH_CHILD_MIN");
     expect(read("lib/session-branch-model-generate.ts")).toContain("SESSION_BRANCH_CHILD_MAX");
   });
 
-  it("prepares the field for Calibrate and Verification, and leaves conversational TAP alone", () => {
+  it("prepares the field for Verification and leaves conversational TAP alone", () => {
     const verification = read("components/tap-score/tap-score-phases.tsx");
-    const learn = read("components/session-view/session-chapter-canvas.tsx");
-    const route = read("app/api/learn/session-branch-model/route.ts");
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
     expect(verification).toContain('enabled={kind === "verify"}');
     expect(verification).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(verification).not.toContain("policyTab");
     expect(verification).toContain("verificationToken");
-    expect(learn).toContain("useSessionBranchField");
-    expect(route).toContain("getVerificationFlowByToken");
-    expect(route).toContain("resolveTapSessionAccess");
-    expect(route).toContain("guardSessionRoute");
     expect(prompt).toContain("listKey: sessionMarkListKey ?? null");
     expect(prompt).toContain("usePublishSessionCanvasCommands");
     expect(prompt).toContain("publishCommands(null)");

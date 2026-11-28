@@ -6,59 +6,47 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildGuestLinkUrl, flowSessionPath } from "@/lib/guest-link-access";
-import { buildIleSessionUrl } from "@/lib/learn-link";
 import { buildTapScoreSessionUrl } from "@/lib/tap-score";
-import { ileSessionMapPath, ileSessionSettingsPath } from "@/lib/learn-session-routes";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ab7c040d7287/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ab7c040d7287/implementer");
 
 function read(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
 describe("flow-named session URLs", () => {
-  it("share builders advertise learn/verify session paths", () => {
+  it("share builders advertise verify session paths", () => {
     expect(flowSessionPath("tap", "scout")).toBe("/verify/session");
     expect(flowSessionPath("tap", "exercise")).toBe("/verify/session");
-    expect(flowSessionPath("ile")).toBe("/learn/session");
     expect(buildGuestLinkUrl("https://app.example.com", "tap", "tok", "scout")).toBe(
       "https://app.example.com/verify/session/tok",
     );
     expect(buildTapScoreSessionUrl("https://app.example.com", "tok", "scout")).toBe(
       "https://app.example.com/verify/session/tok",
     );
-    expect(buildIleSessionUrl("https://app.example.com", "tok")).toBe(
-      "https://app.example.com/learn/session/tok",
-    );
-    expect(ileSessionMapPath({ sessionId: "s1", ileToken: "tok" })).toBe("/learn/session/tok");
-    expect(ileSessionSettingsPath({ sessionId: "s1", ileToken: "tok" })).toBe(
-      "/learn/session/tok/settings",
-    );
     expect(buildGuestLinkUrl("https://app.example.com", "tap", "tok", "scout")).not.toContain(
       "/tap/session",
     );
-    expect(buildIleSessionUrl("https://app.example.com", "tok")).not.toContain("/ile/session");
   });
 
-  it("ships flow-named App Router pages; legacy session pages redirect", () => {
+  it("ships verify App Router page without legacy /tap/session or /calibrate/session redirects", () => {
     expect(existsSync(join(ROOT, "app/calibrate/session/[token]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/play/calibrate/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/verify/session/[token]/page.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/learn/session/[token]/page.tsx"))).toBe(true);
-    expect(read("app/tap/session/[token]/page.tsx")).toContain("flowSessionPath");
-    expect(read("app/tap/session/[token]/page.tsx")).toContain("redirect");
+    expect(existsSync(join(ROOT, "app/learn/session/[token]/page.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/tap/session/[token]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/ile/session/[token]/page.tsx"))).toBe(false);
-    expect(read("next.config.ts")).toContain("/ile/session");
-    expect(read("next.config.ts")).toContain("/learn/session/:token");
-    expect(read("next.config.ts")).toContain("/calibrate/session/:token");
-    expect(read("next.config.ts")).toContain("/verify/session/:token");
+    const nextConfig = read("next.config.ts");
+    expect(nextConfig).not.toContain("/tap/session/:token");
+    expect(nextConfig).not.toContain("/calibrate/session/:token");
     const mw = read("middleware.ts");
     expect(mw).not.toContain('"/calibrate/session"');
+    expect(mw).not.toContain('"/tap/session"');
     expect(mw).toContain('"/verify/session"');
-    expect(mw).toContain('"/learn/session/"');
   });
 });
 
@@ -69,7 +57,6 @@ describe("flow-url evidence", () => {
       join(SCRATCH, "flow-urls.log"),
       [
         buildTapScoreSessionUrl("https://uncertain.systems", "abc", "scout"),
-        buildIleSessionUrl("https://uncertain.systems", "abc"),
         buildGuestLinkUrl("https://uncertain.systems", "tap", "abc"),
       ].join("\n"),
     );

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { hashApiKey } from "@/lib/x402";
+import { hashApiKey } from "./api-key-hash";
 import type { AuthContext, ApiKeyScope, ApiError } from "./types";
 import { jsonError } from "@/lib/api-error-envelope";
 import { checkRateLimitAsync } from "./rate-limit";
@@ -26,7 +26,7 @@ export async function getServiceClient(): Promise<SupabaseClient> {
  */
 export async function authenticateRequest(
   req: NextRequest,
-  requiredScope: ApiKeyScope
+  requiredScope?: ApiKeyScope
 ): Promise<{ auth: AuthContext; supabase: SupabaseClient } | NextResponse> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -41,7 +41,7 @@ export async function authenticateRequest(
 /** Authenticate a raw API key value. Use with Bearer auth on POST /api/mcp. */
 export async function authenticateApiKey(
   apiKey: string,
-  requiredScope: ApiKeyScope
+  requiredScope?: ApiKeyScope
 ): Promise<{ auth: AuthContext; supabase: SupabaseClient } | NextResponse> {
   const supabase = await getServiceClient();
 

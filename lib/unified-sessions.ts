@@ -70,21 +70,17 @@ export function hydrateUnifiedGuestRow(row: Record<string, unknown> | null): Rec
 }
 
 export function unifiedSessionInsertPayload(input: UnifiedSessionInsert): Record<string, unknown> {
-  const kind = parseSessionKind(input.kind) || "learn";
+  const kind = parseSessionKind(input.kind) || "verify";
   const problem =
     typeof input.problem === "string" && input.problem.trim()
       ? input.problem
-      : kind === "verify"
-        ? "Verify"
-        : "Learn";
+      : "Verify";
   return {
     ...(input.id ? { id: input.id } : {}),
     kind,
     user_id: input.user_id,
     problem,
     status: input.status || "pending",
-    workspace_id: input.workspace_id ?? null,
-    block_id: input.block_id ?? null,
     verify_flow_id: input.verify_flow_id ?? null,
     guest_user_id: input.guest_user_id ?? null,
     assigned_user_id: input.assigned_user_id ?? null,
@@ -97,7 +93,6 @@ export function unifiedSessionInsertPayload(input: UnifiedSessionInsert): Record
     field_model: input.field_model ?? null,
     guest_link: input.guest_link ?? {},
     metadata: input.metadata ?? undefined,
-    planning_prompt: input.planning_prompt ?? null,
   };
 }
 

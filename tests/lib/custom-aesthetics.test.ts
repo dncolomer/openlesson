@@ -32,12 +32,10 @@ import {
   validateCustomAestheticUpload,
   type CustomAestheticUpload,
 } from "@/lib/organization/custom-aesthetics";
-import { getRandomWorkspaceCoverImage } from "@/lib/workspace-image";
 import {
   BACKGROUND_IMAGES,
   pickTapBackgroundImage,
 } from "@/lib/tap-score-client-helpers";
-import { resolveWorkspaceCoverImage } from "@/lib/workspace-visual";
 import { CustomAestheticsStyler } from "@/components/organization/custom-aesthetics-styler";
 import { protocolSettingsPreviewScene } from "@/lib/organization/protocol-settings-preview";
 import { sidebarStyleUserContent } from "@/lib/organization/sidebar-style-generate";
@@ -428,22 +426,6 @@ describe("decideActiveAestheticPool", () => {
       () => 0,
     );
     expect(FALLBACK_AESTHETIC_IMAGES).toContain(fallbackPick);
-
-    const customCover = await getRandomWorkspaceCoverImage(customUrls);
-    expect(customUrls).toContain(customCover);
-    expect(String(customCover).startsWith("/aesthetics/")).toBe(false);
-
-    const systemCover = await getRandomWorkspaceCoverImage([]);
-    expect(String(systemCover).startsWith("/aesthetics/")).toBe(true);
-    expect(existsSync(join(ROOT, "public", String(systemCover).replace(/^\//, "")))).toBe(true);
-
-    const customCard = resolveWorkspaceCoverImage("workspace-new", null, customUrls);
-    expect(customUrls).toContain(customCard);
-    expect(customCard.startsWith("/aesthetics/")).toBe(false);
-    expect(resolveWorkspaceCoverImage("workspace-new", "/already-stored.jpg", customUrls)).toBe(
-      "/already-stored.jpg",
-    );
-    expect(resolveWorkspaceCoverImage("workspace-new").startsWith("/aesthetics/")).toBe(true);
   });
 
   it("does not reuse a stored /aesthetics/ still while the custom pool is active", () => {
@@ -800,26 +782,15 @@ describe("custom aesthetic surfaces", () => {
     expect(route).toContain("addCustomAestheticUrls");
     expect(route).toContain("added: published");
 
-    const migration = read("supabase/migrations/20260923120000_organization_custom_aesthetics.sql");
+    const migration = read("supabase/archive/migrations-pre-20261128/20260923120000_organization_custom_aesthetics.sql");
     expect(migration).toContain("custom_aesthetic_urls");
     expect(migration).toContain("org-aesthetics");
-    expect(read("supabase/migrations/20261126160000_sidebar_style.sql")).toContain("sidebar_style");
+    expect(read("supabase/archive/migrations-pre-20261128/20261126160000_sidebar_style.sql")).toContain("sidebar_style");
     expect(read("lib/organization/apply-sidebar-style.ts")).toContain("generateSessionSidebarStyle");
     expect(read("app/api/organization/protocol-settings/[id]/style/route.ts")).toContain(
       "applySidebarStyleBody",
     );
     expect(read("components/session-view/session-sidebar.tsx")).toContain("sessionSidebarStyleCssVars");
-  });
-
-
-  it("the session stage is the work canvas and does not mount an end-turn board", () => {
-    const view = read("components/SessionView.tsx");
-    const chrome = read("components/session-view/session-chrome.tsx");
-    expect(view).not.toContain("boardInterior=");
-    expect(view).not.toContain("<ChapterMapPanel");
-    expect(chrome).toContain('data-ile-canvas-stage="true"');
-    expect(chrome).toContain("{workCanvas}");
-    expect(chrome).not.toContain("End turn");
   });
 
   it("session start picks a random package (org custom set when present) without a picker", () => {
@@ -845,11 +816,7 @@ describe("custom aesthetic surfaces", () => {
     );
 
     const hook = read("components/session-view/use-aesthetic-packages.ts");
-    const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(hook).toContain("pickRandomAestheticPackage");
-    expect(welcome).not.toContain("AestheticPicker");
-    expect(welcome).toContain("selectedAesthetic?.previewImage");
-    expect(welcome).toContain("TapAestheticSection");
   });
 
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {

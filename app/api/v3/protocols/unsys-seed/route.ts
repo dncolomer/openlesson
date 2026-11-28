@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
-  const result = await authenticateRequest(req, "workspaces:write");
+  const result = await authenticateRequest(req, "protocols:write");
   if (result instanceof NextResponse) return result;
   let body: Record<string, unknown>;
   try {

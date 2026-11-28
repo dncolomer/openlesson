@@ -137,15 +137,12 @@ describe("knowledge verification protocols only", () => {
   it("keeps verification embeddings only", () => {
     expect([...EMBEDDING_FAMILIES]).toEqual(["verify"]);
     expect([...EMBEDDING_MODEL_IDS]).toEqual([VERIFY_EMBEDDING_MODEL_ID]);
-    const migration = read("supabase/migrations/20261126120000_protocols_only.sql");
+    const migration = read("supabase/archive/migrations-pre-20261128/20261126120000_protocols_only.sql");
     expect(migration).toContain("DROP TABLE IF EXISTS public.solve_flows");
     expect(migration).toContain("DROP TABLE IF EXISTS public.calibrate_flows");
     expect(migration).toContain("DROP TABLE IF EXISTS public.insights");
     expect(migration).toContain("DROP COLUMN IF EXISTS product");
     expect(migration).toContain("solve-flowcfg-v1-d96");
-    expect(read("lib/pow-api/custom-verification-model-crud.ts")).not.toContain(
-      "learn-flowcfg-v1-d96",
-    );
     expect(read("lib/flow-embedding-client.ts")).toContain('flowKind: "verify"');
     expect(existsSync(join(ROOT, "app/play/calibrate/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/calibrate/session/[token]/page.tsx"))).toBe(false);
@@ -184,12 +181,6 @@ describe("knowledge verification protocols only", () => {
     expect(readme).toContain("The Protocol Challenge");
     expect(readme).not.toContain("Calibrate / Learn / Verify practice links");
     expect(readme).not.toContain("Verification Flows");
-    const authoring = read("docs/course-authoring-tools-report.md");
-    expect(authoring).toContain("Embeddable Knowledge Verification Protocols");
-    expect(authoring).not.toContain("Create and manage calibration flows");
-    expect(authoring).not.toContain("Create and manage verification flows");
-    expect(authoring).not.toContain("mountsCalibrationFlowsPanel");
-    expect(read("docs/learn-pow-resources.md")).not.toContain("Crafting insights stays on the work canvas");
   });
 
   it("pricing, ontology, science, and dashboard payloads are protocol-only", () => {
@@ -250,6 +241,5 @@ describe("knowledge verification protocols only", () => {
     expect(launch).toContain("protocolPublicPathForSession");
     expect(launch).toContain("protocolPath");
     expect(launch).not.toContain("flowPublicPathForSession");
-    expect(read("lib/sales/platform-pitch-deck.ts")).not.toContain("Three flows.");
   });
 });

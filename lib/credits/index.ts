@@ -48,12 +48,3 @@ export {
 } from "@/lib/credits/account";
 
 export { createMemoryCreditStore } from "@/lib/credits/store";
-
-export {
-  AYCL_PLATFORM_FEE_BPS,
-  attachAyclConnectPaymentIntent,
-  authorCanReceiveAyclPayouts,
-  canCompletePayoutBearingAyclSale,
-  presentConnectStatus,
-  resolveAyclPayoutCheckout,
-} from "@/lib/credits/aycl-connect";

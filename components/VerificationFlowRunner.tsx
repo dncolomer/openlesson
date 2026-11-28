@@ -38,6 +38,8 @@ export function VerificationFlowRunner({
   const [phase, setPhase] = useState<Phase>(prepopulatedIdentity ? "claiming" : "identity");
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
+  const [claimedSessionId, setClaimedSessionId] = useState<string | null>(null);
+  const [claimedPrivateToken, setClaimedPrivateToken] = useState<string | null>(null);
   const [topic, setTopic] = useState("");
   const [presetTopics, setPresetTopics] = useState<TapStartingTopic[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
@@ -68,6 +70,16 @@ export function VerificationFlowRunner({
         return;
       }
       setClaimedIdentity(String(payload.identity || nextIdentity.trim()));
+      setClaimedSessionId(
+        typeof payload.sessionId === "string" && payload.sessionId.trim()
+          ? payload.sessionId.trim()
+          : null,
+      );
+      setClaimedPrivateToken(
+        typeof payload.privateToken === "string" && payload.privateToken.trim()
+          ? payload.privateToken.trim()
+          : null,
+      );
       const rawTopics = Array.isArray(payload.topics) ? payload.topics : [];
       const fallback = payload.question ? [payload.question] : [];
       const cards = (rawTopics.length ? rawTopics : fallback)
@@ -137,6 +149,7 @@ export function VerificationFlowRunner({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           identity: claimedIdentity,
+          runId: claimedSessionId || undefined,
           source: "runner",
           prompt: input.prompt,
           questionId: input.practice ? null : input.questionId || null,
@@ -157,6 +170,8 @@ export function VerificationFlowRunner({
         <TapScoreClient
           presetStartingTopics={presetTopics}
           localOpening
+          sessionId={claimedSessionId || undefined}
+          privateToken={claimedPrivateToken || undefined}
           sidebarMode="verification-tap"
           verificationToken={token}
           exactProblemOnCanvas={exactProblemOnCanvas}
@@ -167,7 +182,11 @@ export function VerificationFlowRunner({
           initialMinutes={durationMinutes}
           lockDuration
           onLocalProof={storeProof}
-          initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}
+          initialSession={{
+            id: claimedSessionId || undefined,
+            workspaceTitle: topic || "Verification flow",
+            post_session: "show_results",
+          }}
           showEndSession
         />
         </SessionSidebarStyleOverride>

@@ -41,8 +41,8 @@ export async function GET() {
           .eq("id", user.id)
           .single();
         profile = adminProfile;
-      } catch {
-        // Service role unavailable in local dev — fall through with null profile.
+      } catch (adminErr) {
+        console.warn("[me/status] Admin profile fallback unavailable:", adminErr);
       }
     }
 

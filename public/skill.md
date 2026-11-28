@@ -1103,7 +1103,7 @@ Each public tool has REST and MCP parity. REST bodies are snake_case. MCP argume
 - **MCP:** `list_protocols`
 - **REST:** `GET /api/v3/protocols`
 - **Family:** Protocol API
-- **Scope:** `workspaces:read`
+- **Scope:** `protocols:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -1273,7 +1273,7 @@ print(response.json())
 - **MCP:** `create_protocol`
 - **REST:** `POST /api/v3/protocols`
 - **Family:** Protocol API
-- **Scope:** `workspaces:write`
+- **Scope:** `protocols:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 201
 
@@ -1787,7 +1787,7 @@ print(response.json())
 - **MCP:** `upload_protocol_file`
 - **REST:** `POST /api/v3/protocols/files`
 - **Family:** Protocol API
-- **Scope:** `workspaces:write`
+- **Scope:** `protocols:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 201
 
@@ -1942,7 +1942,7 @@ print(response.json())
 - **MCP:** `generate_protocol_unsys_seed`
 - **REST:** `POST /api/v3/protocols/unsys-seed`
 - **Family:** Protocol API
-- **Scope:** `workspaces:write`
+- **Scope:** `protocols:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -2236,7 +2236,7 @@ print(response.json())
 - **MCP:** `get_protocol`
 - **REST:** `GET /api/v3/protocols/{protocol_id}`
 - **Family:** Protocol API
-- **Scope:** `workspaces:read`
+- **Scope:** `protocols:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -2414,7 +2414,7 @@ print(response.json())
 - **MCP:** `get_protocol_url`
 - **REST:** `GET /api/v3/protocols/{protocol_id}/url`
 - **Family:** Protocol API
-- **Scope:** `workspaces:read`
+- **Scope:** `protocols:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -2554,7 +2554,7 @@ print(response.json())
 - **MCP:** `update_protocol`
 - **REST:** `PATCH /api/v3/protocols/{protocol_id}`
 - **Family:** Protocol API
-- **Scope:** `workspaces:write`
+- **Scope:** `protocols:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -3046,7 +3046,7 @@ print(response.json())
 - **MCP:** `delete_protocol`
 - **REST:** `DELETE /api/v3/protocols/{protocol_id}`
 - **Family:** Protocol API
-- **Scope:** `workspaces:write`
+- **Scope:** `protocols:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -3153,7 +3153,7 @@ print(response.json())
 - **MCP:** `list_knowledge_regions`
 - **REST:** `GET /api/v3/knowledge-regions`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -3317,7 +3317,7 @@ print(response.json())
 - **MCP:** `get_knowledge_region_options`
 - **REST:** `GET /api/v3/knowledge-regions/options`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -3525,7 +3525,7 @@ print(response.json())
 - **MCP:** `create_knowledge_region`
 - **REST:** `POST /api/v3/knowledge-regions`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:write`
+- **Scope:** `knowledge-regions:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 202
 
@@ -3858,7 +3858,7 @@ print(response.json())
 - **MCP:** `get_knowledge_region`
 - **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -4070,7 +4070,7 @@ print(response.json())
 - **MCP:** `update_knowledge_region`
 - **REST:** `PATCH /api/v3/knowledge-regions/{knowledge_region_id}`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:write`
+- **Scope:** `knowledge-regions:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -4208,7 +4208,7 @@ print(response.json())
 - **MCP:** `delete_knowledge_region`
 - **REST:** `DELETE /api/v3/knowledge-regions/{knowledge_region_id}`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:write`
+- **Scope:** `knowledge-regions:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -4317,7 +4317,7 @@ print(response.json())
 - **MCP:** `simulate_knowledge_region`
 - **REST:** `POST /api/v3/knowledge-regions/{knowledge_region_id}/simulation`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:write`
+- **Scope:** `knowledge-regions:write`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 202
 
@@ -4626,7 +4626,7 @@ print(response.json())
 - **MCP:** `get_knowledge_region_job`
 - **REST:** `GET /api/v3/knowledge-regions/jobs/{job_id}`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -4764,7 +4764,7 @@ print(response.json())
 - **MCP:** `get_knowledge_region_run`
 - **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}/runs/{run_id}`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -4879,7 +4879,7 @@ print(response.json())
 - **MCP:** `get_knowledge_region_candidate`
 - **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 
@@ -4902,7 +4902,7 @@ Render one candidate in a knowledge region (unsys distance, cluster L2, pairwise
 - `organization_id` (required, string · Organization to target. Required. Users belong to multiple orgs. REST also accepts query organization_id or header X-Organization-Id. Alias organizationId.)
 - `knowledge_region_id` (required, string)
 - `candidate_id` (required, string)
-- `space` (optional, string · Named mix of basis channels, default path. Example: path+audio.)
+- `space` (optional, string · Embedding space. This client reads Path (flowcfg-v1-d96) only.)
 
 **Input JSON Schema**
 
@@ -4922,7 +4922,7 @@ Render one candidate in a knowledge region (unsys distance, cluster L2, pairwise
     },
     "space": {
       "type": "string",
-      "description": "Named mix of basis channels, default path. Example: path+audio."
+      "description": "Embedding space. This client reads Path (flowcfg-v1-d96) only."
     }
   },
   "required": [
@@ -5115,7 +5115,7 @@ print(response.json())
 - **MCP:** `get_knowledge_region_uncertainty_model`
 - **REST:** `GET /api/v3/knowledge-regions/{knowledge_region_id}/candidates/{candidate_id}/uncertainty-model`
 - **Family:** Knowledge Regions API
-- **Scope:** `workspaces:read`
+- **Scope:** `knowledge-regions:read`
 - **Auth:** `Authorization: Bearer <api_key>`
 - **Success:** HTTP 200
 

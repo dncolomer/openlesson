@@ -12,7 +12,7 @@ import {
   USE_CASES_COPY,
   USE_CASES_DIRECTORY,
   USE_CASES_OTHER,
-  useCasesCopyText,
+  getUseCasesCopyText,
 } from "@/lib/marketing/use-cases";
 
 const ROOT = join(__dirname, "../..");
@@ -100,7 +100,7 @@ describe("use cases listing", () => {
     expect(USE_CASES_COPY.title).toBe("Put knowledge building to work");
     expect(USE_CASES_COPY.closeCta).toBe("Discuss your use case");
     expect(USE_CASES_COPY.closeHref).toBe(ENTERPRISE_SETUP_MAILTO);
-    const text = useCasesCopyText();
+    const text = getUseCasesCopyText();
     expect(text).not.toMatch(/thinking stays human/);
     expect(text).toMatch(/knowledge region/);
     expect(text).toMatch(/The Protocol Challenge/);
@@ -128,8 +128,6 @@ describe("use cases listing", () => {
     expect(read("next.config.ts")).not.toMatch(
       /source:\s*["']\/use-cases["']\s*,\s*destination:\s*["']\/["']/,
     );
-    expect(read("next.config.ts")).toMatch(
-      /source:\s*["']\/use-cases\/:path\+["']\s*,\s*destination:\s*["']\/use-cases["']/,
-    );
+    expect(read("next.config.ts")).not.toContain("/use-cases/:path+");
   });
 });

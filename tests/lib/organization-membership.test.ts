@@ -112,7 +112,7 @@ describe("organization membership", () => {
     expect(accept).not.toContain("archived_at");
     expect(accept).not.toContain("organization_id: null");
 
-    const rpc = readRepo("supabase/migrations/20261126140000_organization_members.sql");
+    const rpc = readRepo("supabase/archive/migrations-pre-20261128/20261126140000_organization_members.sql");
     expect(rpc).toContain("CREATE TABLE IF NOT EXISTS public.organization_members");
     expect(rpc).toContain("ON CONFLICT (user_id, organization_id) DO NOTHING");
     expect(rpc).toContain("already_member");
@@ -169,7 +169,7 @@ describe("organization membership", () => {
     expect(ORGANIZATION_SWITCHED_EVENT).toBe("openlesson:organization-switched");
 
     const protocolOrg = readRepo(
-      "supabase/migrations/20261126150000_protocol_organization.sql",
+      "supabase/archive/migrations-pre-20261128/20261126150000_protocol_organization.sql",
     );
     expect(protocolOrg).toContain("verify_flows");
     expect(protocolOrg).toContain("knowledge_regions");

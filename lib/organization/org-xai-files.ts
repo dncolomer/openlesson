@@ -24,16 +24,10 @@ function asOrgId(value: unknown): string | null {
 }
 
 export async function organizationIdFromWorkspace(
-  supabase: SupabaseClient,
-  workspaceId: string | null | undefined,
+  _supabase: SupabaseClient,
+  _workspaceId: string | null | undefined,
 ): Promise<string | null> {
-  if (!workspaceId) return null;
-  const { data } = await supabase
-    .from("workspaces")
-    .select("organization_id")
-    .eq("id", workspaceId)
-    .maybeSingle();
-  return asOrgId(data?.organization_id);
+  return null;
 }
 
 export async function organizationIdFromUser(

@@ -19,7 +19,6 @@ import {
   buildSessionBranchGenerateMaterial,
   sessionBranchContextFromFlow,
 } from "@/lib/session-branch-model-generate";
-import { heliosFlowCreateInput } from "@/lib/workspace-helios-flow";
 import {
   FLOW_OPENING_CANVAS_LABEL,
   authoringOpeningCanvasScene,
@@ -31,9 +30,7 @@ import {
   seedPreparedOpeningCanvas,
   serializeFlowOpeningCanvasScene,
 } from "@/lib/flow-opening-canvas";
-
-import { heliosMapToolAwarenessText } from "@/lib/workspace-helios-tools";
-import { buildHeliosMapBuilderSystemPrompt } from "@/lib/prompt-kernel";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 
@@ -212,7 +209,7 @@ describe("flow exact problem on canvas", () => {
     if (!verify.ok) return;
     expect(verify.flow?.exactProblemOnCanvas).toBe(true);
 
-    const sql = read("supabase/migrations/20261115120000_flow_exact_problem_on_canvas.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261115120000_flow_exact_problem_on_canvas.sql");
     expect(sql).toContain("exact_problem_on_canvas");
     expect(sql).toContain("verify_flows");
 
@@ -222,7 +219,6 @@ describe("flow exact problem on canvas", () => {
     expect(page).toContain("onExactProblemOnCanvasChange");
     expect(page).toContain("problemReadOnly");
     expect(read("app/api/dashboard/protocols/route.ts")).toContain("exactProblemOnCanvas");
-    expect(read("lib/learn-opening-work-generate.ts")).toContain("exactProblem");
   });
 });
 
@@ -230,7 +226,7 @@ describe("flow opening canvas", () => {
   it("lets Solve and Verification store a prepared scene and hides Calibration", () => {
     const scratch =
       process.env.GROK_GOAL_SCRATCH ||
-      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+      join(tmpdir(), "openlesson-scratch", "grok-goal-8913821ad36e/implementer");
     mkdirSync(scratch, { recursive: true });
 
     const scene = {
@@ -328,7 +324,7 @@ describe("flow opening canvas", () => {
     const alreadyLive = seedPreparedOpeningCanvas(seeded.scene, stored);
     expect(alreadyLive.seeded).toBe(false);
 
-    const sql = read("supabase/migrations/20261121140000_flow_opening_canvas_scene.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261121140000_flow_opening_canvas_scene.sql");
     expect(sql).toContain("opening_canvas_scene");
     expect(sql).toContain("solve_flows");
     expect(sql).toContain("verify_flows");
@@ -388,7 +384,7 @@ describe("flow opening canvas", () => {
 
 describe("flow topic migration", () => {
   it("adds artifacts on all three tables and copies first question into topic", () => {
-    const sql = read("supabase/migrations/20261108120000_flow_problem_artifacts.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261108120000_flow_problem_artifacts.sql");
     expect(sql).toContain("solve_flows");
     expect(sql).toContain("verify_flows");
     expect(sql).toContain("calibrate_flows");

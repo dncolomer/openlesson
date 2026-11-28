@@ -47,7 +47,7 @@ export async function callMcpProofOfWorkTool(
   const organizationId = await requireToolOrganizationId({ auth, args });
 
   if (name === "list_protocols") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "protocols:read");
     assertNoRetiredKind(args);
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("No user available to list protocols");
@@ -59,14 +59,14 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "create_protocol") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "protocols:write");
     assertNoRetiredKind(args);
     const protocol = await createAgentProtocol(auth, undefined, args, organizationId);
     return await evidenceToolResult({ protocol }, { endpoint: "create_protocol" });
   }
 
   if (name === "upload_protocol_file") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "protocols:write");
     const artifact = await uploadAgentFlowFile(auth, args);
     return await evidenceToolResult(
       {
@@ -80,13 +80,13 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "generate_protocol_unsys_seed") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "protocols:write");
     const generated = await generateAgentFlowUnsysSeed(args);
     return await evidenceToolResult(generated, { endpoint: "generate_protocol_unsys_seed" });
   }
 
   if (name === "get_protocol") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "protocols:read");
     const protocolId = stringArg(args, "protocol_id");
     if (!protocolId) throw new Error("protocol_id is required.");
     const protocol = await getAgentProtocol(
@@ -100,7 +100,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_protocol_url") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "protocols:read");
     const protocolId = stringArg(args, "protocol_id");
     if (!protocolId) throw new Error("protocol_id is required.");
     const launch = await getAgentProtocolUrl(
@@ -116,7 +116,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "update_protocol") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "protocols:write");
     assertNoRetiredKind(args);
     const protocolId = stringArg(args, "protocol_id");
     if (!protocolId) throw new Error("protocol_id is required.");
@@ -131,7 +131,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "delete_protocol") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "protocols:write");
     const protocolId = stringArg(args, "protocol_id");
     if (!protocolId) throw new Error("protocol_id is required.");
     const deleted = await deleteAgentProtocol(auth, protocolId, organizationId);
@@ -139,7 +139,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "list_knowledge_regions") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledge_regions = await listAgentKnowledgeRegions(ownerUserId, organizationId);
@@ -147,7 +147,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_knowledge_region_options") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const options = await listAgentKnowledgeRegionOptions(ownerUserId, organizationId);
@@ -155,7 +155,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "create_knowledge_region") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "knowledge-regions:write");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const created = await createAgentKnowledgeRegion(ownerUserId, args, organizationId);
@@ -164,7 +164,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_knowledge_region") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");
@@ -179,7 +179,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "update_knowledge_region") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "knowledge-regions:write");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");
@@ -194,7 +194,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "delete_knowledge_region") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "knowledge-regions:write");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");
@@ -208,7 +208,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "simulate_knowledge_region") {
-    requireScope(auth.scopes, "workspaces:write");
+    requireScope(auth.scopes, "knowledge-regions:write");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");
@@ -224,7 +224,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_knowledge_region_job") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const jobId = stringArg(args, "job_id");
@@ -235,7 +235,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_knowledge_region_run") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");
@@ -253,7 +253,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_knowledge_region_candidate") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");
@@ -273,7 +273,7 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "get_knowledge_region_uncertainty_model") {
-    requireScope(auth.scopes, "workspaces:read");
+    requireScope(auth.scopes, "knowledge-regions:read");
     const ownerUserId = String(auth.user_id || "").trim();
     if (!ownerUserId) throw new Error("Not authenticated");
     const knowledgeRegionId = stringArg(args, "knowledge_region_id");

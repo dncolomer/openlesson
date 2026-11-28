@@ -35,7 +35,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "list_protocols",
     family: "protocol",
-    scope: "workspaces:read",
+    scope: "protocols:read",
     summary: "List knowledge verification protocols in the requested organization.",
     rest: {
       method: "GET",
@@ -45,7 +45,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "create_protocol",
     family: "protocol",
-    scope: "workspaces:write",
+    scope: "protocols:write",
     summary: "Create a knowledge verification protocol.",
     rest: {
       method: "POST",
@@ -55,7 +55,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "upload_protocol_file",
     family: "protocol",
-    scope: "workspaces:write",
+    scope: "protocols:write",
     summary:
       "Upload a Protocol Challenge context file (PDF, text, image) and get an artifact pointer for create_protocol / update_protocol.",
     rest: {
@@ -66,7 +66,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "generate_protocol_unsys_seed",
     family: "protocol",
-    scope: "workspaces:write",
+    scope: "protocols:write",
     summary:
       "Generate the Unsys model for a protocol from The Protocol Challenge, artifacts, and optional guidance.",
     rest: {
@@ -77,7 +77,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_protocol",
     family: "protocol",
-    scope: "workspaces:read",
+    scope: "protocols:read",
     summary: "Read one knowledge verification protocol.",
     rest: {
       method: "GET",
@@ -87,7 +87,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_protocol_url",
     family: "protocol",
-    scope: "workspaces:read",
+    scope: "protocols:read",
     summary:
       "Public URL for a protocol. Optional identity (or id) is prepopulated; the learner is not asked for an ID.",
     rest: {
@@ -98,7 +98,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "update_protocol",
     family: "protocol",
-    scope: "workspaces:write",
+    scope: "protocols:write",
     summary: "Update a knowledge verification protocol.",
     rest: {
       method: "PATCH",
@@ -108,7 +108,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "delete_protocol",
     family: "protocol",
-    scope: "workspaces:write",
+    scope: "protocols:write",
     summary: "Delete a knowledge verification protocol.",
     rest: {
       method: "DELETE",
@@ -118,7 +118,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "list_knowledge_regions",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary: "List knowledge regions in the requested organization.",
     rest: {
       method: "GET",
@@ -128,7 +128,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_knowledge_region_options",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary:
       "Wizard options for creating a knowledge region: protocols, exploration strategies, AI-use catalog, and sample bounds.",
     rest: {
@@ -139,7 +139,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "create_knowledge_region",
     family: "knowledge_region",
-    scope: "workspaces:write",
+    scope: "knowledge-regions:write",
     summary:
       "Create a knowledge region by running the simulation wizard (protocols, exploration strategies, optional AI-use).",
     rest: {
@@ -150,7 +150,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_knowledge_region",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary: "Read one knowledge region: clusters, strategies, AI-use clusters, and samples (no vectors).",
     rest: {
       method: "GET",
@@ -160,7 +160,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "update_knowledge_region",
     family: "knowledge_region",
-    scope: "workspaces:write",
+    scope: "knowledge-regions:write",
     summary: "Rename a knowledge region.",
     rest: {
       method: "PATCH",
@@ -170,7 +170,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "delete_knowledge_region",
     family: "knowledge_region",
-    scope: "workspaces:write",
+    scope: "knowledge-regions:write",
     summary: "Delete a knowledge region and its simulation clusters.",
     rest: {
       method: "DELETE",
@@ -180,7 +180,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "simulate_knowledge_region",
     family: "knowledge_region",
-    scope: "workspaces:write",
+    scope: "knowledge-regions:write",
     summary:
       "Add exploration-strategy or AI-use samples to an existing knowledge region.",
     rest: {
@@ -191,7 +191,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_knowledge_region_job",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary: "Read a knowledge-region simulation job.",
     rest: {
       method: "GET",
@@ -201,7 +201,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_knowledge_region_run",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary:
       "Retrieve stored proof-of-work for one sample run in a knowledge region (no person audio or video).",
     rest: {
@@ -212,7 +212,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_knowledge_region_candidate",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary:
       "Render metrics for one candidate in a knowledge region: unsys distance, cluster L2, path and pairwise L2.",
     rest: {
@@ -223,7 +223,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "get_knowledge_region_uncertainty_model",
     family: "knowledge_region",
-    scope: "workspaces:read",
+    scope: "knowledge-regions:read",
     summary:
       "Overlay one candidate walk on the region’s reference uncertainty model.",
     rest: {

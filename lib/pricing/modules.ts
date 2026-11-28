@@ -73,11 +73,11 @@ export function formatUsdFromCents(cents: number): string {
 
 function uniqueModules(modules: readonly ProductModule[]): ProductModule[] {
   const set = new Set<ProductModule>();
-  for (const module of modules) {
-    set.add(module);
-    if (module === "author") set.add("learn");
+  for (const mod of modules) {
+    set.add(mod);
+    if (mod === "author") set.add("learn");
   }
-  return PRODUCT_MODULES.filter((module) => set.has(module));
+  return PRODUCT_MODULES.filter((mod) => set.has(mod));
 }
 
 export function modulesForPlan(plan: string | null | undefined): ProductModule[] {

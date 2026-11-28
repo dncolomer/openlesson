@@ -94,8 +94,8 @@ describe("linkQueryGuestEmail / resolveGuestForLinkQueryParams", () => {
               eq(col: string, val: string) {
                 return {
                   eq(col2: string, val2: string) {
-                    expect(col).toBe("workspace_id");
-                    expect(val).toBe(workspaceId);
+                    expect(col).toBe("created_by_user_id");
+                    expect(val).toBe("aaaaaaaa-bbbb-4ccc-8ddd-111111111111");
                     expect(col2).toBe("email");
                     expect(val2).toBe(expectedEmail);
                     return {

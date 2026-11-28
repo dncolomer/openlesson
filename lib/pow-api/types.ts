@@ -5,12 +5,12 @@
 // --- API Key Types ---
 
 export type ApiKeyScope =
-  | "workspaces:read"
-  | "workspaces:write"
+  | "protocols:read"
+  | "protocols:write"
+  | "knowledge-regions:read"
+  | "knowledge-regions:write"
   | "sessions:read"
   | "sessions:write"
-  | "tap:read"
-  | "tap:write"
   | "org:read"
   | "org:write"
   | "*";
@@ -94,8 +94,9 @@ export type SessionStatus = "active" | "paused" | "completed" | "ended_by_tutor"
 // --- Scope requirements per endpoint ---
 
 export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
-  "POST /workspaces": "workspaces:write",
-  "GET /workspaces/:id/blocks": "workspaces:read",
-  "POST /workspaces/:id/proof-of-work-schema": "workspaces:read",
-  "POST /workspaces/:id/integration-skill": "workspaces:read",
+  "GET /api/v3/protocols": "protocols:read",
+  "POST /api/v3/protocols": "protocols:write",
+  "GET /api/v3/protocol-settings": "protocols:read",
+  "GET /api/v3/knowledge-regions": "knowledge-regions:read",
+  "POST /api/v3/knowledge-regions": "knowledge-regions:write",
 };

@@ -1,5 +1,4 @@
 import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
-import type { FlowEmbeddingViewRow } from "@/lib/flow-embedding-view";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
 export async function postWorkspaceFlowEmbedding(input: {
@@ -54,13 +53,4 @@ export async function postWorkspaceFlowEmbedding(input: {
   } catch {
     return { ok: false };
   }
-}
-
-export async function listWorkspaceFlowEmbeddings(_input: {
-  workspaceId: string;
-  ayclToken?: string;
-  flowId?: string | null;
-  flowKind?: FlowKind | string | null;
-}): Promise<FlowEmbeddingViewRow[]> {
-  return [];
 }

@@ -161,8 +161,8 @@ export function defaultProofOfWorkFileName(type: WorkspaceProofOfWorkType, provi
 
 export interface WorkspaceProofOfWorkRow {
   id: string;
-  workspace_id: string;
-  block_id: string | null;
+  workspace_id?: string | null;
+  block_id?: string | null;
   session_id: string | null;
   proof_of_work_type: WorkspaceProofOfWorkType;
   pow_model_version: PowModelVersion;
@@ -191,7 +191,7 @@ export function proofOfWorkQueryForAuth(auth: AuthContext) {
 }
 
 const PROOF_OF_WORK_SELECT =
-  "id, workspace_id, block_id, session_id, proof_of_work_type, pow_model_version, file_name, mime_type, file_size, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, device_name, sample_count, created_at";
+  "id, session_id, proof_of_work_type, pow_model_version, file_name, mime_type, file_size, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, device_name, sample_count, created_at";
 
 export async function insertWorkspaceProofOfWorkRow(
   supabase: import("@supabase/supabase-js").SupabaseClient,
@@ -231,14 +231,16 @@ export async function queryWorkspaceProofOfWorkRows<T>(
 
 export async function countWorkspaceProofOfWorkForPlan(
   supabase: import("@supabase/supabase-js").SupabaseClient,
-  workspaceId: string
+  sessionOrScopeId: string
 ): Promise<number> {
-  const id = String(workspaceId || "").trim();
-  if (!id) return 0;
+  const id = String(sessionOrScopeId || "").trim();
+  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return 0;
+  }
   const { count, error } = await supabase
     .from("proof_of_work")
     .select("id", { count: "exact", head: true })
-    .eq("workspace_id", id);
+    .eq("session_id", id);
 
   if (error) return 0;
   return count ?? 0;

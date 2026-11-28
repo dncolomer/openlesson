@@ -78,14 +78,9 @@ export function Navbar({
   const showCommunity = isLoggedIn !== true && productLinks;
   const showProductLinks = showNav && productLinks;
 
-  const solutionLinks = [
-    { href: "/", label: t('nav.forIndividuals') },
-    { href: "/enterprise", label: t('nav.forSales') },
-    { href: "/for-hiring-teams", label: t('nav.forHR') },
-    { href: "/homeschool", label: t('nav.forFamilies') },
-    { href: "/schools", label: t('nav.forSchools') },
-    { href: "/certify", label: t('nav.forCareers') },
-    { href: "/agent", label: t('nav.forAIAgent') },
+  const mobileProductLinks = [
+    { href: "/verify-protocols", label: "Verify Protocols" },
+    { href: "/use-cases", label: "Use cases" },
   ];
 
   return (
@@ -252,11 +247,9 @@ export function Navbar({
       {showProductLinks && mobileMenuOpen && (
         <div className="md:hidden mt-4 pb-4 border-t border-neutral-800 pt-4">
           <nav className="flex flex-col gap-4">
-            {/* Solutions Section - visible only on mobile/tablet where SolutionsBand is hidden */}
             <div className="lg:hidden">
-              <p className="text-xs text-neutral-600 uppercase tracking-wide mb-2">{t('nav.solutions')}</p>
               <div className="flex flex-col gap-2 pl-2 mb-4">
-                {solutionLinks.map((link) => (
+                {mobileProductLinks.map((link) => (
                   <Link 
                     key={link.href} 
                     href={link.href} 

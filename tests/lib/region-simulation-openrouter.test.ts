@@ -6,6 +6,7 @@ import {
   openRouterHeaders,
   openRouterUserHash,
   setOpenRouterFetchForTests,
+  setOpenRouterSleepForTests,
 } from "@/lib/ai/openrouter";
 import { setOrgOpenRouterApiKeyForTests } from "@/lib/organization/org-backend-runtime";
 import { AI_USE_DEFAULT_CHECKED, clampSamplesPerAiUse, publicAiUseCatalog } from "@/lib/region-simulation-ai-use-catalog";
@@ -17,6 +18,8 @@ import { applyProofOfWorkRunIdFilter } from "@/lib/region-simulation-persist";
 import { createAiUseCheckpoint, runAiUseHarnessRound } from "@/lib/region-simulation-harness";
 import { seededSimulationTree } from "@/lib/region-simulation";
 import {
+  REGION_SIM_CRON_DEADLINE_MS,
+  REGION_SIM_LEASE_MS,
   drainRegionSimulationJobs,
   enqueueRegionSimulation,
   resetRegionSimulationJobsForTests,
@@ -27,6 +30,7 @@ import { parseKnowledgeRegionFigureSpace, placeKnowledgeRegionAiUsePoints } from
 describe("openrouter client", () => {
   afterEach(() => {
     setOpenRouterFetchForTests(null);
+    setOpenRouterSleepForTests(null);
     setOrgOpenRouterApiKeyForTests(undefined);
   });
 
@@ -38,7 +42,9 @@ describe("openrouter client", () => {
     expect(headers["X-OpenRouter-Title"]).toBe("OpenLesson");
     expect(headers["HTTP-Referer"]).toBeTruthy();
     expect(openRouterUserHash("owner-1")).toHaveLength(32);
-    expect(OPENROUTER_ROUND_TIMEOUT_MS).toBe(45_000);
+    expect(OPENROUTER_ROUND_TIMEOUT_MS).toBe(25_000);
+    expect(REGION_SIM_LEASE_MS).toBe(65_000);
+    expect(REGION_SIM_CRON_DEADLINE_MS).toBe(45_000);
     const source = readFileSync(join(__dirname, "../../lib/ai/openrouter.ts"), "utf8");
     expect(source).not.toContain("OPENROUTER_API_KEY");
     expect(source).toContain("OPENROUTER_ORG_KEY_MISSING");
@@ -60,12 +66,21 @@ describe("openrouter client", () => {
     expect(calls).toBe(1);
   });
 
-  it("retries 429 once then returns tool calls", async () => {
+  it("retries 429 once with Retry-After backoff then returns tool calls and omits reasoning when absent", async () => {
     let calls = 0;
-    setOpenRouterFetchForTests(async () => {
+    const sleeps: number[] = [];
+    let lastBody: Record<string, unknown> | null = null;
+    setOpenRouterSleepForTests(async (ms) => {
+      sleeps.push(ms);
+    });
+    setOpenRouterFetchForTests(async (_url, init) => {
       calls += 1;
+      lastBody = JSON.parse(String(init?.body || "{}")) as Record<string, unknown>;
       if (calls === 1) {
-        return new Response(JSON.stringify({ error: { message: "rate" } }), { status: 429 });
+        return new Response(JSON.stringify({ error: { message: "rate" } }), {
+          status: 429,
+          headers: { "Retry-After": "3" },
+        });
       }
       return new Response(
         JSON.stringify({
@@ -97,8 +112,92 @@ describe("openrouter client", () => {
       apiKey: "sk-or-test",
     });
     expect(calls).toBe(2);
+    expect(sleeps).toEqual([3000]);
+    expect(lastBody).not.toHaveProperty("reasoning");
     expect(result.toolCalls[0]?.function.name).toBe("board_done");
     expect(result.costUsd).toBe(0.01);
+  });
+  it("sends usage.include=true, parses fallback token cost, and halts jobs at OPENROUTER_JOB_MAX_USD", async () => {
+    let seenBody: Record<string, unknown> | null = null;
+    setOpenRouterFetchForTests(async (_url, init) => {
+      seenBody = JSON.parse(String(init?.body || "{}")) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          id: "gen_fallback",
+          usage: { prompt_tokens: 10_000, completion_tokens: 5_000 },
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    id: "call_fb",
+                    type: "function",
+                    function: { name: "board_done", arguments: "{}" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    });
+    const res = await openRouterChatCompletions({
+      model: "openai/gpt-4o-mini",
+      messages: [{ role: "user", content: "hi" }],
+      apiKey: "sk-or-test",
+    });
+    expect(seenBody).toMatchObject({ usage: { include: true } });
+    expect(res.costUsd).toBeGreaterThan(0);
+
+    const prevMax = process.env.OPENROUTER_JOB_MAX_USD;
+    process.env.OPENROUTER_JOB_MAX_USD = "0.05";
+    try {
+      resetRegionSimulationJobsForTests();
+      setOrgOpenRouterApiKeyForTests("sk-or-cap-test");
+      setOpenRouterFetchForTests(async () =>
+        new Response(
+          JSON.stringify({
+            id: "gen_expensive",
+            usage: { cost: 0.08 },
+            choices: [
+              {
+                finish_reason: "tool_calls",
+                message: {
+                  role: "assistant",
+                  tool_calls: [
+                    {
+                      id: "call_exp",
+                      type: "function",
+                      function: { name: "board_done", arguments: "{}" },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+      const job = await enqueueRegionSimulation({
+        ownerUserId: "owner-cap",
+        family: "ai_use",
+        name: "Cap Region",
+        kind: "verification",
+        flows: [{ id: "flow-cap", name: "Flow", problems: ["P"] }],
+        catalogIds: [AI_USE_CATALOG[0]!.id],
+        samplesPerAiUse: 3,
+      });
+      const ticked = await tickRegionSimulationJob(job.id);
+      expect(ticked.job.status).toBe("failed");
+      expect(ticked.job.error).toBe("OpenRouter job USD cap");
+      expect(ticked.job.cost_usd).toBeGreaterThanOrEqual(0.05);
+    } finally {
+      if (prevMax === undefined) delete process.env.OPENROUTER_JOB_MAX_USD;
+      else process.env.OPENROUTER_JOB_MAX_USD = prevMax;
+    }
   });
 });
 
@@ -229,6 +328,52 @@ describe("jobs drain", () => {
     expect(after.job.status).toBe("failed");
     expect(after.job.error).toBe(OPENROUTER_ORG_KEY_MISSING);
   });
+  it("prevents concurrent parallel ticks from executing the same job simultaneously", async () => {
+    resetRegionSimulationJobsForTests();
+    setOrgOpenRouterApiKeyForTests("sk-or-concurrent");
+    let openRouterCalls = 0;
+    setOpenRouterFetchForTests(async () => {
+      openRouterCalls += 1;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      return new Response(
+        JSON.stringify({
+          id: `gen_${openRouterCalls}`,
+          usage: { cost: 0.001 },
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    id: `call_${openRouterCalls}`,
+                    type: "function",
+                    function: { name: "board_done", arguments: "{}" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    });
+    const job = await enqueueRegionSimulation({
+      ownerUserId: "owner-race",
+      family: "ai_use",
+      name: "Race Region",
+      kind: "verification",
+      flows: [{ id: "flow-race", name: "Flow", problems: ["P"] }],
+      catalogIds: [AI_USE_CATALOG[0]!.id],
+      samplesPerAiUse: 3,
+    });
+    const [a, b] = await Promise.all([
+      tickRegionSimulationJob(job.id),
+      tickRegionSimulationJob(job.id),
+    ]);
+    expect(openRouterCalls).toBe(1);
+    expect([a.shouldContinue, b.shouldContinue].filter(Boolean)).toHaveLength(1);
+  });
 });
 
 describe("org OpenRouter gate", () => {
@@ -265,6 +410,11 @@ describe("cron drain route", () => {
       path: "/api/cron/region-simulation-drain",
       schedule: "* * * * *",
     });
+    const tickRoute = readFileSync(
+      join(__dirname, "../../app/api/dashboard/region-simulation/jobs/[id]/tick/route.ts"),
+      "utf8",
+    );
+    expect(tickRoute).not.toContain("after(");
   });
 });
 

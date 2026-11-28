@@ -8,7 +8,7 @@ import { getAppOrigin } from "./config";
 
 export async function authenticateMcpRequest(
   req: NextRequest,
-  requiredScope: ApiKeyScope
+  requiredScope?: ApiKeyScope
 ): Promise<{ auth: AuthContext; supabase: SupabaseClient } | NextResponse> {
   const origin = getAppOrigin(req);
   const authHeader = req.headers.get("Authorization");

@@ -18,6 +18,16 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 let cached: SupabaseClient | null = null;
 
 /**
+ * True when both `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+ * are present so server stores can choose Supabase vs in-memory fallback.
+ */
+export function isSupabaseAdminConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+}
+
+/**
  * Return a Supabase client authenticated with the service role key.
  * Throws if `SUPABASE_SERVICE_ROLE_KEY` or `NEXT_PUBLIC_SUPABASE_URL` is missing.
  *

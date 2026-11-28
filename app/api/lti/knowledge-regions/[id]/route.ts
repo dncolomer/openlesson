@@ -27,7 +27,7 @@ export async function GET(
     const { data: row, error } = await admin
       .from("knowledge_regions")
       .select(
-        "id, workspace_id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id",
+        "id, owner_user_id, name, description, subject_count, subjects, created_at, embedding_model_id, centroid, cosine_threshold, mean_radius, verify_flow_id",
       )
       .eq("id", id)
       .maybeSingle();

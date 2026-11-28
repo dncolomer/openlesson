@@ -266,7 +266,6 @@ export type GuestLinkTable =
  * Uses a read-modify-write; best-effort (does not throw on empty params).
  */
 export async function recordGuestLinkEntryQueryParams(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: { from: (table: string) => any },
   table: GuestLinkTable,
   linkId: string,

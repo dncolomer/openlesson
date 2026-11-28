@@ -115,6 +115,23 @@ export function openOrgOpenRouterApiKey(org: OrgBackendRecord | null | undefined
   return openCustomerSecret(stored.openrouter_api_key_ciphertext);
 }
 
+export async function loadOpenRouterApiKeyForOrganization(
+  organizationId: string | null | undefined,
+  admin?: SupabaseClient,
+): Promise<string | null> {
+  if (openRouterApiKeyForTests !== undefined) return openRouterApiKeyForTests;
+  const id = String(organizationId || "").trim();
+  if (!id) return null;
+  try {
+    const client = admin || createAdminClient();
+    const org = await loadOrgBackendRecord(client, id);
+    return openOrgOpenRouterApiKey(org);
+  } catch (err) {
+    console.error("[org-backends] OpenRouter org key lookup failed:", err);
+    return null;
+  }
+}
+
 export async function loadOpenRouterApiKeyForOwner(
   admin: SupabaseClient,
   userId: string | null | undefined,

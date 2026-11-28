@@ -6,6 +6,7 @@ import {
   openRouterHeaders,
   openRouterUserHash,
   setOpenRouterFetchForTests,
+  setOpenRouterSleepForTests,
 } from "@/lib/ai/openrouter";
 import { setOrgOpenRouterApiKeyForTests } from "@/lib/organization/org-backend-runtime";
 import { AI_USE_DEFAULT_CHECKED, clampSamplesPerAiUse, publicAiUseCatalog } from "@/lib/region-simulation-ai-use-catalog";
@@ -17,6 +18,8 @@ import { applyProofOfWorkRunIdFilter } from "@/lib/region-simulation-persist";
 import { createAiUseCheckpoint, runAiUseHarnessRound } from "@/lib/region-simulation-harness";
 import { seededSimulationTree } from "@/lib/region-simulation";
 import {
+  REGION_SIM_CRON_DEADLINE_MS,
+  REGION_SIM_LEASE_MS,
   drainRegionSimulationJobs,
   enqueueRegionSimulation,
   resetRegionSimulationJobsForTests,
@@ -27,6 +30,7 @@ import { parseKnowledgeRegionFigureSpace, placeKnowledgeRegionAiUsePoints } from
 describe("openrouter client", () => {
   afterEach(() => {
     setOpenRouterFetchForTests(null);
+    setOpenRouterSleepForTests(null);
     setOrgOpenRouterApiKeyForTests(undefined);
   });
 
@@ -38,7 +42,9 @@ describe("openrouter client", () => {
     expect(headers["X-OpenRouter-Title"]).toBe("OpenLesson");
     expect(headers["HTTP-Referer"]).toBeTruthy();
     expect(openRouterUserHash("owner-1")).toHaveLength(32);
-    expect(OPENROUTER_ROUND_TIMEOUT_MS).toBe(45_000);
+    expect(OPENROUTER_ROUND_TIMEOUT_MS).toBe(25_000);
+    expect(REGION_SIM_LEASE_MS).toBe(65_000);
+    expect(REGION_SIM_CRON_DEADLINE_MS).toBe(45_000);
     const source = readFileSync(join(__dirname, "../../lib/ai/openrouter.ts"), "utf8");
     expect(source).not.toContain("OPENROUTER_API_KEY");
     expect(source).toContain("OPENROUTER_ORG_KEY_MISSING");
@@ -60,12 +66,21 @@ describe("openrouter client", () => {
     expect(calls).toBe(1);
   });
 
-  it("retries 429 once then returns tool calls", async () => {
+  it("retries 429 once with Retry-After backoff then returns tool calls and omits reasoning when absent", async () => {
     let calls = 0;
-    setOpenRouterFetchForTests(async () => {
+    const sleeps: number[] = [];
+    let lastBody: Record<string, unknown> | null = null;
+    setOpenRouterSleepForTests(async (ms) => {
+      sleeps.push(ms);
+    });
+    setOpenRouterFetchForTests(async (_url, init) => {
       calls += 1;
+      lastBody = JSON.parse(String(init?.body || "{}")) as Record<string, unknown>;
       if (calls === 1) {
-        return new Response(JSON.stringify({ error: { message: "rate" } }), { status: 429 });
+        return new Response(JSON.stringify({ error: { message: "rate" } }), {
+          status: 429,
+          headers: { "Retry-After": "3" },
+        });
       }
       return new Response(
         JSON.stringify({
@@ -97,6 +112,8 @@ describe("openrouter client", () => {
       apiKey: "sk-or-test",
     });
     expect(calls).toBe(2);
+    expect(sleeps).toEqual([3000]);
+    expect(lastBody).not.toHaveProperty("reasoning");
     expect(result.toolCalls[0]?.function.name).toBe("board_done");
     expect(result.costUsd).toBe(0.01);
   });
@@ -393,6 +410,11 @@ describe("cron drain route", () => {
       path: "/api/cron/region-simulation-drain",
       schedule: "* * * * *",
     });
+    const tickRoute = readFileSync(
+      join(__dirname, "../../app/api/dashboard/region-simulation/jobs/[id]/tick/route.ts"),
+      "utf8",
+    );
+    expect(tickRoute).not.toContain("after(");
   });
 });
 

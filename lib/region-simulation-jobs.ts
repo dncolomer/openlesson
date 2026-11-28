@@ -42,14 +42,18 @@ import {
   type RegionSimulationFlowInput,
 } from "@/lib/region-simulation-run";
 import { OPENROUTER_ORG_KEY_MISSING, openRouterJobMaxUsd } from "@/lib/ai/openrouter";
-import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
+import {
+  loadOpenRouterApiKeyForOrganization,
+  loadOpenRouterApiKeyForOwnerUser,
+} from "@/lib/organization/org-backend-runtime";
 import { seededSimulationTree } from "@/lib/region-simulation";
 import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
-export const REGION_SIM_LEASE_MS = 55_000;
+export const REGION_SIM_LEASE_MS = 65_000;
 export const REGION_SIM_TICK_MAX_DURATION = 60;
 export const REGION_SIM_CRON_JOB_CAP = 10;
+export const REGION_SIM_CRON_DEADLINE_MS = 45_000;
 
 export type RegionSimulationFamily = "exploration" | "ai_use";
 
@@ -540,7 +544,10 @@ export async function tickRegionSimulationJob(jobId: string): Promise<TickResult
       if (job.cost_usd >= openRouterJobMaxUsd()) {
         throw new Error("OpenRouter job USD cap");
       }
-      const apiKey = await loadOpenRouterApiKeyForOwnerUser(job.owner_user_id);
+      const apiKey = job.plan.organizationId
+        ? (await loadOpenRouterApiKeyForOrganization(job.plan.organizationId)) ||
+          (await loadOpenRouterApiKeyForOwnerUser(job.owner_user_id))
+        : await loadOpenRouterApiKeyForOwnerUser(job.owner_user_id);
       if (!apiKey) throw new Error(OPENROUTER_ORG_KEY_MISSING);
       const flow = job.plan.flows.find((row) => row.id === item.flowId) || job.plan.flows[0];
       const model = referenceModelFor(flow, {
@@ -642,14 +649,23 @@ async function refreshAfterTick(job: RegionSimulationJobRow): Promise<void> {
   job.result = { id: records.id };
 }
 
-export async function drainRegionSimulationJobs(limit = REGION_SIM_CRON_JOB_CAP): Promise<string[]> {
+export async function drainRegionSimulationJobs(
+  limit = REGION_SIM_CRON_JOB_CAP,
+  opts?: { deadlineMs?: number },
+): Promise<string[]> {
   const cap = Math.max(1, Math.min(50, Math.floor(limit) || REGION_SIM_CRON_JOB_CAP));
+  const deadlineMs =
+    typeof opts?.deadlineMs === "number" && opts.deadlineMs > 0
+      ? opts.deadlineMs
+      : REGION_SIM_CRON_DEADLINE_MS;
+  const startedAt = Date.now();
   const ids: string[] = [];
   if (!supabaseConfigured()) {
     const due = [...memoryJobs.values()]
       .filter((job) => ["queued", "running"].includes(job.status) && leaseExpired(job))
       .slice(0, cap);
     for (const job of due) {
+      if (ids.length > 0 && Date.now() - startedAt >= deadlineMs) break;
       await tickRegionSimulationJob(job.id);
       ids.push(job.id);
     }
@@ -665,6 +681,7 @@ export async function drainRegionSimulationJobs(limit = REGION_SIM_CRON_JOB_CAP)
   if (error) throw new Error(error.message);
   for (const row of data || []) {
     if (ids.length >= cap) break;
+    if (ids.length > 0 && Date.now() - startedAt >= deadlineMs) break;
     const until = row.lease_until ? new Date(String(row.lease_until)).getTime() : 0;
     if (until && until > Date.now()) continue;
     await tickRegionSimulationJob(String(row.id));

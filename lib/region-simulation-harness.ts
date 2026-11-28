@@ -316,9 +316,11 @@ export async function runAiUseHarnessRound(input: {
   const sequence = [...input.checkpoint.sequence];
   const complete = input.complete || openRouterChatCompletions;
   const thinking =
-    catalog.thinking.kind === "effort"
-      ? { exclude: true, effort: catalog.thinking.effort }
-      : { exclude: true, max_tokens: catalog.thinking.maxTokens };
+    catalog.thinking.kind === "none"
+      ? undefined
+      : catalog.thinking.kind === "effort"
+        ? { exclude: true, effort: catalog.thinking.effort }
+        : { exclude: true, max_tokens: catalog.thinking.maxTokens };
 
   const result = await complete({
     model: catalog.slug,

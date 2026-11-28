@@ -8,6 +8,7 @@ export const REGION_SIMULATION_MIN_SAMPLES_PER_AI_USE = 3;
 export const REGION_SIMULATION_MAX_SAMPLES_PER_AI_USE = 12;
 
 export type AiUseCatalogThinking =
+  | { kind: "none" }
   | { kind: "effort"; effort: "low" | "medium" | "high" }
   | { kind: "max_tokens"; maxTokens: number };
 
@@ -27,8 +28,8 @@ export const AI_USE_CATALOG: readonly AiUseCatalogRow[] = [
     id: "gpt-mini-low",
     displayName: "GPT Mini · low",
     slug: "openai/gpt-4o-mini",
-    thinking: { kind: "effort", effort: "low" },
-    thinkingLabel: "low",
+    thinking: { kind: "none" },
+    thinkingLabel: "standard",
     toolsRequired: true,
     imageInput: true,
     dataCollection: "deny",
@@ -37,8 +38,8 @@ export const AI_USE_CATALOG: readonly AiUseCatalogRow[] = [
     id: "gpt-mini-high",
     displayName: "GPT Mini · high",
     slug: "openai/gpt-4o-mini",
-    thinking: { kind: "effort", effort: "high" },
-    thinkingLabel: "high",
+    thinking: { kind: "none" },
+    thinkingLabel: "standard",
     toolsRequired: true,
     imageInput: true,
     dataCollection: "deny",

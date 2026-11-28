@@ -67,7 +67,7 @@ export async function resolveGuestForLinkQueryParams(
     };
   }
 
-  if (!isUuid(input.linkId) || !isUuid(input.workspaceId) || !isUuid(input.ownerUserId)) {
+  if (!isUuid(input.linkId) || !isUuid(input.ownerUserId)) {
     return {
       guestUserId: input.baseGuestUserId,
       paramsFingerprint: fingerprint,
@@ -82,7 +82,7 @@ export async function resolveGuestForLinkQueryParams(
   const { data: existing } = await supabase
     .from("organization_guest_users")
     .select("id, status")
-    .eq("workspace_id", input.workspaceId)
+    .eq("created_by_user_id", input.ownerUserId)
     .eq("email", email)
     .maybeSingle();
 
@@ -98,7 +98,6 @@ export async function resolveGuestForLinkQueryParams(
     .from("organization_guest_users")
     .insert({
       organization_id: input.organizationId,
-      workspace_id: input.workspaceId,
       email,
       created_by_user_id: input.ownerUserId,
       created_by_api_key_id: input.createdByApiKeyId || null,
@@ -118,7 +117,7 @@ export async function resolveGuestForLinkQueryParams(
     const { data: raced } = await supabase
       .from("organization_guest_users")
       .select("id")
-      .eq("workspace_id", input.workspaceId)
+      .eq("created_by_user_id", input.ownerUserId)
       .eq("email", email)
       .maybeSingle();
     if (raced?.id) {

@@ -19,6 +19,12 @@ export function useTapSpeechProofOfWork(
   const latestTranscriptRef = useRef("");
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
+  const pendingEventRef = useRef<{
+    event: "start" | "stop";
+    segmentDurationMs?: number;
+    transcriptSnapshot?: string;
+    timestampMs?: number;
+  } | null>(null);
   const onInterruptionRef = useRef(onInterruption);
   const contextRef = useRef(context);
   const speechApiPathRef = useRef(speechApiPath);
@@ -51,26 +57,45 @@ export function useTapSpeechProofOfWork(
     }) => {
       const activeContext = contextRef.current;
       const sessionKey = activeContext.tapSessionId || activeContext.sessionId;
-      if (!enabled || !sessionKey || inFlightRef.current) return;
+      if (!enabled || !sessionKey) return;
+      if (inFlightRef.current) {
+        // Queue the latest pending event (especially speech_stop) instead of dropping it
+        pendingEventRef.current = input;
+        return;
+      }
 
       inFlightRef.current = true;
+      let nextToSend: typeof input | null = input;
       try {
-        const posted = await postTutoringSpeech(
-          activeContext,
-          {
-            event: input.event,
-            segmentDurationMs: input.segmentDurationMs,
-            transcriptSnapshot: input.transcriptSnapshot,
-            timestampMs: input.timestampMs ?? Date.now(),
-          },
-          speechApiPathRef.current,
-        );
-        if (!posted.ok) return;
-        onInterruptionRef.current(
-          (posted.payload.interruption as ProofOfWorkApiInterruption) ?? null,
-        );
-      } catch {
-        // ignore transient network errors
+        while (nextToSend) {
+          const current = nextToSend;
+          nextToSend = null;
+          const posted = await postTutoringSpeech(
+            contextRef.current,
+            {
+              event: current.event,
+              segmentDurationMs: current.segmentDurationMs,
+              transcriptSnapshot: current.transcriptSnapshot,
+              timestampMs: current.timestampMs ?? Date.now(),
+            },
+            speechApiPathRef.current,
+          );
+          if (!posted.ok) {
+            console.warn(
+              `[tap-speech-pow] Speech PoW upload failed (${posted.status}) for speech_${current.event}`,
+            );
+          } else {
+            onInterruptionRef.current(
+              (posted.payload.interruption as ProofOfWorkApiInterruption) ?? null,
+            );
+          }
+          if (pendingEventRef.current) {
+            nextToSend = pendingEventRef.current;
+            pendingEventRef.current = null;
+          }
+        }
+      } catch (err) {
+        console.warn("[tap-speech-pow] Speech PoW network error:", err);
       } finally {
         inFlightRef.current = false;
       }

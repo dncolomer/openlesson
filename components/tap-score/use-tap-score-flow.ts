@@ -376,7 +376,8 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           openingQuestion: topic?.openingQuestion,
         });
         if (!opening) throw new Error("Could not generate opening question");
-        const localId = `verification-${topic?.id || "question"}`;
+        const existingId = String(s.tapSessionIdRef.current || s.sessionId || "").trim();
+        const localId = existingId || `verification-${topic?.id || "question"}`;
         s.tapSessionIdRef.current = localId;
         if (s.localQuestionIdRef) {
           s.localQuestionIdRef.current = topic?.id ?? null;

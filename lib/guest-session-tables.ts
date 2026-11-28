@@ -188,8 +188,6 @@ export async function insertGuestSession(
 
 const SESSION_UPDATE_KEYS = new Set([
   "status",
-  "workspace_id",
-  "block_id",
   "user_id",
   "guest_user_id",
   "assigned_user_id",

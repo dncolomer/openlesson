@@ -109,12 +109,15 @@ export function useTapIdleProofOfWork(
           },
           idleApiPathRef.current,
         );
-        if (!posted.ok) return;
+        if (!posted.ok) {
+          console.warn(`[tap-idle-pow] Idle PoW upload failed (${posted.status})`);
+          return;
+        }
         onInterruptionRef.current(
           (posted.payload.interruption as ProofOfWorkApiInterruption) ?? null,
         );
-      } catch {
-        // ignore transient network errors; next interval will retry
+      } catch (err) {
+        console.warn("[tap-idle-pow] Idle PoW network error:", err);
       } finally {
         idleInFlightRef.current = false;
       }

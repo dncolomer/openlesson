@@ -64,6 +64,8 @@ export async function POST(
   const question = claimed.choices.question;
   return NextResponse.json({
     identity: claimed.identity,
+    sessionId: claimed.sessionId ?? null,
+    privateToken: claimed.privateToken ?? null,
     durationMinutes: claimed.flow.durationMinutes,
     actionCatalog: claimed.flow.actionCatalog,
     emptyPool: claimed.choices.emptyPool,

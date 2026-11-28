@@ -330,15 +330,43 @@ export async function uploadTapWorkCanvasPow(input: {
   practice?: boolean;
   kind?: TapProductKind;
   item: IleProofOfWorkUploadItem;
-}): Promise<void> {
+  onError?: (message: string) => void;
+}): Promise<{ ok: boolean; status?: number; error?: string }> {
   const sessionKey = String(input.tapSessionId || input.sessionId || "").trim();
-  if (!sessionKey) return;
+  if (!sessionKey) return { ok: false, error: "Missing session id" };
   const canvasPath = tapSessionRuntimePaths(input.kind).canvas;
-  await fetch(canvasPath, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildTapWorkCanvasPowPostBody(input)),
-  }).catch(() => {});
+  try {
+    const response = await fetch(canvasPath, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildTapWorkCanvasPowPostBody(input)),
+      keepalive: true,
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: { message?: string } | string;
+      };
+      const message =
+        typeof payload.error === "string"
+          ? payload.error
+          : payload.error?.message || `HTTP ${response.status}`;
+      console.warn(
+        `[tap-work-canvas] PoW upload failed (${response.status}) for ${input.item.toolName}/${input.item.toolAction}:`,
+        message,
+      );
+      input.onError?.(message);
+      return { ok: false, status: response.status, error: message };
+    }
+    return { ok: true, status: response.status };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Network error";
+    console.warn(
+      `[tap-work-canvas] PoW upload network error for ${input.item.toolName}/${input.item.toolAction}:`,
+      message,
+    );
+    input.onError?.(message);
+    return { ok: false, error: message };
+  }
 }
 
 

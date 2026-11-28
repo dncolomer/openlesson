@@ -22,6 +22,7 @@ import {
   findCalibrateOrVerifySessionByToken,
   type CalibrateVerifyTable,
 } from "@/lib/guest-session-tables";
+import { UNIFIED_SESSIONS_TABLE } from "@/lib/unified-sessions";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -49,7 +50,7 @@ export interface ResolvedTapSessionContext {
 export const TAP_SESSION_SELECT = GUEST_SESSION_SELECT;
 
 const TAP_SESSION_SELECT_NO_JOIN =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link";
+  "id, user_id, guest_user_id, assigned_user_id, organization_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link";
 
 export function authContextFromTapAccess(
   access: {
@@ -267,7 +268,7 @@ export async function resolveTapSessionAccess(input: {
         });
         guestUserId = created.id;
         await supabase
-          .from(sessionTable)
+          .from(UNIFIED_SESSIONS_TABLE)
           .update({ guest_user_id: guestUserId })
           .eq("id", sessionRow.id);
         sessionRow.guest_user_id = guestUserId;

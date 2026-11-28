@@ -174,7 +174,7 @@ export function planSessionBranchPrepare(
   return { kind: "none" };
 }
 
-/** JSON body for POST /api/learn/session-branch-model. Null when the call should wait. */
+/** JSON body for POST /api/verify/session/branch-model. Null when the call should wait. */
 export function sessionBranchPrepareRequest(
   plan: SessionBranchPreparePlan,
 ): Record<string, unknown> | null {

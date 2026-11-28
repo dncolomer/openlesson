@@ -100,6 +100,88 @@ describe("openrouter client", () => {
     expect(result.toolCalls[0]?.function.name).toBe("board_done");
     expect(result.costUsd).toBe(0.01);
   });
+  it("sends usage.include=true, parses fallback token cost, and halts jobs at OPENROUTER_JOB_MAX_USD", async () => {
+    let seenBody: Record<string, unknown> | null = null;
+    setOpenRouterFetchForTests(async (_url, init) => {
+      seenBody = JSON.parse(String(init?.body || "{}")) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          id: "gen_fallback",
+          usage: { prompt_tokens: 10_000, completion_tokens: 5_000 },
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    id: "call_fb",
+                    type: "function",
+                    function: { name: "board_done", arguments: "{}" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    });
+    const res = await openRouterChatCompletions({
+      model: "openai/gpt-4o-mini",
+      messages: [{ role: "user", content: "hi" }],
+      apiKey: "sk-or-test",
+    });
+    expect(seenBody).toMatchObject({ usage: { include: true } });
+    expect(res.costUsd).toBeGreaterThan(0);
+
+    const prevMax = process.env.OPENROUTER_JOB_MAX_USD;
+    process.env.OPENROUTER_JOB_MAX_USD = "0.05";
+    try {
+      resetRegionSimulationJobsForTests();
+      setOrgOpenRouterApiKeyForTests("sk-or-cap-test");
+      setOpenRouterFetchForTests(async () =>
+        new Response(
+          JSON.stringify({
+            id: "gen_expensive",
+            usage: { cost: 0.08 },
+            choices: [
+              {
+                finish_reason: "tool_calls",
+                message: {
+                  role: "assistant",
+                  tool_calls: [
+                    {
+                      id: "call_exp",
+                      type: "function",
+                      function: { name: "board_done", arguments: "{}" },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+      const job = await enqueueRegionSimulation({
+        ownerUserId: "owner-cap",
+        family: "ai_use",
+        name: "Cap Region",
+        kind: "verification",
+        flows: [{ id: "flow-cap", name: "Flow", problems: ["P"] }],
+        catalogIds: [AI_USE_CATALOG[0]!.id],
+        samplesPerAiUse: 3,
+      });
+      const ticked = await tickRegionSimulationJob(job.id);
+      expect(ticked.job.status).toBe("failed");
+      expect(ticked.job.error).toBe("OpenRouter job USD cap");
+      expect(ticked.job.cost_usd).toBeGreaterThanOrEqual(0.05);
+    } finally {
+      if (prevMax === undefined) delete process.env.OPENROUTER_JOB_MAX_USD;
+      else process.env.OPENROUTER_JOB_MAX_USD = prevMax;
+    }
+  });
 });
 
 describe("ai-use catalog", () => {

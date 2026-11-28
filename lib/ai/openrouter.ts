@@ -76,11 +76,19 @@ export function openRouterJobMaxUsd(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 5;
 }
 
+let warnedHashSecretFallback = false;
+
 function openRouterHashSecret(): string {
   const dedicated = [
     process.env.XAI_ORG_KEY_ENCRYPTION_SECRET,
     process.env.ORG_SECRETS_ENCRYPTION_KEY,
   ].find((value) => typeof value === "string" && value.trim());
+  if (!dedicated && process.env.NODE_ENV === "production" && !warnedHashSecretFallback) {
+    warnedHashSecretFallback = true;
+    console.warn(
+      "[openrouter] XAI_ORG_KEY_ENCRYPTION_SECRET / ORG_SECRETS_ENCRYPTION_KEY unset; using fallback user hash secret.",
+    );
+  }
   return String(dedicated || "openlesson").slice(0, 32);
 }
 
@@ -95,7 +103,7 @@ export function openRouterHeaders(apiKey: string | null | undefined): Record<str
   if (!key) {
     throw new Error(OPENROUTER_ORG_KEY_MISSING);
   }
-  const referer = String(process.env.NEXT_PUBLIC_APP_URL || "https://openlesson.app").replace(
+  const referer = String(process.env.NEXT_PUBLIC_APP_URL || "https://uncertain.systems").replace(
     /\/+$/,
     "",
   );
@@ -125,8 +133,25 @@ function shouldRetry(error: unknown, attempt: number): boolean {
 function parseCost(payload: Record<string, unknown>): number {
   const usage = payload.usage;
   if (!usage || typeof usage !== "object") return 0;
-  const cost = Number((usage as { cost?: unknown }).cost);
-  return Number.isFinite(cost) && cost > 0 ? cost : 0;
+  const record = usage as {
+    cost?: unknown;
+    total_cost?: unknown;
+    prompt_tokens?: unknown;
+    completion_tokens?: unknown;
+  };
+  const direct = Number(record.cost ?? record.total_cost);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const promptTokens = Number(record.prompt_tokens);
+  const completionTokens = Number(record.completion_tokens);
+  const safePrompt = Number.isFinite(promptTokens) && promptTokens > 0 ? promptTokens : 0;
+  const safeCompletion =
+    Number.isFinite(completionTokens) && completionTokens > 0 ? completionTokens : 0;
+  if (safePrompt + safeCompletion > 0) {
+    // Conservative fallback floor so missing OpenRouter usage.cost never bypasses OPENROUTER_JOB_MAX_USD.
+    const estimated = (safePrompt * 0.15 + safeCompletion * 0.6) / 1_000_000;
+    return Math.max(0.00001, estimated);
+  }
+  return 0;
 }
 
 function parseToolCalls(message: Record<string, unknown> | null): OpenRouterToolCall[] {
@@ -166,6 +191,7 @@ export async function openRouterChatCompletions(
     max_tokens: input.max_tokens ?? 4096,
     temperature: input.temperature ?? 0.2,
     user: input.user,
+    usage: { include: true },
     reasoning: { exclude: true, ...(input.reasoning || {}) },
     provider: {
       require_parameters: true,

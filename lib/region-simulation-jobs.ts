@@ -551,6 +551,9 @@ export async function tickRegionSimulationJob(jobId: string): Promise<TickResult
       });
       job.checkpoint = round.checkpoint;
       job.cost_usd += Math.max(0, round.checkpoint.costUsd - costBefore);
+      if (job.cost_usd >= openRouterJobMaxUsd()) {
+        throw new Error("OpenRouter job USD cap");
+      }
       if (round.done || round.failed) {
         if (!round.failed) await persistAiUseSample(job, round.checkpoint);
         job.plan_cursor += 1;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
@@ -886,13 +887,13 @@ export function TapScorePhases(props: {
               title={t("tap.postSession.thankYouTitle")}
               body={t("tap.postSession.thankYouBody")}
               actions={
-                <a
+                <Link
                   href="/"
                   data-tap-explore-uncertain-systems
                   className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
                 >
                   {t("tap.postSession.exploreUncertainSystems")}
-                </a>
+                </Link>
               }
             >
               <SessionPolicyScoreResult score={policyScore} />

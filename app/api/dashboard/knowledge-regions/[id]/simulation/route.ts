@@ -1,7 +1,7 @@
 /**
  * Owner dashboard: add simulated samples on an existing region.
  */
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
@@ -23,7 +23,10 @@ import {
 } from "@/lib/region-simulation-run";
 import { clampSamplesPerAiUse, parseAiUseCatalogIds } from "@/lib/region-simulation-ai-use-catalog";
 import { OPENROUTER_ORG_KEY_MISSING } from "@/lib/ai/openrouter";
-import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
+import {
+  loadOpenRouterApiKeyForOrganization,
+  loadOpenRouterApiKeyForOwnerUser,
+} from "@/lib/organization/org-backend-runtime";
 import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import {
   enqueueRegionSimulation,
@@ -201,7 +204,9 @@ export async function POST(
     const aiUseCatalogIds = parseAiUseCatalogIds(body.aiUseCatalogIds);
     const samplesPerAiUse = clampSamplesPerAiUse(body.samplesPerAiUse);
     if (aiUseCatalogIds.length) {
-      const openRouterKey = await loadOpenRouterApiKeyForOwnerUser(loaded.regionOwnerUserId);
+      const openRouterKey =
+        (await loadOpenRouterApiKeyForOrganization(loaded.organizationId)) ||
+        (await loadOpenRouterApiKeyForOwnerUser(loaded.regionOwnerUserId));
       if (!openRouterKey) return jsonError(400, OPENROUTER_ORG_KEY_MISSING);
     }
     if (!strategies.length && !aiUseCatalogIds.length) {
@@ -236,9 +241,6 @@ export async function POST(
             : null,
         });
         const ticked = await tickRegionSimulationJob(job.id);
-        if (ticked.shouldContinue) after(() => tickRegionSimulationJob(job.id));
-        const followUpId = ticked.followUpJobId;
-        if (followUpId) after(() => tickRegionSimulationJob(followUpId));
         return NextResponse.json(jobsPublicPayload(ticked.job));
       }
       const job = await enqueueRegionSimulation({
@@ -253,7 +255,6 @@ export async function POST(
         regionId: id,
       });
       const ticked = await tickRegionSimulationJob(job.id);
-      if (ticked.shouldContinue) after(() => tickRegionSimulationJob(job.id));
       return NextResponse.json(jobsPublicPayload(ticked.job));
     }
     if (!strategies.length) return jsonError(400, "Select at least one exploration strategy");

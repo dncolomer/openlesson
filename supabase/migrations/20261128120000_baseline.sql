@@ -817,6 +817,35 @@ COMMENT ON TABLE public.region_simulation_jobs IS 'Queued knowledge-region simul
 
 
 --
+-- Name: acquire_region_simulation_job_lease(uuid, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acquire_region_simulation_job_lease(p_job_id uuid, p_lease_owner text, p_lease_ms integer DEFAULT 65000) RETURNS SETOF public.region_simulation_jobs
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  RETURN QUERY
+  UPDATE public.region_simulation_jobs
+  SET
+    status = 'running',
+    lease_owner = p_lease_owner,
+    lease_until = now() + make_interval(secs => GREATEST(1, COALESCE(p_lease_ms, 65000)) / 1000.0),
+    updated_at = now()
+  WHERE id = p_job_id
+    AND status IN ('queued', 'running')
+    AND (lease_until IS NULL OR lease_until < now() OR lease_owner = p_lease_owner)
+  RETURNING *;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.acquire_region_simulation_job_lease(uuid, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.acquire_region_simulation_job_lease(uuid, text, integer) FROM anon;
+REVOKE ALL ON FUNCTION public.acquire_region_simulation_job_lease(uuid, text, integer) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.acquire_region_simulation_job_lease(uuid, text, integer) TO service_role;
+
+
+--
 -- Name: session_embeddings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1521,6 +1550,13 @@ CREATE INDEX idx_profiles_token_tier ON public.profiles USING btree (token_tier)
 --
 
 CREATE INDEX idx_session_embeddings_owner_flow ON public.session_embeddings USING btree (owner_user_id, flow_kind, flow_id);
+
+
+--
+-- Name: idx_session_embeddings_owner_run_uidx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_session_embeddings_owner_run_uidx ON public.session_embeddings USING btree (owner_user_id, run_id) WHERE ((owner_user_id IS NOT NULL) AND (run_id IS NOT NULL) AND (run_id <> ''::text));
 
 
 --

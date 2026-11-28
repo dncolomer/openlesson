@@ -1,6 +1,6 @@
 /**
  * Auto-generated TypeScript schema types for the verification-only public schema
- * (25 tables, 4 functions) matching supabase/migrations/20261128120000_baseline.sql.
+ * (25 tables, 5 functions) matching supabase/migrations/20261128120000_baseline.sql.
  *
  * Regenerate against a linked Supabase project with: npm run db:types
  */
@@ -1221,6 +1221,10 @@ export type Database = {
       accept_organization_invite: {
         Args: { invite_token: string; accepting_user_id: string };
         Returns: Json;
+      };
+      acquire_region_simulation_job_lease: {
+        Args: { p_job_id: string; p_lease_owner: string; p_lease_ms?: number };
+        Returns: Database["public"]["Tables"]["region_simulation_jobs"]["Row"][];
       };
       is_admin_user: {
         Args: Record<PropertyKey, never>;

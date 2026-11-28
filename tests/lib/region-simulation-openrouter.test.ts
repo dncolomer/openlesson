@@ -311,6 +311,52 @@ describe("jobs drain", () => {
     expect(after.job.status).toBe("failed");
     expect(after.job.error).toBe(OPENROUTER_ORG_KEY_MISSING);
   });
+  it("prevents concurrent parallel ticks from executing the same job simultaneously", async () => {
+    resetRegionSimulationJobsForTests();
+    setOrgOpenRouterApiKeyForTests("sk-or-concurrent");
+    let openRouterCalls = 0;
+    setOpenRouterFetchForTests(async () => {
+      openRouterCalls += 1;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      return new Response(
+        JSON.stringify({
+          id: `gen_${openRouterCalls}`,
+          usage: { cost: 0.001 },
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    id: `call_${openRouterCalls}`,
+                    type: "function",
+                    function: { name: "board_done", arguments: "{}" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    });
+    const job = await enqueueRegionSimulation({
+      ownerUserId: "owner-race",
+      family: "ai_use",
+      name: "Race Region",
+      kind: "verification",
+      flows: [{ id: "flow-race", name: "Flow", problems: ["P"] }],
+      catalogIds: [AI_USE_CATALOG[0]!.id],
+      samplesPerAiUse: 3,
+    });
+    const [a, b] = await Promise.all([
+      tickRegionSimulationJob(job.id),
+      tickRegionSimulationJob(job.id),
+    ]);
+    expect(openRouterCalls).toBe(1);
+    expect([a.shouldContinue, b.shouldContinue].filter(Boolean)).toHaveLength(1);
+  });
 });
 
 describe("org OpenRouter gate", () => {

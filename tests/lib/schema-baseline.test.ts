@@ -62,12 +62,15 @@ describe("verification-only database schema baseline & upgrade contract", () => 
 
     for (const fn of [
       "public.accept_organization_invite",
+      "public.acquire_region_simulation_job_lease",
       "public.handle_new_user",
       "public.is_admin_user",
       "public.prevent_privileged_profile_escalation",
     ]) {
       expect(sql, `missing function ${fn}`).toContain(fn);
     }
+
+    expect(sql).toContain("idx_session_embeddings_owner_run_uidx");
 
     expect(sql).toContain("'org-logos'");
     expect(sql).toContain("'org-aesthetics'");

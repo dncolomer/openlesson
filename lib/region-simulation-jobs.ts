@@ -334,16 +334,39 @@ export async function getRegionSimulationJob(
 }
 
 async function acquireLease(jobId: string, owner: string): Promise<RegionSimulationJobRow | null> {
-  const job = await getRegionSimulationJob(jobId);
-  if (!job) return null;
-  if (!["queued", "running"].includes(job.status)) return null;
-  if (job.lease_until && !leaseExpired(job) && job.lease_owner && job.lease_owner !== owner) {
-    return null;
+  const id = String(jobId || "").trim();
+  if (!id) return null;
+  if (!supabaseConfigured()) {
+    // Synchronous check-and-set so concurrent memory ticks cannot both acquire the lease.
+    const existing = memoryJobs.get(id);
+    if (!existing) return null;
+    if (!["queued", "running"].includes(existing.status)) return null;
+    if (
+      existing.lease_until &&
+      !leaseExpired(existing) &&
+      existing.lease_owner &&
+      existing.lease_owner !== owner
+    ) {
+      return null;
+    }
+    existing.lease_owner = owner;
+    existing.lease_until = leaseUntilIso();
+    existing.status = "running";
+    existing.updated_at = nowIso();
+    memoryJobs.set(id, existing);
+    return { ...existing };
   }
-  job.lease_owner = owner;
-  job.lease_until = leaseUntilIso();
-  job.status = "running";
-  return writeJob(job);
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("acquire_region_simulation_job_lease", {
+    p_job_id: id,
+    p_lease_owner: owner,
+    p_lease_ms: REGION_SIM_LEASE_MS,
+  });
+  if (error) throw new Error(error.message);
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  if (!rows.length) return null;
+  return normalizeJob(rows[0] as Record<string, unknown>);
 }
 
 export async function enqueueRegionSimulation(input: {

@@ -210,7 +210,21 @@ export async function persistCompletedFlowEmbedding(
     created_at: new Date().toISOString(),
   };
   if ((await resolveBackend()) === "memory") {
-    storeGlobal().memory = [stored, ...storeGlobal().memory.filter((row) => row.id !== stored.id)];
+    storeGlobal().memory = [
+      stored,
+      ...storeGlobal().memory.filter((row) => {
+        if (row.id === stored.id) return false;
+        if (
+          stored.owner_user_id &&
+          stored.run_id &&
+          row.owner_user_id === stored.owner_user_id &&
+          row.run_id === stored.run_id
+        ) {
+          return false;
+        }
+        return true;
+      }),
+    ];
     return stored;
   }
   const supabase = createAdminClient();
@@ -232,6 +246,25 @@ export async function persistCompletedFlowEmbedding(
   };
   const { error } = await supabase.from("session_embeddings").insert(row);
   if (error) {
+    const code = "code" in error ? String((error as { code?: unknown }).code || "") : "";
+    if (
+      (code === "23505" || String(error.message).includes("idx_session_embeddings_owner_run_uidx")) &&
+      stored.owner_user_id &&
+      stored.run_id
+    ) {
+      const { data: existing } = await supabase
+        .from("session_embeddings")
+        .select("*")
+        .eq("owner_user_id", stored.owner_user_id)
+        .eq("run_id", stored.run_id)
+        .maybeSingle();
+      const mapped = existing ? mapRow(existing as Record<string, unknown>) : null;
+      if (mapped) {
+        const presented = presentFlowEmbedding(mapped);
+        if (presented) return presented;
+      }
+      return stored;
+    }
     const retry = { ...row };
     const message = String(error.message);
     let dropped = false;

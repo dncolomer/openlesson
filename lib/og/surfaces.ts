@@ -53,18 +53,11 @@ function standardSurface(id: string, path: string): OgSurface {
 export const OG_SURFACES: Record<string, OgSurface> = {
   home: standardSurface("home", "/"),
   pricing: standardSurface("pricing", "/pricing"),
-  vision: standardSurface("vision", "/vision"),
   science: standardSurface("science", "/science"),
   "docs-proof-of-work-api": standardSurface(
     "docs-proof-of-work-api",
     "/docs/proof-of-work-api",
   ),
-  "docs-learning-map-api": standardSurface(
-    "docs-learning-map-api",
-    "/docs/learning-map-api",
-  ),
-  insight: standardSurface("insight", "/insights/[id]"),
-  "public-workspace": standardSurface("public-workspace", "/p/[id]/[slug]"),
 };
 
 /**
@@ -73,12 +66,8 @@ export const OG_SURFACES: Record<string, OgSurface> = {
 export const REQUIRED_SHARE_SURFACE_IDS = [
   "home",
   "pricing",
-  "vision",
   "science",
   "docs-proof-of-work-api",
-  "docs-learning-map-api",
-  "insight",
-  "public-workspace",
 ] as const;
 
 export type RequiredShareSurfaceId = (typeof REQUIRED_SHARE_SURFACE_IDS)[number];

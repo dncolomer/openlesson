@@ -15,14 +15,12 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/privacy",
   "/cookies",
   "/legal",
-  "/tap/session/",
   "/verify/session/",
   "/v/",
   "/oauth/",
   "/docs/",
   "/use-cases",
   "/pitch",
-  "/community",
   "/community-events",
   "/science",
 ];
@@ -80,11 +78,8 @@ export async function middleware(request: NextRequest) {
   // Public routes that should skip all auth logic (shareable session links)
   const publicRoutes = [
     "/pricing",
-    "/tap/session",
     "/verify/session",
     "/v/",
-    "/insights",
-    "/snapshot",
   ];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)

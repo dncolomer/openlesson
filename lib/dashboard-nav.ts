@@ -65,17 +65,6 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
 
 const TAB_SET = new Set<string>(DASHBOARD_TABS);
 
-const RETIRED_TAB_ALIASES = new Set([
-  "browse_maps",
-  "my_maps",
-  "learning",
-  "shop",
-  "help",
-  "plans",
-  "learning_studio",
-  "sessions",
-]);
-
 export function isDashboardTab(value: unknown): value is DashboardTab {
   return typeof value === "string" && TAB_SET.has(value);
 }
@@ -120,39 +109,8 @@ export function isDashboardNavTabItem(
   return !item.href && isDashboardTab(item.id);
 }
 
-/** Query `tab` → sidebar section. Retired map/shop/help tabs land on Home. */
+/** Query `tab` → sidebar section. Unknown values land on Home. */
 export function parseDashboardTab(value: unknown): DashboardTab {
-  if (
-    value === "practice" ||
-    value === "practice_performance" ||
-    value === "solve" ||
-    value === "verification" ||
-    value === "calibration" ||
-    value === "flows"
-  ) {
-    return "protocols";
-  }
-  if (
-    value === "practice_studio" ||
-    value === "solve_studio" ||
-    value === "verification_studio" ||
-    value === "calibration_studio" ||
-    value === "solve_regions" ||
-    value === "verification_regions" ||
-    value === "calibration_regions"
-  ) {
-    return "regions";
-  }
-  if (
-    value === "style" ||
-    value === "aesthetics" ||
-    value === "custom_aesthetics" ||
-    value === "sidebar_style"
-  ) {
-    return "protocol_settings";
-  }
-  if (value === "upgrade") return "usage";
-  if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
   return "home";
 }

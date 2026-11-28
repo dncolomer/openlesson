@@ -33,18 +33,19 @@ describe("flow-named session URLs", () => {
     );
   });
 
-  it("ships verify App Router page and redirects legacy /tap/session and /calibrate/session", () => {
+  it("ships verify App Router page without legacy /tap/session or /calibrate/session redirects", () => {
     expect(existsSync(join(ROOT, "app/calibrate/session/[token]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/play/calibrate/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/verify/session/[token]/page.tsx"))).toBe(true);
     expect(existsSync(join(ROOT, "app/learn/session/[token]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/tap/session/[token]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/ile/session/[token]/page.tsx"))).toBe(false);
-    expect(read("next.config.ts")).toContain("/tap/session/:token");
-    expect(read("next.config.ts")).toContain("/calibrate/session/:token");
-    expect(read("next.config.ts")).toContain("/verify/session/:token");
+    const nextConfig = read("next.config.ts");
+    expect(nextConfig).not.toContain("/tap/session/:token");
+    expect(nextConfig).not.toContain("/calibrate/session/:token");
     const mw = read("middleware.ts");
     expect(mw).not.toContain('"/calibrate/session"');
+    expect(mw).not.toContain('"/tap/session"');
     expect(mw).toContain('"/verify/session"');
   });
 });

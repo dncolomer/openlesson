@@ -8,7 +8,6 @@ import {
   canStartFreeSession,
   clampDashboardTabForAccess,
   dashboardNavGroupsForAccess,
-  dashboardPlayKindsForAccess,
   formatFreeWeekReset,
   freeWeeklySessionLimitMessage,
   isFreeTierAllowedPath,
@@ -46,24 +45,25 @@ describe("free tier dashboard and paths", () => {
     expect(clampDashboardTabForAccess("flows" as never, false)).toBe("home");
     expect(clampDashboardTabForAccess("protocols", false)).toBe("protocols");
     expect(clampDashboardTabForAccess("home", false)).toBe("home");
-    expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify"]);
-    expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify"]);
   });
 
-  it("allows dashboard, map create, sessions, and product prefixes", () => {
+  it("allows active dashboard, protocol, verify session, and region prefixes only", () => {
     expect(isFreeTierAllowedPath("/dashboard")).toBe(true);
     expect(isFreeTierAllowedPath("/dashboard/")).toBe(true);
-    expect(isFreeTierAllowedPath("/session")).toBe(true);
-    expect(isFreeTierAllowedPath("/play")).toBe(true);
-    expect(isFreeTierAllowedPath("/play/verify")).toBe(true);
     expect(isFreeTierAllowedPath("/protocols")).toBe(true);
+    expect(isFreeTierAllowedPath("/v/token-123")).toBe(true);
+    expect(isFreeTierAllowedPath("/verify/session/tok")).toBe(true);
+    expect(isFreeTierAllowedPath("/regions/new")).toBe(true);
+    expect(isFreeTierAllowedPath("/organization")).toBe(true);
+    expect(isFreeTierAllowedPath("/session")).toBe(false);
+    expect(isFreeTierAllowedPath("/play")).toBe(false);
+    expect(isFreeTierAllowedPath("/play/verify")).toBe(false);
     expect(isFreeTierAllowedPath("/workspace/abc")).toBe(false);
     expect(isFreeTierAllowedPath("/results")).toBe(false);
     expect(isFreeTierAllowedPath("/workspace/new")).toBe(false);
-    expect(isFreeTierAllowedPath("/verification")).toBe(true);
+    expect(isFreeTierAllowedPath("/verification")).toBe(false);
     expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(false);
     expect(isFreeTierAllowedPath("/flows/new")).toBe(false);
-    expect(isFreeTierAllowedPath("/regions/new")).toBe(true);
     expect(isPaidOnlyWorkspaceKind("knowledge_region")).toBe(false);
     expect(isPaidOnlyWorkspaceKind("calibration")).toBe(false);
     expect(isPaidOnlyWorkspaceKind("standard")).toBe(false);
@@ -98,7 +98,7 @@ describe("free tier surfaces", () => {
     const dash = readDashboardSurface();
     expect(dash).toContain("dashboardNavGroupsForAccess");
     expect(dash).toContain("clampDashboardTabForAccess");
-    expect(readRepo("lib/free-tier.ts")).toContain("dashboardPlayKindsForAccess");
+    expect(existsSync(join(__dirname, "../../lib/dashboard-play.ts"))).toBe(false);
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");
     expect(existsSync(join(__dirname, "../../app/api/workspace/generate/route.ts"))).toBe(false);
     expect(readRepo("app/api/dashboard/knowledge-regions/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");

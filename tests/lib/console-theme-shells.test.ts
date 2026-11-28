@@ -250,7 +250,8 @@ describe("console theme shells", () => {
     expect(shell).not.toContain("data-console-frame-label");
     expect(shell).not.toContain("dashboardFrameLabel");
 
-    expect(read("app/community/page.tsx")).toContain("RetiredProductPage");
+    expect(existsSync(join(ROOT, "app/community/page.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/support/page.tsx"))).toBe(false);
     expect(read("app/community-events/page.tsx")).toContain("MarketingPageShell");
     for (const rel of [
       "app/pricing/page.tsx",

@@ -128,8 +128,6 @@ describe("use cases listing", () => {
     expect(read("next.config.ts")).not.toMatch(
       /source:\s*["']\/use-cases["']\s*,\s*destination:\s*["']\/["']/,
     );
-    expect(read("next.config.ts")).toMatch(
-      /source:\s*["']\/use-cases\/:path\+["']\s*,\s*destination:\s*["']\/use-cases["']/,
-    );
+    expect(read("next.config.ts")).not.toContain("/use-cases/:path+");
   });
 });

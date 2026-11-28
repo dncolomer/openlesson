@@ -131,31 +131,12 @@ The app will be available at `http://localhost:3000`.
 │   ├── pow-api/          # PoW / Snapshot / Stash / MCP
 │   ├── xai-client.ts     # xAI API client
 │   └── workspace-kind.ts # standard vs knowledge_region
-├── utilities/            # Operator CLIs (not product features) — see utilities/README.md
-│   └── import-think-aloud-pow/
 ├── scripts/              # Ops: migrations, seeds, e2e, one-off backfills
 ├── docs/                 # Design notes and API docs
 ├── supabase/             # Database schema & migrations
-├── tests/                # Vitest (tests/lib mirrors lib/; tests/utilities mirrors utilities/)
-└── public/               # Static assets; skill.md for standard-workspace agent integrations
+├── tests/                # Vitest (tests/lib and tests/api)
+└── public/               # Static assets; skill.md for protocol & knowledge-region agent integrations
 ```
-
-`utilities/` vs `scripts/`: new operator tools (think-aloud import) go in `utilities/<name>/`. `scripts/` is ops automation (DB, CI, seeds). Product code stays in `app/`, `components/`, and `lib/`.
-
-## Operator utilities
-
-These are **not** Calibrate/Learn/Verify/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
-
-### Import think-aloud PoW (Learn Explore Solo)
-
-Turns a think-aloud video or audio file into Learn Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
-
-```bash
-npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id>
-npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id> --dry-run
-```
-
-Requires `XAI_API_KEY` (STT + action inference). Persist also needs Supabase service-role env. Video stills need `ffmpeg`; without it, traces still write. Full flags: `npm run import:think-aloud-pow -- --help`.
 
 ## Public agent APIs (v3)
 

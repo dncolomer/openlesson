@@ -1,4 +1,4 @@
-import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
+import { AYCL_HACKATHONS } from "@/lib/marketing/hackathons";
 import { ACADEMY_K_HREF } from "@/lib/marketing/paths";
 import type { ThesisDeepLink } from "@/lib/science/hub";
 

@@ -16,10 +16,57 @@ import {
   type FlowEmbeddingChannel,
   type FlowKind,
 } from "@/lib/flow-embedding";
-import type {
-  AvailableSubject,
-  KnowledgeConfigResponse,
-} from "@/components/knowledge-panel/widgets";
+export interface AvailableSubject {
+  user_id: string | null;
+  guest_user_id: string | null;
+  embedding_model_id: string;
+  as_of_ms: number;
+  confidence: number;
+  label?: string | null;
+}
+
+export interface KnowledgeConfigResponse {
+  knowledge_config: {
+    embedding_model_id: string;
+    dim: number;
+    confidence: number;
+    pow_event_count: number;
+    as_of?: string;
+    empty?: boolean;
+  };
+  scope?: {
+    mode: string;
+    kind: string;
+    label: string;
+  };
+  available_subjects?: AvailableSubject[];
+  trajectory: {
+    point_count: number;
+    path_length: number;
+    points?: Array<{
+      t: string;
+      as_of_ms: number;
+      vector: number[];
+      confidence: number;
+      trigger?: string;
+      pow_event_count?: number;
+      subject_user_id?: string | null;
+      subject_guest_user_id?: string | null;
+    }>;
+    projection: {
+      algorithm?: string;
+      frame_id: string;
+      coords: Array<{
+        t: string;
+        as_of_ms: number;
+        x: number;
+        y: number;
+        confidence: number;
+        subjectKey?: string;
+      }>;
+    };
+  };
+}
 
 export type FlowEmbeddingViewRow = {
   id: string;

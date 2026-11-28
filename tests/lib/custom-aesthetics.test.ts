@@ -373,6 +373,8 @@ describe("session sidebar style", () => {
     expect(compactRail).toContain("data-org-aesthetic-upload");
     expect(compactRail).toContain("Upload image");
     expect(compactRail).toContain("Generate");
+    expect(compactRail).toContain("aria-label=\"Generate\"");
+    expect(compactRail).toContain("h-8 w-8");
     expect(compactRail).not.toContain("data-org-custom-aesthetics-assets");
     expect(compactRail).not.toContain("https://cdn.example/a.png");
     expect(compactRail).not.toContain("data-org-sidebar-style-reset");
@@ -772,6 +774,9 @@ describe("custom aesthetic surfaces", () => {
     expect(read("lib/organization/sidebar-style-generate.ts")).toContain("gridMode: keepGrid");
     expect(read("lib/organization/apply-sidebar-style.ts")).toContain("parseSessionCanvasStyle");
     expect(read("lib/organization/apply-sidebar-style.ts")).toContain("body.backgroundImage");
+    expect(read("lib/organization/apply-sidebar-style.ts")).toContain("body.preset");
+    expect(styler).toContain("Sparkles");
+    expect(styler).toContain("ImagePlus");
     expect(read("app/api/organization/aesthetics/style/route.ts")).toContain("applySidebarStyleBody");
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("sessionCanvasExcalidrawChrome");
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("useSessionSidebarStyle");

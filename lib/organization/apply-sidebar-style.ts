@@ -8,6 +8,10 @@ import {
 } from "@/lib/organization/custom-aesthetics";
 import { generateSessionSidebarStyle } from "@/lib/organization/sidebar-style-generate";
 import {
+  applyProtocolStylePreset,
+  parseProtocolStylePresetId,
+} from "@/lib/organization/protocol-style-presets";
+import {
   clampSidebarStylePrompt,
   EMPTY_SESSION_SIDEBAR_STYLE,
   parseSessionCanvasStyle,
@@ -19,6 +23,7 @@ export type SidebarStyleMutationBody = {
   reset?: unknown;
   canvas?: unknown;
   backgroundImage?: unknown;
+  preset?: unknown;
 };
 
 export async function applySidebarStyleBody(input: {
@@ -35,6 +40,16 @@ export async function applySidebarStyleBody(input: {
 
   if (body.reset === true) {
     return { ok: true, urls: input.urls, style: EMPTY_SESSION_SIDEBAR_STYLE };
+  }
+
+  if (body.preset != null && !clampSidebarStylePrompt(body.prompt) && body.reset !== true) {
+    const preset = parseProtocolStylePresetId(body.preset);
+    if (!preset) return { ok: false, status: 400, error: "unknown preset" };
+    return {
+      ok: true,
+      urls: input.urls,
+      style: applyProtocolStylePreset(input.style, preset),
+    };
   }
 
   if (body.canvas != null && !clampSidebarStylePrompt(body.prompt) && body.reset !== true) {

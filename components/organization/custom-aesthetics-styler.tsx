@@ -1,5 +1,6 @@
 "use client";
 
+import { ImagePlus, Loader2, Sparkles } from "lucide-react";
 import {
   parseSessionCanvasStyle,
   SESSION_SIDEBAR_STYLE_PROMPT_MAX,
@@ -8,6 +9,11 @@ import {
   type SessionCanvasStyle,
   type SessionSidebarStyle,
 } from "@/lib/session-sidebar-style";
+
+const COMPACT_ICON_BTN =
+  "inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-none border border-white/40 text-neutral-200 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
+const COMPACT_ICON_BTN_PRIMARY =
+  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-none bg-white text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function CustomAestheticsStyler({
   urls,
@@ -104,18 +110,34 @@ export function CustomAestheticsStyler({
               readOnly={!editable}
               disabled={!editable}
               onChange={(event) => onPromptChange(event.target.value)}
-              className={`mt-2 w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white/70 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70 ${compact ? "min-h-[5rem]" : "min-h-[4.5rem]"}`}
+              className={`mt-1.5 w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white/70 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70 ${compact ? "min-h-[3.25rem]" : "mt-2 min-h-[4.5rem]"}`}
             />
             {editable ? (
-              <div className={`mt-3 flex gap-2 ${compact ? "flex-col" : "flex-wrap"}`}>
+              <div className={`flex gap-1 ${compact ? "mt-2" : "mt-3 flex-wrap gap-2"}`}>
                 <button
                   type="button"
                   data-org-sidebar-style-apply
                   disabled={generating || !prompt.trim()}
                   onClick={() => onGenerate()}
-                  className={`inline-flex h-9 items-center justify-center rounded-none bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 ${compact ? "w-full" : ""}`}
+                  aria-label={generating ? labels.applying : labels.apply}
+                  title={generating ? labels.applying : labels.apply}
+                  className={
+                    compact
+                      ? COMPACT_ICON_BTN_PRIMARY
+                      : "inline-flex h-9 items-center justify-center rounded-none bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  }
                 >
-                  {generating ? labels.applying : labels.apply}
+                  {compact ? (
+                    generating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )
+                  ) : generating ? (
+                    labels.applying
+                  ) : (
+                    labels.apply
+                  )}
                 </button>
                 {compact ? null : (
                   <button
@@ -128,7 +150,15 @@ export function CustomAestheticsStyler({
                     {labels.reset}
                   </button>
                 )}
-                <label className={`console-button inline-flex h-9 cursor-pointer items-center px-4 text-sm text-neutral-300 transition hover:border-white/80 hover:text-white ${compact ? "w-full justify-center" : ""}`}>
+                <label
+                  className={
+                    compact
+                      ? COMPACT_ICON_BTN
+                      : "console-button inline-flex h-9 cursor-pointer items-center px-4 text-sm text-neutral-300 transition hover:border-white/80 hover:text-white"
+                  }
+                  aria-label={uploading ? labels.uploading : labels.upload}
+                  title={uploading ? labels.uploading : labels.upload}
+                >
                   <input
                     data-org-aesthetic-upload
                     type="file"
@@ -141,7 +171,17 @@ export function CustomAestheticsStyler({
                       e.target.value = "";
                     }}
                   />
-                  {uploading ? labels.uploading : labels.upload}
+                  {compact ? (
+                    uploading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ImagePlus className="h-3.5 w-3.5" />
+                    )
+                  ) : uploading ? (
+                    labels.uploading
+                  ) : (
+                    labels.upload
+                  )}
                 </label>
               </div>
             ) : null}
@@ -149,8 +189,8 @@ export function CustomAestheticsStyler({
           <div className="min-w-0" data-org-canvas-style>
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">{labels.canvas}</p>
             {compact ? null : <p className="mt-1 text-xs text-neutral-500">{labels.canvasHelper}</p>}
-            <div className={`mt-2 grid grid-cols-2 gap-2 ${compact ? "" : "sm:grid-cols-4"}`}>
-              <label className="flex flex-col gap-1 text-xs text-neutral-300">
+            <div className={`mt-1.5 grid grid-cols-2 gap-1.5 ${compact ? "" : "mt-2 gap-2 sm:grid-cols-4"}`}>
+              <label className="flex flex-col gap-1 text-[11px] text-neutral-300">
                 {labels.canvasBackground}
                 <input
                   type="color"
@@ -165,10 +205,10 @@ export function CustomAestheticsStyler({
                     );
                     if (next) patchCanvas({ background: next });
                   }}
-                  className="h-9 w-full cursor-pointer rounded-none border border-white/40 bg-black p-1 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-8 w-full cursor-pointer rounded-none border border-white/40 bg-black p-1 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-neutral-300">
+              <label className="flex flex-col gap-1 text-[11px] text-neutral-300">
                 {labels.canvasStroke}
                 <input
                   type="color"
@@ -183,28 +223,28 @@ export function CustomAestheticsStyler({
                     );
                     if (next) patchCanvas({ stroke: next });
                   }}
-                  className="h-9 w-full cursor-pointer rounded-none border border-white/40 bg-black p-1 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-8 w-full cursor-pointer rounded-none border border-white/40 bg-black p-1 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </label>
-              <label className="flex items-end gap-2 pb-1 text-xs text-neutral-300">
+              <label className="flex items-center gap-1.5 text-[11px] text-neutral-300">
                 <input
                   type="checkbox"
                   data-org-canvas-zen
                   checked={canvas.zenMode}
                   disabled={!editable || generating}
                   onChange={(event) => patchCanvas({ zenMode: event.target.checked })}
-                  className="h-4 w-4 rounded-none border-white/40 bg-black"
+                  className="h-3.5 w-3.5 rounded-none border-white/40 bg-black"
                 />
                 {labels.canvasZen}
               </label>
-              <label className="flex items-end gap-2 pb-1 text-xs text-neutral-300">
+              <label className="flex items-center gap-1.5 text-[11px] text-neutral-300">
                 <input
                   type="checkbox"
                   data-org-canvas-grid
                   checked={canvas.gridMode}
                   disabled={!editable || generating}
                   onChange={(event) => patchCanvas({ gridMode: event.target.checked })}
-                  className="h-4 w-4 rounded-none border-white/40 bg-black"
+                  className="h-3.5 w-3.5 rounded-none border-white/40 bg-black"
                 />
                 {labels.canvasGrid}
               </label>

@@ -11,6 +11,10 @@ import {
 } from "@/lib/organization/custom-aesthetics-client";
 import { ORGANIZATION_SWITCHED_EVENT } from "@/lib/organization/membership";
 import {
+  applyProtocolStylePreset,
+  type ProtocolStylePresetId,
+} from "@/lib/organization/protocol-style-presets";
+import {
   presentProtocolSetting,
   protocolSettingLocked,
   type ProtocolSettingRecord,
@@ -289,6 +293,10 @@ export function useOrgProtocolStyle() {
 
   const canvasSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canvasSaveGen = useRef(0);
+  const bumpCanvasSave = () => {
+    canvasSaveGen.current += 1;
+    if (canvasSaveTimer.current) clearTimeout(canvasSaveTimer.current);
+  };
   const handleCanvasStyle = (canvas: SessionCanvasStyle) => {
     if (protocolSettingLocked(selected)) return;
     const nextCanvas = parseSessionCanvasStyle(canvas);
@@ -317,8 +325,37 @@ export function useOrgProtocolStyle() {
     }, 250);
   };
 
+  const handleApplyPreset = (presetId: ProtocolStylePresetId) => {
+    if (protocolSettingLocked(selected)) return;
+    const next = applyProtocolStylePreset(sidebarStyle, presetId);
+    setSidebarStyle(next);
+    const gen = ++canvasSaveGen.current;
+    if (canvasSaveTimer.current) clearTimeout(canvasSaveTimer.current);
+    void (async () => {
+      try {
+        const res = await fetch(stylePath(selected?.id || "default"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preset: presetId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (gen !== canvasSaveGen.current) return;
+        if (!res.ok) {
+          alert(apiErrorMessage(data, t("organization.sidebarStyleError")));
+          return;
+        }
+        applyAestheticsPayload(data);
+      } catch (presetErr) {
+        if (gen !== canvasSaveGen.current) return;
+        console.error("Protocol style preset error:", presetErr);
+        alert(t("organization.sidebarStyleError"));
+      }
+    })();
+  };
+
   const handleResetSidebarStyle = async () => {
     if (protocolSettingLocked(selected)) return;
+    bumpCanvasSave();
     setStylingSidebar(true);
     try {
       const res = await fetch(stylePath(selected?.id || "default"), {
@@ -481,6 +518,7 @@ export function useOrgProtocolStyle() {
     handleRemoveAesthetic,
     handleStyleSidebar,
     handleCanvasStyle,
+    handleApplyPreset,
     handleResetSidebarStyle,
     handleCreateSetting,
     handleSaveSetting,

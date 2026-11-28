@@ -18,6 +18,12 @@ import {
 } from "@/lib/organization/protocol-settings";
 import { emptyProtocolDraft } from "@/lib/product-flow";
 import { PROTOCOL_SETTINGS_API_BASE } from "@/lib/api/agent-api-paths";
+import {
+  applyProtocolStylePreset,
+  matchingProtocolStylePreset,
+  parseProtocolStylePresetId,
+  PROTOCOL_STYLE_PRESETS,
+} from "@/lib/organization/protocol-style-presets";
 import { EMPTY_SESSION_SIDEBAR_STYLE } from "@/lib/session-sidebar-style";
 import { dashboardProtocolSettingsHref } from "@/lib/dashboard-nav";
 
@@ -132,6 +138,15 @@ describe("named protocol settings", () => {
     expect(editor).toContain("data-org-protocol-settings-save");
     expect(editor).toContain("handleSaveSetting");
     expect(editor).toContain("protocolSettingsSaveStyle");
+    expect(editor).toContain("data-org-protocol-settings-presets");
+    expect(editor).toContain("data-org-protocol-settings-preset");
+    expect(editor).toContain("handleApplyPreset");
+    expect(editor).toContain("protocolSettingsPresetDark");
+    expect(editor).toContain("protocolSettingsPresetLight");
+    expect(editor).toContain("protocolSettingsPresetHighContrast");
+    expect(editor).toContain("ArrowLeft");
+    expect(editor).toContain("h-8 w-8");
+    expect(editor).not.toContain("FLOW_PRIMARY_BTN");
     expect(editor).not.toContain("handleRenameSetting");
     expect(editor).not.toContain("protocolSettingsRename");
     const factory = read("supabase/migrations/20261127140000_protocol_settings_factory_default.sql");
@@ -169,6 +184,13 @@ describe("named protocol settings", () => {
     expect(read("app/api/organization/protocol-settings/[id]/style/route.ts")).toContain(
       "protocolSettingLocked",
     );
+    expect(read("lib/organization/apply-sidebar-style.ts")).toContain("body.preset");
+    expect(read("components/organization/use-org-protocol-style.ts")).toContain(
+      "handleApplyPreset",
+    );
+    expect(read("components/organization/use-org-protocol-style.ts")).toContain(
+      "JSON.stringify({ preset: presetId })",
+    );
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("ProtocolSettingSelect");
     expect(read("components/product-flow/product-flow-page.tsx")).toContain("ProtocolSettingSelect");
     expect(read("components/product-flow/protocol-setting-select.tsx")).toContain(
@@ -181,5 +203,35 @@ describe("named protocol settings", () => {
     expect(read("app/api/verification-flow/public/[token]/route.ts")).toContain("sidebarStyle");
     expect(read("components/VerificationFlowRunner.tsx")).toContain("SessionSidebarStyleOverride");
     expect(read("lib/use-session-sidebar-style.ts")).toContain("SessionSidebarStyleOverride");
+  });
+
+  it("applies dark, light, and high-contrast presets without touching prompt or still", () => {
+    expect(parseProtocolStylePresetId("light")).toBe("light");
+    expect(parseProtocolStylePresetId("nope")).toBeNull();
+    expect(matchingProtocolStylePreset(EMPTY_SESSION_SIDEBAR_STYLE)).toBe("dark");
+
+    const current = {
+      ...EMPTY_SESSION_SIDEBAR_STYLE,
+      prompt: "brass on ink",
+      backgroundImage: "https://cdn.example/brand.jpg",
+      canvas: { ...EMPTY_SESSION_SIDEBAR_STYLE.canvas, zenMode: false, gridMode: false },
+    };
+    const light = applyProtocolStylePreset(current, "light");
+    expect(light.prompt).toBe("brass on ink");
+    expect(light.backgroundImage).toBe("https://cdn.example/brand.jpg");
+    expect(light.canvas.zenMode).toBe(false);
+    expect(light.canvas.gridMode).toBe(false);
+    expect(light.tokens).toEqual(PROTOCOL_STYLE_PRESETS.light.tokens);
+    expect(light.canvas.background).toBe(PROTOCOL_STYLE_PRESETS.light.canvas.background);
+    expect(matchingProtocolStylePreset(light)).toBe("light");
+
+    const contrast = applyProtocolStylePreset(light, "high_contrast");
+    expect(matchingProtocolStylePreset(contrast)).toBe("high_contrast");
+    expect(contrast.tokens.border).toBe("#ffffff");
+    expect(contrast.canvas.stroke).toBe("#ffffff");
+
+    const dark = applyProtocolStylePreset(contrast, "dark");
+    expect(matchingProtocolStylePreset(dark)).toBe("dark");
+    expect(dark.tokens).toEqual(PROTOCOL_STYLE_PRESETS.dark.tokens);
   });
 });

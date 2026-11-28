@@ -40,7 +40,19 @@ import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts
 import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { parseProtocolSettingId } from "@/lib/organization/protocol-settings";
 import { writeFlowRowWithOptionalColumns } from "@/lib/flow-row-write";
-import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
+import { billedUserIdForSession } from "@/lib/credits/ledger";
+
+function inviteFlowSessionOwner(input: {
+  flowOwnerUserId: string;
+  runnerUserId?: string | null;
+}): { user_id: string; billedUserId: string; workspace_id: null } {
+  const ownerUserId = String(input.flowOwnerUserId || "").trim();
+  const billedUserId = billedUserIdForSession({
+    runnerUserId: input.runnerUserId,
+    ownerUserId,
+  });
+  return { user_id: ownerUserId, billedUserId, workspace_id: null };
+}
 import { getFlowLinkByToken, withFlowLinkMetadata } from "@/lib/flow-links";
 import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
 

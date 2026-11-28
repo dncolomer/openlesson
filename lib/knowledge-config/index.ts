@@ -61,15 +61,6 @@ export {
 } from "./custom-verification-model";
 
 export {
-  encodeSyntheticRegionProfile,
-  createSyntheticKnowledgeRegionFromProfile,
-  projectKnowledgeRegionToOverlay,
-  projectKnowledgeRegionsToOverlays,
-  type SyntheticRegionProfile,
-  type KnowledgeRegionOverlay2D,
-} from "./synthetic-knowledge-region";
-
-export {
   computeDataBounds,
   computeProjectionFitBounds,
   selectProjectionDisplayPoints,

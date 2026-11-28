@@ -4,14 +4,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { persistCompletedFlowEmbedding } from "@/lib/flow-embedding-store";
-import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  parseMapPlayDataAccessFlags,
-  playCopyContributionEmbeddingInput,
-} from "@/lib/map-play-data-access";
-import { isPlayCopyWorkspace } from "@/lib/workspace-play-copy";
 import { sessionBranchModelFromUnknown } from "@/lib/session-branch-model";
-import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
+import type { FlowPowRow } from "@/lib/flow-embedding";
 import {
   requireSessionProofAccess,
   sessionProofAccessFromBody,
@@ -75,38 +69,6 @@ export async function POST(req: NextRequest) {
       pow: parsePow(body.pow),
       raw: body.raw,
     });
-
-    if (workspaceId && stored.flow_id && stored.run_id) {
-      const admin = createAdminClient();
-      const { data: copy } = await admin
-        .from("workspaces")
-        .select("is_play_copy, original_workspace_id, user_id")
-        .eq("id", workspaceId)
-        .maybeSingle();
-      if (isPlayCopyWorkspace(copy)) {
-        const originalId = String(copy?.original_workspace_id || "").trim();
-        if (originalId) {
-          const { data: sourceMap } = await admin
-            .from("workspaces")
-            .select("play_share_path, play_share_pow, user_id")
-            .eq("id", originalId)
-            .maybeSingle();
-          const contribution = playCopyContributionEmbeddingInput({
-            flags: parseMapPlayDataAccessFlags(sourceMap),
-            playerUserId: String(copy?.user_id || stored.owner_user_id || ownerUserId),
-            authorUserId: String(sourceMap?.user_id || ""),
-            flowKind: flowKind as FlowKind | "learn",
-            flowId: stored.flow_id,
-            runId: stored.run_id,
-            identity: stored.identity,
-            raw: stored.raw,
-          });
-          if (contribution) {
-            await persistCompletedFlowEmbedding(contribution);
-          }
-        }
-      }
-    }
 
     const { maybePostLtiUnsysGrades } = await import("@/lib/lti/maybe-post-grades");
     await maybePostLtiUnsysGrades({ stored });

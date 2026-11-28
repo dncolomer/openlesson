@@ -242,7 +242,8 @@ describe("session topic card", () => {
     expect(html).not.toContain("w-[7rem]");
     expect(html.match(/data-session-topic-card=/g)).toHaveLength(1);
     expect(html).toContain('data-session-topic-card="ch-a"');
-    expect(html).toContain("alpha");
+    expect(html).toContain('aria-label="alpha"');
+    expect(html).not.toContain("data-session-topic-card-title");
     expect(html).not.toContain('data-session-topic-card="ch-b"');
     expect(html).toContain("w-full min-w-0");
   });

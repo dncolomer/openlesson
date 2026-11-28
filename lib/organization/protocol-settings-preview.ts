@@ -15,6 +15,14 @@ export function protocolSettingsPreviewScene(): IleWorkCanvasScene {
     y: 64,
     textWidth: 360,
     label: "Protocol Settings",
+    textId: "protocol-settings-preview-text",
+    elementIds: {
+      body: "protocol-settings-preview-body",
+      header: "protocol-settings-preview-header",
+      text: "protocol-settings-preview-text",
+      label: "protocol-settings-preview-label",
+      group: "protocol-settings-preview-grp",
+    },
   });
   return {
     elements: note.elements,

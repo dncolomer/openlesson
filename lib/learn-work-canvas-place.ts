@@ -14,6 +14,7 @@ import {
   BOARD_INSTRUCTION_NOTE_KEY,
   BOARD_INSTRUCTION_NOTE_LABEL,
   DEFAULT_DIMENSION,
+  ILE_CHAPTER_SEED_CUSTOM_DATA_KEY,
   ILE_XAI_CANVAS_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
@@ -23,6 +24,7 @@ import {
   TEXT_ORIGIN_Y,
   boardInstructionNoteElements,
   convertToExcalidrawElements,
+  ileWorkCanvasHasChapterSeed,
   ileWorkCanvasContentBounds,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasXaiShapeType,
@@ -809,6 +811,29 @@ export function settleIleWorkCanvasIncoming(
   );
 }
 
+/** Drop a second chapter-seed Work card when the board already has one. */
+export function omitDuplicateChapterSeedIncoming(
+  existing: readonly IleWorkCanvasElement[],
+  incoming: readonly IleWorkCanvasElement[],
+): IleWorkCanvasElement[] {
+  if (!ileWorkCanvasHasChapterSeed(existing)) return incoming.slice();
+  const dropGroups = new Set<string>();
+  const dropIds = new Set<string>();
+  for (const el of incoming) {
+    if (!el || el.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] !== true) continue;
+    if (el.id) dropIds.add(el.id);
+    for (const groupId of el.groupIds ?? []) {
+      if (groupId) dropGroups.add(String(groupId));
+    }
+  }
+  if (!dropGroups.size && !dropIds.size) return incoming.slice();
+  return incoming.filter((el) => {
+    if (!el) return false;
+    if (el.id && dropIds.has(el.id)) return false;
+    return !(el.groupIds ?? []).some((groupId) => dropGroups.has(String(groupId)));
+  });
+}
+
 /**
  * Paste host commit: drop ids, then slide the new group off whatever is
  * already on the live board. Marks that appeared after a snapshot stay put.
@@ -821,7 +846,8 @@ export function pasteIleWorkCanvasElements(input: {
   const remove = new Set((input.removeIds ?? []).map((id) => String(id || "")).filter(Boolean));
   const kept = (input.existing ?? []).filter((el) => el && (!el.id || !remove.has(el.id)));
   const keptIds = new Set(kept.map((el) => el.id));
-  const toAdd = (input.incoming ?? []).filter(
+  const uniqueIncoming = omitDuplicateChapterSeedIncoming(kept, input.incoming ?? []);
+  const toAdd = uniqueIncoming.filter(
     (el) => el && typeof el === "object" && (!el.id || !keptIds.has(el.id)),
   );
   if (!toAdd.length) return kept.slice();

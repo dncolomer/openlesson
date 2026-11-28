@@ -175,6 +175,9 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     );
     expect(workLabel?.originalText || workLabel?.text).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
     expect(String(workText?.originalText || workText?.text || "")).toContain("heap insert");
+    expect(
+      verifyOpening.elements.filter((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
+    ).toHaveLength(1);
     const exactText = exactOpening.elements.find(
       (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text",
     );
@@ -190,6 +193,12 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     );
     expect(exactLive).toContain("distance-5");
     expect(exactLive).not.toContain("heap insert");
+    expect(
+      exactOpening.elements.filter((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
+    ).toHaveLength(1);
+    expect(
+      exactOpening.elements.map((el) => String(el.originalText || el.text || "")).join(" "),
+    ).not.toContain("heap insert");
     const prepared = serializeFlowOpeningCanvasScene({
       elements: [
         {
@@ -234,6 +243,10 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
       .join(" ");
     expect(preparedLive).toContain("Prepared verify board");
     expect(preparedLive).not.toContain("distance-5");
+    expect(preparedLive).not.toContain("heap insert");
+    expect(
+      preparedOpening.elements.filter((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
+    ).toHaveLength(0);
     const liveSeed = tapWorkCanvasOpeningLiveSeed(
       empty,
       [{ id: "open-1", role: "assistant", content: "Walk the heap insert from this array." }],
@@ -249,6 +262,8 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(phases).toContain("openingCanvasScene");
     expect(phases).toContain("tapWorkCanvasOpeningLiveSeed");
+    expect(phases).toContain("openingAlreadyPlaced");
+    expect(phases).toContain("laterMissing");
     expect(phases).toContain("applyFiles={canvasApplyFiles}");
     expect(phases).toContain("canvasSeedNonce");
     expect(phases).toContain("tap-work-canvas:${phase}:${canvasSeedNonce}");

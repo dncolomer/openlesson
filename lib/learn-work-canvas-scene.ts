@@ -874,6 +874,36 @@ export function ileWorkCanvasNoteLabel(kind?: string | null): string {
   }
 }
 
+export type IleWorkCanvasNoteElementIds = {
+  body?: string;
+  header?: string;
+  text?: string;
+  label?: string;
+  group?: string;
+};
+
+/** Stable ids so a second seed/paste of the same chapter note is a no-op. */
+export function ileChapterSeedElementIds(
+  chapterId?: string | null,
+): Required<IleWorkCanvasNoteElementIds> {
+  const key = resolveIleChapterContextKey(chapterId).replace(/[^a-zA-Z0-9_-]/g, "") || "session";
+  return {
+    body: `ile-seed-${key}-body`,
+    header: `ile-seed-${key}-header`,
+    text: `ile-seed-${key}-text`,
+    label: `ile-seed-${key}-label`,
+    group: `ile-seed-${key}-grp`,
+  };
+}
+
+export function ileWorkCanvasHasChapterSeed(
+  elements: readonly IleWorkCanvasElement[] | null | undefined,
+): boolean {
+  return (elements ?? []).some(
+    (el) => Boolean(el) && !el.isDeleted && el.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true,
+  );
+}
+
 /**
  * Instruction on the board is a work card: header bar + body bar stacked,
  * each with its own bound text. One full-card rectangle plus unbound copy
@@ -891,6 +921,7 @@ export function boardInstructionNoteElements(input: {
   headerCustomData?: Record<string, unknown> | null;
   locked?: boolean;
   textId?: string;
+  elementIds?: IleWorkCanvasNoteElementIds | null;
   /** Empty body still draws the card (live dictate). */
   allowEmpty?: boolean;
 }): { elements: IleWorkCanvasElement[]; width: number; height: number } {
@@ -915,11 +946,15 @@ export function boardInstructionNoteElements(input: {
     [BOARD_INSTRUCTION_NOTE_KEY]: part,
   });
   const headerSource = input.headerCustomData ?? input.bodyCustomData;
-  const groupId = nextElementId("grp");
+  const ids = input.elementIds ?? {};
+  const textId = input.textId || ids.text;
+  const regenerateIds = !textId && !ids.body && !ids.header && !ids.label && !ids.group;
+  const groupId = ids.group || nextElementId("grp");
   const converted = convertToExcalidrawElements(
     [
       {
         type: "rectangle",
+        id: ids.body,
         x,
         y: bodyY,
         width,
@@ -935,6 +970,7 @@ export function boardInstructionNoteElements(input: {
       },
       {
         type: "rectangle",
+        id: ids.header,
         x,
         y,
         width,
@@ -950,7 +986,7 @@ export function boardInstructionNoteElements(input: {
       },
       {
         type: "text",
-        id: input.textId,
+        id: textId,
         text: text || " ",
         x: x + BOARD_NOTE_PAD_X,
         y: bodyY + BOARD_NOTE_PAD_Y,
@@ -966,6 +1002,7 @@ export function boardInstructionNoteElements(input: {
       },
       {
         type: "text",
+        id: ids.label,
         text: title,
         x: x + BOARD_NOTE_PAD_X,
         y: y + 8,
@@ -980,7 +1017,7 @@ export function boardInstructionNoteElements(input: {
         customData: kind(headerSource, "label"),
       },
     ],
-    { regenerateIds: !input.textId },
+    { regenerateIds },
   );
   const body = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
   const header = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
@@ -1022,6 +1059,7 @@ export function seedIleChapterWorkCanvas(
   const text = String(input.text || "").trim();
   if (!text) return { scene: current, seeded: false };
   if (ileWorkCanvasHasLiveElements(current)) return { scene: current, seeded: false };
+  if (ileWorkCanvasHasChapterSeed(current.elements)) return { scene: current, seeded: false };
   if (
     ileWorkCanvasTimerResetBlocksSeed({
       chapterId: input.chapterId,
@@ -1033,11 +1071,14 @@ export function seedIleChapterWorkCanvas(
   }
   const origin = nextXaiTextOrigin(current.elements);
   const chapterId = resolveIleChapterContextKey(input.chapterId);
+  const elementIds = ileChapterSeedElementIds(chapterId);
   const note = boardInstructionNoteElements({
     text,
     x: origin.x,
     y: origin.y,
     textWidth: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    textId: elementIds.text,
+    elementIds,
     textCustomData: {
       [ILE_CHAPTER_SEED_CUSTOM_DATA_KEY]: true,
       chapterId,

@@ -295,7 +295,11 @@ describe("session sidebar style", () => {
     expect(mock).toContain("inertCommands");
     const scene = protocolSettingsPreviewScene();
     expect(scene.elements.length).toBeGreaterThan(0);
+    expect(
+      scene.elements.filter((el) => el.customData?.boardInstructionNote === "body"),
+    ).toHaveLength(1);
     expect(scene.appState).toBeTruthy();
+    expect(mock).not.toContain("data-session-topic-card-title");
     const uploadedOnly = renderToStaticMarkup(
       createElement(CustomAestheticsStyler, {
         urls: ["https://cdn.example/a.png", "https://cdn.example/b.webp"],
@@ -523,7 +527,8 @@ describe("decideActiveAestheticPool", () => {
       }),
     );
     expect(customHtml).toContain(customStill);
-    expect(customHtml).toContain("Just war");
+    expect(customHtml).toContain('aria-label="Just war"');
+    expect(customHtml).not.toContain("data-session-topic-card-title");
     expect(customHtml).not.toContain(storedSystem);
     expect(customHtml).not.toContain(systemImages[0]);
     expect(customHtml.match(/data-session-topic-card-image/g)).toHaveLength(1);

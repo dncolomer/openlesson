@@ -219,7 +219,8 @@ describe("session sidebar mode configuration", () => {
     expect(card).toContain('data-session-topic-card="chapter-1"');
     expect(card).toContain("data-session-topic-card-image");
     expect(card).toContain(TOPIC_STILL);
-    expect(card).toContain(TOPIC_TITLE);
+    expect(card).toContain(`aria-label="${TOPIC_TITLE}"`);
+    expect(card).not.toContain("data-session-topic-card-title");
     expect(card.match(/data-session-topic-card=/g)).toHaveLength(1);
     expect(card.match(/data-session-topic-card-image/g)).toHaveLength(1);
     expect(card).not.toContain("data-session-topic-card-media");
@@ -442,7 +443,8 @@ describe("session sidebar mode configuration", () => {
       expect(html).toContain('data-session-sidebar-section="focus"');
       expect(html).toContain(">Stash<");
       expect(html).toContain("Stash body");
-      expect(html).toContain(TOPIC_TITLE);
+      expect(html).toContain(`aria-label="${TOPIC_TITLE}"`);
+      expect(html).not.toContain("data-session-topic-card-title");
       expect(html).toContain(TOPIC_STILL);
       expect(html).toContain("Signals body");
       expect(html).not.toContain(">Chapters<");
@@ -462,15 +464,12 @@ describe("session sidebar mode configuration", () => {
       expect(modeCard).toContain('data-session-topic-card-timer="true"');
       expect(modeCard).toContain("items-start");
       expect(modeCard).toContain("justify-end");
-      expect(modeCard).toContain("text-left");
       expect(modeCard).not.toContain("text-right");
       expect(modeCard).not.toContain("max-w-[58%]");
       expect(modeCard.indexOf('data-session-topic-card-timer="true"')).toBeGreaterThan(
         modeCard.indexOf('data-session-topic-card="chapter-1"'),
       );
-      expect(modeCard.indexOf('data-session-topic-card-timer="true"')).toBeLessThan(
-        modeCard.indexOf("data-session-topic-card-title"),
-      );
+      expect(modeCard).not.toContain("data-session-topic-card-title");
       expect(modeCard).toContain(">0:16<");
       expect(modeCard.match(/data-session-topic-card=/g)).toHaveLength(1);
       expect(html).not.toContain("data-ile-transcription-box");

@@ -66,7 +66,7 @@ export function LearnElapsedTimer({ startedAt }: { startedAt?: string | null }) 
 
 const SessionTopicCardTimerContext = createContext<ReactNode>(null);
 
-/** Sidebar clock rendered inside the topic card, above the chapter name. */
+/** Sidebar clock rendered inside the topic card, over the still. */
 export function SessionTopicCardTimerProvider({
   timer,
   children,
@@ -145,6 +145,7 @@ export function SessionTopicCard({
     <div
       data-session-topic-card={id}
       data-session-topic-card-static="true"
+      aria-label={heading}
       className="relative w-full min-w-0 max-w-full shrink-0 overflow-hidden border-b bg-black"
       style={{
         height,
@@ -169,17 +170,6 @@ export function SessionTopicCard({
       />
       <span className="relative z-10 flex h-full w-full flex-col items-start justify-end gap-1 px-2 pb-2">
         {timer}
-        <span
-          data-session-topic-card-title
-          className="line-clamp-3 max-w-full min-w-0 self-start text-left border px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em]"
-          style={{
-            borderColor: sidebarStyle.tokens.accent,
-            backgroundColor: sidebarStyle.tokens.panel,
-            color: sidebarStyle.tokens.text,
-          }}
-        >
-          {heading}
-        </span>
       </span>
     </div>
   );

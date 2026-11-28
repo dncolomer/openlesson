@@ -403,6 +403,16 @@ export function TapScorePhases(props: {
     if (!missing.length) return;
     const boardEmpty = !sceneRef.current.elements.some((el) => !el.isDeleted);
     const prevIds = new Set(sceneRef.current.elements.map((el) => el.id));
+    const firstAssistantId = assistantTurns[0]?.id;
+    const openingAlreadyPlaced = !boardEmpty;
+    const laterMissing =
+      openingAlreadyPlaced && kind === "verify"
+        ? missing.filter((turn) => turn.id !== firstAssistantId)
+        : missing;
+    if (!laterMissing.length) {
+      for (const turn of missing) appliedAssistantIdsRef.current.add(turn.id);
+      return;
+    }
     const next =
       boardEmpty && missing.length === assistantTurns.length
         ? kind === "verify"
@@ -414,12 +424,18 @@ export function TapScorePhases(props: {
               openingCanvasChrome,
             ).scene
           : applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
-        : applyTapHeliosReplyToWorkCanvas(
-            sceneRef.current,
-            lastAssistantTurn?.content,
-            null,
-            lastAssistantTurn?.id,
-          );
+        : openingAlreadyPlaced && kind === "verify"
+          ? laterMissing.reduce(
+              (scene, turn) =>
+                applyTapHeliosReplyToWorkCanvas(scene, turn.content, null, turn.id),
+              sceneRef.current,
+            )
+          : applyTapHeliosReplyToWorkCanvas(
+              sceneRef.current,
+              lastAssistantTurn?.content,
+              null,
+              lastAssistantTurn?.id,
+            );
     for (const turn of assistantTurns) appliedAssistantIdsRef.current.add(turn.id);
     const added = next.elements.filter((el) => !prevIds.has(el.id));
     if (!added.length && !boardEmpty) return;

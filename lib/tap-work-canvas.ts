@@ -150,9 +150,10 @@ export function applyTapVerificationOpeningToWorkCanvas(
   chrome?: IleWorkCanvasChrome | null,
 ): IleWorkCanvasScene {
   const assistant = assistantCanvasTurns(turns);
+  const later = assistant.slice(1);
   const prepared = seedPreparedOpeningCanvas(scene, preparedScene, chrome);
   if (prepared.seeded) {
-    return applyTapAssistantTurnsToWorkCanvas(prepared.scene, assistant);
+    return applyTapAssistantTurnsToWorkCanvas(prepared.scene, later);
   }
   const problem = String(exactProblem || "").replace(/\s+/g, " ").trim();
   if (problem) {
@@ -160,7 +161,7 @@ export function applyTapVerificationOpeningToWorkCanvas(
       text: problem,
       chapterId: "session",
     });
-    return applyTapAssistantTurnsToWorkCanvas(seeded.scene, assistant);
+    return applyTapAssistantTurnsToWorkCanvas(seeded.scene, later);
   }
   const [first, ...rest] = assistant;
   const seeded = seedIleChapterWorkCanvas(scene, {

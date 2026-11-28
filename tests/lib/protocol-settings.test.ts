@@ -167,6 +167,9 @@ describe("named protocol settings", () => {
     expect(mock).not.toContain("sessionMarkMode");
     expect(editor).toContain("urls={brandStill}");
     expect(mock).toContain("image={brandStill || null}");
+    expect(read("components/session-view/learn-work-dock-bar.tsx")).not.toContain(
+      "data-session-topic-card-title",
+    );
     expect(mock).toContain("key={brandStill || \"system\"}");
     expect(mock).toContain("boardStyle.backgroundImage || urls[0]");
     expect(editor).toContain("protocolSettingsUploadImage");

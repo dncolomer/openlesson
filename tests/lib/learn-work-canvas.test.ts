@@ -456,6 +456,40 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
     expect(seeded.scene).not.toHaveProperty("scrollToContent");
   });
 
+  it("does not paste a second chapter Work card onto a board that already has one", () => {
+    const first = seedIleChapterWorkCanvas(null, {
+      text: "Walk a case through just-war criteria",
+      chapterId: "chapter-a",
+    });
+    const second = seedIleChapterWorkCanvas(null, {
+      text: "Walk a case through just-war criteria",
+      chapterId: "chapter-a",
+    });
+    expect(first.scene.elements.map((el) => el.id).sort()).toEqual(
+      second.scene.elements.map((el) => el.id).sort(),
+    );
+    const sameIds = pasteIleWorkCanvasElements({
+      existing: first.scene.elements,
+      incoming: second.scene.elements,
+    });
+    expect(
+      sameIds.filter((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
+    ).toHaveLength(1);
+
+    const renamed = first.scene.elements.map((el) => ({
+      ...el,
+      id: `${el.id}-copy`,
+      groupIds: (el.groupIds ?? []).map((id) => `${id}-copy`),
+    }));
+    const copied = pasteIleWorkCanvasElements({
+      existing: first.scene.elements,
+      incoming: renamed,
+    });
+    expect(
+      copied.filter((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
+    ).toHaveLength(1);
+  });
+
   it("keeps the Work header off the instruction note body", () => {
     const seeded = seedIleChapterWorkCanvas(null, {
       text: "Walk a case through just-war criteria",

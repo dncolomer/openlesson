@@ -180,39 +180,26 @@ describe("PoW source link traceability", () => {
     });
   });
 
-  it("create modules store durable public_token for always-visible share URLs", async () => {
+  it("normalizes guest link access modes", async () => {
     expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
     expect(normalizeGuestLinkAccessMode({ access_mode: "private" })).toBe("private");
-    const createTap = await import("@/lib/pow-api/create-tap-link");
-    const createIle = await import("@/lib/pow-api/create-learn-link");
-    expect(typeof createTap.createWorkspaceTapLink).toBe("function");
-    expect(typeof createIle.createWorkspaceIleLink).toBe("function");
-    const tapSrc = (await import("node:fs")).readFileSync(
-      (await import("node:path")).join(__dirname, "../../lib/pow-api/create-tap-link.ts"),
-      "utf8",
-    );
-    expect(tapSrc).toContain("durableGuestLinkPublicToken");
   });
 });
 
 describe("session page wiring (static)", () => {
-  it("TAP and TAP Learning session pages capture searchParams via collectEntryQueryParams", async () => {
+  it("TAP verify session page captures searchParams via collectEntryQueryParams", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const root = join(__dirname, "../..");
     const tap = readFileSync(join(root, "components/guest-session/private-tap-session-page.tsx"), "utf8");
-    const ile = readFileSync(join(root, "app/learn/session/[token]/page.tsx"), "utf8");
     expect(tap).toContain("collectEntryQueryParams");
     expect(tap).toContain("recordGuestLinkEntryQueryParams");
     expect(tap).toContain("searchParams");
     expect(tap).toContain("findCalibrateSessionByToken");
     expect(tap).toContain("findVerifySessionByToken");
-    expect(ile).toContain("collectEntryQueryParams");
-    expect(ile).toContain("recordGuestLinkEntryQueryParams");
-    expect(ile).toContain("searchParams");
   });
 
-  it("TAP and TAP Learning PoW routes stamp source_link via stampSourceLinkMetadata", async () => {
+  it("Verify PoW routes stamp source_link via stampSourceLinkMetadata", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const root = join(__dirname, "../..");
@@ -223,8 +210,6 @@ describe("session page wiring (static)", () => {
       "app/api/verify/session/idle/route.ts",
       "app/api/verify/session/complete/route.ts",
       "app/api/session/proof-of-work/route.ts",
-      "app/api/workspace-learn/speech/route.ts",
-      "app/api/workspace-learn/idle/route.ts",
     ]) {
       const src = readFileSync(join(root, rel), "utf8");
       expect(src, rel).toContain("stampSourceLinkMetadata");

@@ -306,20 +306,7 @@ describe("live speech recognition helpers", () => {
   });
 });
 
-describe("TAP Learning + TAP speech wiring (structural)", () => {
-  it("SessionView enables speech via isIleSpeechCaptureEnabled and starts recording when welcome is skipped", () => {
-    const viewSrc = readSessionViewSurface();
-    expect(viewSrc).toContain("isIleSpeechCaptureEnabled");
-    expect(viewSrc).toContain("powSessionEnabled");
-    expect(viewSrc).toContain("enabled: speechCaptureEnabled");
-    // Returning sessions arm capture without the welcome Play path
-    // (settings confirm + map remount both go through decideIleSettingsEnterMap).
-    expect(viewSrc).toContain("decideIleSettingsEnterMap");
-    expect(viewSrc).toMatch(/enterMap === "record"[\s\S]*await startRecording\(\)/);
-    expect(viewSrc).toMatch(/action === "help"[\s\S]*startRecording\(\)/);
-    expect(viewSrc).toMatch(/needsWelcome[\s\S]*await startRecording\(\)/);
-  });
-
+describe("TAP speech wiring (structural)", () => {
   it("TAP live phase starts recognition and keeps display enabled while live", () => {
     const tapSrc = readFileSync(
       path.join(process.cwd(), "components/TapScoreClient.tsx"),

@@ -56,21 +56,8 @@ describe("session-participant-identity", () => {
   });
 });
 
-describe("guest-link + map attribution wiring", () => {
-  it("TAP Learning guest PoW access uses guest auth not owner user_id", () => {
-    const access = fs.readFileSync(
-      path.join(ROOT, "lib/pow-api/workspace-session-access.ts"),
-      "utf8",
-    );
-    expect(access).toContain('key_id: "ile-link"');
-    expect(access).toContain("participantGuestUserId");
-    expect(access).toContain("user_id: participantUserId");
-    expect(access).toContain("guest_user_id: participantGuestUserId");
-    // Must not set auth.user_id to owner on guest links
-    expect(access).not.toMatch(/key_id: "ile-link"[\s\S]{0,200}user_id: ile\.ownerUserId/);
-  });
-
-  it("TAP/TAP Learning speech inserts force null user_id when guest present", () => {
+describe("guest-link attribution wiring", () => {
+  it("Verify speech inserts force null user_id when guest present", () => {
     const auth = fs.readFileSync(
       path.join(ROOT, "lib/tap-score-session-auth.ts"),
       "utf8",
@@ -86,13 +73,5 @@ describe("guest-link + map attribution wiring", () => {
       "utf8",
     );
     expect(tapSpeech).toMatch(/guestUserId \? null/);
-    for (const rel of [
-      "app/api/workspace-learn/speech/route.ts",
-      "app/api/workspace-learn/idle/route.ts",
-    ]) {
-      const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
-      expect(src, rel).toMatch(/guest_user_id \? null/);
-    }
   });
-
 });

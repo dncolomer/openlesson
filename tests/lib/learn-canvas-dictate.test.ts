@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surface-source";
+import { readExcalidrawSurface } from "../helpers/surface-source";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
@@ -70,7 +70,6 @@ function promptBar(mode: SessionMarkMode) {
 
 function read(rel: string) {
   if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
-  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
@@ -328,12 +327,6 @@ describe("canvas dictate button", () => {
     expect(canvas).toContain("dictateTranscript !== undefined && !viewModeEnabled");
     expect(canvas).toContain(".dictate(");
     expect(canvas).toContain("transcript={dictateTranscript}");
-    expect(read("components/session-view/session-chapter-canvas.tsx")).toContain(
-      "dictateTranscript={sessionThoughtInterface.crystallizableText",
-    );
-    expect(read("components/session-view/session-chapter-canvas.tsx")).toContain(
-      "getLiveTranscript={sessionThoughtInterface.getFormingText}",
-    );
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
       "dictateTranscript={crystallizableText}",
     );
@@ -371,7 +364,6 @@ describe("canvas dictate button", () => {
     expect(html).not.toContain('data-ile-command-index="06"');
     expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("min-h-9");
     for (const file of [
-      "components/session-view/session-chapter-canvas.tsx",
       "components/tap-score/tap-score-phases.tsx",
     ]) {
       const source = read(file);

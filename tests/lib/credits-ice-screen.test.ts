@@ -91,11 +91,7 @@ describe("insufficient credits ice screen", () => {
     expect(String(body.error.message)).toMatch(/server/i);
   });
 
-  it("Learn guest-link 402 renders the ice; minted guests grant 100 credits", () => {
-    const learnPage = read("app/learn/session/[token]/page.tsx");
-    expect(learnPage).toContain("InsufficientCreditsIceScreen");
-    expect(learnPage).toContain("ensured.status === 402");
-    expect(read("lib/aycl-fork-guest.ts")).toContain("applyGuestGrantIfNeeded");
+  it("register return path and guest starter credit migration stay wired", () => {
     expect(read("app/register/page.tsx")).toContain("safeInternalReturnPath");
     expect(read("supabase/migrations/20261102140000_guest_starter_credits.sql")).toContain(
       "guest_starter",

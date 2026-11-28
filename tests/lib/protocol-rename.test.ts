@@ -143,9 +143,6 @@ describe("knowledge verification protocols only", () => {
     expect(migration).toContain("DROP TABLE IF EXISTS public.insights");
     expect(migration).toContain("DROP COLUMN IF EXISTS product");
     expect(migration).toContain("solve-flowcfg-v1-d96");
-    expect(read("lib/pow-api/custom-verification-model-crud.ts")).not.toContain(
-      "learn-flowcfg-v1-d96",
-    );
     expect(read("lib/flow-embedding-client.ts")).toContain('flowKind: "verify"');
     expect(existsSync(join(ROOT, "app/play/calibrate/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/calibrate/session/[token]/page.tsx"))).toBe(false);
@@ -250,6 +247,5 @@ describe("knowledge verification protocols only", () => {
     expect(launch).toContain("protocolPublicPathForSession");
     expect(launch).toContain("protocolPath");
     expect(launch).not.toContain("flowPublicPathForSession");
-    expect(read("lib/sales/platform-pitch-deck.ts")).not.toContain("Three flows.");
   });
 });

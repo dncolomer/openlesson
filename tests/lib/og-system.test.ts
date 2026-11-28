@@ -359,9 +359,7 @@ describe("OG entrypoint wiring (static audit)", () => {
   const expectedEntrypoints = [
     "app/opengraph-image.tsx",
     "app/twitter-image.tsx",
-    "app/p/[id]/[slug]/opengraph-image.tsx",
     "app/pricing/opengraph-image.tsx",
-    "app/vision/opengraph-image.tsx",
     "app/science/opengraph-image.tsx",
     "app/docs/proof-of-work-api/opengraph-image.tsx",
   ];

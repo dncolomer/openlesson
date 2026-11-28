@@ -481,7 +481,7 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
     expect(runtime).toContain("VERIFY_POW_API_PATHS");
     expect(runtime).toContain("tapSessionRuntimePaths");
     expect(existsSync(join(ROOT, "app/api/verify/session/canvas/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "app/api/calibrate/session/canvas/route.ts"))).toBe(false);
 
     writeScratch(

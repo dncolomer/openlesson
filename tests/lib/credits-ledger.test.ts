@@ -27,10 +27,6 @@ import {
   unmeteredCreateLeavesBalance,
 } from "@/lib/credits";
 import { billedUserIdForIleLinkSession } from "@/lib/learn-link-auth";
-import {
-  inviteFlowSessionOwner,
-  playCopyFlowSessionInsert,
-} from "@/lib/map-play-data-access";
 
 describe("credit constants", () => {
   it("ships a positive starter grant and a positive per-session cost", () => {
@@ -241,11 +237,9 @@ describe("guest vs signed-in billed account", () => {
 });
 
 describe("session-start routes debit shipped credits", () => {
-  it("wires Learn, Calibrate, and Verify starts onto the debit helper", () => {
+  it("wires verification starts onto the debit helper", () => {
     const root = join(__dirname, "../..");
     const files = [
-      "app/api/play/start/route.ts",
-      "app/api/play/curious/route.ts",
       "lib/learn-link-auth.ts",
       "lib/verification-flow-repository.ts",
     ];
@@ -263,31 +257,6 @@ describe("session-start routes debit shipped credits", () => {
     expect(supabaseStore).toContain("credit_balance, is_admin");
     expect(supabaseStore).toContain("isUnmeteredCreditsProfile");
     expect(supabaseStore).toContain("skipped: true");
-  });
-
-  it("bills the signed-in player for a play-copy start and the invite runner otherwise", () => {
-    const play = playCopyFlowSessionInsert({
-      flowKind: "calibrate",
-      flowId: "cf1",
-      runnerUserId: "player-1",
-      copyWorkspaceId: "copy-1",
-      topic: "Continuity",
-      publicToken: "ctok",
-    });
-    expect(play.billedUserId).toBe("player-1");
-    expect(play.user_id).toBe("player-1");
-    expect(
-      inviteFlowSessionOwner({
-        flowOwnerUserId: "author-1",
-        runnerUserId: "player-1",
-      }).billedUserId,
-    ).toBe("player-1");
-    expect(
-      inviteFlowSessionOwner({
-        flowOwnerUserId: "author-1",
-        runnerUserId: null,
-      }).billedUserId,
-    ).toBe("author-1");
   });
 });
 

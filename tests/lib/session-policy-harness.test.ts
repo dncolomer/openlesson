@@ -324,20 +324,11 @@ describe("policy score against the prepared tree", () => {
     if (!proved.ok || !proved.result) return;
     expect(proved.result.prompt).toContain("policy distance");
 
-    const learnEnd = read("components/session-view/use-session-phase.ts");
-    const learnCanvas = read("components/session-view/use-session-field.ts");
     const verificationEnd = read("components/tap-score/use-tap-score-flow.ts");
     const verificationCanvas = read("components/tap-score/tap-score-phases.tsx");
     const publicVerification = read("components/VerificationFlowRunner.tsx");
     const results = read("app/api/verification-flow/public/[token]/results/route.ts");
 
-    const confirmEnd = learnEnd.slice(learnEnd.indexOf("const handleConfirmEnd"));
-    expect(confirmEnd.indexOf("postWorkspaceFlowEmbedding")).toBeGreaterThan(-1);
-    expect(confirmEnd.indexOf("postWorkspaceFlowEmbedding")).toBeLessThan(confirmEnd.indexOf("endSession("));
-    expect(confirmEnd.indexOf("endSession(")).toBeLessThan(confirmEnd.indexOf("stopRecording"));
-    expect(confirmEnd).toContain("uploadIleProofOfWork");
-    expect(confirmEnd).not.toContain("lwm_snapshot");
-    expect(learnCanvas).toContain('logTool("canvas"');
     const verificationFinish = verificationEnd.slice(verificationEnd.indexOf("async function endSession"));
     expect(verificationFinish.indexOf("postWorkspaceFlowEmbedding")).toBeLessThan(
       verificationFinish.indexOf("postTutoringSessionComplete"),
@@ -573,15 +564,6 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     );
     expect(retried.ok).toBe(true);
 
-    const phase = read("components/session-view/use-session-field.ts");
-    const confirm = sliceBetween(phase, "const handleConfirmSettings", "const handleWelcomeReadyStart");
-    const readyStart = sliceBetween(phase, "const handleWelcomeReadyStart", "return {");
-    expect(confirm.indexOf("loadSessionBranchField")).toBeGreaterThan(-1);
-    expect(confirm.indexOf("loadSessionBranchField")).toBeLessThan(confirm.indexOf("startRecording()"));
-    expect(confirm.indexOf("sessionClockMayStart")).toBeLessThan(confirm.indexOf("setShowWelcomeModal(false)"));
-    expect(readyStart.indexOf("loadSessionBranchField")).toBeLessThan(readyStart.indexOf("startRecording()"));
-    expect(readyStart.indexOf("sessionClockMayStart")).toBeLessThan(readyStart.indexOf("startRecording()"));
-
     const tap = sliceBetween(
       read("components/tap-score/use-tap-score-flow.ts"),
       "async function startSession",
@@ -594,16 +576,13 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     expect(tap.lastIndexOf("loadSessionBranchField", secondClock)).toBeGreaterThan(firstClock);
     expect(tap.lastIndexOf('kind === "verify"', secondClock)).toBeGreaterThan(firstClock);
 
-    expect(read("components/session-view/session-welcome-modal.tsx")).toContain("<IleStartLoading");
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain("<IleStartLoading");
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
       'kind === "verify"',
     );
     expect(read("components/session-view/session-page-loading.tsx")).toContain("<IleStartLoading");
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
-    expect(read("components/session-view/session-field-gate.tsx")).toContain("<IleStartLoading");
     expect(read("components/session-view/session-branch-prepare.tsx")).toContain("loadSessionBranchField");
-    expect(read("components/session-view/session-chapter-canvas.tsx")).toContain("<SessionFieldLoader");
   });
 
   it("returns the opening field and applies a later batch without waiting for it", async () => {

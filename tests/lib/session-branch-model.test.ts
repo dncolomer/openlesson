@@ -1,10 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readExcalidrawSurface } from "../helpers/surface-source";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { SessionBranchFieldView } from "@/components/session-view/session-branch-field";
 import {
   assembleSessionBranchDraft,
   mapWithConcurrency,
@@ -412,37 +409,5 @@ describe("session branch model", () => {
     expect(results).toEqual([0, 1, 2, 3, 4, 5]);
     expect(maxInFlight).toBeGreaterThan(1);
     expect(maxInFlight).toBeLessThanOrEqual(2);
-  });
-
-  it("shows prices on the actions and the whole field in the policy", () => {
-    const model = normalizeSessionBranchModel(fieldDraft(), "Just war");
-    expect(model).toBeTruthy();
-    if (!model) return;
-    const field = renderToStaticMarkup(
-      createElement(SessionBranchFieldView, {
-        slot: { status: "ready", model, error: null },
-      }),
-    );
-    expect(field).toContain("103 branches");
-    expect(field).toContain('data-session-branch-state="latent"');
-    expect(field).toContain("Ahead");
-    expect(field).toContain("r1 12");
-    expect(renderToStaticMarkup(createElement(SessionBranchFieldView, { slot: { status: "idle", model: null, error: null } }))).toBe("");
-    expect(renderToStaticMarkup(createElement(SessionBranchFieldView, { slot: null }))).toBe("");
-  });
-
-  it("hides prices and the lowest-cost mark outside Learn", () => {
-    const model = normalizeSessionBranchModel(fieldDraft(), "Just war");
-    expect(model).toBeTruthy();
-    if (!model) return;
-    const field = renderToStaticMarkup(
-      createElement(SessionBranchFieldView, {
-        slot: { status: "ready", model, error: null },
-        showPrices: false,
-      }),
-    );
-    expect(field).toContain("103 branches");
-    expect(field).not.toContain("r1 12");
-    expect(field).not.toContain("data-session-branch-prices");
   });
 });

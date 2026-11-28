@@ -10,18 +10,14 @@ import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
 } from "@/lib/flow-embedding";
-import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
+import { l2Normalize } from "@/lib/knowledge-config/math";
 
-async function expertVector(score: number, seed: number) : Promise<number[]> {
-  return await encodeTextsToFlowVector([
-    "prod-console runbook",
-    "pager",
-    "screen",
-    `score ${score}`,
-    `seed ${seed}`,
-    "incident-response",
-    "runbook-discipline",
-  ]);
+async function expertVector(score: number, seed: number): Promise<number[]> {
+  return l2Normalize(
+    Array.from({ length: FLOW_EMBEDDING_DIM }, (_, i) =>
+      Math.cos(i * 0.25 + score * 0.01) + (seed % 3) * 0.02,
+    ),
+  );
 }
 
 describe("custom verification model (shipped geometry)", () => {
@@ -61,7 +57,9 @@ describe("custom verification model (shipped geometry)", () => {
     });
 
     const expertLike = experts[0]!;
-    const novice = await encodeTextsToFlowVector(["notes", "score 15", "novice"]);
+    const novice = l2Normalize(
+      Array.from({ length: FLOW_EMBEDDING_DIM }, (_, i) => -Math.cos(i * 0.25 + 0.9)),
+    );
 
     const high = scoreAgainstCustomVerificationModel(expertLike, model);
     const low = scoreAgainstCustomVerificationModel(novice, model);

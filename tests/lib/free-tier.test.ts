@@ -87,11 +87,7 @@ describe("free tier surfaces", () => {
     const login = readRepo("app/login/page.tsx");
     expect(login).toContain('href="/register"');
 
-    const playStart = readRepo("app/api/play/start/route.ts");
-    expect(playStart).toContain("rejectIfInsufficientSessionCredits");
-    expect(playStart).toContain("parseDashboardPlayKind");
-    expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfInsufficientSessionCredits");
-
+    expect(existsSync(join(__dirname, "../../app/api/play/start/route.ts"))).toBe(false);
     expect(existsSync(join(__dirname, "../../app/api/workspace/learner-launch/route.ts"))).toBe(
       false,
     );

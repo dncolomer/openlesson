@@ -130,12 +130,10 @@ describe("OG share inventory (one unsys standard)", () => {
     const expected = [
       "docs/proof-of-work-api/opengraph-image.tsx",
       "opengraph-image.tsx",
-      "p/[id]/[slug]/opengraph-image.tsx",
       "pricing/opengraph-image.tsx",
       "pricing/twitter-image.tsx",
       "science/opengraph-image.tsx",
       "twitter-image.tsx",
-      "vision/opengraph-image.tsx",
     ].sort();
     expect(routes).toEqual(expected);
 
@@ -145,15 +143,10 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(read("app/pricing/opengraph-image.tsx")).toContain(
       'createStaticOgImageHandler("pricing")',
     );
-    expect(read("app/vision/opengraph-image.tsx")).toContain('"vision"');
     expect(read("app/science/opengraph-image.tsx")).toContain('"science"');
     expect(read("app/docs/proof-of-work-api/opengraph-image.tsx")).toContain(
       "docs-proof-of-work-api",
     );
-
-    const publicOg = read("app/p/[id]/[slug]/opengraph-image.tsx");
-    expect(publicOg).toContain("composeStandardOgImage");
-    expect(publicOg).not.toContain("planData?.title");
   });
 
   it("twitter-image routes re-export opengraph-image where present", () => {
@@ -186,10 +179,6 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(pricing).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(pricing).toMatch(/twitter:\s*standardSocial\.twitter/);
 
-    const vision = read("app/vision/page.tsx");
-    expect(vision).toContain("standardShareSocialMetadata");
-    expect(vision).not.toContain("/vision/opengraph-image");
-
     const science = read("app/science/page.tsx");
     expect(science).toContain("standardShareSocialMetadata");
     expect(science).not.toContain("/science/opengraph-image");
@@ -202,9 +191,6 @@ describe("OG share inventory (one unsys standard)", () => {
     const docs = read("app/docs/proof-of-work-api/layout.tsx");
     expect(docs).toContain("standardShareSocialMetadata");
 
-    const publicPage = read("app/p/[id]/[slug]/page.tsx");
-    expect(publicPage).toContain("standardShareSocialMetadata");
-
     expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
 
     const hack = read("app/community-events/page.tsx");
@@ -216,8 +202,6 @@ describe("OG share inventory (one unsys standard)", () => {
 
     // SEO helpers
     expect(read("lib/seo/product-page.ts")).toContain("standardShareSocialMetadata");
-    expect(read("lib/seo/use-case-page.ts")).toContain("standardShareSocialMetadata");
-    expect(read("lib/seo/platform-page.ts")).toContain("standardShareSocialMetadata");
 
     // Standard module is the single source of share title/description/image
     expect(UNSYS_STANDARD_SHARE.imagePath).toBe("/opengraph-image");

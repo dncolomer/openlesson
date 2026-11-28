@@ -34,13 +34,10 @@ function namesRetiredProduct(text: string) {
 const FORMER_PRODUCT_SLOTS = [
   "app/layout.tsx",
   "app/skill-verification/SkillVerificationLanding.tsx",
-  "lib/seo/platform-page.ts",
   "lib/seo/product-page.ts",
-  "lib/seo/products.ts",
   "lib/prompt-kernel/ontology.ts",
   "lib/prompt-kernel/surfaces/learn.ts",
   "lib/prompt-kernel/surfaces/tap.ts",
-  "lib/sales/platform-pitch-deck.ts",
   "lib/marketing/verification-product.ts",
 ];
 
@@ -56,14 +53,11 @@ const LIVE_SURFACES = [
   "lib/session-instructions.ts",
   "lib/pow-api/agent-tool-surface.ts",
   "lib/pow-api/mcp-tools/evidence-tools.ts",
-  "lib/pow-api/pow-model-agent-contract.ts",
   "lib/prompt-kernel/surfaces/score-context.ts",
   "app/docs/proof-of-work-api/layout.tsx",
   "app/docs/proof-of-work-api/page.tsx",
   "components/tap-score/tap-score-phases.tsx",
   "components/tap-score/use-tap-score-flow.ts",
-  "components/SessionItem.tsx",
-  "components/CustomVerificationModelsPanel.tsx",
 ];
 
 function read(rel: string) {

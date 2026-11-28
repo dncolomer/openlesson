@@ -10,23 +10,8 @@ function read(rel: string) {
   return readFileSync(path, "utf8");
 }
 
-describe("session Muse EEG quality + PoW gate wiring", () => {
-  it("scores live sample windows and uploads EEG PoW including impure contact", () => {
-    const runtime = read("components/session-view/use-session-runtime.ts");
-    expect(runtime).toContain("scoreEegContactWindow");
-    expect(runtime).toContain("eegChannelsFromMap");
-    expect(runtime).toContain("buildIleEegUploadItem");
-    expect(runtime).toContain("calibrationPassed");
-    expect(runtime).toContain("contactEvaluated");
-    expect(runtime).toContain('void uploadPowItem(item, "eeg")');
-    expect(runtime).not.toMatch(/if \(!item\) return;/);
-
-    const runtimeCapture = read("components/session-view/use-session-runtime.ts");
-    expect(runtimeCapture).toContain("BehaviorChunker");
-    expect(runtimeCapture).toContain("attachBehaviorBoardSampler");
-    expect(runtimeCapture).toContain("buildBehaviorSessionRollup");
-    expect(runtimeCapture).toContain("sessionMountsBehaviorPointer");
-
+describe("Muse EEG quality + verification signal wiring", () => {
+  it("scores live sample windows and tracks contact calibration in muse-athena client", () => {
     const client = read("lib/muse-athena.ts");
     expect(client).toContain("ingestEegForQuality");
     expect(client).toContain("scoreEegContactWindow");
@@ -34,23 +19,9 @@ describe("session Muse EEG quality + PoW gate wiring", () => {
     expect(client).toContain("calibrationPassed");
   });
 
-  it("shows live quality/calibration in Muse data-input and EEG preview, not only streaming", () => {
-    const dataInput = read("components/DataInputTool.tsx");
-    expect(dataInput).toContain("museEegPreviewState");
-    expect(dataInput).toContain("data-muse-calibration");
-    expect(dataInput).toContain("data-muse-signal-quality");
-    expect(dataInput).toContain("data-muse-eeg-ready");
-    expect(dataInput).toContain("data-muse-eeg-pow");
-    expect(dataInput).toContain("dataInput.checkingContact");
-    expect(dataInput).toContain("dataInput.calibrated");
-    expect(dataInput).toContain("dataInput.eegEvidenceReady");
-    expect(dataInput).toContain("dataInput.eegEvidenceBlocked");
-    expect(dataInput).not.toContain("dataInput.receivingData");
-
-    const tools = read("components/ToolsPanel.tsx");
-    expect(tools).toContain("museEegPreviewState");
-    expect(tools).toContain("data-muse-eeg-preview");
-    expect(tools).toContain("data-muse-calibration");
-    expect(tools).not.toContain("inferredQuality");
+  it("wires Muse EEG signals into verification session signals", () => {
+    const signals = read("components/session-view/session-signals.tsx");
+    expect(signals).toContain("muse-athena");
+    expect(signals).toContain("channels.muse");
   });
 });

@@ -19,7 +19,6 @@ import {
   buildSessionBranchGenerateMaterial,
   sessionBranchContextFromFlow,
 } from "@/lib/session-branch-model-generate";
-import { heliosFlowCreateInput } from "@/lib/workspace-helios-flow";
 import {
   FLOW_OPENING_CANVAS_LABEL,
   authoringOpeningCanvasScene,
@@ -31,9 +30,6 @@ import {
   seedPreparedOpeningCanvas,
   serializeFlowOpeningCanvasScene,
 } from "@/lib/flow-opening-canvas";
-
-import { heliosMapToolAwarenessText } from "@/lib/workspace-helios-tools";
-import { buildHeliosMapBuilderSystemPrompt } from "@/lib/prompt-kernel";
 import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
@@ -223,7 +219,6 @@ describe("flow exact problem on canvas", () => {
     expect(page).toContain("onExactProblemOnCanvasChange");
     expect(page).toContain("problemReadOnly");
     expect(read("app/api/dashboard/protocols/route.ts")).toContain("exactProblemOnCanvas");
-    expect(read("lib/learn-opening-work-generate.ts")).toContain("exactProblem");
   });
 });
 

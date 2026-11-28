@@ -110,7 +110,5 @@ describe("releaseSessionLocalMemory", () => {
     expect(() => read("lib/local-context.ts")).toThrow();
     expect(() => read("components/ModelLoadingModal.tsx")).toThrow();
     expect(read("package.json")).not.toContain("@huggingface/transformers");
-    expect(read("components/SessionView.tsx")).not.toContain("LocalInferenceManager");
-    expect(read("components/session-view/use-session-phase.ts")).not.toContain("LocalInferenceManager");
   });
 });

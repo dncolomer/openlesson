@@ -34,7 +34,6 @@ import {
   parseFlowUnsysSeed,
   studentModelFromFlowSeed,
 } from "@/lib/flow-unsys-seed";
-import { definitionUnsysSeedFromBlocks } from "@/lib/definition-unsys-seed";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import { FlowPublishReview } from "@/components/product-flow/flow-publish-review";
@@ -260,20 +259,6 @@ describe("product flow owner_user_id", () => {
     expect(nextFlowUnsysSeed(seed, null)).toBeNull();
     expect(parseFlowUnsysSeed(seed)?.model.rootId).toBe(seed.model.rootId);
 
-    const fromFlow = definitionUnsysSeedFromBlocks({
-      flowId: "sf-live",
-      flowSeed: seed,
-      copyBlockId: "copy-block",
-      blocks: [
-        {
-          id: "copy-block",
-          workspace_id: "ws-copy",
-          map_block: { kind: "verification", flow_id: "sf-live" },
-          answers_model_seed: authorUnsysSeedForPersist(exampleAuthorUnsysModel("Copy")),
-        },
-      ],
-    });
-    expect(studentModelFromFlowSeed(fromFlow)?.rootId).toBe(seed.model.rootId);
     const verify = applyVerificationCommand(emptyVerificationState(), {
       type: "create",
       ownerUserId: "owner-1",
@@ -292,7 +277,6 @@ describe("product flow owner_user_id", () => {
     const create = read("app/api/dashboard/protocols/route.ts");
     const update = read("app/api/dashboard/protocols/[id]/route.ts");
     const generate = read("app/api/dashboard/protocols/unsys-seed/route.ts");
-    const session = read("app/api/learn/session-branch-model/route.ts");
     const sql = read("supabase/migrations/20261116140000_flow_answers_model_seed.sql");
     expect(wizard).toContain("FlowUnsysModelStep");
     expect(wizard).toContain('step === "model"');
@@ -345,8 +329,6 @@ describe("product flow owner_user_id", () => {
     expect(generate).toContain("requireAuthenticatedUser");
     expect(read("lib/flow-unsys-generate.ts")).toContain("generateAuthorUnsysSessionField");
     expect(FLOW_UNSYS_SEED_PATH).toBe("/api/dashboard/protocols/unsys-seed");
-    expect(session).toContain("flow.answersModelSeed");
-    expect(session).toContain("getVerificationFlowById");
     expect(sql).toContain("verify_flows");
     expect(sql).toContain("answers_model_seed");
   });

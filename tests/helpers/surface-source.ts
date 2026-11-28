@@ -7,26 +7,6 @@ export function readRepo(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-export function readGridOpsSurface(): string {
-  const dir = join(ROOT, "lib/workspace-grid-ops");
-  const parts = [readRepo("app/api/workspace/grid-ops/route.ts")];
-  for (const name of readdirSync(dir).sort()) {
-    if (name.endsWith(".ts")) parts.push(readFileSync(join(dir, name), "utf8"));
-  }
-  return parts.join("\n");
-}
-
-export function readMapGridSurface(): string {
-  const dir = join(ROOT, "components/block-skill-grid");
-  const parts = [readRepo("components/BlockSkillGrid.tsx")];
-  for (const name of readdirSync(dir).sort()) {
-    if (name.endsWith(".ts") || name.endsWith(".tsx")) {
-      parts.push(readFileSync(join(dir, name), "utf8"));
-    }
-  }
-  return parts.join("\n");
-}
-
 export function readExcalidrawSurface(): string {
   const dir = join(ROOT, "components/excalidraw-canvas");
   const parts = [readRepo("components/ExcalidrawCanvas.tsx")];
@@ -57,20 +37,9 @@ export function readDashboardSurface(): string {
   return parts.join("\n");
 }
 
-export function readSessionStageSurface(): string {
-  return [
-    readRepo("components/SessionView.tsx"),
-    readRepo("components/session-view/session-live-stage.tsx"),
-    readRepo("components/session-view/session-chapter-canvas.tsx"),
-    readRepo("components/session-view/use-session-field.ts"),
-    readRepo("components/session-view/use-session-recording.ts"),
-    readRepo("components/session-view/use-session-welcome.ts"),
-  ].join("\n");
-}
-
 export function readSessionViewSurface(): string {
   const dir = join(ROOT, "components/session-view");
-  const parts = [readRepo("components/SessionView.tsx")];
+  const parts: string[] = [];
   try {
     for (const name of readdirSync(dir).sort()) {
       if (name.endsWith(".ts") || name.endsWith(".tsx")) {
@@ -78,19 +47,9 @@ export function readSessionViewSurface(): string {
       }
     }
   } catch {
-    // Directory is created as SessionView extracts land.
+    // Directory optional.
   }
   return parts.join("\n");
-}
-
-/** Learning Map WorkspaceView was deleted. Callers should assert the files are gone. */
-export function readWorkspaceViewSurface(): string {
-  return "";
-}
-
-/** Workspace combine drawers were deleted with WorkspaceView. */
-export function readCombineBlocksSurface(): string {
-  return "";
 }
 
 export function readMcpSurface(): string {
@@ -123,18 +82,3 @@ export const EXERCISE_TAP_DELETED_PATHS = [
   "components/exercise-tap/ExerciseTapShell.tsx",
   "components/exercise-tap/exercise-tap-phases.tsx",
 ] as const;
-
-export function readKnowledgePanelSurface(): string {
-  const dir = join(ROOT, "components/knowledge-panel");
-  const parts = [];
-  try {
-    for (const name of readdirSync(dir).sort()) {
-      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
-        parts.push(readFileSync(join(dir, name), "utf8"));
-      }
-    }
-  } catch {
-    // Directory is created as Knowledge panel extracts land.
-  }
-  return parts.join("\n");
-}

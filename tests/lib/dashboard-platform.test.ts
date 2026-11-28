@@ -1,5 +1,9 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
+
+const ROOT = join(__dirname, "../..");
 import {
   DASHBOARD_NAV_GROUPS,
   DASHBOARD_TOP_NAV_ITEMS,
@@ -625,7 +629,7 @@ describe("dashboard platform surface", () => {
       "data-console-frame-label",
     );
     expect(readRepo("app/protocols/[id]/page.tsx")).toContain("ProductFlowPage");
-    expect(readRepo("app/workspace/[[...slug]]/page.tsx")).toContain("RetiredProductPage");
+    expect(existsSync(join(ROOT, "app/workspace/[[...slug]]/page.tsx"))).toBe(false);
     expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
       "dashboardCreateLabel()",
     );
@@ -784,12 +788,10 @@ describe("dashboard platform surface", () => {
 });
 
 describe("workspace create query mode", () => {
-  it("retired workspace create routes render the contact screen", () => {
+  it("retired workspace create routes are removed", () => {
     expect(workspaceCreateModeFromQuery("knowledge_region")).toBeNull();
     expect(workspaceCreateModeFromQuery("calibration")).toBeNull();
     expect(workspaceCreateModeFromQuery("blank")).toBe("blank");
-    const page = readRepo("app/workspace/[[...slug]]/page.tsx");
-    expect(page).toContain("RetiredProductPage");
-    expect(page).not.toContain("createBlankMap");
+    expect(existsSync(join(ROOT, "app/workspace/[[...slug]]/page.tsx"))).toBe(false);
   });
 });

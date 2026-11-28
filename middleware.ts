@@ -16,20 +16,15 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/cookies",
   "/legal",
   "/tap/session/",
-  "/ile/session/",
   "/verify/session/",
-  "/learn/session/",
-  "/p/",
-  "/quiz/",
+  "/v/",
   "/oauth/",
   "/docs/",
   "/use-cases",
   "/pitch",
-  "/sales",
   "/community",
-  "/all-you-can-learn",
   "/community-events",
-  "/learn/",
+  "/science",
 ];
 
 function isSubscriptionExemptPath(pathname: string): boolean {
@@ -79,18 +74,17 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Protected routes - require authentication
-  const protectedRoutes = ["/session", "/dashboard", "/play"];
+  const protectedRoutes = ["/dashboard"];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
   // Public routes that should skip all auth logic (shareable session links)
   const publicRoutes = [
     "/pricing",
     "/tap/session",
-    "/ile/session",
     "/verify/session",
+    "/v/",
     "/insights",
     "/snapshot",
-    "/learn",
   ];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)

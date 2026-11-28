@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
-import { getSessions, deleteSession, restartSession, type Session } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, planDisplayName as formatPlanName, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
@@ -16,7 +15,6 @@ import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
-import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
@@ -153,13 +151,6 @@ export default function DashboardPage() {
   const [xaiUsageOverride, setXaiUsageOverride] = useState<XaiUsageState | null>(null);
   const [xaiUsageLoading, setXaiUsageLoading] = useState(false);
 
-  // Sessions tab
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionSearch, setSessionSearch] = useState("");
-  const [sessionStatusFilter, setSessionStatusFilter] = useState<Set<string>>(new Set(["active", "paused"]));
-  const [sessionPage, setSessionPage] = useState(1);
-  const sessionPageSize = 10;
-
   // Agentic tab
   const [apiKeys, setApiKeys] = useState<AgentApiKey[]>([]);
   const [creatingKey, setCreatingKey] = useState(false);
@@ -179,11 +170,6 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
   }, []);
-
-  // Reset page when search or filter changes
-  useEffect(() => {
-    setSessionPage(1);
-  }, [sessionSearch, sessionStatusFilter]);
 
   const loadData = async () => {
     try {
@@ -224,10 +210,6 @@ export default function DashboardPage() {
           console.error("Failed to fetch AI provider info:", e);
         }
       }
-
-      // Load sessions
-      const loadedSessions = await getSessions();
-      setSessions(loadedSessions);
 
         // Load usage data
         try {
@@ -315,23 +297,6 @@ export default function DashboardPage() {
       console.error("Dashboard load error:", err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeleteSession = async (id: string) => {
-    if (!confirm(t('dashboard.deleteSessionConfirm'))) return;
-    await deleteSession(id);
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  const handleStartOverSession = async (id: string) => {
-    if (!confirm(t('dashboard.startOverConfirm'))) return;
-    try {
-      await restartSession(id);
-      router.push(`/session?id=${id}`);
-    } catch (err) {
-      console.error("Failed to restart session:", err);
-      alert(t('dashboard.startOverError'));
     }
   };
 
@@ -510,20 +475,6 @@ export default function DashboardPage() {
     });
   };
 
-  // Filter and paginate sessions
-  const filteredSessions = sessions.filter((s) => {
-    const matchesSearch = sessionSearch === "" || 
-      s.problem.toLowerCase().includes(sessionSearch.toLowerCase());
-    const matchesStatus = sessionStatusFilter.size === 0 || sessionStatusFilter.has(s.status);
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalSessionPages = Math.ceil(filteredSessions.length / sessionPageSize);
-  const paginatedSessions = filteredSessions.slice(
-    (sessionPage - 1) * sessionPageSize,
-    sessionPage * sessionPageSize
-  );
-
   const accessKnown = usageData != null;
   const hasPaidAccess = usageData?.hasPaidAccess === true;
 
@@ -575,28 +526,6 @@ export default function DashboardPage() {
 
       <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
       <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
-        {/* Sessions Tab */}
-        {activeTab === "sessions" && (
-          <DashboardSessionsTab
-            filteredSessions={filteredSessions}
-            formatDate={formatDate}
-            formatDuration={formatDuration}
-            handleDeleteSession={handleDeleteSession}
-            handleStartOverSession={handleStartOverSession}
-            paginatedSessions={paginatedSessions}
-            router={router}
-            sessionPage={sessionPage}
-            sessionPageSize={sessionPageSize}
-            sessionSearch={sessionSearch}
-            sessionStatusFilter={sessionStatusFilter}
-            setSessionPage={setSessionPage}
-            setSessionSearch={setSessionSearch}
-            setSessionStatusFilter={setSessionStatusFilter}
-            t={t}
-            totalSessionPages={totalSessionPages}
-          />
-        )}
-
         {activeTab === "home" && <DashboardHomeTab />}
 
         {activeTab === "protocols" ? (

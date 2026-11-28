@@ -68,6 +68,7 @@ const nextConfig: NextConfig = {
       { source: "/pricing/verification", destination: "/pricing", permanent: true },
       { source: "/pricing/mapping", destination: "/pricing", permanent: true },
       { source: "/pricing/authoring", destination: "https://academy-k.com/", permanent: true },
+      { source: "/tap/session/:token", destination: "/verify/session/:token", permanent: true },
       { source: "/calibrate/session/:token", destination: "/verify/session/:token", permanent: true },
       { source: "/ile/session/:token", destination: "/learn/session/:token", permanent: true },
       {

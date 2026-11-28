@@ -13,7 +13,6 @@ export const DASHBOARD_TABS = [
   "organization",
   "protocol_settings",
   "integrations",
-  "sessions",
   "config",
 ] as const;
 
@@ -74,6 +73,7 @@ const RETIRED_TAB_ALIASES = new Set([
   "help",
   "plans",
   "learning_studio",
+  "sessions",
 ]);
 
 export function isDashboardTab(value: unknown): value is DashboardTab {
@@ -203,7 +203,6 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "protocol_settings") return "Protocol Settings";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";
-  if (tab === "sessions") return "Sessions";
   if (tab === "config") return "Config";
   return "Home";
 }

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { drainRegionSimulationJobs } from "@/lib/region-simulation-jobs";
@@ -12,7 +13,11 @@ function authorized(req: NextRequest): boolean {
   if (!secret) return false;
   const header = req.headers.get("authorization") || "";
   const bearer = header.replace(/^Bearer\s+/i, "").trim();
-  return Boolean(bearer) && bearer === secret;
+  if (!bearer) return false;
+  const actual = Buffer.from(bearer, "utf8");
+  const expected = Buffer.from(secret, "utf8");
+  if (actual.length !== expected.length) return false;
+  return crypto.timingSafeEqual(actual, expected);
 }
 
 async function drain(req: NextRequest) {

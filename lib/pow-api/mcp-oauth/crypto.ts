@@ -8,12 +8,27 @@ async function sha256Hex(value: string): Promise<string> {
   return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+let warnedOAuthFallback = false;
+
 export function getOAuthSigningSecret(): string {
-  return (
-    process.env.MCP_OAUTH_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "uncertain-systems-mcp-oauth-dev-secret"
-  );
+  if (process.env.MCP_OAUTH_SECRET) {
+    return process.env.MCP_OAUTH_SECRET;
+  }
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (process.env.NODE_ENV === "production" && !warnedOAuthFallback) {
+      warnedOAuthFallback = true;
+      console.warn(
+        "[mcp-oauth] MCP_OAUTH_SECRET is not set; falling back to SUPABASE_SERVICE_ROLE_KEY. Set a dedicated MCP_OAUTH_SECRET in production.",
+      );
+    }
+    return process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "MCP_OAUTH_SECRET must be set in production (refusing to use dev fallback secret).",
+    );
+  }
+  return "uncertain-systems-mcp-oauth-dev-secret";
 }
 
 export function signPayload(payload: string): string {
@@ -65,5 +80,8 @@ export function verifyPkceChallenge(
 ): boolean {
   if (method !== "S256") return false;
   const digest = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-  return digest === codeChallenge;
+  const actual = Buffer.from(digest, "utf8");
+  const expected = Buffer.from(codeChallenge, "utf8");
+  if (actual.length !== expected.length) return false;
+  return crypto.timingSafeEqual(actual, expected);
 }

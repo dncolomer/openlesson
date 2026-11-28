@@ -1,14 +1,33 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
+import { createClient } from "@/lib/supabase/server";
 import { getProviderInfo, AVAILABLE_MODELS } from "@/lib/xai-client";
 
 /**
  * GET /api/ai-provider
  * Returns the active AI provider configuration.
- * Used by the admin dashboard to display provider status.
+ * Restricted to authenticated platform admins.
  */
 export async function GET() {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return jsonError(401, "Unauthorized");
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile?.is_admin) {
+      return jsonError(403, "Forbidden");
+    }
+
     const info = getProviderInfo();
 
     return NextResponse.json({

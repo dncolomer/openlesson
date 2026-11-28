@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { enforceIpRateLimit } from "@/lib/api/rate-limit";
 import { getServiceClient } from "@/lib/pow-api/auth";
 import { registerOAuthClient } from "@/lib/pow-api/mcp-oauth/clients";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceIpRateLimit(req, "oauth-register", 30);
+  if (limited) return limited;
+
   try {
     const body = (await req.json()) as {
       client_name?: string;

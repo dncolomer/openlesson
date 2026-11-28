@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
+import { enforceIpRateLimit } from "@/lib/api/rate-limit";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -12,6 +13,9 @@ import { emailFromCheckoutSession, isGuestCheckoutPriceType, planIdFromPriceType
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const limited = await enforceIpRateLimit(request, "stripe-verify-session", 60);
+  if (limited) return limited;
+
   try {
     const sessionId = new URL(request.url).searchParams.get("session_id");
     if (!sessionId) {

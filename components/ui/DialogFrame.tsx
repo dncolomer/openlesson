@@ -58,6 +58,17 @@ export function DialogFrame({
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (!open || !closeOnEscape) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, closeOnEscape, onClose]);
+
+  useEffect(() => {
     if (!open) return;
     previouslyFocusedRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -70,11 +81,6 @@ export function DialogFrame({
     }
 
     const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && closeOnEscape) {
-        event.preventDefault();
-        onClose();
-        return;
-      }
       if (event.key === "Tab" && panel) {
         const focusable = Array.from(
           panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
@@ -107,7 +113,7 @@ export function DialogFrame({
         prev.focus();
       }
     };
-  }, [open, closeOnEscape, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

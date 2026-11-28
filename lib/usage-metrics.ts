@@ -413,21 +413,10 @@ export async function countOrgProofOfWorkSubmissions(
 }
 
 export async function countActiveWorkspaces(
-  supabase: SupabaseClient,
-  userId: string
+  _supabase: SupabaseClient,
+  _userId: string
 ): Promise<number> {
-  const { count, error } = await supabase
-    .from("workspaces")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .neq("status", "archived");
-
-  if (error) {
-    console.error("[usage-metrics] workspace count failed:", error);
-    return 0;
-  }
-
-  return count ?? 0;
+  return 0;
 }
 
 export function billingPeriodStart(periodEndIso: string | null): Date | null {

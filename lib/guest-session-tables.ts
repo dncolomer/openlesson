@@ -22,10 +22,10 @@ export type CalibrateVerifyTable =
 export type GuestFlowKind = "calibrate" | "verify" | "learn";
 
 export const GUEST_SESSION_SELECT =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link, workspaces(user_id)";
+  "id, user_id, guest_user_id, assigned_user_id, organization_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link";
 
 export const GUEST_SESSION_OPEN_SELECT =
-  "id, workspace_id, block_id, status, assigned_user_id, guest_user_id, organization_id, user_id, access_mode, public_token, kind, guest_link, workspaces(title, user_id)";
+  "id, status, assigned_user_id, guest_user_id, organization_id, user_id, access_mode, public_token, kind, guest_link";
 
 export type GuestSessionClient = { from: (table: string) => any };
 

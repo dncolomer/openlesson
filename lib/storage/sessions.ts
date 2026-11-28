@@ -36,11 +36,8 @@ export async function createSession(
       user_id: user.id,
       problem,
       status: "active",
-      kind: "learn",
-      workspace_id: workspaceId || null,
-      planning_prompt: planningPrompt || null,
+      kind: "verify",
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      probes: [],
     })
     .select()
     .single();
@@ -275,8 +272,6 @@ export async function restartSession(id: string): Promise<void> {
   await supabase
     .from("sessions")
     .update({
-      probes: [],
-      chapter_map: null,
       status: "active",
       duration_ms: 0,
       ended_at: null,

@@ -72,7 +72,6 @@ export async function persistRegionSimulationProof(input: {
     const { error } = await insertWorkspaceProofOfWorkRow(supabase, {
       session_id: null,
       user_id: ownerUserId,
-      workspace_id: input.workspaceId || null,
       proof_of_work_type: row.type === "screen" ? "screen" : "tool",
       pow_model_version: POW_MODEL_VERSION,
       file_name: `${runId}-${index}.json`,

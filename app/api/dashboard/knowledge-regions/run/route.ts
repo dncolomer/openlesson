@@ -55,43 +55,28 @@ export async function GET(req: NextRequest) {
     const organizationId = org.organizationId;
 
     const url = new URL(req.url);
-    const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
     const rawRunId = (url.searchParams.get("runId") || "").trim();
     const runId = /^[a-zA-Z0-9_-]+$/.test(rawRunId) ? rawRunId : "";
-    if (!runId && !workspaceId) {
+    if (!runId) {
       return jsonError(400, "runId is required");
     }
 
     const admin = createAdminClient();
-    if (workspaceId) {
-      const { data: workspace, error: workspaceError } = await auth.supabase
-        .from("workspaces")
-        .select("id, user_id, organization_id")
-        .eq("id", workspaceId)
-        .maybeSingle();
-      const workspaceOrg = String(workspace?.organization_id || "").trim();
-      const inOrg = Boolean(organizationId && workspaceOrg && workspaceOrg === organizationId);
-      const owner = String(workspace?.user_id || "").trim() === auth.user.id;
-      if (workspaceError || !workspace || (!inOrg && !owner)) {
-        return jsonError(404, "Workspace not found");
-      }
-    } else {
-      let owned = await admin
+    let owned = await admin
+      .from("session_embeddings")
+      .select("id")
+      .eq("owner_user_id", auth.user.id)
+      .eq("run_id", runId)
+      .limit(1);
+    if (!owned.data?.length && organizationId) {
+      owned = await admin
         .from("session_embeddings")
         .select("id")
-        .eq("owner_user_id", auth.user.id)
         .eq("run_id", runId)
         .limit(1);
-      if (!owned.data?.length && organizationId) {
-        owned = await admin
-          .from("session_embeddings")
-          .select("id")
-          .eq("run_id", runId)
-          .limit(1);
-      }
-      if (!owned.data?.length) {
-        return jsonError(404, "Run not found");
-      }
+    }
+    if (!owned.data?.length) {
+      return jsonError(404, "Run not found");
     }
 
     let query = admin
@@ -99,14 +84,11 @@ export async function GET(req: NextRequest) {
       .select(POW_SELECT)
       .order("timestamp_ms", { ascending: true })
       .limit(400);
-    if (workspaceId) query = query.eq("workspace_id", workspaceId);
-    if (runId) {
-      query = applyProofOfWorkRunIdFilter(query, runId);
-    }
+    query = applyProofOfWorkRunIdFilter(query, runId);
     const { data, error } = await query;
     if (error) {
       return NextResponse.json({
-        workspaceId: workspaceId || null,
+        workspaceId: null,
         runId: runId || null,
         pow: [],
         transcripts: [],
@@ -121,7 +103,6 @@ export async function GET(req: NextRequest) {
     const pow = (data || []).map((row) => flowPowFromWorkspaceRow(row));
     const orgId =
       organizationId ||
-      (await organizationIdFromWorkspace(admin, workspaceId || null)) ||
       (await organizationIdFromUser(auth.supabase, auth.user.id));
     const bodies = await loadStoredRecordBodies(pow, async (fileId) => {
       const upstream = await getOrgScopedFileContentResponse(fileId, orgId);
@@ -135,8 +116,8 @@ export async function GET(req: NextRequest) {
       bodies,
       filePath: DASHBOARD_KNOWLEDGE_REGION_FILE_PATH,
     });
-    return NextResponse.json({
-      workspaceId: workspaceId || null,
+      return NextResponse.json({
+        workspaceId: null,
       runId: runId || null,
       pow,
       transcripts: extractStudioTranscripts(pow),

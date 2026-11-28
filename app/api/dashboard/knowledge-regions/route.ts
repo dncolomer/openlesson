@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const organizationId = org.organizationId;
     const admin = createAdminClient();
     const select =
-      "id, workspace_id, owner_user_id, name, description, subject_count, created_at, embedding_model_id";
+      "id, owner_user_id, name, description, subject_count, created_at, embedding_model_id";
     let listed = organizationId
       ? await admin
           .from("knowledge_regions")

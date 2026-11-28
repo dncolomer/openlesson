@@ -214,18 +214,8 @@ export async function persistCompletedFlowEmbedding(
     return stored;
   }
   const supabase = createAdminClient();
-  if (!ownerUserId && workspaceId) {
-    const { data } = await supabase
-      .from("workspaces")
-      .select("user_id")
-      .eq("id", workspaceId)
-      .maybeSingle();
-    ownerUserId = text((data as { user_id?: string } | null)?.user_id);
-    stored.owner_user_id = ownerUserId;
-  }
   const row: Record<string, unknown> = {
     id: stored.id,
-    workspace_id: stored.workspace_id || null,
     owner_user_id: stored.owner_user_id || null,
     flow_kind: stored.flow_kind,
     flow_id: stored.flow_id,

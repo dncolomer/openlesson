@@ -159,7 +159,6 @@ function knowledgeRegionWriteRow(input: {
   createdBy?: string;
 }): Record<string, unknown> {
   return {
-    workspace_id: input.workspaceId,
     owner_user_id: input.ownerUserId,
     name: input.spec.name,
     description: input.description,
@@ -585,7 +584,7 @@ async function loadOwnedSimulationParent(input: {
   const { data, error } = await supabase
     .from("knowledge_regions")
     .select(
-      "id, name, workspace_id, owner_user_id, verify_flow_id, created_at",
+      "id, name, owner_user_id, verify_flow_id, created_at",
     )
     .eq("id", input.regionId)
     .eq("owner_user_id", input.ownerUserId)
@@ -598,7 +597,7 @@ async function loadOwnedSimulationParent(input: {
     id: String(data.id),
     name: String(data.name || "").trim(),
     kind,
-    workspaceId: data.workspace_id ? String(data.workspace_id) : null,
+    workspaceId: null,
     flowId: flowId || null,
     createdAt: String(data.created_at || ""),
   };

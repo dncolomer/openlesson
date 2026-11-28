@@ -185,7 +185,7 @@ async function loadSupabaseState(filter: {
   if (ids.length === 0) return emptyVerificationState();
   const { data: sessionRows } = await supabase
     .from("sessions")
-    .select("id, verify_flow_id, identity, result, workspace_id")
+    .select("id, verify_flow_id, identity, result")
     .eq("kind", "verify")
     .in("verify_flow_id", ids);
   const identityRows = (sessionRows || [])
@@ -200,7 +200,7 @@ async function loadSupabaseState(filter: {
       results.push(
         mapResultFromAnswer(
           String(row.verify_flow_id || ""),
-          String(row.workspace_id || ""),
+          "",
           answer as Record<string, unknown>,
           null,
         ),
@@ -227,7 +227,6 @@ async function persistCommand(
       id: value.flow.id,
       owner_user_id: nullableId(value.flow.ownerUserId),
       organization_id: nullableId(value.flow.organizationId),
-      workspace_id: nullableId(value.flow.workspaceId),
       name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
@@ -453,7 +452,6 @@ async function writeVerificationFlow(
       "duration_minutes",
       "owner_user_id",
       "organization_id",
-      "workspace_id",
       "archived_at",
       "artifacts",
       "exact_problem_on_canvas",

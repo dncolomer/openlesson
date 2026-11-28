@@ -168,16 +168,6 @@ export async function uploadWorkspaceProofOfWork(
   const participantUserId = auth.guest_user_id ? null : auth.user_id || null;
   const participantGuestUserId = isUuid(auth.guest_user_id) ? auth.guest_user_id : null;
 
-  if (input.block_id && storedWorkspaceId) {
-    const { data: block } = await supabase
-      .from("blocks")
-      .select("id")
-      .eq("id", input.block_id)
-      .eq("workspace_id", storedWorkspaceId)
-      .single();
-    if (!block) throw new Error("Block not found in this workspace");
-  }
-
   if (input.require_existing_session && input.session_id) {
     if (!isUuid(input.session_id)) throw new Error("session_id not found");
     const { data: session } = await supabase
@@ -242,8 +232,6 @@ export async function uploadWorkspaceProofOfWork(
   const xaiCollectionId = uploaded.collectionId;
 
   const { row, error } = await insertWorkspaceProofOfWorkRow(supabase, {
-    workspace_id: storedWorkspaceId,
-    block_id: storedWorkspaceId ? input.block_id || null : null,
     session_id: finalSessionId,
     proof_of_work_type: evidenceType,
     pow_model_version: powModelVersion,
@@ -284,8 +272,8 @@ export async function uploadWorkspaceProofOfWork(
 
   const proof_of_work = {
     ...row,
-    workspace_id: row.workspace_id,
-    block_id: row.block_id,
+    workspace_id: row.workspace_id ?? null,
+    block_id: row.block_id ?? null,
     type: row.proof_of_work_type,
   };
 

@@ -347,13 +347,11 @@ export async function resolveTapSessionAccess(input: {
 
   const resolvedWorkspaceId =
     workspaceId || String(existingSession?.workspace_id || "").trim();
-  const { data: workspaceRow } = resolvedWorkspaceId
-    ? await supabase
-        .from("workspaces")
-        .select("user_id, organization_id")
-        .eq("id", resolvedWorkspaceId)
-        .maybeSingle()
-    : { data: null };
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", user.id)
+    .maybeSingle();
 
   return {
     supabase,
@@ -361,8 +359,11 @@ export async function resolveTapSessionAccess(input: {
     userId: user.id,
     guestUserId: null,
     assignedUserId: existingSession?.assigned_user_id?.toString() || null,
-    workspaceOwnerUserId: workspaceRow?.user_id || user.id,
-    organizationId: workspaceRow?.organization_id || null,
+    workspaceOwnerUserId: user.id,
+    organizationId:
+      existingSession?.organization_id?.toString() ||
+      profileRow?.organization_id ||
+      null,
     blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,
     tapSessionId: tapSessionId || "",

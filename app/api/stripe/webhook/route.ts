@@ -34,10 +34,6 @@ import {
 
 export const runtime = "nodejs";
 
-function getAdminClient() {
-  return createAdminClient();
-}
-
 function subscriptionPlanFromMetadata(
   priceType: string | null | undefined,
   targetPlan: string | null | undefined,
@@ -51,7 +47,7 @@ function subscriptionPlanFromMetadata(
 }
 
 async function currentOrgPlanForUser(
-  supabase: ReturnType<typeof getAdminClient>,
+  supabase: ReturnType<typeof createAdminClient>,
   userId: string,
 ): Promise<{ plan: PlanId; stripeSubscriptionId: string | null }> {
   const { data: profile } = await supabase
@@ -96,7 +92,7 @@ export async function POST(request: NextRequest) {
     return jsonError(400, "Invalid signature");
   }
 
-  const supabase = getAdminClient();
+  const supabase = createAdminClient();
 
   try {
     switch (event.type) {

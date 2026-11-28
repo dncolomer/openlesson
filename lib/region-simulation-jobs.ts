@@ -44,7 +44,7 @@ import {
 import { OPENROUTER_ORG_KEY_MISSING, openRouterJobMaxUsd } from "@/lib/ai/openrouter";
 import { loadOpenRouterApiKeyForOwnerUser } from "@/lib/organization/org-backend-runtime";
 import { seededSimulationTree } from "@/lib/region-simulation";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
 export const REGION_SIM_LEASE_MS = 55_000;
@@ -115,9 +115,7 @@ export type TickResult = {
 
 const memoryJobs = new Map<string, RegionSimulationJobRow>();
 
-function supabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+const supabaseConfigured = isSupabaseAdminConfigured;
 
 function nowIso(): string {
   return new Date().toISOString();

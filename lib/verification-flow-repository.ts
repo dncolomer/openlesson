@@ -8,7 +8,7 @@
  * `applyVerificationCommand`.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize } from "@/lib/learning-model";
 import {
@@ -75,11 +75,7 @@ export function resetVerificationFlowRepository(): void {
   store.backend = "unknown";
 }
 
-function supabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-}
+const supabaseConfigured = isSupabaseAdminConfigured;
 
 async function resolveBackend(): Promise<"supabase" | "memory"> {
   const store = verificationRepositoryGlobal();

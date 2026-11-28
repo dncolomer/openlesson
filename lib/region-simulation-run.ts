@@ -31,7 +31,7 @@ import {
   productRegionPagePath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { isMissingOrganizationIdColumn } from "@/lib/organization/membership";
 import { loadActiveOrganizationId } from "@/lib/organization/membership-store";
 import {
@@ -104,9 +104,7 @@ export type RegionSimulationMutateResult = RegionSimulationRunResult & {
   removedSampleIds: string[];
 };
 
-function supabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+const supabaseConfigured = isSupabaseAdminConfigured;
 
 function simulationDetailsPath(kind: ProductFlowKind, regionId: string | null): string {
   return productRegionPagePath(kind, regionId || "");

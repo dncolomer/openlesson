@@ -4,7 +4,7 @@
  * carry an optional label that stamps session metadata and embeddings.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { FLOW_LINKS_TABLE } from "@/lib/core-tables";
 export type FlowLinkKind = "verification";
 
@@ -42,9 +42,7 @@ export function resetFlowLinksStore(backend: "unknown" | "memory" = "unknown"): 
   store.backend = backend;
 }
 
-function supabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+const supabaseConfigured = isSupabaseAdminConfigured;
 
 async function resolveBackend(): Promise<"supabase" | "memory"> {
   const store = storeGlobal();

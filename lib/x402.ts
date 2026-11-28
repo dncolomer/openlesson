@@ -1,8 +1,10 @@
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-});
+import type Stripe from "stripe";
+import { getStripe } from "@/lib/stripe/client";
+export {
+  getApiKeyPrefix,
+  hashApiKey,
+  verifyApiKey,
+} from "@/lib/pow-api/api-key-hash";
 
 export const X402_PRICES = {
   plan_generation: 50,
@@ -80,7 +82,7 @@ export async function createPaymentIntent(
 ): Promise<Stripe.PaymentIntent> {
   const description = getX402Description(endpoint);
 
-  return await stripe.paymentIntents.create({
+  return await getStripe().paymentIntents.create({
     amount,
     currency: "usd",
     description,
@@ -96,7 +98,7 @@ export async function verifyPayment(
   paymentIntentId: string
 ): Promise<Stripe.PaymentIntent | null> {
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
     if (paymentIntent.status === "succeeded") {
       return paymentIntent;
     }
@@ -129,24 +131,4 @@ export function createPaymentLink(
 
   const baseUrl = process.env.STRIPE_PORTAL_URL || "https://checkout.stripe.com";
   return `${baseUrl}/pay?${params.toString()}`;
-}
-
-export async function hashApiKey(key: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(key);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-export async function verifyApiKey(
-  providedKey: string,
-  keyHash: string
-): Promise<boolean> {
-  const providedHash = await hashApiKey(providedKey);
-  return providedHash === keyHash;
-}
-
-export function getApiKeyPrefix(key: string): string {
-  return key.substring(0, 8);
 }

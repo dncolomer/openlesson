@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import Stripe from "stripe";
+import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getPendingCheckoutBySessionId,
@@ -10,12 +10,6 @@ import {
 import { emailFromCheckoutSession, isGuestCheckoutPriceType, planIdFromPriceType } from "@/lib/stripe-checkout";
 
 export const runtime = "nodejs";
-
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-  });
-}
 
 export async function GET(request: NextRequest) {
   try {

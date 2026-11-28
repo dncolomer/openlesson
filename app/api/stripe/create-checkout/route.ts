@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
 import {
   creditPackCheckoutPriceData,
@@ -12,12 +13,6 @@ import { getAppOrigin } from "@/lib/app-url";
 import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-checkout";
 
 export const runtime = "nodejs";
-
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-  });
-}
 
 const GUEST_CHECKOUT_TYPES = new Set<CheckoutPriceType>([
   ...PUBLIC_MODULE_CHECKOUT_PRICE_TYPES,

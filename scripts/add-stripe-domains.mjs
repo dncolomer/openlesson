@@ -63,7 +63,7 @@ if (!secretKey) {
   process.exit(1);
 }
 
-const stripe = new Stripe(secretKey, { apiVersion: "2026-01-28.clover" });
+const stripe = new Stripe(secretKey);
 const mode = secretKey.startsWith("sk_live_") ? "live" : "test";
 console.log(`Stripe target: ${useProduction ? "production" : "default"} (${mode} mode)`);
 

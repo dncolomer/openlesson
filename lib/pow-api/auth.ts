@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { hashApiKey } from "@/lib/x402";
+import { hashApiKey } from "./api-key-hash";
 import type { AuthContext, ApiKeyScope, ApiError } from "./types";
 import { jsonError } from "@/lib/api-error-envelope";
 import { checkRateLimitAsync } from "./rate-limit";

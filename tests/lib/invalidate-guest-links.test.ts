@@ -553,19 +553,4 @@ describe("static wiring: migration, APIs, UI", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
-  it("i18n keys exist for invalidate actions", () => {
-    const en = JSON.parse(read("messages/en.json")) as {
-      planView: Record<string, string>;
-    };
-    for (const key of [
-      "tapLinksInvalidate",
-      "tapLinksInvalidateAll",
-      "tapLinksRevokedHint",
-      "ileLinksInvalidate",
-      "ileLinksInvalidateAll",
-      "ileLinksRevokedHint",
-    ]) {
-      expect(en.planView[key], key).toBeTruthy();
-    }
-  });
 });

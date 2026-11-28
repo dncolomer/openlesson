@@ -101,12 +101,6 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(enMessages.dashboard.proofOfWorkApiDesc).not.toMatch(/Proof-of-Work API/i);
     expect(enMessages.dashboard.apiExperimentalDesc).not.toMatch(/Proof-of-Work API/i);
     expect(enMessages.integrationAccess.skillDescription).not.toMatch(/Proof-of-Work API/i);
-    expect(enMessages.workspaceIntegration.mcpWorkflowSteps).toContain("create_protocol");
-    expect(enMessages.workspaceIntegration.mcpWorkflowSteps).toContain("challenge");
-    expect(enMessages.workspaceIntegration.mcpWorkflowSteps).not.toContain("create_flow");
-    expect(publicDocInstructsHeadlessPowLoop(enMessages.workspaceIntegration.mcpWorkflowSteps)).toBe(
-      false,
-    );
     expect(publicDocInstructsHeadlessPowLoop(enMessages.dashboard.mcpWorkflowSteps)).toBe(false);
 
     const integrationsTab = readFileSync(

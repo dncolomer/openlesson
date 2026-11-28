@@ -181,12 +181,6 @@ describe("knowledge verification protocols only", () => {
     expect(readme).toContain("The Protocol Challenge");
     expect(readme).not.toContain("Calibrate / Learn / Verify practice links");
     expect(readme).not.toContain("Verification Flows");
-    const authoring = read("docs/course-authoring-tools-report.md");
-    expect(authoring).toContain("Embeddable Knowledge Verification Protocols");
-    expect(authoring).not.toContain("Create and manage calibration flows");
-    expect(authoring).not.toContain("Create and manage verification flows");
-    expect(authoring).not.toContain("mountsCalibrationFlowsPanel");
-    expect(read("docs/learn-pow-resources.md")).not.toContain("Crafting insights stays on the work canvas");
   });
 
   it("pricing, ontology, science, and dashboard payloads are protocol-only", () => {

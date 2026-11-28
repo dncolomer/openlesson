@@ -34,12 +34,14 @@ for (const file of readdirSync(messagesDir).filter((f) => f.endsWith(".json") &&
   if (missing.length) {
     console.error(`\n${file}: missing ${missing.length}/${enKeys.size} keys (${(missingRatio * 100).toFixed(1)}%)`);
     missing.slice(0, 10).forEach((k) => console.error(`    - ${k}`));
-    if (missingRatio > 0.05) failed = true;
+    failed = true;
   }
   if (extra.length) {
-    console.warn(`${file}: ${extra.length} extra keys (not in en.json)`);
+    console.error(`\n${file}: ${extra.length} extra keys (not in en.json)`);
+    extra.slice(0, 10).forEach((k) => console.error(`    + ${k}`));
+    failed = true;
   }
-  if (!missing.length) {
+  if (!missing.length && !extra.length) {
     console.log(`OK ${file} (${localeKeys.size} keys)`);
   }
 }

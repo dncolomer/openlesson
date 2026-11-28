@@ -90,6 +90,7 @@ export function OrganizationDashboardTab() {
   const [changingRoleMember, setChangingRoleMember] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
+  const [orgIdCopied, setOrgIdCopied] = useState(false);
   const [backends, setBackends] = useState<OrgBackendPublic | null>(null);
   const [llmMode, setLlmMode] = useState<"platform" | "custom">("platform");
   const [llmProvider, setLlmProvider] = useState<"xai" | "openai-compatible">("xai");
@@ -285,6 +286,18 @@ export function OrganizationDashboardTab() {
     }
   };
 
+  const copyOrganizationId = async () => {
+    const id = String(organization?.id || "").trim();
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      setOrgIdCopied(true);
+      window.setTimeout(() => setOrgIdCopied(false), 1600);
+    } catch {
+      /* clipboard may be denied */
+    }
+  };
+
   const copyInviteLink = async (inviteId: string, token: string) => {
     const url = `${window.location.origin}/invite/${token}`;
     try {
@@ -472,6 +485,25 @@ export function OrganizationDashboardTab() {
                   {t("organization.member")}
                 </span>
               )}
+            </div>
+            <div className="mt-3" data-org-id>
+              <p className={labelClass}>{t("organization.organizationId")}</p>
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2">
+                <code
+                  data-org-id-value
+                  className="console-chip max-w-full break-all px-2 py-1 font-mono text-xs text-neutral-200"
+                >
+                  {organization.id}
+                </code>
+                <button
+                  type="button"
+                  data-org-copy-id
+                  className={secondaryBtnClass}
+                  onClick={() => void copyOrganizationId()}
+                >
+                  {orgIdCopied ? t("common.copied") : t("organization.copyId")}
+                </button>
+              </div>
             </div>
             {isOrgAdmin && (
               <div className="mt-4">

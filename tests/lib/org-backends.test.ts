@@ -43,6 +43,8 @@ const SEAL_SECRET = "org-byok-test-seal-secret";
 describe("Organization tab BYOK surface", () => {
   it("exposes LLM and document-storage save/load for org admins only", () => {
     const dashboard = read("components/OrganizationDashboardTab.tsx");
+    expect(dashboard).toContain("data-org-id");
+    expect(dashboard).toContain("data-org-copy-id");
     expect(dashboard).toContain('data-org-backends');
     expect(dashboard).toContain('data-org-llm-backend');
     expect(dashboard).toContain('data-org-blob-backend');

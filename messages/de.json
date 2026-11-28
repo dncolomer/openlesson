@@ -1257,6 +1257,8 @@
     "noOrganizationMatches": "Keine Organisation gefunden",
     "organizationSwitcherMore": "{remaining} weitere — tippen zum Suchen",
     "orgAdmin": "Org-Admin",
+    "organizationId": "Organisations-ID",
+    "copyId": "ID kopieren",
     "members": "Mitglieder",
     "admins": "Admins",
     "pendingInvites": "Ausstehende Einladungen",

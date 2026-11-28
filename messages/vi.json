@@ -1256,6 +1256,8 @@
     "noOrganizationMatches": "No organizations match",
     "organizationSwitcherMore": "{remaining} more — type to search",
     "orgAdmin": "Org Admin",
+    "organizationId": "ID tổ chức",
+    "copyId": "Sao chép ID",
     "members": "Members",
     "admins": "Admins",
     "pendingInvites": "Pending Invites",

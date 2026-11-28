@@ -1301,6 +1301,8 @@
     "noOrganizationMatches": "Ninguna organización coincide",
     "organizationSwitcherMore": "{remaining} más — escribe para buscar",
     "orgAdmin": "Admin de Org",
+    "organizationId": "ID de la organización",
+    "copyId": "Copiar ID",
     "members": "Miembros",
     "admins": "Admins",
     "pendingInvites": "Invitaciones Pendientes",

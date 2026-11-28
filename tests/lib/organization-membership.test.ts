@@ -136,6 +136,12 @@ describe("organization membership", () => {
     expect(store).toContain("export async function setOrganizationMemberRole");
 
     const orgTab = readRepo("components/OrganizationDashboardTab.tsx");
+    expect(orgTab).toContain("data-org-id");
+    expect(orgTab).toContain("data-org-id-value");
+    expect(orgTab).toContain("data-org-copy-id");
+    expect(orgTab).toContain("copyOrganizationId");
+    expect(orgTab).toContain("organization.organizationId");
+    expect(orgTab).toContain("organization.copyId");
     expect(orgTab).toContain("handleChangeMemberRole");
     expect(orgTab).toContain("data-org-member-role");
     expect(orgTab).toContain('method: "PATCH"');

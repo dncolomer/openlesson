@@ -1301,6 +1301,8 @@
     "noOrganizationMatches": "No organizations match",
     "organizationSwitcherMore": "{remaining} more — type to search",
     "orgAdmin": "Org Admin",
+    "organizationId": "Organization ID",
+    "copyId": "Copy ID",
     "members": "Members",
     "admins": "Admins",
     "pendingInvites": "Pending Invites",

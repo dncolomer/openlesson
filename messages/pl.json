@@ -1256,6 +1256,8 @@
     "noOrganizationMatches": "No organizations match",
     "organizationSwitcherMore": "{remaining} more — type to search",
     "orgAdmin": "Org Admin",
+    "organizationId": "Identyfikator organizacji",
+    "copyId": "Kopiuj ID",
     "members": "Members",
     "admins": "Admins",
     "pendingInvites": "Pending Invites",

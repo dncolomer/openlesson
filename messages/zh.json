@@ -1256,6 +1256,8 @@
     "noOrganizationMatches": "没有匹配的组织",
     "organizationSwitcherMore": "还有 {remaining} 个 — 输入以搜索",
     "orgAdmin": "组织管理员",
+    "organizationId": "组织 ID",
+    "copyId": "复制 ID",
     "members": "成员",
     "admins": "管理员",
     "pendingInvites": "待处理邀请",

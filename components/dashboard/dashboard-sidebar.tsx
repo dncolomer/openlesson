@@ -315,6 +315,7 @@ function OrgSwitcher() {
       {open ? (
         <input
           ref={searchRef}
+          role="combobox"
           data-dashboard-org-switcher-select
           data-dashboard-org-switcher-search
           aria-label={t("organization.searchOrganizations")}

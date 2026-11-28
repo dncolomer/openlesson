@@ -39,7 +39,6 @@ function createStorage(): StorageLike {
   try {
     // Dynamic require so bundlers do not resolve async_hooks for client/edge.
     // Avoid Node version probes; Turbopack treats those as an Edge Node API.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { AsyncLocalStorage } = require("async_hooks") as typeof import("async_hooks");
     const als = new AsyncLocalStorage<XaiRequestContext>();
     return {

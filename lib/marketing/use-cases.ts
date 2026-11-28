@@ -118,7 +118,7 @@ export const USE_CASES_DIRECTORY: readonly ThesisDeepLink[] = [
   { href: "#start", label: "Start with one problem", hint: USE_CASES_COPY.closeCta },
 ];
 
-export function useCasesCopyText(): string {
+export function getUseCasesCopyText(): string {
   return [
     USE_CASES_COPY.title,
     ...USE_CASES_COPY.lead,

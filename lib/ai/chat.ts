@@ -67,7 +67,6 @@ export function setChatForTests(port: ChatPort | null): void {
 export function getChat(): ChatPort {
   if (chatOverride) return chatOverride;
   // Lazy require: xai-client reads getChatConfig from this module.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const client = require("@/lib/xai-client") as {
     callXai: ChatPort["complete"];
     callXaiJSON: ChatPort["completeJson"];

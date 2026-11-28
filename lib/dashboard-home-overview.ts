@@ -36,7 +36,7 @@ function surfaceLink(tab: DashboardTab, label: string): DashboardHomeCtaLink {
   };
 }
 
-function useCaseVisual(id: (typeof USE_CASES)[number]["id"]): {
+function getUseCaseVisual(id: (typeof USE_CASES)[number]["id"]): {
   imageSrc: string;
   imageAlt: string;
   imageFit: "contain" | "cover";
@@ -81,7 +81,7 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
       label: "Protocols",
       href: protocols.href,
       body: "Author Embeddable Knowledge Verification Protocols. The Protocol Challenge is the topic that run is scored against.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.protocols),
+      ...getUseCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.protocols),
       links: [protocols],
     },
     {
@@ -89,7 +89,7 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
       label: "Knowledge Regions",
       href: regions.href,
       body: "Simulate exploration strategies on your protocols and inspect the resulting regions.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.regions),
+      ...getUseCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.regions),
       links: [regions],
     },
   ];

@@ -74,7 +74,6 @@ function getApiKey(override?: string | null): string {
   if (typeof window === "undefined") {
     try {
       // Lazy require to avoid circular deps / client bundling of async_hooks
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { getContextualXaiApiKey } = require("@/lib/xai-context") as {
         getContextualXaiApiKey: () => string | null;
       };

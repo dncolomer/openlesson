@@ -13,7 +13,7 @@ import {
   VERIFICATION_PRODUCT_COPY,
 } from "@/lib/marketing/verification-product";
 import { MAPPING_PLATFORM_COPY, MAPPING_PRODUCT_COPY } from "@/lib/marketing/mapping-product";
-import { USE_CASES, USE_CASES_COPY, USE_CASES_OTHER, useCasesCopyText } from "@/lib/marketing/use-cases";
+import { USE_CASES, USE_CASES_COPY, USE_CASES_OTHER, getUseCasesCopyText } from "@/lib/marketing/use-cases";
 import { landingHeroCopyText } from "@/lib/marketing/landing-variants";
 import {
   DISCOVERY_CTA_LABEL,
@@ -47,7 +47,7 @@ function scopedCorpus(): string {
   return [
     homepageCopyText(),
     landingHeroCopyText(),
-    useCasesCopyText(),
+    getUseCasesCopyText(),
     JSON.stringify(HARNESS_PRODUCT_COPY),
     JSON.stringify(VERIFICATION_PRODUCT_COPY),
     JSON.stringify(VERIFICATION_PLATFORM_COPY),
@@ -66,7 +66,7 @@ describe("five-page positioning contract", () => {
     );
     expect(homepageCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(landingHeroCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
-    expect(useCasesCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
+    expect(getUseCasesCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(HARNESS_PRODUCT_COPY.lead).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(VERIFICATION_PRODUCT_COPY.lead).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(MAPPING_PRODUCT_COPY.lead).not.toContain(APPROVED_BRAND_ANCHOR);

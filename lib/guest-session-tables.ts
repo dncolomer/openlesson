@@ -27,7 +27,6 @@ export const GUEST_SESSION_SELECT =
 export const GUEST_SESSION_OPEN_SELECT =
   "id, workspace_id, block_id, status, assigned_user_id, guest_user_id, organization_id, user_id, access_mode, public_token, kind, guest_link, workspaces(title, user_id)";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type GuestSessionClient = { from: (table: string) => any };
 
 export function guestSessionTableForFlow(flow: "calibrate" | "verify"): CalibrateVerifyTable {

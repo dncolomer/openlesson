@@ -6,10 +6,12 @@
 -- migrations in `supabase/migrations/`, applied in filename order.
 --
 -- Current chain:
---   20260711120000_baseline.sql  — squashed production public schema
---   20260711120001_rename_ghc_sessions_to_tap.sql
+--   20261128120000_baseline.sql  — clean-start verification-only baseline
 --
--- Historical migrations live in `supabase/migrations/_archive/pre-baseline/`.
+-- Upgrade migration for existing staging/prod databases:
+--   supabase/upgrade/20261128120000_drop_legacy_non_verification_schema.sql
+--
+-- Historical migrations live in `supabase/archive/`.
 --
 -- To set up a fresh database (staging branch or new project):
 --

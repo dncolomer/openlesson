@@ -38,7 +38,7 @@ async function schemaAlreadyInitialized(client) {
     SELECT EXISTS (
       SELECT 1
       FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = 'workspaces'
+      WHERE table_schema = 'public' AND table_name = 'verify_flows'
     ) AS ready
   `);
   return result.rows[0]?.ready === true;

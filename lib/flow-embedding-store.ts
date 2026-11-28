@@ -328,13 +328,13 @@ export async function listFlowEmbeddingsForWorkspaces(input: {
       .filter((row): row is StoredFlowEmbedding => row !== null);
   }
   const supabase = createAdminClient();
+  if (!flowId) return [];
   let query = supabase
     .from("session_embeddings")
     .select("*")
-    .in("workspace_id", workspaceIds)
+    .eq("flow_id", flowId)
     .order("created_at", { ascending: false });
   if (flowKind) query = query.eq("flow_kind", flowKind);
-  if (flowId) query = query.eq("flow_id", flowId);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data || [])
@@ -350,10 +350,10 @@ export async function getFlowEmbedding(input: {
 }): Promise<StoredFlowEmbedding | null> {
   const workspaceId = text(input.workspaceId);
   const embeddingId = text(input.embeddingId);
-  if (!workspaceId || !embeddingId) return null;
+  if (!embeddingId) return null;
   if ((await resolveBackend()) === "memory") {
     const row = storeGlobal().memory.find(
-      (item) => item.workspace_id === workspaceId && item.id === embeddingId,
+      (item) => (!workspaceId || item.workspace_id === workspaceId) && item.id === embeddingId,
     );
     return row ? presentFlowEmbedding(row) : null;
   }
@@ -361,7 +361,6 @@ export async function getFlowEmbedding(input: {
   const { data, error } = await supabase
     .from("session_embeddings")
     .select("*")
-    .eq("workspace_id", workspaceId)
     .eq("id", embeddingId)
     .maybeSingle();
   if (error) throw new Error(error.message);

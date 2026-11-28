@@ -5,9 +5,6 @@
  */
 
 import {
-  buildVoiceRegionFromFlowRaws,
-} from "@/lib/verification-flow";
-import {
   createCustomVerificationModelFromVectors,
   pathTextRegionCompanionNames,
   type CustomVerificationModelSpec,
@@ -247,7 +244,7 @@ async function deleteKnowledgeRegion(input: {
   if (error) throw new Error(error.message);
 }
 
-async function persistPathTextCompanion(input: {
+async function persistPathTextCompanion(_input: {
   ownerUserId: string;
   organizationId?: string | null;
   workspaceId: string | null;
@@ -258,20 +255,7 @@ async function persistPathTextCompanion(input: {
   createdBy: string;
   kind: ProductFlowKind;
 }): Promise<void> {
-  try {
-    const voiceSpec = await buildVoiceRegionFromFlowRaws({
-      name: input.name,
-      embeddings: input.embeddings,
-    });
-    if (!voiceSpec) return;
-    await persistKnowledgeRegion({
-      ...input,
-      name: voiceSpec.name,
-      spec: voiceSpec,
-    });
-  } catch {
-    /* Path region is already saved. */
-  }
+  return;
 }
 
 export async function runRegionSimulation(input: {

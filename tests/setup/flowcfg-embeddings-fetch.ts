@@ -1,8 +1,8 @@
 /**
  * Persist goes over HTTP. Tests intercept POST /v1/embed with a SHA-256
  * stand-in. This is not the production Path encoder. Path is hashed from
- * genModel + projectedPolicy only so extra-channel mixes can be tested
- * without shipping the host function.
+ * genModel + projectedPolicy only. Extra channels stay independent; the
+ * OpenLesson client does not mix them.
  */
 import { createHash } from "node:crypto";
 import {

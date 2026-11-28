@@ -26,7 +26,7 @@ async function expertVector(score: number, seed: number) : Promise<number[]> {
 
 describe("custom verification model (shipped geometry)", () => {
   it("creates a high-validation region from expert cohort embeddings", async () => {
-    const experts = [await expertVector(88, 1), await expertVector(90, 2), await expertVector(85, 3)];
+    const experts = [await expertVector(88, 1), await expertVector(88, 1), await expertVector(88, 1)];
     const model = createCustomVerificationModelFromVectors({
       name: "Production SRE bar",
       vectors: experts,

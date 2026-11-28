@@ -99,7 +99,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
     subjects: [{ label: "ada", user_id: "user_ada" }],
   };
 
-  function stored(sequence: string[]): StoredFlowEmbedding {
+  async function stored(sequence: string[]): Promise<StoredFlowEmbedding> {
     const model = tree();
     const record = await encodeFlowEmbedding({
       flowKind: "verify",
@@ -127,7 +127,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
   }
 
   it("returns the reference tree and the mapped walk for a known run", async () => {
-    const embedding = stored(["root", "visited-a"]);
+    const embedding = await stored(["root", "visited-a"]);
     const payload = presentKnowledgeRegionUncertaintyModel({
       knowledgeRegionId: "parent",
       candidateId: "ada",
@@ -152,7 +152,7 @@ describe("presentKnowledgeRegionUncertaintyModel", () => {
       knowledgeRegionId: "parent",
       candidateId: "nobody",
       parent,
-      embeddings: [stored(["root"])],
+      embeddings: [await stored(["root"])],
       referenceModel: tree(),
     });
     expect(payload.mapped.sequence).toEqual([]);

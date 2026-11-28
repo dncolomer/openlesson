@@ -141,7 +141,7 @@ describe("flow enforced channels", () => {
     ).toBe(false);
   });
 
-  it("drops spoken PoW so Path+Text matches Path when audio is off", async () => {
+  it("drops spoken PoW from raw when audio is off and still encodes Path", async () => {
     const pow = powRowsForCanvasEmbedding([
       { type: "tool", tool_name: "speech-segment", tool_action: "speech_stop", payload: "hello" },
       { type: "tool", tool_name: "tap-draw", tool_action: "draw", payload: "{}" },
@@ -161,7 +161,9 @@ describe("flow enforced channels", () => {
         { type: "tool", tool_name: "speech-segment", tool_action: "speech_stop", payload: "hello" },
       ],
     });
+    expect(canvasOnly.raw.pow).toHaveLength(0);
+    expect(withSpeech.raw.pow).toHaveLength(1);
+    expect(canvasOnly.vector).toEqual(withSpeech.vector);
     expect(canvasOnly.vector_path_text).toEqual(canvasOnly.vector);
-    expect(withSpeech.vector_path_text).not.toEqual(canvasOnly.vector_path_text);
   });
 });

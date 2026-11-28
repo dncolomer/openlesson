@@ -164,7 +164,7 @@ describe("knowledge region candidate render", () => {
     expect(payload.observations.some((row) => row.id === "other")).toBe(false);
   });
 
-  it("returns empty observations for an unknown candidate and mixes path+audio when asked", async () => {
+  it("returns empty observations for an unknown candidate and reads Path only", async () => {
     const empty = presentKnowledgeRegionCandidate({
       knowledgeRegionId: "parent",
       candidateId: "nobody",
@@ -177,7 +177,7 @@ describe("knowledge region candidate render", () => {
     expect(empty.unsys.average).toBeNull();
     expect(empty.path.span).toBeNull();
     expect(empty.pairwise.matrix).toEqual([]);
-    expect(empty.space).toBe("path+audio+eeg");
+    expect(empty.space).toBe("path");
 
     const a = await stored({
       id: "a",
@@ -205,9 +205,9 @@ describe("knowledge region candidate render", () => {
       parent: { ...parent, centroid: a.vector, cosine_threshold: 0 },
       embeddings: [a, b],
     });
-    expect(audioPayload.space).toBe("path+audio");
+    expect(audioPayload.space).toBe("path");
     expect(pathPayload.pairwise.matrix[0]?.[1]).toBe(0);
-    expect(audioPayload.pairwise.matrix[0]?.[1]).toBeGreaterThan(0);
+    expect(audioPayload.pairwise.matrix[0]?.[1]).toBe(0);
   });
 
   it("keeps public nearest on exploration clusters when an AI-use cluster is closer", async () => {

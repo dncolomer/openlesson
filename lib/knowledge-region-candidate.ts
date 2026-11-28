@@ -1,6 +1,6 @@
 /**
  * Closed render payload for one knowledge region × one candidate.
- * Mixes embeddings into a named space; unsys distance stays policy excess.
+ * OpenLesson reads Path embeddings only; unsys distance stays policy excess.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,7 +15,7 @@ import {
   listFlowEmbeddingsForOwner,
   type StoredFlowEmbedding,
 } from "@/lib/flow-embedding-store";
-import { parseFlowEmbeddingSpace } from "@/lib/flow-embedding-space";
+
 import { l2Distance, l2Normalize } from "@/lib/knowledge-config/math";
 import { studioPointInsideHighDimRegion } from "@/lib/data-studio-view";
 import {
@@ -241,8 +241,7 @@ export function presentKnowledgeRegionCandidate(input: {
   clusters?: readonly KnowledgeRegionDetailsRow[];
   embeddings?: readonly StoredFlowEmbedding[];
 }): KnowledgeRegionCandidateRender {
-  const space = parseFlowEmbeddingSpace(input.space);
-  const canonical = space.ok ? space.space : "path";
+  const canonical = "path";
   const clusters = presentKnowledgeRegionClusters(input.parent, input.clusters ?? []);
   const subjects = parseSubjects(input.parent.subjects);
   const keys = candidateIdentityKeys(input.candidateId, subjects);
@@ -420,11 +419,6 @@ export async function loadKnowledgeRegionCandidate(
   if (!knowledgeRegionId || !candidateId) {
     return { ok: false, status: 400, code: "validation_error", message: "knowledge_region_id and candidate_id are required" };
   }
-  const space = parseFlowEmbeddingSpace(input.space);
-  if (!space.ok) {
-    return { ok: false, status: 400, code: "validation_error", message: space.error };
-  }
-
   const supabase = createAdminClient();
   let query = supabase
     .from("knowledge_regions")
@@ -463,7 +457,7 @@ export async function loadKnowledgeRegionCandidate(
     payload: presentKnowledgeRegionCandidate({
       knowledgeRegionId,
       candidateId,
-      space: space.space,
+      space: "path",
       parent: row as KnowledgeRegionDetailsRow,
       clusters: (siblings || []) as KnowledgeRegionDetailsRow[],
       embeddings,

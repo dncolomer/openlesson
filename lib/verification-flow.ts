@@ -23,17 +23,12 @@ import {
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
-  isFlowEmbeddingVector,
-  recoverFlowEmbeddingRaw,
-  vectorForFlowSpace,
   type FlowEmbeddingChannel,
 } from "@/lib/flow-embedding";
-import { encodeFlowEmbedding, encodeFlowRaw } from "@/lib/flow-embedding-encode";
+import { encodeFlowEmbedding, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
-  voiceRegionName,
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
@@ -314,33 +309,12 @@ export function buildRegionFromFlowEmbeddings(input: {
   });
 }
 
-/** Path + Text companion from recoverable flow raws for the same cohort. */
-export async function buildVoiceRegionFromFlowRaws(input: {
+/** Extra-channel companion regions are not an application offering. */
+export async function buildVoiceRegionFromFlowRaws(_input: {
   name: string;
   embeddings: readonly { raw?: unknown; channel_vectors?: unknown; vector?: number[] }[];
 }): Promise<CustomVerificationModelSpec | null> {
-  const pathName = input.name.trim();
-  const name = voiceRegionName(pathName);
-  if (!pathName || name === pathName) return null;
-  const vectors: number[][] = [];
-  for (const row of input.embeddings) {
-    const mixed = vectorForFlowSpace(row as { vector?: number[]; channel_vectors?: never }, "path+audio");
-    if (isFlowEmbeddingVector(mixed) && mixed.some((n) => n !== 0)) {
-      vectors.push(mixed);
-      continue;
-    }
-    const recovered = recoverFlowEmbeddingRaw(row.raw);
-    if (!recovered) continue;
-    const encoded = await encodeFlowRaw(recovered);
-    vectors.push(encoded.vector_path_text);
-  }
-  if (!vectors.length) return null;
-  return createCustomVerificationModelFromVectors({
-    name,
-    vectors,
-    subjects: vectors.map(() => ({ label: pathName })),
-    embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
-  });
+  return null;
 }
 
 export function buildSyntheticAgentPowRequest(input: {
@@ -392,18 +366,20 @@ export function parseSyntheticPowModelOutput(raw: unknown): SyntheticPowItem[] {
 }
 
 /**
- * Host Path numbers for one verification proof. Default `path` is the Path
- * channel. `path_text` mixes stored audio at read. Synthetic text-only items
- * use path_text.
+ * Host Path numbers for one verification proof. Extra-channel fusion is not
+ * requested. Synthetic text-only items pack a Path tree from the text.
  */
 export async function verificationProofEmbedding(input: {
   prompt: string;
   source?: "runner" | "skill" | "synthetic";
   workspaceId?: string;
-  channel?: FlowEmbeddingChannel;
+  channel?: FlowEmbeddingChannel | string;
   catalogSize?: unknown;
   policy?: { model: SessionBranchModel; sequence: readonly string[] } | null;
 }): Promise<number[]> {
+  if (input.source === "synthetic") {
+    return encodeTextsToFlowVector([input.prompt]);
+  }
   const source = input.source ?? "runner";
   const record = await encodeFlowEmbedding({
     flowKind: "verify",
@@ -424,7 +400,7 @@ export async function verificationProofEmbedding(input: {
       })),
     ],
   });
-  return input.channel === "path_text" ? record.vector_path_text : record.vector;
+  return record.vector;
 }
 
 /** Opening line the TAP canvas shows for this run. Empty when the pool refused a question. */
@@ -447,7 +423,6 @@ export async function regionEmbeddingsFromSyntheticItems(
         prompt: text,
         source: "synthetic",
         workspaceId: "synthetic-agents",
-        channel: "path_text",
       }),
     );
   }
@@ -481,7 +456,7 @@ export async function buildRegionFromSyntheticItems(input: {
     name: input.name,
     vectors: await regionEmbeddingsFromSyntheticItems(input.items),
     subjects: input.items.map((item) => ({ label: item.text.slice(0, 80) })),
-    embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
 }
 

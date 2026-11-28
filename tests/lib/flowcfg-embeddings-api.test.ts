@@ -118,13 +118,18 @@ describe("flowcfg embeddings persist client", () => {
       model: string;
       raw: { flowKind?: unknown; genModel?: { rootId?: string } };
       input?: unknown;
+      space?: unknown;
+      channel?: unknown;
     };
     expect(body.model).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(body.input).toBeUndefined();
+    expect(body.space).toBeUndefined();
+    expect(body.channel).toBeUndefined();
     expect(body.raw.flowKind).toBeUndefined();
     expect(body.raw.genModel).toMatchObject({ rootId: "root" });
     expect(stored.vector).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(stored.vector).toEqual(local.vector);
+    expect(stored.vector_path_text).toEqual(stored.vector);
     expect(stored.channel_vectors.path).toEqual(local.channel_vectors.path);
     expect(stored.raw.projectedPolicy?.sequence).toEqual(["root", "cheap", "cheap-leaf"]);
   });

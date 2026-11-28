@@ -152,7 +152,7 @@ describe("flow embedding knowledge view", () => {
         { embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID, centroid },
         "path_text",
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       regionMatchesFlowEmbeddingChannel(
         { embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID, centroid },

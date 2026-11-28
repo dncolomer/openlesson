@@ -9,7 +9,6 @@ import { join } from "node:path";
 import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
 import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
 import { resolveTapStartingTopicsFromLlm } from "@/lib/tap-score";
@@ -317,9 +316,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
         }),
       ],
     });
-    expect(voice?.name).toBe("Limits region · Path + Text");
-    expect(voice?.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
-    expect(voice?.subject_count).toBe(2);
+    expect(voice).toBeNull();
     expect(await buildVoiceRegionFromFlowRaws({ name: "Limits region", embeddings: [] })).toBeNull();
   });
 
@@ -344,11 +341,11 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(generated.embeddings[0]).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(generated.embeddings[0]).not.toEqual(generated.embeddings[1]);
     expect(generated.embeddings[0]).not.toEqual(axis(2));
-    const spec = buildRegionFromSyntheticItems({
+    const spec = await buildRegionFromSyntheticItems({
       name: "Synthetic limits",
       items: generated.items,
     });
-    expect(spec.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+    expect(spec.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(spec.subject_count).toBe(generated.items.length);
     expect(spec.dim).toBe(FLOW_EMBEDDING_DIM);
     expect(spec.centroid).toHaveLength(FLOW_EMBEDDING_DIM);
@@ -362,23 +359,25 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(bogus.items[0]?.embedding).toEqual([]);
     expect(bogus.embeddings[0]).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(bogus.embeddings[0]?.slice(0, 3)).not.toEqual([0.1, 0.2, 0.3]);
-    const fromText = buildRegionFromSyntheticItems({
+    const fromText = await buildRegionFromSyntheticItems({
       name: "Epsilon",
       items: bogus.items,
     });
     expect(fromText.dim).toBe(FLOW_EMBEDDING_DIM);
     expect(fromText.centroid).toEqual(
-      buildRegionFromSyntheticItems({
-        name: "Epsilon",
-        items: [{ id: "s", text: "epsilon proof", embedding: [] }],
-      }).centroid,
+      (
+        await buildRegionFromSyntheticItems({
+          name: "Epsilon",
+          items: [{ id: "s", text: "epsilon proof", embedding: [] }],
+        })
+      ).centroid,
     );
     const bare = buildSyntheticAgentPowRequest({ topic: "Limits", promptModifier: "  " });
     expect(bare.includesModifier).toBe(false);
     expect(bare.asksForProofOfWork).toBe(true);
   });
 
-  it("keeps runner and skill on the same path without a walk; path+text follows spoken proof", async () => {
+  it("keeps runner and skill on the same Path without a walk", async () => {
     const runnerA = await verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "runner",
@@ -415,8 +414,9 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       workspaceId: "flow-token",
       channel: "path_text",
     });
-    expect(runnerAText).not.toEqual(runnerBText);
-    expect(runnerAText).not.toEqual(skillText);
+    expect(runnerAText).toEqual(runnerA);
+    expect(runnerBText).toEqual(runnerB);
+    expect(skillText).toEqual(skill);
     expect(
       await verificationProofEmbedding({
         prompt: "epsilon delta limit proof",

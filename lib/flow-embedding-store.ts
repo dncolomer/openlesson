@@ -15,7 +15,6 @@ import {
 } from "@/lib/flow-embedding";
 import { requestFlowcfgEmbeddings } from "@/lib/flowcfg-embeddings-api";
 import {
-  mixFlowEmbeddingSpace,
   parseFlowEmbeddingChannelVectors,
   type FlowEmbeddingChannelVectors,
 } from "@/lib/flow-embedding-space";
@@ -139,7 +138,7 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: channel_vectors.path,
-    vector_path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
+    vector_path_text: channel_vectors.path,
     channel_vectors,
     raw,
     created_at: String(row.created_at || new Date().toISOString()),
@@ -155,7 +154,7 @@ export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedd
       embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
       dim: FLOW_EMBEDDING_DIM,
       vector: storedChannels.path,
-      vector_path_text: mixFlowEmbeddingSpace(storedChannels, "path+audio"),
+      vector_path_text: storedChannels.path,
       channel_vectors: storedChannels,
       raw: recovered ?? row.raw,
     };
@@ -163,13 +162,13 @@ export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedd
   const path = Array.isArray(row.vector) && row.vector.length === FLOW_EMBEDDING_DIM
     ? row.vector
     : new Array(FLOW_EMBEDDING_DIM).fill(0);
-  const channel_vectors = { path, ...(row.channel_vectors ?? {}) };
+  const channel_vectors = { ...(row.channel_vectors ?? {}), path };
   return {
     ...row,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: path,
-    vector_path_text: mixFlowEmbeddingSpace(channel_vectors, "path+audio"),
+    vector_path_text: path,
     channel_vectors,
     raw: recovered ?? row.raw,
   };
@@ -205,7 +204,7 @@ export async function persistCompletedFlowEmbedding(
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
     vector: encoded.embedding,
-    vector_path_text: mixFlowEmbeddingSpace(encoded.channel_vectors, "path+audio"),
+    vector_path_text: encoded.embedding,
     channel_vectors: encoded.channel_vectors,
     raw,
     created_at: new Date().toISOString(),

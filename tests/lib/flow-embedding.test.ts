@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   flowEmbeddingChannelLabel,
   flowEmbeddingModelIdForChannel,
   recoverFlowEmbeddingRaw,
@@ -12,10 +11,6 @@ import {
   vectorsMatch,
 } from "@/lib/flow-embedding";
 import { encodeFlowEmbedding, encodeFlowRaw } from "@/lib/flow-embedding-encode";
-import {
-  mixFlowEmbeddingSpace,
-  parseFlowEmbeddingSpace,
-} from "@/lib/flow-embedding-space";
 import { cosineSimilarity } from "@/lib/knowledge-config/math";
 import {
   persistCompletedFlowEmbedding,
@@ -91,7 +86,7 @@ describe("flowcfg-v1-d96 embeddings", () => {
     }
   });
 
-  it("changes the path vector when the tree or walk changes; speech only moves path+text", async () => {
+  it("changes the path vector when the tree or walk changes; speech does not move Path", async () => {
     const base = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
@@ -126,41 +121,26 @@ describe("flowcfg-v1-d96 embeddings", () => {
     expect(base.vector).not.toEqual(otherPolicy.vector);
     expect(base.vector).toEqual(otherPow.vector);
     expect(base.vector).toEqual(silent.vector);
-    expect(base.vector_path_text).not.toEqual(otherPow.vector_path_text);
-    expect(base.vector_path_text).not.toEqual(base.vector);
+    expect(base.vector_path_text).toEqual(base.vector);
+    expect(otherPow.vector_path_text).toEqual(otherPow.vector);
     expect(silent.vector_path_text).toEqual(silent.vector);
     expect(cosineSimilarity(base.vector, otherPolicy.vector)).toBeLessThan(0.999);
     expect(cosineSimilarity(base.vector, otherPow.vector)).toBeGreaterThan(0.999);
     expect(flowEmbeddingModelIdForChannel("path")).toBe(FLOW_EMBEDDING_MODEL_ID);
-    expect(flowEmbeddingModelIdForChannel("path_text")).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+    expect(flowEmbeddingModelIdForChannel("path_text")).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(flowEmbeddingChannelLabel("path")).toBe("Path");
-    expect(flowEmbeddingChannelLabel("path_text")).toBe("Path + Text");
+    expect(flowEmbeddingChannelLabel("path_text")).toBe("Path");
     const recovered = recoverFlowEmbeddingRaw(base);
     expect(recovered).toEqual(base.raw);
     expect(vectorsMatch((await encodeFlowRaw(recovered!)).vector, base.vector)).toBe(true);
-    expect(vectorsMatch((await encodeFlowRaw(recovered!)).vector_path_text, base.vector_path_text)).toBe(true);
+    expect(vectorsMatch((await encodeFlowRaw(recovered!)).vector_path_text, base.vector)).toBe(true);
     expect(
       otherModel.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
     ).toBeGreaterThan(0);
     expect(otherModel.raw.genModel.chapterTitle).toBe("Priced");
   });
 
-  it("names spaces from basis channels and mixes path+audio as Path+Text", async () => {
-    expect(parseFlowEmbeddingSpace(null)).toEqual({
-      ok: true,
-      space: "path",
-      channels: ["path"],
-    });
-    expect(parseFlowEmbeddingSpace("path_text")).toEqual({
-      ok: true,
-      space: "path+audio",
-      channels: ["path", "audio"],
-    });
-    const sorted = parseFlowEmbeddingSpace("path+eeg+audio");
-    expect(sorted.ok && sorted.space).toBe("path+audio+eeg");
-    const voice = parseFlowEmbeddingSpace("voice");
-    expect(voice.ok && voice.space).toBe("path+audio");
-    expect(parseFlowEmbeddingSpace("path+foo").ok).toBe(false);
+  it("reads Path even when extras are present; persist body has no mix selector", async () => {
     const spoken = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
@@ -168,21 +148,16 @@ describe("flowcfg-v1-d96 embeddings", () => {
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
     expect(spoken.channel_vectors.path).toEqual(spoken.vector);
-    expect(spoken.channel_vectors.audio).toBeTruthy();
-    expect(
-      vectorsMatch(vectorForFlowSpace(spoken, "path+audio"), spoken.vector_path_text),
-    ).toBe(true);
-    expect(vectorsMatch(vectorForFlowSpace(spoken, "path+audio"), spoken.vector_path_text)).toBe(
-      true,
-    );
+    expect(vectorForFlowSpace(spoken, "path+audio")).toEqual(spoken.vector);
+    expect(vectorForFlowSpace(spoken, "path_text")).toEqual(spoken.vector);
     const silent = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
       pow: [{ type: "tool", tool_name: "session_policy", tool_action: "r1", timestamp_ms: 1 }],
     });
-    expect(silent.channel_vectors.audio).toBeUndefined();
     expect(vectorForFlowSpace(silent, "path+audio")).toEqual(silent.vector);
+    expect(vectorsMatch(spoken.vector, silent.vector)).toBe(true);
     const withEeg = await encodeFlowEmbedding({
       flowKind: "verify",
       model,
@@ -192,10 +167,8 @@ describe("flowcfg-v1-d96 embeddings", () => {
         { type: "eeg", tool_name: "muse", timestamp_ms: 2, payload: "band-alpha" },
       ],
     });
-    expect(withEeg.channel_vectors.eeg).toBeTruthy();
-    const twoExtra = mixFlowEmbeddingSpace(withEeg.channel_vectors, "path+audio+eeg");
-    expect(twoExtra).not.toEqual(withEeg.vector);
-    expect(twoExtra).not.toEqual(withEeg.vector_path_text);
+    expect(withEeg.vector).toEqual(spoken.vector);
+    expect(vectorForFlowSpace(withEeg, "path+audio+eeg")).toEqual(withEeg.vector);
     expect(
       existsSync(join(ROOT, "supabase/migrations/20261118120000_session_embedding_channel_vectors.sql")),
     ).toBe(true);

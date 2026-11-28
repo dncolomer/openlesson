@@ -1,10 +1,7 @@
 /**
- * Named embedding spaces: mix stored basis channel vectors at read time.
- * Path is always first. Extra channels (audio, eeg, video, screen) combine
- * later; combinations are not persisted.
+ * Named embedding spaces live on the private host multimodal model.
+ * OpenLesson persist and read use Path only.
  */
-
-import { l2Normalize } from "@/lib/knowledge-config/math";
 
 export const FLOW_EMBEDDING_BASIS_CHANNELS = [
   "path",
@@ -24,11 +21,7 @@ export const FLOW_EMBEDDING_BASIS_CHANNEL_LABELS: Record<FlowEmbeddingBasisChann
   screen: "Screen",
 };
 
-export const FLOW_EMBEDDING_SPACE_PATH_WEIGHT = 0.75;
-export const FLOW_EMBEDDING_SPACE_EXTRA_WEIGHT = 0.25;
-
 const BASIS_DIM = 96;
-const BASIS_SET = new Set<string>(FLOW_EMBEDDING_BASIS_CHANNELS);
 
 const CHANNEL_ALIASES: Record<string, FlowEmbeddingBasisChannel> = {
   path: "path",
@@ -131,42 +124,4 @@ export function parseFlowEmbeddingChannelVectors(
     }
   }
   return out;
-}
-
-function channelVector(
-  basis: Partial<Record<FlowEmbeddingBasisChannel, number[] | undefined>>,
-  channel: FlowEmbeddingBasisChannel,
-): number[] | null {
-  const vector = basis[channel];
-  if (!isUnitBasisVector(vector) || isZeroFlowEmbeddingVector(vector)) return null;
-  return vector;
-}
-
-/**
- * Mix basis vectors into a named space. Path weight 0.75 when any extra
- * channel has signal; remaining 0.25 split equally. Silent extras drop out,
- * so path+audio with no audio equals path (legacy Path+Text).
- */
-export function mixFlowEmbeddingSpace(
-  basis: Partial<Record<FlowEmbeddingBasisChannel, number[] | undefined>>,
-  space: string,
-): number[] {
-  const parsed = parseFlowEmbeddingSpace(space);
-  const path = channelVector(basis, "path");
-  if (!path) return new Array(BASIS_DIM).fill(0);
-  if (!parsed.ok) return path;
-  const extras = parsed.channels
-    .filter((channel) => channel !== "path")
-    .map((channel) => channelVector(basis, channel))
-    .filter((vector): vector is number[] => !!vector);
-  if (!extras.length) return path;
-  const extraWeight = FLOW_EMBEDDING_SPACE_EXTRA_WEIGHT / extras.length;
-  const mixed = path.map((value, index) => {
-    let sum = value * FLOW_EMBEDDING_SPACE_PATH_WEIGHT;
-    for (const extra of extras) {
-      sum += (extra[index] ?? 0) * extraWeight;
-    }
-    return sum;
-  });
-  return l2Normalize(mixed);
 }

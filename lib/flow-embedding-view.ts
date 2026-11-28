@@ -13,7 +13,6 @@ import {
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   isFlowEmbeddingVector,
-  parseFlowEmbeddingChannel,
   type FlowEmbeddingChannel,
   type FlowKind,
 } from "@/lib/flow-embedding";
@@ -196,9 +195,6 @@ export function regionMatchesFlowEmbeddingChannel(
   const model = String(region.embedding_model_id || "");
   if (channel === "any") {
     return model === FLOW_EMBEDDING_MODEL_ID || model === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID;
-  }
-  if (parseFlowEmbeddingChannel(channel) === "path_text") {
-    return model === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID;
   }
   return model === FLOW_EMBEDDING_MODEL_ID;
 }

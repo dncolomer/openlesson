@@ -195,34 +195,34 @@ describe("policy score against the prepared tree", () => {
   });
 
 
-  it("changes the path embedding when the sequence changes; speech only moves path+text", () => {
+  it("changes the path embedding when the sequence changes; speech stays on Path", async () => {
     const prompt = "The person spoke the observation.";
-    const speech = verificationProofEmbedding({
+    const speech = await verificationProofEmbedding({
       prompt,
       source: "runner",
       workspaceId: "ws-policy",
       policy: { model, sequence: lowest },
     });
-    const otherSequence = verificationProofEmbedding({
+    const otherSequence = await verificationProofEmbedding({
       prompt,
       source: "runner",
       workspaceId: "ws-policy",
       policy: { model, sequence: higher },
     });
-    const canvas = verificationProofEmbedding({
+    const canvas = await verificationProofEmbedding({
       prompt,
       source: "skill",
       workspaceId: "ws-policy",
       policy: { model, sequence: lowest },
     });
-    const speechText = verificationProofEmbedding({
+    const speechText = await verificationProofEmbedding({
       prompt,
       source: "runner",
       workspaceId: "ws-policy",
       policy: { model, sequence: lowest },
       channel: "path_text",
     });
-    const canvasText = verificationProofEmbedding({
+    const canvasText = await verificationProofEmbedding({
       prompt,
       source: "skill",
       workspaceId: "ws-policy",
@@ -231,25 +231,25 @@ describe("policy score against the prepared tree", () => {
     });
     expect(speech).not.toEqual(otherSequence);
     expect(speech).toEqual(canvas);
-    expect(speechText).not.toEqual(canvasText);
+    expect(speechText).toEqual(canvasText);
     expect(speech).toHaveLength(96);
   });
 
-  it("builds a verification region from the policy-score embeddings", () => {
+  it("builds a verification region from the policy-score embeddings", async () => {
     const prompt = "What does this question ask the person to notice?";
-    const low = verificationProofEmbedding({
+    const low = await verificationProofEmbedding({
       prompt,
       source: "runner",
       workspaceId: "flow-policy",
       policy: { model, sequence: lowest },
     });
-    const high = verificationProofEmbedding({
+    const high = await verificationProofEmbedding({
       prompt,
       source: "runner",
       workspaceId: "flow-policy",
       policy: { model, sequence: higher },
     });
-    const promptOnly = verificationProofEmbedding({
+    const promptOnly = await verificationProofEmbedding({
       prompt,
       source: "runner",
       workspaceId: "flow-policy",

@@ -258,7 +258,7 @@ async function main() {
       );
     }
 
-    for (const region of [regions.path, regions.voice]) {
+    for (const region of [regions.path]) {
       await client.query(
         `INSERT INTO public.knowledge_regions (
            workspace_id, name, description, embedding_model_id, dim,
@@ -272,9 +272,7 @@ async function main() {
         [
           workspaceId,
           region.name,
-          region.embedding_model_id === FLOW_EMBEDDING_MODEL_ID
-            ? "Path-space region of the cheapest ε-δ walks (ada, bea, cam)."
-            : "Path + Text region of the cheapest ε-δ walks (ada, bea, cam).",
+          "Path-space region of the cheapest ε-δ walks (ada, bea, cam).",
           region.embedding_model_id,
           region.dim,
           JSON.stringify(region.centroid),
@@ -292,12 +290,12 @@ async function main() {
     console.log(`[seed-local-studio] workspace_id=${workspaceId}`);
     console.log(`[seed-local-studio] flow_id=${flowId} token=${publicToken}`);
     console.log(
-      `[seed-local-studio] runs=${encoded.length} regions=${regions.path.name}, ${regions.voice.name}`,
+      `[seed-local-studio] runs=${encoded.length} regions=${regions.path.name}`,
     );
     console.log(`[seed-local-studio] Knowledge regions ${appUrl}/dashboard?tab=verification_regions`);
     console.log(`[seed-local-studio] Public flow ${appUrl}/v/${publicToken}`);
     console.log(
-      "[seed-local-studio] Path: ada=bea (same walk), cam nearby in-region, eve outside. Path + Text splits ada/bea speech.",
+      "[seed-local-studio] Path: ada=bea (same walk), cam nearby in-region, eve outside.",
     );
     console.log("[seed-local-studio] SUCCESS");
   } catch (error) {

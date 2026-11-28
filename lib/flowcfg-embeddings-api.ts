@@ -1,6 +1,7 @@
 /**
  * HTTP client for the private flowcfg embeddings host.
  * Custom POST /v1/embed with Bearer auth and structured Path raw.
+ * Always requests the Path model. Multimodal encode is not an app offering.
  */
 
 import {

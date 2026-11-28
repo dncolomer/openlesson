@@ -483,7 +483,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
         candidate_id: { type: "string" },
         space: {
           type: "string",
-          description: "Named mix of basis channels, default path. Example: path+audio.",
+          description: "Embedding space. This client reads Path (flowcfg-v1-d96) only.",
         },
       },
       required: ["knowledge_region_id", "candidate_id"],

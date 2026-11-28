@@ -1,13 +1,12 @@
 /**
- * Distances, mix checks, provisional regions, and a 2D export for hosted
- * Path numbers. Does not run the production encoder.
+ * Distances, provisional regions, and a 2D export for hosted Path numbers.
+ * Does not run the production encoder.
  */
 
 import {
   collectFlowPowTranscripts,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   recoverFlowEmbeddingRaw,
   vectorsMatch,
   type FlowEmbeddingChannel,
@@ -90,9 +89,8 @@ export type FlowEmbeddingHarnessReport = {
 
 function vectorFor(
   embedded: HarnessEmbeddedCase,
-  channel: FlowEmbeddingChannel,
+  _channel: FlowEmbeddingChannel = "path",
 ): number[] {
-  if (channel === "path_text") return embedded.path_text;
   return embedded.path;
 }
 
@@ -149,7 +147,7 @@ export function buildProvisionalRegion(
     return true;
   });
   if (members.length < 2) return null;
-  const modelId = channel === "path_text" ? FLOW_EMBEDDING_PATH_TEXT_MODEL_ID : FLOW_EMBEDDING_MODEL_ID;
+  const modelId = FLOW_EMBEDDING_MODEL_ID;
   const spec = createCustomVerificationModelFromVectors({
     name: options.name ?? "provisional expert region",
     vectors: members.map((row) => vectorFor(row, channel)),
@@ -252,10 +250,7 @@ export async function runFlowEmbeddingHarness(input: {
       xy: pathCoords[index] ?? { x: 0, y: 0 },
       xy_path_text: pathTextCoords[index] ?? { x: 0, y: 0 },
     })),
-    pairwise: [
-      ...pairwiseDistances(cases, "path"),
-      ...pairwiseDistances(cases, "path_text"),
-    ],
+    pairwise: [...pairwiseDistances(cases, "path")],
     ablations: {
       path_equals_path_text_when_silent: silentIds(cases),
       path_unchanged_by_transcript: sameTreeWalkPairs(cases),

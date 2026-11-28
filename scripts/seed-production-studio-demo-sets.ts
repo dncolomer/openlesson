@@ -252,7 +252,7 @@ async function seedSet(
     );
   }
 
-  for (const region of [regions.path, regions.voice]) {
+  for (const region of [regions.path]) {
     await client.query(
       `INSERT INTO public.knowledge_regions (
          workspace_id, name, description, embedding_model_id, dim,

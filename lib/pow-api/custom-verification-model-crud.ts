@@ -6,7 +6,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createCustomVerificationModelFromVectors,
   pathTextRegionCompanionNames,
-  voiceRegionName,
   type CustomVerificationModelSpec,
   type CustomVerificationSubjectRef,
   CustomVerificationModelError,
@@ -16,10 +15,7 @@ import {
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   isFlowEmbeddingVector,
-  recoverFlowEmbeddingRaw,
-  vectorForFlowSpace,
 } from "@/lib/flow-embedding";
-import { encodeFlowRaw } from "@/lib/flow-embedding-encode";
 import { normalizeSubject, subjectIdentityKey } from "./subject-ref";
 import {
   filterImportableKnowledgeRegions,
@@ -232,11 +228,9 @@ export type LatestFlowVector = {
 
 export function vectorForRegionModel(
   latest: LatestFlowVector,
-  embeddingModelId: string,
+  _embeddingModelId?: string,
 ): number[] {
-  return embeddingModelId === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID
-    ? latest.vector_path_text
-    : latest.vector;
+  return latest.vector;
 }
 
 type SubjectPowProvenance = {
@@ -301,23 +295,9 @@ export async function loadLatestFlowVectorForSubject(
     ? row.vector.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
     : [];
   if (!isFlowEmbeddingVector(vector)) return null;
-  const mixedPathText = vectorForFlowSpace(
-    { vector, channel_vectors: row.channel_vectors as never },
-    "path+audio",
-  );
-  if (isFlowEmbeddingVector(mixedPathText)) {
-    return {
-      vector,
-      vector_path_text: mixedPathText,
-      as_of_ms: Date.parse(String(row.created_at || "")) || 0,
-      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-    };
-  }
-  const recovered = recoverFlowEmbeddingRaw(row.raw);
-  const embedded = recovered ? await encodeFlowRaw(recovered) : null;
   return {
-    vector: embedded?.vector ?? vector,
-    vector_path_text: embedded?.vector_path_text ?? vector,
+    vector,
+    vector_path_text: vector,
     as_of_ms: Date.parse(String(row.created_at || "")) || 0,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   };
@@ -414,7 +394,6 @@ export async function createCustomVerificationModelFromSubjects(
   }
 
   const pathVectors: number[][] = [];
-  const voiceVectors: number[][] = [];
   const resolvedSubjects: CustomVerificationSubjectRef[] = [];
 
   for (const subject of options.subjects) {
@@ -425,7 +404,6 @@ export async function createCustomVerificationModelFromSubjects(
       );
     }
     pathVectors.push(latest.vector);
-    voiceVectors.push(latest.vector_path_text);
     resolvedSubjects.push({
       user_id: subject.user_id ?? null,
       guest_user_id: subject.guest_user_id ?? null,
@@ -449,31 +427,7 @@ export async function createCustomVerificationModelFromSubjects(
     subjects: resolvedSubjects,
   });
 
-  const voiceName = voiceRegionName(spec.name);
-  let voiceSpec: CustomVerificationModelSpec | null = null;
-  let voiceModel: CustomVerificationModelRow | null = null;
-  if (
-    voiceName !== spec.name &&
-    voiceVectors.length === pathVectors.length &&
-    voiceVectors.every((vector) => isFlowEmbeddingVector(vector))
-  ) {
-    voiceSpec = createCustomVerificationModelFromVectors({
-      name: voiceName,
-      vectors: voiceVectors,
-      subjects: resolvedSubjects,
-      embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
-    });
-    voiceModel = await insertCustomVerificationSpec(supabase, {
-      workspaceId: options.workspaceId,
-      spec: voiceSpec,
-      description,
-      ownerUserId: options.ownerUserId,
-      createdBy: options.createdBy,
-      subjects: resolvedSubjects,
-    });
-  }
-
-  return { model, spec, voiceModel, voiceSpec };
+  return { model, spec, voiceModel: null, voiceSpec: null };
 }
 
 /** Distinct subjects that have at least one flow embedding in the workspace. */

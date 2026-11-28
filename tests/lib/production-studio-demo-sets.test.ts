@@ -4,8 +4,6 @@ import { join } from "node:path";
 import { computeKnowledgeDistance } from "@/lib/knowledge-config";
 import {
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
-  vectorsMatch,
 } from "@/lib/flow-embedding";
 import {
   PRODUCTION_STUDIO_DEMO_MARKER,
@@ -31,7 +29,7 @@ describe("production Data Studio demo sets", () => {
       const bea = encoded.find((run) => run.key === "bea")!;
       const eve = encoded.find((run) => run.key === "eve")!;
       expect(ada.embedding.vector).toHaveLength(96);
-      expect(ada.embedding.vector_path_text).toHaveLength(96);
+      expect(ada.embedding.vector_path_text).toEqual(ada.embedding.vector);
       expect(ada.embedding.vector).not.toEqual(eve.embedding.vector);
       expect(ada.embedding.raw.flowKind).toBe(set.flowKind);
       expect(ada.embedding.raw.projectedPolicy?.sequence).toEqual(["r1", "r1-c1"]);
@@ -40,12 +38,6 @@ describe("production Data Studio demo sets", () => {
       expect(region.subject_count).toBe(3);
       expect(computeKnowledgeDistance(ada.embedding.vector, region).in_region).toBe(true);
       expect(computeKnowledgeDistance(eve.embedding.vector, region).in_region).toBe(false);
-      const voice = buildStudioDemoRegion(set, encoded, "path_text");
-      expect(voice.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
-      expect(voice.name).toContain("Path + Text");
-      expect(voice.name).not.toBe(region.name);
-      expect(computeKnowledgeDistance(ada.embedding.vector_path_text, voice).in_region).toBe(true);
-      expect(computeKnowledgeDistance(eve.embedding.vector_path_text, voice).in_region).toBe(false);
     }
     const [a, b] = PRODUCTION_STUDIO_DEMO_SETS;
     const encodedA = await encodeStudioDemoRuns(a);

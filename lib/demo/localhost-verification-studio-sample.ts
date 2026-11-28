@@ -1,18 +1,15 @@
 /**
  * Localhost-only Verification Data Studio sample: one flow, several hidden-state
- * walks, spoken traces, and Path plus Path + Text regions. No DB I/O.
+ * walks, spoken traces, and a Path region. No DB I/O.
  */
 
 import {
-  flowEmbeddingModelIdForChannel,
-  parseFlowEmbeddingChannel,
-  type FlowEmbeddingChannel,
+  FLOW_EMBEDDING_MODEL_ID,
   type FlowEmbeddingRecord,
 } from "@/lib/flow-embedding";
 import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import {
   createCustomVerificationModelFromVectors,
-  voiceRegionName,
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
 import { cosineSimilarity } from "@/lib/knowledge-config/math";
@@ -221,17 +218,16 @@ export async function encodeLocalhostVerificationStudioRuns(
 
 export function buildLocalhostVerificationStudioRegion(
   encoded: readonly (LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord })[],
-  channel: FlowEmbeddingChannel | string = "path",
+  _channel: string = "path",
 ): CustomVerificationModelSpec {
-  const space = parseFlowEmbeddingChannel(channel);
   const inRegion = encoded.filter((run) => run.inRegion);
   const vectorOf = (run: LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord }) =>
-    space === "path_text" ? run.embedding.vector_path_text : run.embedding.vector;
+    run.embedding.vector;
   const model = createCustomVerificationModelFromVectors({
-    name: space === "path_text" ? voiceRegionName("ε-δ walkers") : "ε-δ walkers",
+    name: "ε-δ walkers",
     vectors: inRegion.map(vectorOf),
     subjects: inRegion.map((run) => ({ label: run.identity })),
-    embedding_model_id: flowEmbeddingModelIdForChannel(space),
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
   const outsider = encoded.find((run) => run.key === "eve");
   if (!outsider) return model;
@@ -248,9 +244,8 @@ export function buildLocalhostVerificationStudioRegion(
 
 export function buildLocalhostVerificationStudioRegions(
   encoded: readonly (LocalhostStudioRunDef & { embedding: FlowEmbeddingRecord })[],
-): { path: CustomVerificationModelSpec; voice: CustomVerificationModelSpec } {
+): { path: CustomVerificationModelSpec } {
   return {
     path: buildLocalhostVerificationStudioRegion(encoded, "path"),
-    voice: buildLocalhostVerificationStudioRegion(encoded, "path_text"),
   };
 }

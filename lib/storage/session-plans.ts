@@ -1,4 +1,5 @@
 // Session plan persistence
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import {
   type SessionPlan,
@@ -9,20 +10,19 @@ import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 
 // ---- Session Plans (Session Planner feature) ----
 
- 
-function mapDbSessionPlan(p: any): SessionPlan {
+function mapDbSessionPlan(p: Record<string, unknown>): SessionPlan {
   return {
-    id: p.id,
-    sessionId: p.session_id,
-    userId: p.user_id,
-    goal: p.goal,
-    strategy: p.strategy || "",
-    description: p.description ?? undefined,
-    steps: (p.steps || []) as SessionPlanStep[],
-    currentStepIndex: p.current_step_index || 0,
+    id: String(p.id ?? ""),
+    sessionId: String(p.session_id ?? ""),
+    userId: String(p.user_id ?? ""),
+    goal: String(p.goal ?? ""),
+    strategy: String(p.strategy ?? ""),
+    description: p.description != null ? String(p.description) : undefined,
+    steps: (Array.isArray(p.steps) ? p.steps : []) as SessionPlanStep[],
+    currentStepIndex: Number(p.current_step_index ?? 0),
     unusable_cells: normalizeUnusableCells(p.unusable_cells),
-    createdAt: p.created_at,
-    updatedAt: p.updated_at,
+    createdAt: String(p.created_at ?? ""),
+    updatedAt: String(p.updated_at ?? ""),
   };
 }
 
@@ -35,8 +35,7 @@ export async function createSessionPlan(
     steps: SessionPlanStep[];
     unusable_cells?: Array<{ row: number; col: number }> | null;
   },
-   
-  supabaseClient?: any,
+  supabaseClient?: SupabaseClient,
   options?: { userId?: string }
 ): Promise<SessionPlan> {
   // Validate steps before allowing any DB write
@@ -83,8 +82,7 @@ export async function createSessionPlan(
 
 export async function getSessionPlan(
   sessionId: string,
-   
-  supabaseClient?: any
+  supabaseClient?: SupabaseClient
 ): Promise<SessionPlan | null> {
   const supabase = supabaseClient || createClient();
 
@@ -126,13 +124,30 @@ export function sessionPlanHasChaptersFromRow(row: unknown): boolean {
   return typeof rec.id === "string" && rec.id.length > 0;
 }
 
+export type SessionPlanChaptersQueryBuilder = {
+  select: (columns: string) => {
+    eq: (column: string, value: string) => {
+      not: (column: string, operator: string, value: unknown) => {
+        maybeSingle: () => PromiseLike<{ data: unknown; error: unknown }>;
+      };
+    };
+  };
+};
+
+export type SessionPlanChaptersClient = {
+  from: (table: string) => SessionPlanChaptersQueryBuilder;
+};
+
 /**
  * Cheap query: does this session already have chapters?
  * Selects only `id` and excludes empty `steps` shells. Does not transfer
  * the full plan / steps JSON.
  */
-export function sessionPlanHasChaptersQuery(supabaseClient: any, sessionId: string) {
-  return supabaseClient
+export function sessionPlanHasChaptersQuery(
+  supabaseClient: SupabaseClient | SessionPlanChaptersClient,
+  sessionId: string,
+) {
+  return (supabaseClient as SessionPlanChaptersClient)
     .from("sessions")
     .select("id, chapter_map")
     .eq("id", sessionId)
@@ -161,7 +176,7 @@ export function sessionPlanChaptersStatusFromResult(result: {
  */
 export async function sessionPlanChaptersStatus(
   sessionId: string,
-  supabaseClient: any,
+  supabaseClient: SupabaseClient | SessionPlanChaptersClient | null | undefined,
 ): Promise<SessionPlanChaptersStatus> {
   if (!supabaseClient) return "failed";
   try {
@@ -177,7 +192,7 @@ export async function sessionPlanChaptersStatus(
 
 export async function sessionPlanHasChapters(
   sessionId: string,
-  supabaseClient?: any,
+  supabaseClient?: SupabaseClient | SessionPlanChaptersClient,
 ): Promise<boolean> {
   const status = await sessionPlanChaptersStatus(
     sessionId,
@@ -189,7 +204,7 @@ export async function sessionPlanHasChapters(
 /** Drop the chapter map for a session. Does not touch Proof of Work. */
 export async function deleteSessionPlanBySessionId(
   sessionId: string,
-  supabaseClient?: any,
+  supabaseClient?: SupabaseClient,
 ): Promise<void> {
   const id = String(sessionId || "").trim();
   if (!id) return;
@@ -210,8 +225,7 @@ export async function updateSessionPlan(
     currentStepIndex?: number;
     unusable_cells?: Array<{ row: number; col: number }> | null;
   },
-   
-  supabaseClient?: any
+  supabaseClient?: SupabaseClient
 ): Promise<SessionPlan> {
   const supabase = supabaseClient || createClient();
 

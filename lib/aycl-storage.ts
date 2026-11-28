@@ -1,4 +1,5 @@
 import type { Probe, Session } from "@/lib/storage";
+import { mapDbProbe, mapDbSession as mapDbSessionBase } from "@/lib/storage/session-mappers";
 
 async function ayclPost<T>(token: string, action: string, payload: Record<string, unknown> = {}): Promise<T> {
   const res = await fetch("/api/aycl/session-mutate", {
@@ -11,43 +12,8 @@ async function ayclPost<T>(token: string, action: string, payload: Record<string
   return data as T;
 }
 
-function mapDbProbe(row: Record<string, unknown>): Probe {
-  return {
-    id: String(row.id),
-    timestamp: Number(row.timestamp_ms || 0),
-    gapScore: Number(row.gap_score || 0),
-    signals: Array.isArray(row.signals) ? (row.signals as string[]) : [],
-    text: String(row.text || ""),
-    expandedText: row.expanded_text ? String(row.expanded_text) : undefined,
-    starred: Boolean(row.starred),
-    isRevealed: Boolean(row.is_revealed),
-    requestType: (row.request_type as Probe["requestType"]) || "question",
-    planStepId: row.plan_step_id ? String(row.plan_step_id) : undefined,
-    archived: Boolean(row.archived),
-    focused: Boolean(row.focused),
-  };
-}
-
 function mapDbSession(row: Record<string, unknown>, probes: Probe[] = []): Session {
-  const metadata = (row.metadata as Session["metadata"]) || {};
-  const storedObjectives = (metadata as Record<string, unknown>).objectives;
-  return {
-    id: String(row.id),
-    problem: String(row.problem || ""),
-    startedAt: String(row.created_at || new Date().toISOString()),
-    endedAt: row.ended_at ? String(row.ended_at) : undefined,
-    durationMs: Number(row.duration_ms || 0),
-    status: (row.status as Session["status"]) || "active",
-    probes,
-    objectives: Array.isArray(storedObjectives) ? (storedObjectives as string[]) : [],
-    hasAudio: false,
-    audioPath: undefined,
-    report: undefined,
-    reportGeneratedAt: undefined,
-    transcript: undefined,
-    planningPrompt: row.planning_prompt ? String(row.planning_prompt) : undefined,
-    metadata,
-  };
+  return mapDbSessionBase(row, probes, "active");
 }
 
 export async function getAyclSession(token: string, sessionId: string): Promise<Session | null> {

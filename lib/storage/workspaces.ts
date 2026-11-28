@@ -3,6 +3,33 @@ import { createClient } from "@/lib/supabase/client";
 import type { Workspace, Block } from "@/lib/domain/types";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 
+type WorkspaceRow = {
+  id: string;
+  title?: string | null;
+  root_topic: string;
+  status?: Workspace["status"] | null;
+  created_at: string;
+  is_public?: boolean | null;
+  author_id?: string | null;
+  remix_count?: number | null;
+  original_workspace_id?: string | null;
+  notes?: string | null;
+  cover_image_url?: string | null;
+  workspace_kind?: string | null;
+  learning_model_size?: number | null;
+  is_play_copy?: boolean | null;
+};
+
+type BlockRow = {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description?: string | null;
+  is_start?: boolean | null;
+  next_block_ids?: string[] | null;
+  status?: Block["status"] | null;
+};
+
 // ---- Learning Plans ----
 
 export async function getWorkspaces(options?: { includeArchived?: boolean }): Promise<Workspace[]> {
@@ -19,21 +46,20 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     query = query.neq("status", "archived");
   }
 
-   
   const { data } = await query.order("created_at", { ascending: false });
 
-  return (data || []).map((p: any) => ({
+  return ((data || []) as WorkspaceRow[]).map((p) => ({
     id: p.id,
     title: p.title || p.root_topic,
     root_topic: p.root_topic,
     status: p.status || "active",
     created_at: p.created_at,
     is_public: p.is_public || false,
-    author_id: p.author_id,
+    author_id: p.author_id ?? undefined,
     remix_count: p.remix_count || 0,
-    original_workspace_id: p.original_workspace_id,
-    notes: p.notes,
-    cover_image_url: p.cover_image_url,
+    original_workspace_id: p.original_workspace_id ?? undefined,
+    notes: p.notes ?? undefined,
+    cover_image_url: p.cover_image_url ?? undefined,
     workspace_kind: parseWorkspaceKind(p.workspace_kind),
     learning_model_size:
       p.learning_model_size === 8 || p.learning_model_size === 16 ? p.learning_model_size : 4,
@@ -44,13 +70,12 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
 export async function getBlocks(workspaceId: string): Promise<Block[]> {
   const supabase = createClient();
 
-   
   const { data } = await supabase
     .from("blocks")
     .select("*")
     .eq("workspace_id", workspaceId);
 
-  return (data || []).map((n: any) => ({
+  return ((data || []) as BlockRow[]).map((n) => ({
     id: n.id,
     workspace_id: n.workspace_id,
     title: n.title,
@@ -66,7 +91,6 @@ export async function getIncompleteNodes(): Promise<(Block & { workspaceTitle: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-   
   const { data: plans } = await supabase
     .from("workspaces")
     .select("id, root_topic")
@@ -75,17 +99,17 @@ export async function getIncompleteNodes(): Promise<(Block & { workspaceTitle: s
 
   if (!plans || plans.length === 0) return [];
 
-  const workspaceIds = plans.map((p: any) => p.id);
-  const workspaceTitles = new Map(plans.map((p: any) => [p.id, p.root_topic]));
+  const planRows = plans as Array<{ id: string; root_topic: string }>;
+  const workspaceIds = planRows.map((p) => p.id);
+  const workspaceTitles = new Map(planRows.map((p) => [p.id, p.root_topic]));
 
-   
   const { data: nodes } = await supabase
     .from("blocks")
     .select("*")
     .in("workspace_id", workspaceIds)
     .in("status", ["not_started", "in_progress"]);
 
-  return (nodes || []).map((n: any) => ({
+  return ((nodes || []) as BlockRow[]).map((n) => ({
     id: n.id,
     workspace_id: n.workspace_id,
     title: n.title,

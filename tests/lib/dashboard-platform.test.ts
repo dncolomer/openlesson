@@ -571,8 +571,11 @@ describe("dashboard platform surface", () => {
       "https://app.example/c/tok",
     );
     expect(dashSrc).toContain("FlowPublicActions");
+    expect(dashSrc).toContain("id={flow.id}");
     expect(dashSrc).not.toContain("Public URL");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
+    expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-id");
+    expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("Copy ID");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-start");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("absoluteFlowPublicUrl");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("flowPublicHref");

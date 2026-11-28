@@ -7,6 +7,36 @@ import { absoluteFlowPublicUrl, flowPublicHref } from "@/lib/product-flow";
 const FLOW_PUBLIC_ACTION_CLASS =
   "console-button shrink-0 px-3 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-white/80 hover:text-white";
 
+export function CopyFlowIdButton({
+  id,
+  className = FLOW_PUBLIC_ACTION_CLASS,
+}: {
+  id: string;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const value = String(id || "").trim();
+  if (!value) return null;
+
+  async function copy(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard may be denied */
+    }
+  }
+
+  return (
+    <button type="button" data-flow-copy-id onClick={(event) => void copy(event)} className={className}>
+      {copied ? "Copied" : "Copy ID"}
+    </button>
+  );
+}
+
 export function CopyFlowUrlButton({
   url,
   className = FLOW_PUBLIC_ACTION_CLASS,
@@ -60,10 +90,11 @@ export function StartFlowButton({
   );
 }
 
-export function FlowPublicActions({ url }: { url: string }) {
+export function FlowPublicActions({ url, id }: { url: string; id?: string }) {
   if (!String(url || "").trim()) return null;
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2" data-flow-public-actions>
+      {id ? <CopyFlowIdButton id={id} /> : null}
       <CopyFlowUrlButton url={url} />
       <StartFlowButton url={url} />
     </div>

@@ -114,7 +114,7 @@ export function DashboardFlowsTab({
               <col className="w-[28%]" />
               <col />
               <col className="w-[9.5rem]" />
-              <col className="w-[11.5rem]" />
+              <col className="w-[16rem]" />
             </colgroup>
             <thead>
               <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
@@ -154,7 +154,7 @@ export function DashboardFlowsTab({
                     {flow.createdAt ? formatDate(flow.createdAt) : "—"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
-                    <FlowPublicActions url={flow.publicPath} />
+                    <FlowPublicActions url={flow.publicPath} id={flow.id} />
                   </td>
                 </tr>
               ))}

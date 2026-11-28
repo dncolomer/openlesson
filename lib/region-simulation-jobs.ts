@@ -496,6 +496,7 @@ export async function tickRegionSimulationJob(jobId: string): Promise<TickResult
   try {
     const item = job.plan.items[job.plan_cursor];
     if (!item) {
+      await refreshAfterTick(job);
       job.status = "done";
       job.lease_owner = null;
       job.lease_until = null;
@@ -603,22 +604,18 @@ async function maybeEnqueueFollowUp(job: RegionSimulationJobRow): Promise<string
 }
 
 async function refreshAfterTick(job: RegionSimulationJobRow): Promise<void> {
-  try {
-    const records = await refreshSimulationFamilyClusters({
-      ownerUserId: job.owner_user_id,
-      organizationId: job.plan.organizationId,
-      regionId: job.region_id || "",
-      family: job.family,
-      name: job.plan.name,
-      kind: job.plan.kind,
-      flows: job.plan.flows,
-      strategies: job.plan.strategies,
-    });
-    if (records.id) job.region_id = records.id;
-    job.result = { id: records.id };
-  } catch {
-    /* next tick retries */
-  }
+  const records = await refreshSimulationFamilyClusters({
+    ownerUserId: job.owner_user_id,
+    organizationId: job.plan.organizationId,
+    regionId: job.region_id || "",
+    family: job.family,
+    name: job.plan.name,
+    kind: job.plan.kind,
+    flows: job.plan.flows,
+    strategies: job.plan.strategies,
+  });
+  if (records.id) job.region_id = records.id;
+  job.result = { id: records.id };
 }
 
 export async function drainRegionSimulationJobs(limit = REGION_SIM_CRON_JOB_CAP): Promise<string[]> {

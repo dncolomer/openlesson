@@ -36,12 +36,15 @@ import {
   parseCustomExplorationStrategy,
   previousRegionSimulationWizardStep,
   REGION_SIMULATION_DEFAULT_SAMPLES,
+  REGION_SIMULATION_FINISHED_WITHOUT_REGION,
   REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_MAX_SAMPLES,
   REGION_SIMULATION_MIN_SAMPLES,
   REGION_SIMULATION_WIZARD_STEPS,
+  regionIdFromSimulationJobPayload,
   regionSimulationWizardCanAdvance,
   regionSimulationProgressOverall,
+  splitRegionSimulationNdjson,
   type ExplorationStrategyId,
   type RegionSimulationProgress,
   type RegionSimulationWizardStep,
@@ -109,41 +112,42 @@ function wizardDescription(step: RegionSimulationWizardStep): string {
 async function readSimulationStream(
   response: Response,
   onProgress: (progress: RegionSimulationProgress[]) => void,
-): Promise<RegionSimulationRunResult> {
+): Promise<Record<string, unknown>> {
   if (!response.body) {
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (payload.type === "error") {
       throw new Error(String(payload.error || "Could not run simulation"));
     }
-    return payload as unknown as RegionSimulationRunResult;
+    return payload;
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let result: RegionSimulationRunResult | null = null;
+  let result: Record<string, unknown> | null = null;
+  let jobs: Record<string, unknown> | null = null;
   let streamError = "";
   while (true) {
     const { value, done } = await reader.read();
     buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      const payload = JSON.parse(trimmed) as Record<string, unknown>;
+    const { leftover, payloads } = splitRegionSimulationNdjson(buffer, done);
+    buffer = leftover;
+    for (const payload of payloads) {
       if (payload.type === "progress" && Array.isArray(payload.progress)) {
         onProgress(payload.progress as RegionSimulationProgress[]);
       } else if (payload.type === "error") {
         streamError = String(payload.error || "Could not run simulation");
       } else if (payload.type === "result") {
-        result = payload as unknown as RegionSimulationRunResult;
+        result = payload;
+      } else if (payload.type === "jobs") {
+        jobs = payload;
       }
     }
     if (done) break;
   }
   if (streamError) throw new Error(streamError);
-  if (!result) throw new Error("Simulation finished without a region");
-  return result;
+  if (result) return result;
+  if (jobs) return jobs;
+  throw new Error(REGION_SIMULATION_FINISHED_WITHOUT_REGION);
 }
 
 export function RegionSimulationSetup({
@@ -266,7 +270,10 @@ export function RegionSimulationSetup({
       const payload = (await status.json().catch(() => ({}))) as Record<string, unknown>;
       if (Array.isArray(payload.progress)) onProgress(payload.progress as RegionSimulationProgress[]);
       const jobStatus = String(payload.status || "");
-      if (jobStatus === "done" || jobStatus === "failed") return payload;
+      if (jobStatus === "failed") {
+        throw new Error(String(payload.error || "Simulation job failed"));
+      }
+      if (jobStatus === "done") return payload;
       if (jobStatus === "queued" || jobStatus === "running") {
         await fetch(
           withOrganizationId(`${DASHBOARD_REGION_SIMULATION_JOBS_PATH}/${jobId}/tick`),
@@ -357,39 +364,46 @@ export function RegionSimulationSetup({
         throw new Error(errorMessageFromBody(payload, "Could not run simulation"));
       }
       const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const payload = (await response.json()) as Record<string, unknown>;
-        if (payload.type === "jobs") {
-          const jobId = String(payload.jobId || payload.explorationJobId || "");
-          if (jobId && apiPath === DASHBOARD_REGION_SIMULATION_PATH) {
-            const done = await pollJob(jobId, setProgress);
-            const follow = String(done.followUpJobId || payload.aiUseJobId || "");
-            if (follow) await pollJob(follow, setProgress);
+      const payload = contentType.includes("application/json")
+        ? ((await response.json()) as Record<string, unknown>)
+        : await readSimulationStream(response, setProgress);
+      if (payload.type === "jobs") {
+        const jobId = String(payload.jobId || payload.explorationJobId || "");
+        let done = payload;
+        if (jobId && apiPath === DASHBOARD_REGION_SIMULATION_PATH) {
+          done = await pollJob(jobId, setProgress);
+          const follow = String(done.followUpJobId || payload.aiUseJobId || "");
+          if (follow) {
+            const followDone = await pollJob(follow, setProgress);
+            if (regionIdFromSimulationJobPayload(followDone)) done = followDone;
           }
-          setResult({
-            persisted: true,
-            id: String(payload.regionId || ""),
-            regionPath: "",
-            parentName: name.trim(),
-            clusters: [],
-            summary: {
-              name: name.trim(),
-              flows: selectedFlows.map((flow) => ({ id: flow.id, name: flow.name })),
-              strategies: strategies.filter((row) => strategyIds.includes(row.id)),
-              samplesPerStrategy,
-              simulatedCount: 0,
-              realSessionCount: 0,
-            },
-            progress: Array.isArray(payload.progress)
+        }
+        const regionId = regionIdFromSimulationJobPayload(done) || regionIdFromSimulationJobPayload(payload);
+        if (!regionId) throw new Error(REGION_SIMULATION_FINISHED_WITHOUT_REGION);
+        setResult({
+          persisted: true,
+          id: regionId,
+          regionPath: "",
+          parentName: name.trim(),
+          clusters: [],
+          summary: {
+            name: name.trim(),
+            flows: selectedFlows.map((flow) => ({ id: flow.id, name: flow.name })),
+            strategies: strategies.filter((row) => strategyIds.includes(row.id)),
+            samplesPerStrategy,
+            simulatedCount: 0,
+            realSessionCount: 0,
+          },
+          progress: Array.isArray(done.progress)
+            ? (done.progress as RegionSimulationProgress[])
+            : Array.isArray(payload.progress)
               ? (payload.progress as RegionSimulationProgress[])
               : progress,
-          });
-        } else {
-          setResult(payload as unknown as RegionSimulationRunResult);
-        }
+        });
+      } else if (payload.type === "error") {
+        throw new Error(String(payload.error || "Could not run simulation"));
       } else {
-        const next = await readSimulationStream(response, setProgress);
-        setResult(next);
+        setResult(payload as unknown as RegionSimulationRunResult);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not run simulation");

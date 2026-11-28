@@ -185,6 +185,33 @@ export function regionSimulationProgressOverall(
   return { done, total, percent };
 }
 
+export const REGION_SIMULATION_FINISHED_WITHOUT_REGION = "Simulation finished without a region";
+
+export function parseRegionSimulationNdjson(text: string): Record<string, unknown>[] {
+  return String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+export function splitRegionSimulationNdjson(
+  buffer: string,
+  flush: boolean,
+): { leftover: string; payloads: Record<string, unknown>[] } {
+  if (flush) {
+    return { leftover: "", payloads: parseRegionSimulationNdjson(buffer) };
+  }
+  const lines = String(buffer || "").split("\n");
+  const leftover = lines.pop() || "";
+  return { leftover, payloads: parseRegionSimulationNdjson(lines.join("\n")) };
+}
+
+export function regionIdFromSimulationJobPayload(payload: Record<string, unknown> | null | undefined): string {
+  if (!payload) return "";
+  return String(payload.regionId || payload.region_id || "").trim();
+}
+
 export type RegionSimulationWalk = {
   model: SessionBranchModel;
   sequence: string[];

@@ -3,7 +3,9 @@
  */
 
 export function regionSimulationJobsEnabled(): boolean {
-  return process.env.REGION_SIM_JOBS === "1";
+  if (process.env.REGION_SIM_JOBS === "0") return false;
+  if (process.env.REGION_SIM_JOBS === "1") return true;
+  return process.env.NODE_ENV === "production";
 }
 
 export function regionSimulationCanvasFaithfulEnabled(): boolean {

@@ -20,8 +20,10 @@ import {
   parseSimulationStrategiesWithRecovered,
   planRegionSimulationSamples,
   previousRegionSimulationWizardStep,
+  regionIdFromSimulationJobPayload,
   regionSimulationFlowIds,
   REGION_SIMULATION_DEFAULT_SAMPLES,
+  REGION_SIMULATION_FINISHED_WITHOUT_REGION,
   REGION_SIMULATION_FLOW_MATCH_LIMIT,
   REGION_SIMULATION_SOURCE,
   REGION_SIMULATION_WIZARD_STEPS,
@@ -30,9 +32,11 @@ import {
   seededSimulationTree,
   simulatedIdentityLabel,
   simulationClusterRegionName,
+  splitRegionSimulationNdjson,
   studioEmbeddingOrigin,
   walkExplorationStrategy,
 } from "@/lib/region-simulation";
+import { regionSimulationJobsEnabled } from "@/lib/region-simulation-flags";
 import {
   addRegionSimulationSamples,
   removeRegionSimulationSamples,
@@ -290,6 +294,46 @@ describe("region simulation", () => {
     expect(route).not.toContain("body.flowIds");
     expect(route).not.toContain("flow.goal");
     expect(read("app/regions/new/page.tsx")).toContain("KnowledgeRegionCreate");
+    expect(setup).toContain("REGION_SIMULATION_FINISHED_WITHOUT_REGION");
+    expect(setup).toContain("splitRegionSimulationNdjson");
+    expect(setup).toContain("regionIdFromSimulationJobPayload");
+    expect(setup).toContain("payload.type === \"jobs\"");
+    expect(setup).not.toContain('String(payload.regionId || "")');
+  });
+
+  it("parses a trailing simulation result line without a newline", () => {
+    const resultLine = JSON.stringify({ type: "result", id: "region-1", persisted: true });
+    const pending = splitRegionSimulationNdjson(`${resultLine}`, false);
+    expect(pending.payloads).toEqual([]);
+    expect(pending.leftover).toBe(resultLine);
+    const flushed = splitRegionSimulationNdjson(pending.leftover, true);
+    expect(flushed.leftover).toBe("");
+    expect(flushed.payloads).toEqual([{ type: "result", id: "region-1", persisted: true }]);
+    const jobs = splitRegionSimulationNdjson(
+      JSON.stringify({ type: "jobs", jobId: "job-1", regionId: null }),
+      true,
+    );
+    expect(jobs.payloads[0]).toMatchObject({ type: "jobs", jobId: "job-1" });
+    expect(regionIdFromSimulationJobPayload({ type: "jobs", regionId: null })).toBe("");
+    expect(regionIdFromSimulationJobPayload({ regionId: "region-9" })).toBe("region-9");
+    expect(REGION_SIMULATION_FINISHED_WITHOUT_REGION).toBe("Simulation finished without a region");
+  });
+
+  it("enables durable simulation jobs in production unless REGION_SIM_JOBS=0", () => {
+    const previous = process.env.REGION_SIM_JOBS;
+    delete process.env.REGION_SIM_JOBS;
+    expect(regionSimulationJobsEnabled()).toBe(process.env.NODE_ENV === "production");
+    process.env.REGION_SIM_JOBS = "1";
+    expect(regionSimulationJobsEnabled()).toBe(true);
+    process.env.REGION_SIM_JOBS = "0";
+    expect(regionSimulationJobsEnabled()).toBe(false);
+    if (previous === undefined) delete process.env.REGION_SIM_JOBS;
+    else process.env.REGION_SIM_JOBS = previous;
+    const flags = read("lib/region-simulation-flags.ts");
+    expect(flags).toContain('process.env.NODE_ENV === "production"');
+    expect(flags).toContain('process.env.REGION_SIM_JOBS === "0"');
+    expect(read("lib/region-simulation-jobs.ts")).toContain("await refreshAfterTick(job)");
+    expect(read("lib/region-simulation-jobs.ts")).not.toContain("/* next tick retries */");
   });
 
   it("advances create-region wizard steps with the same chrome as protocol create", () => {

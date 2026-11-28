@@ -20,11 +20,12 @@ import {
   readMapGridSurface,
   readWorkspaceViewSurface,
 } from "../helpers/surface-source";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f09ec4435deb/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-f09ec4435deb/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

@@ -29,11 +29,12 @@ import {
   stashExerciseSpeech,
   submitExerciseSpeechDirect,
 } from "@/lib/exercise-tap";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-95854a546cb8/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-95854a546cb8/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -119,7 +120,7 @@ describe("normalizeIleSessionMode / resolve", () => {
 
     const scratch =
       process.env.GROK_GOAL_SCRATCH ||
-      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f71f456e9e6e/implementer";
+      join(tmpdir(), "openlesson-scratch", "grok-goal-f71f456e9e6e/implementer");
     mkdirSync(scratch, { recursive: true });
     writeFileSync(
       join(scratch, "session-chat-mode.log"),

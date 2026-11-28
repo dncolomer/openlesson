@@ -154,6 +154,7 @@ import {
   ILE_WORK_CANVAS_STAY_ON_DOMAIN,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
+import { tmpdir } from "node:os";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 import { ileHeliosThinkingLine } from "@/lib/learn-dialogue-turn";
 import { buildIleSessionChatBody } from "@/lib/session-chat-client";
@@ -172,7 +173,7 @@ import { DEFAULT_PROMPTS } from "@/lib/prompts";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-43f631c11586/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-43f631c11586/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

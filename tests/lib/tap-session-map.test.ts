@@ -20,11 +20,12 @@ import {
 } from "@/lib/tap-session-map";
 import { SKILL_GRID_CELL_SIZE, SKILL_GRID_GAP } from "@/lib/block-skill-grid";
 import { readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-7c8727e16da8/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-7c8727e16da8/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

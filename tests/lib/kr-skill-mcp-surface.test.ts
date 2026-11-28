@@ -26,11 +26,12 @@ import {
   workspaceAllowsKnowledgeLinkMint,
 } from "@/lib/workspace-kind";
 import { WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-c0ce1e0f08e6/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-c0ce1e0f08e6/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

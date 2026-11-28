@@ -21,12 +21,13 @@ import {
   deriveSimulationSamples,
   type SimulationSampleWorkspaceContext,
 } from "@/lib/workspace-simulation-samples";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.SIMULATION_CONTEXT_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b0100551b8a4/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-b0100551b8a4/implementer");
 
 function writeEvidence(name: string, body: string) {
   try {

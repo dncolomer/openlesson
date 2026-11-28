@@ -14,6 +14,7 @@ import {
 } from "@/lib/pow-api/models-tab-scope";
 import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import { tmpdir } from "node:os";
 
 const ME = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
@@ -23,7 +24,7 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.LEARNER_LWM_EMB_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-e257e60caf66/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-e257e60caf66/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

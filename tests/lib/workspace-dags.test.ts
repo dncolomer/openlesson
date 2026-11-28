@@ -26,10 +26,11 @@ import {
   resolveWorkspaceSectionLayout,
 } from "@/lib/workspace-sections";
 import { availableSectionsForMode } from "@/lib/workspace-mode";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-93aed6281775/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-93aed6281775/implementer");
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");

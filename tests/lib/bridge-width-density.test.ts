@@ -9,10 +9,11 @@ import {
   resolveBridgeSelection,
   selectCorridorByDensity,
 } from "@/lib/bridge-blocks";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d5c6027932ea/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-d5c6027932ea/implementer");
 
 describe("bridge independent width + density", () => {
   it("width changes corridor candidates; density changes selected subset", () => {

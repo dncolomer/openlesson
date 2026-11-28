@@ -46,6 +46,7 @@ import {
   toIleGatherExternalCreate,
   type IleGatherJob,
 } from "@/lib/learn-gather-resources";
+import { tmpdir } from "node:os";
 import {
   blockCircularMenuProgressFraction,
   gatherJobToBlockProgress,
@@ -61,7 +62,7 @@ import type { WorkspaceExternalResource } from "@/lib/workspace-external-resourc
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-c4bc4e763ac7/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-c4bc4e763ac7/implementer");
 
 function read(rel: string) {
   if (rel === "components/SessionView.tsx") return readSessionStageSurface();

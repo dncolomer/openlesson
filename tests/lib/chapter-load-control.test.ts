@@ -14,11 +14,12 @@ import {
   resolveChapterLoadControl,
   shouldAllowChapterLoadClick,
 } from "@/lib/chapter-load-control";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ac7d1d920d1e/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ac7d1d920d1e/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

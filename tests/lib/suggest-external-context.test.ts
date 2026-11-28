@@ -11,12 +11,13 @@ import {
   mergeAcceptedExternalIntoSelection,
   normalizeExternalContextSuggestions,
 } from "@/lib/suggest-external-context";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.SUGGEST_EXTERNAL_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b413fa687e2d/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-b413fa687e2d/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

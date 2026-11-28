@@ -23,6 +23,7 @@ import {
 } from "@/lib/workspace-create-modes";
 import { AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE } from "@/lib/workspace-kind";
 import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
+import { tmpdir } from "node:os";
 
 describe("workspace create modes", () => {
   it("exposes blank as the only UI mode; template and files_goal stay API-only", () => {
@@ -177,7 +178,7 @@ describe("workspace create modes", () => {
 
 const OVERLAY_SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1caf392ccbf2/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-1caf392ccbf2/implementer");
 
 describe("workspace create overlay after blank attempt", () => {
   it("keeps overlay on success and restores retry on failure", () => {

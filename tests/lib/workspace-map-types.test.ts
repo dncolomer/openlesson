@@ -36,10 +36,11 @@ import {
   setMapTypeOrderStepCount,
   upsertCustomMapType,
 } from "@/lib/workspace-map-types";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d04191785a5f/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-d04191785a5f/implementer");
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");

@@ -28,13 +28,14 @@ import {
   rankKnowledgeSnapshotsForSuggest,
 } from "@/lib/suggest-from-knowledge";
 import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simulation";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-871793e0b32f/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-871793e0b32f/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

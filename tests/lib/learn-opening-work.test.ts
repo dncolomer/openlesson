@@ -28,6 +28,7 @@ import {
   generateLearnOpeningWorkPrompt,
   openingWorkForSessionField,
 } from "@/lib/learn-opening-work-generate";
+import { tmpdir } from "node:os";
 
 function read(path: string): string {
   return readFileSync(join(ROOT, path), "utf8");
@@ -169,7 +170,7 @@ describe("learn opening work", () => {
   it("seeds a prepared opening scene instead of Exact-problem rewrite", () => {
     const scratch =
       process.env.GROK_GOAL_SCRATCH ||
-      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+      join(tmpdir(), "openlesson-scratch", "grok-goal-8913821ad36e/implementer");
     mkdirSync(scratch, { recursive: true });
     const scene = serializeFlowOpeningCanvasScene({
       elements: [

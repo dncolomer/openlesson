@@ -42,6 +42,7 @@ import {
   ILE_POW_EXPENSE_DEFAULT,
   ILE_WORK_PARALLEL_DISABLED_WARNING,
 } from "@/lib/learn-pow-spend";
+import { tmpdir } from "node:os";
 import { ileCircularMenuDisabledActionIds } from "@/lib/block-circular-menu";
 import {
   capIleSessionChapters,
@@ -54,7 +55,7 @@ import { aestheticPackageVibe } from "@/lib/aesthetics";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-9c55d331956d/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-9c55d331956d/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

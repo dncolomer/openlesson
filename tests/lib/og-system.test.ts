@@ -41,11 +41,12 @@ import {
   truncateOgText,
   truncateOgTitle,
 } from "@/lib/og/text";
+import { tmpdir } from "node:os";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6c95ab69b7c0/implementer";
+  path.join(tmpdir(), "openlesson-scratch", "grok-goal-6c95ab69b7c0/implementer");
 
 function writeScratch(name: string, body: string) {
   fs.mkdirSync(SCRATCH, { recursive: true });

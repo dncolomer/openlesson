@@ -10,10 +10,11 @@ import {
   WORKSPACE_SECTION_KEYS,
   availableWorkspaceSections,
 } from "@/lib/workspace-sections";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-e21de05c1b34/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-e21de05c1b34/implementer");
 
 const REPORT_REL = "docs/course-authoring-tools-report.md";
 

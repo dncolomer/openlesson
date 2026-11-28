@@ -7,10 +7,11 @@ import {
   type WorkspaceValidationResult,
 } from "@/lib/workspace-simulation-validation";
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-78aaf8f88920/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-78aaf8f88920/implementer");
 
 function read(rel: string): string {
   return readFileSync(join(process.cwd(), rel), "utf8");

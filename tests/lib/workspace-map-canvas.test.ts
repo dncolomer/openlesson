@@ -12,11 +12,12 @@ import {
   serializeWorkspaceMapCanvasScene,
   workspaceMapCanvasSceneHasContent,
 } from "@/lib/workspace-map-canvas";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.MAP_CANVAS_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-94d39669e869/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-94d39669e869/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

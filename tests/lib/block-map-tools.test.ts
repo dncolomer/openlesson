@@ -53,6 +53,7 @@ import {
   toggleStagedPrereq,
   type BlockMapToolEnablementInput,
 } from "@/lib/block-map-tools";
+import { tmpdir } from "node:os";
 import {
   canPlaceOnMapGround,
   isBlockLockedUntilCompleted,
@@ -67,7 +68,7 @@ const SCRATCH =
   process.env.BLOCK_SELECT_LASSO_SCRATCH ||
   process.env.PAN_MODE_SCRATCH ||
   process.env.GROUND_TOOLBAR_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6e76dfec82b4/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-6e76dfec82b4/implementer");
 
 function state(
   partial: Partial<BlockMapToolEnablementInput> = {},

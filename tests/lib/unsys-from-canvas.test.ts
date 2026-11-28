@@ -7,6 +7,7 @@ import {
 } from "@/lib/flow-unsys-generate";
 import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 import { exampleAuthorUnsysModel } from "@/lib/author-unsys-model";
+import { tmpdir } from "node:os";
 
 const ARTIFACT = {
   name: "brief.pdf",
@@ -16,7 +17,7 @@ const ARTIFACT = {
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-8913821ad36e/implementer");
 
 describe("Unsys generate from prepared canvas", () => {
   it("drives runProductFlowUnsysGenerate from the saved board, not leftover Problem text", async () => {

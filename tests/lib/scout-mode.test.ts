@@ -64,13 +64,14 @@ import {
   seedScoutWorkCanvas,
   stripScoutAnswerTail,
 } from "@/lib/scout-session";
+import { tmpdir } from "node:os";
 import { WORKSPACE_CIRCULAR_MENU_ACTIONS } from "@/lib/block-circular-menu";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-68ad206c8604/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-68ad206c8604/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

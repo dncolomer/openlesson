@@ -41,6 +41,7 @@ import {
   revealTimChapterIconOnPlan,
   resolveChapterCompleteExpansionAnchor,
 } from "@/lib/learn-tim-chapter-complete";
+import { tmpdir } from "node:os";
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
 import {
   predictInterruption,
@@ -58,7 +59,7 @@ import type { PredictiveInterruption } from "@/lib/pow-api/predictive-interrupti
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8ac12025c029/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-8ac12025c029/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

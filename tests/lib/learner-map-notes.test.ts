@@ -49,12 +49,13 @@ import {
   type LearnerNotePointerTargetLike,
   type LearnerNotesStorage,
 } from "@/lib/learner-map-notes";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.LEARNER_NOTES_PLANE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b038908e4597/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-b038908e4597/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

@@ -19,10 +19,11 @@ import {
   setBlockLockUntil,
   toggleUnusableCell,
 } from "@/lib/map-ground-rules";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.MAP_GROUND_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-0b9bfff9cca4/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-0b9bfff9cca4/implementer");
 
 function log(lines: string[]) {
   try {

@@ -46,13 +46,14 @@ import {
   mapExcalidrawToolToIlePow,
   wrapIleWorkCanvasText,
 } from "@/lib/learn-work-canvas";
+import { tmpdir } from "node:os";
 import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 import { serializeFlowOpeningCanvasScene } from "@/lib/flow-opening-canvas";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-43f631c11586/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-43f631c11586/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -269,7 +270,7 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     expect(phases).toContain("tap-work-canvas:${phase}:${canvasSeedNonce}");
     const openingScratch =
       process.env.GROK_GOAL_SCRATCH ||
-      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-8913821ad36e/implementer";
+      join(tmpdir(), "openlesson-scratch", "grok-goal-8913821ad36e/implementer");
     mkdirSync(openingScratch, { recursive: true });
     appendFileSync(
       join(openingScratch, "opening-scene-tests.log"),

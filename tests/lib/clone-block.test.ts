@@ -17,11 +17,12 @@ import {
   resolveClonePasteTarget,
   shouldInterceptEmptyClickForClone,
 } from "@/lib/clone-block";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.CLONE_BLOCK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-172de092c1c8/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-172de092c1c8/implementer");
 
 function writeEvidence(name: string, body: string) {
   try {

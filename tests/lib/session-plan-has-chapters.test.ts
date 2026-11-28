@@ -22,11 +22,12 @@ import {
   welcomePlanFromPayload,
 } from "@/lib/session-plan-chapters-status";
 import { lookupSessionPlanChaptersForRequest } from "@/lib/session-plan-has-chapters-request";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-7249dfcaf2a6/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-7249dfcaf2a6/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

@@ -24,11 +24,12 @@ import {
   restartRabbitHoleExpand,
   toggleSummaryCandidate,
 } from "@/lib/rabbit-hole-expand";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.RABBIT_HOLE_EXPAND_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6d1a34f215cc/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-6d1a34f215cc/implementer");
 
 function writeEvidence(name: string, body: string) {
   try {

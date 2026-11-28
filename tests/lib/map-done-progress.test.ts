@@ -30,11 +30,12 @@ import {
   resolveMapSelfProgressScope,
   type MapSelfProgressStorage,
 } from "@/lib/map-self-progress";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b487f5346d8e/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-b487f5346d8e/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

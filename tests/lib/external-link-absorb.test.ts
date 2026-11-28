@@ -21,12 +21,13 @@ import {
 } from "@/lib/suggest-external-context";
 import { buildDomainExerciseAuthorUserPrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 import { resolveExercisePromptContext } from "@/lib/exercise-tap";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.EXTERNAL_ABSORB_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b413fa687e2d/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-b413fa687e2d/implementer");
 
 function writeEvidence(name: string, body: string) {
   try {

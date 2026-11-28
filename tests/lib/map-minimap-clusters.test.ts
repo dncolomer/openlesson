@@ -34,12 +34,13 @@ import {
   SKILL_GRID_CELL_SIZE,
   SKILL_GRID_PITCH,
 } from "@/lib/block-skill-grid";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.MINIMAP_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-33455485d280/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-33455485d280/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

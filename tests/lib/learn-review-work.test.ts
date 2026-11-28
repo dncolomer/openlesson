@@ -8,11 +8,12 @@ import {
   listIleUnsubmittedReviewItems,
 } from "@/lib/learn-review-work";
 import { ILE_MAP_OVERLAY_TOOLS, ILE_CHAPTER_WIDGET_TOOLS } from "@/lib/learn-map-chrome";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ile-review-work/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ile-review-work/implementer");
 
 function read(rel: string) {
   expect(existsSync(join(ROOT, rel)), `missing ${rel}`).toBe(true);

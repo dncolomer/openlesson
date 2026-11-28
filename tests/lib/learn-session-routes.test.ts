@@ -8,10 +8,11 @@ import {
   ileWelcomeRouteSync,
   isIleSessionSettingsPath,
 } from "@/lib/learn-session-routes";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ac62cc577bd0/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ac62cc577bd0/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

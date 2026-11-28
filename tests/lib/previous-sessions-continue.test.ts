@@ -39,13 +39,14 @@ import {
   ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS,
   miniMapInteractive,
 } from "@/lib/learn-chapter-mini-map";
+import { tmpdir } from "node:os";
 import { ileWelcomeShowsContinuePreview } from "@/lib/learn-welcome-chapters";
 import type { SessionPlanStep } from "@/lib/domain/types";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f12cef54c820/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-f12cef54c820/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

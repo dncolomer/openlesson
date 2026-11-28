@@ -12,11 +12,12 @@ import {
   ILE_HELIOS_WHY_COPY,
 } from "@/lib/learn-helios-trigger";
 import { resolveIleDialogueTurn } from "@/lib/learn-dialogue-turn";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-c9348eb42d37/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-c9348eb42d37/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

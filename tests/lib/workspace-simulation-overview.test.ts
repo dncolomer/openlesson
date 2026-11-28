@@ -9,12 +9,13 @@ import {
   availableWorkspaceSections,
   resolveWorkspaceSectionLayout,
 } from "@/lib/workspace-sections";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a7ffc08ac118/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-a7ffc08ac118/implementer");
 
 describe("deriveWorkspaceSimulationOverview", () => {
   it("empty map: zero counts and author guidance", () => {

@@ -15,12 +15,13 @@ import {
   sourceBlockOccupiedKeys,
 } from "@/lib/expand-block-from-source";
 import { resolveAddExpandSelection } from "@/lib/add-block-range-density";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.EXPAND_FROM_SOURCE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-172de092c1c8/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-172de092c1c8/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

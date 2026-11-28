@@ -31,12 +31,13 @@ import {
   ILE_LIVE_EEG_CHUNKS_MAX,
   ILE_LIVE_SCREENSHOTS_MAX,
 } from "@/lib/learn-evidence-buffer";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a2f4918b104f/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-a2f4918b104f/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

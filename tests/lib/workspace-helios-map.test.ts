@@ -40,6 +40,7 @@ import {
   heliosMapOpeningAwarenessText,
   heliosMapOpeningMarkdown,
 } from "@/lib/workspace-helios-opening";
+import { tmpdir } from "node:os";
 import {
   heliosSpeechFinalDelta,
   heliosSpeechUtteranceFromEvent,
@@ -65,7 +66,7 @@ import type { SpeechRecognitionEventLike } from "@/lib/useSessionThoughtInterfac
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-630c02a0abfd/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-630c02a0abfd/implementer");
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");

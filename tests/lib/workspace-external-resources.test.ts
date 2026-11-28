@@ -19,11 +19,12 @@ import {
   buildWorkspaceResourceList,
   externalResourcesAboveNotes,
 } from "@/lib/workspace-resource-list";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.CONTEXT_DANTES_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-0d2042848f32/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-0d2042848f32/implementer");
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");

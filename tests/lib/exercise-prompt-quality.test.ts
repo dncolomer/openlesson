@@ -21,11 +21,12 @@ import {
   type TapScoreBrief,
 } from "@/lib/tap-score";
 import { buildTapbenchExercise } from "@/lib/pow-api/tapbench";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.EXERCISE_PROMPT_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-64f1f256bfdf/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-64f1f256bfdf/implementer");
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");

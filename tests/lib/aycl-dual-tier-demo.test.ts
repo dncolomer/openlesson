@@ -18,12 +18,13 @@ import {
 import { ayclPurchaseEligibleForUpgrade } from "@/lib/aycl";
 import { resolveAyclCapabilities } from "@/lib/aycl-shared";
 import { hashPrivateToken } from "@/lib/private-token";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.AYCL_DUAL_TIER_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-000685533980/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-000685533980/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

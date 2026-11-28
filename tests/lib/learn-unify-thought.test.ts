@@ -22,12 +22,13 @@ import {
 import { applyIleContextFullAutoStash } from "@/lib/learn-context-auto-stash";
 import { emptyIleProjectDualLists } from "@/lib/learn-mode";
 import { THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS } from "@/lib/thought-context-auto-stash";
+import { tmpdir } from "node:os";
 
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-bb1322ed3d29/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-bb1322ed3d29/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

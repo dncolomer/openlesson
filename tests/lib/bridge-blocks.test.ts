@@ -21,12 +21,13 @@ import {
   resolveBridgeSelection,
   thickenCorridor,
 } from "@/lib/bridge-blocks";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.BRIDGE_BLOCKS_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-13324bdfeaef/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-13324bdfeaef/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

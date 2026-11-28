@@ -14,10 +14,11 @@ import {
 } from "@/lib/learner-local-dag";
 import { layoutMultiBlockDagNodes } from "@/lib/multi-block-dag";
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-0f749429c9fc/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-0f749429c9fc/implementer");
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");

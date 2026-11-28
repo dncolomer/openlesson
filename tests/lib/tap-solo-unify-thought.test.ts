@@ -18,11 +18,12 @@ import {
   submitLastStashedThought,
   submitSelectedThoughts,
 } from "@/lib/learn-last-stash";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ad1ba1775897/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ad1ba1775897/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

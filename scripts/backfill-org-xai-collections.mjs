@@ -14,11 +14,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { connectTarget, loadEnvFile } from "./db-connection.mjs";
+import { tmpdir } from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRATCH =
   process.env.GOAL_SCRATCH_DIR ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ca5ed58fd0de/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ca5ed58fd0de/implementer");
 
 const MANAGEMENT_BASE = "https://management-api.x.ai";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

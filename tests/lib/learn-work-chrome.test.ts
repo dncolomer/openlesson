@@ -24,11 +24,12 @@ import {
   SESSION_SIDEBAR_COLLAPSED_REM,
   SESSION_SIDEBAR_EXPANDED_REM,
 } from "@/lib/session-sidebar";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a4905160ec41/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-a4905160ec41/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

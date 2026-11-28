@@ -14,11 +14,12 @@ import {
   ILE_CONTEXT_BODY,
   ILE_SURFACE,
 } from "@/lib/prompt-kernel";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6e83b7914842/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-6e83b7914842/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

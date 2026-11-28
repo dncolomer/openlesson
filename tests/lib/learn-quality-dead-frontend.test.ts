@@ -6,11 +6,12 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-7b5be2be6813/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-7b5be2be6813/implementer");
 
 function read(rel: string) {
   expect(existsSync(join(ROOT, rel)), `missing ${rel}`).toBe(true);

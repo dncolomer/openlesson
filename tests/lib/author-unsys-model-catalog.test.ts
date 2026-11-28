@@ -16,10 +16,11 @@ import {
   studentSessionModelFromAuthorSeed,
 } from "@/lib/author-unsys-model";
 import { sessionBranchById } from "@/lib/session-branch-model";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-54e8f9ec94f9/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-54e8f9ec94f9/implementer");
 
 function writeEvidence(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

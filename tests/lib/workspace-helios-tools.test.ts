@@ -22,10 +22,11 @@ import {
 import { isUnusableCell } from "@/lib/map-ground-rules";
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-630c02a0abfd/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-630c02a0abfd/implementer");
 
 function writeEvidence(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

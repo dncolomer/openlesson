@@ -18,10 +18,11 @@ import {
   toIlePowDisplayCounts,
   type IlePowCounterArtifact,
 } from "@/lib/learn-pow-counters";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a5fcb6d60ed5/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-a5fcb6d60ed5/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

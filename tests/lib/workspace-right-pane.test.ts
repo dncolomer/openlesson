@@ -28,6 +28,7 @@ import {
   splitTargetCellCount,
 } from "@/lib/workspace-right-pane";
 import { isBlockMapToolEnabled } from "@/lib/block-map-tools";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -36,7 +37,7 @@ const SCRATCH =
   process.env.EMPTY_ADD_SCRATCH ||
   process.env.COMBINE_BLOCKS_SCRATCH ||
   process.env.SPLIT_DRAWER_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f89c5e59d09f/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-f89c5e59d09f/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

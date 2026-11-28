@@ -15,11 +15,12 @@ import {
   resolveWorkspaceHeliosColumnSurface,
 } from "@/lib/workspace-helios-mode";
 import { workspaceBlockDetailDrawerIds } from "@/lib/workspace-right-pane";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-54e8f9ec94f9/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-54e8f9ec94f9/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

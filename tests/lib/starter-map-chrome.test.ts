@@ -2,10 +2,11 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d5c6027932ea/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-d5c6027932ea/implementer");
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");

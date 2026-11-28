@@ -30,10 +30,11 @@ import {
   normalizeEffectGenerationResult,
 } from "@/lib/block-effect-generation";
 import { isLearnerMapBlockLocked } from "@/lib/learner-local-dag";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-block-effects/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-block-effects/implementer");
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");

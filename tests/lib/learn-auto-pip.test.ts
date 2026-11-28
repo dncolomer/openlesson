@@ -4,12 +4,13 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-9dd558f97ff3/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-9dd558f97ff3/implementer");
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");

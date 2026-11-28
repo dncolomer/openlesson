@@ -24,12 +24,13 @@ import {
   type SimulationSampleWorkspaceContext,
 } from "@/lib/workspace-simulation-samples";
 import { SIMULATION_EXERCISE_COUNT, SIMULATION_QUESTION_COUNT } from "@/lib/block-simulation";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-46f9864a291e/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-46f9864a291e/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

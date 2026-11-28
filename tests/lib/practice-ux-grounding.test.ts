@@ -40,6 +40,7 @@ import {
   buildVerticalScoreInstructions,
   PERFORMANCE_REMEDIATION_GUARDRAILS,
 } from "@/lib/pow-api/performance-report";
+import { tmpdir } from "node:os";
 import {
   SCORE_POW_CONTEXT_LAYER,
   scoreInstructionsRequirePowOnly,
@@ -50,7 +51,7 @@ import { getPrompt } from "@/lib/prompts";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-5d75896f22ab/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-5d75896f22ab/implementer");
 
 function writeEvidence(name: string, body: string) {
   try {

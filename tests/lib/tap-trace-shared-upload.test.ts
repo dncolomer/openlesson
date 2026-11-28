@@ -38,12 +38,13 @@ vi.mock("@/lib/xai-files", async (importOriginal) => {
 
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { uploadFileToXAI } from "@/lib/xai-files";
+import { tmpdir } from "node:os";
 import { POST } from "@/app/api/verify/session/trace/route";
 import { TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ab7c040d7287/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ab7c040d7287/implementer");
 
 describe("TAP thought traces use the shared Files uploader", () => {
   beforeEach(() => {

@@ -38,6 +38,7 @@ import {
 import { l2Norm } from "@/lib/knowledge-config";
 import { FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
 import { encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
+import { tmpdir } from "node:os";
 import { projectTrajectoryAndRegions } from "@/lib/knowledge-config";
 import {
   assembleSelectedRegionOverlayInputs,
@@ -54,7 +55,7 @@ import {
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-abd9ab8e0040/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-abd9ab8e0040/implementer");
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });

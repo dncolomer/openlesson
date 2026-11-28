@@ -39,12 +39,13 @@ import {
   heliosMapToolAwarenessText,
   type HeliosMapSnapshot,
 } from "@/lib/workspace-helios-tools";
+import { tmpdir } from "node:os";
 import { buildHeliosMapBuilderSystemPrompt } from "@/lib/prompt-kernel";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-cf48410bbed9/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-cf48410bbed9/implementer");
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");

@@ -9,10 +9,11 @@ import {
   resolveCreateBlockIsStart,
   resolveUpdateBlockIsStart,
 } from "@/lib/block-starter-flag";
+import { tmpdir } from "node:os";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6cbbd3238dc4/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-6cbbd3238dc4/implementer");
 
 function readSrc(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");

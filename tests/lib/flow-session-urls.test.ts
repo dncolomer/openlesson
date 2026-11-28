@@ -9,11 +9,12 @@ import { buildGuestLinkUrl, flowSessionPath } from "@/lib/guest-link-access";
 import { buildIleSessionUrl } from "@/lib/learn-link";
 import { buildTapScoreSessionUrl } from "@/lib/tap-score";
 import { ileSessionMapPath, ileSessionSettingsPath } from "@/lib/learn-session-routes";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ab7c040d7287/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-ab7c040d7287/implementer");
 
 function read(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");

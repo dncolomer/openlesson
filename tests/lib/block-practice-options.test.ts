@@ -26,12 +26,13 @@ import {
   resolveDefaultPracticeLaunchUi,
   serializeBlockPracticeOptions,
 } from "@/lib/block-practice-options";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.BLOCK_PRACTICE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-00e5ee38097b/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-00e5ee38097b/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

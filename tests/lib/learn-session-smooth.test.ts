@@ -21,11 +21,12 @@ import {
 import { emptyIleProjectDualLists } from "@/lib/learn-mode";
 import { THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS } from "@/lib/thought-context-auto-stash";
 import { CHAPTER_LOAD_DURATION_MS } from "@/components/session/sessionViewHelpers";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f144411bd284/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-f144411bd284/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

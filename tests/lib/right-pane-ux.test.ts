@@ -19,12 +19,13 @@ import {
   resolveWorkspaceRightPane,
 } from "@/lib/workspace-right-pane";
 import { deriveBlockExampleTopics } from "@/lib/block-example-topics";
+import { tmpdir } from "node:os";
 
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.RIGHT_PANE_UX_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a6b66a4f65ae/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-a6b66a4f65ae/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

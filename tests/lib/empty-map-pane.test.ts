@@ -36,12 +36,13 @@ import {
 } from "@/lib/empty-map-pane";
 import { resolveWorkspaceRightPane } from "@/lib/workspace-right-pane";
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.EMPTY_MAP_PANE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-451f69f59475/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-451f69f59475/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

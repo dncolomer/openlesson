@@ -7,11 +7,12 @@ import {
   normalizeResourceTypeFilter,
   nextResourceTypeFilter,
 } from "@/lib/workspace-resource-list";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.CONTEXT_LIST_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d397f0bc9d45/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-d397f0bc9d45/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

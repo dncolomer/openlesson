@@ -21,11 +21,12 @@ import { buildIleProjectChapterExercisePrompt } from "@/lib/learn-mode";
 import { buildTapbenchExercise } from "@/lib/pow-api/tapbench";
 import { buildDomainExerciseAuthorUserPrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 import { buildTapScoreInstructions, type TapScoreBrief } from "@/lib/tap-score";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.WORKSPACE_CONTEXT_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-0b9bfff9cca4/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-0b9bfff9cca4/implementer");
 
 function ensureScratch() {
   try {

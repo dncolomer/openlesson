@@ -29,11 +29,12 @@ import {
   ILE_CONTEXT_BODY,
   ILE_SURFACE,
 } from "@/lib/prompt-kernel";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-29d5d0c5afa4/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-29d5d0c5afa4/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

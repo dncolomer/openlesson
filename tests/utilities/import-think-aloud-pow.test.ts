@@ -25,11 +25,12 @@ import {
   parseSystem2Inference,
 } from "@/utilities/import-think-aloud-pow";
 import type { IleSoloThoughtEvent, IleSoloTimelineEvent } from "@/utilities/import-think-aloud-pow/types";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a1bb2984a842/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-a1bb2984a842/implementer");
 const PERSIST_MAP = join(ROOT, "utilities/import-think-aloud-pow/persist-map.ts");
 const TRANSCRIPT_FIXTURE = join(ROOT, "tests/fixtures/think-aloud-transcript.json");
 const WAV_FIXTURE = join(ROOT, "tests/fixtures/think-aloud-silent.wav");

@@ -42,6 +42,7 @@ import {
   ileWorkCanvasElementRect,
   ileWorkCanvasRectsOverlap,
 } from "@/lib/learn-work-canvas";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 
@@ -480,7 +481,7 @@ describe("canvas dictate button", () => {
 
     const scratch =
       process.env.GROK_GOAL_SCRATCH ||
-      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-94f79d5a71b0/implementer";
+      join(tmpdir(), "openlesson-scratch", "grok-goal-94f79d5a71b0/implementer");
     mkdirSync(scratch, { recursive: true });
     writeFileSync(
       join(scratch, "craft-and-slash.log"),

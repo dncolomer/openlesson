@@ -17,11 +17,12 @@ import {
   nextWorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
 import { toolTooltip } from "@/components/block-skill-grid/map-tool-icons";
+import { tmpdir } from "node:os";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-71b3c8f22936/implementer";
+  join(tmpdir(), "openlesson-scratch", "grok-goal-71b3c8f22936/implementer");
 
 function read(rel: string) {
   const path = join(ROOT, rel);

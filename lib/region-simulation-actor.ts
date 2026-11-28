@@ -118,7 +118,7 @@ export async function runCanvasFaithfulExplorationSample(
   flowKind: FlowKind = "verify",
   catalog: readonly ExplorationStrategy[] = EXPLORATION_STRATEGIES,
   referenceModel?: SessionBranchModel | null,
-): RegionSimulationWalk {
+): Promise<RegionSimulationWalk> {
   const strategy =
     catalog.find((row) => row.id === plan.strategyId) ?? explorationStrategyById(plan.strategyId);
   if (!strategy) throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);

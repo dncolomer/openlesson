@@ -109,17 +109,17 @@ describe("region simulation", () => {
     expect(plans.every((plan) => plan.seed.includes(plan.strategyId))).toBe(true);
   });
 
-  it("walks each strategy on a seeded tree and labels the sample simulated", () => {
+  it("walks each strategy on a seeded tree and labels the sample simulated", async () => {
     const plan = planRegionSimulationSamples({
       flowIds: ["flow-a"],
       problemsByFlowId: { "flow-a": ["What is a limit?"] },
       strategyIds: ["exploit-heavy"],
       samplesPerStrategy: 3,
     })[0]!;
-    const walk = runRegionSimulationSample(plan);
+    const walk = await runRegionSimulationSample(plan);
     expect(walk.sequence.length).toBeGreaterThan(0);
     expect(walk.embedding.raw.flowKind).toBe("verify");
-    expect(runRegionSimulationSample(plan, "verify").embedding.raw.flowKind).toBe("verify");
+    expect((await runRegionSimulationSample(plan, "verify")).embedding.raw.flowKind).toBe("verify");
     expect(walk.pow[0]?.tool_name).toBe(REGION_SIMULATION_SOURCE);
     expect(walk.pow[0]?.metadata?.simulated).toBe(true);
     expect(walk.pow[0]?.metadata?.strategyId).toBe("exploit-heavy");
@@ -150,7 +150,7 @@ describe("region simulation", () => {
       seed: "same-seed",
     });
     expect(exploit.join(">")).not.toBe(info.join(">"));
-    const again = runRegionSimulationSample(plan);
+    const again = await runRegionSimulationSample(plan);
     expect(again.sequence).toEqual(walk.sequence);
   });
 
@@ -439,7 +439,7 @@ describe("region simulation", () => {
       strategyIds: [custom.id],
       samplesPerStrategy: 3,
     })[0]!;
-    const walk = runRegionSimulationSample(plan, "verify", [custom]);
+    const walk = await runRegionSimulationSample(plan, "verify", [custom]);
     expect(walk.pow[0]?.metadata?.strategyId).toBe(custom.id);
     expect(walk.pow[0]?.metadata?.instructions).toBe(custom.instructions);
     expect(custom.params).not.toEqual(other.params);

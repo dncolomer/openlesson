@@ -52,10 +52,10 @@ function plan(strategyId: string) {
 }
 
 describe("canvas-faithful exploration actor", () => {
-  it("locks exploit-heavy to a cheap hid with canvas timestamps", () => {
+  it("locks exploit-heavy to a cheap hid with canvas timestamps", async () => {
     const model = fixtureModel();
     const cheap = model.branches.find((row) => row.title === "Delta")!;
-    const walk = runCanvasFaithfulExplorationSample(plan("exploit-heavy"), "verify", EXPLORATION_STRATEGIES, model);
+    const walk = await runCanvasFaithfulExplorationSample(plan("exploit-heavy"), "verify", EXPLORATION_STRATEGIES, model);
     expect(walk.sequence.length).toBeGreaterThan(0);
     expect(walk.sequence[0]).toBe(cheap.id);
     expect(walk.pow.some((row) => row.tool_name === "canvas" && row.tool_action === "draw_text")).toBe(
@@ -68,10 +68,10 @@ describe("canvas-faithful exploration actor", () => {
   });
 
 
-  it("makes information-seeking visit a costly child", () => {
+  it("makes information-seeking visit a costly child", async () => {
     const model = fixtureModel();
     const costly = model.branches.find((row) => row.title === "Epsilon")!;
-    const walk = runCanvasFaithfulExplorationSample(
+    const walk = await runCanvasFaithfulExplorationSample(
       plan("information-seeking"),
       "verify",
       EXPLORATION_STRATEGIES,

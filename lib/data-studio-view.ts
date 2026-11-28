@@ -1,14 +1,12 @@
 /**
- * Pure Data Studio helpers: flow/run filters, inspect payloads
+ * Knowledge-region inspect helpers: flow/run filters, inspect payloads
  * (vector + raw + PoW/transcripts), and 2D projection.
- * Products are verification | calibration | solve.
  * Tests drive these functions — do not re-implement in tests.
  */
 
 import {
   FLOW_EMBEDDING_CHANNELS,
   FLOW_EMBEDDING_MODEL_ID,
-  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   flowEmbeddingChannelLabel,
   flowEmbeddingModelIdForChannel,
   parseFlowEmbeddingChannel,
@@ -38,7 +36,6 @@ import {
   type RegionCentroidInput,
   type ScreenRect,
 } from "@/lib/knowledge-config";
-import { includeAuthorStudioEmbedding } from "@/lib/map-play-data-access";
 import {
   isSimulationStrategyClusterName,
   studioEmbeddingOrigin,
@@ -46,10 +43,6 @@ import {
 } from "@/lib/region-simulation";
 
 export type { StudioEmbeddingOrigin };
-
-export const DATA_STUDIO_PRODUCTS = ["verification"] as const;
-
-export type DataStudioProduct = (typeof DATA_STUDIO_PRODUCTS)[number];
 
 export const DATA_STUDIO_PROJECTION_ALGORITHMS: readonly ProjectionAlgorithmId[] =
   PROJECTION_ALGORITHM_IDS;
@@ -151,29 +144,8 @@ export const STUDIO_INSPECT_WIDTH_MAX = 960;
 export const DASHBOARD_KNOWLEDGE_REGION_RUN_PATH = "/api/dashboard/knowledge-regions/run";
 export const DASHBOARD_KNOWLEDGE_REGION_FILE_PATH = "/api/dashboard/knowledge-regions/file";
 
-export type LearningStudioWorkspace = {
-  id: string;
-  owner_user_id?: string | null;
-  user_id?: string | null;
-  is_play_copy?: boolean | null;
-  original_workspace_id?: string | null;
-};
-
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-export function parseDataStudioProduct(value: unknown): DataStudioProduct | null {
-  if (value === "verification") return value;
-  return null;
-}
-
-export function dataStudioFlowKind(_product?: DataStudioProduct): FlowKind {
-  return "verify";
-}
-
-export function dataStudioProductLabel(_product?: DataStudioProduct): string {
-  return "Protocol";
 }
 
 export function uniqueStudioIds(values: readonly unknown[]): string[] {
@@ -563,131 +535,26 @@ export function clampStudioInspectWidth(width: number, max = STUDIO_INSPECT_WIDT
   return Math.min(ceiling, Math.max(STUDIO_INSPECT_WIDTH_MIN, Math.round(width)));
 }
 
-/**
- * Leftover helper kept for tests. Dashboard Data Studio no longer has a
- * learning product; `presentDashboardDataStudio` does not call this.
- */
-export function includeLearningStudioEmbedding(input: {
-  viewerUserId: string;
-  workspace?: LearningStudioWorkspace | null;
-  embedding: Pick<
-    DataStudioEmbeddingRow,
-    "flow_kind" | "user_id" | "workspace_id" | "is_play_copy" | "owner_user_id"
-  >;
-}): boolean {
-  const viewer = text(input.viewerUserId);
-  if (!viewer) return false;
-  if (text(input.embedding.flow_kind) !== "learn") return false;
-
-  const workspace = input.workspace;
-  const owner = text(
-    workspace?.owner_user_id || workspace?.user_id || input.embedding.owner_user_id,
-  );
-  if (owner && owner !== viewer) return false;
-
-  return Boolean(workspace?.is_play_copy ?? input.embedding.is_play_copy);
-}
-
-export function scopeLearningStudioEmbeddings(
-  rows: readonly DataStudioEmbeddingRow[],
-  input: {
-    viewerUserId: string;
-    workspaces?: readonly LearningStudioWorkspace[];
-  },
-): DataStudioEmbeddingRow[] {
-  const byId = new Map<string, LearningStudioWorkspace>();
-  for (const workspace of input.workspaces ?? []) {
-    const id = text(workspace.id);
-    if (id) byId.set(id, workspace);
-  }
-  return rows.filter((row) => {
-    const workspaceId = text(row.workspace_id);
-    const workspace =
-      (workspaceId ? byId.get(workspaceId) : null) ??
-      ({
-        id: workspaceId,
-        owner_user_id: row.owner_user_id,
-        is_play_copy: row.is_play_copy,
-        original_workspace_id: row.original_workspace_id,
-      } satisfies LearningStudioWorkspace);
-    return includeLearningStudioEmbedding({
-      viewerUserId: input.viewerUserId,
-      workspace,
-      embedding: row,
-    });
-  });
-}
-
-export function presentDashboardDataStudio(input: {
-  product: DataStudioProduct;
-  viewerUserId: string;
-  practiceFlowIds?: readonly string[];
-  workspaces?: readonly {
-    id?: unknown;
-    title?: unknown;
-    root_topic?: unknown;
-    user_id?: unknown;
-    workspace_kind?: unknown;
-    is_play_copy?: boolean | null;
-    original_workspace_id?: unknown;
-  }[];
-  embeddings: readonly DataStudioEmbeddingRow[];
-  regions?: readonly RegionCentroidInput[];
-}): {
-  product: DataStudioProduct;
-  flowKind: FlowKind;
-  workspaces: Array<{ id: string; title: string; is_play_copy: boolean }>;
-  embeddings: DataStudioEmbeddingRow[];
-  regions: RegionCentroidInput[];
-} {
-  void input.practiceFlowIds;
-  void input.workspaces;
-  const flowKind = dataStudioFlowKind(input.product);
-  const embeddings = input.embeddings.filter((row) => {
-    if (text(row.flow_kind) && text(row.flow_kind) !== flowKind) return false;
-    return includeAuthorStudioEmbedding({
-      viewerUserId: input.viewerUserId,
-      embedding: row,
-    });
-  });
-
-  return {
-    product: input.product,
-    flowKind,
-    workspaces: [],
-    embeddings,
-    regions: [...(input.regions ?? [])],
-  };
-}
-
 export function studioVectors(rows: readonly DataStudioEmbeddingRow[]): number[][] {
   return rows.map((row) => (Array.isArray(row.vector) ? row.vector : []));
 }
 
 export function studioRegionsForSpace(
   regions: readonly RegionCentroidInput[] | null | undefined,
-  space: DataStudioSpace | string,
+  _space: DataStudioSpace | string = "path",
 ): RegionCentroidInput[] {
-  const channel = parseDataStudioSpace(space);
   return (regions ?? []).filter((region) => {
     const model = text(region.embedding_model_id);
-    if (channel === "path_text") {
-      return model === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID;
-    }
     return !model || model === FLOW_EMBEDDING_MODEL_ID;
   });
 }
 
 export function studioEmbeddingVector(
   row: DataStudioEmbeddingRow,
-  space: DataStudioSpace | string = "path",
+  _space: DataStudioSpace | string = "path",
 ): number[] {
-  const channel = parseDataStudioSpace(space);
-  const mixed = vectorForFlowChannel(row, channel);
-  if (mixed.some((n) => n !== 0)) return mixed;
-  if (channel === "path_text" && Array.isArray(row.vector_path_text) && row.vector_path_text.length) {
-    return row.vector_path_text;
-  }
+  const path = vectorForFlowChannel(row, "path");
+  if (path.some((n) => n !== 0)) return path;
   return Array.isArray(row.vector) ? row.vector : [];
 }
 

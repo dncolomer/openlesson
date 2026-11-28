@@ -1,31 +1,17 @@
 /**
- * Data Studio — pure helpers + structural wiring of the workspace Settings surface.
- * Exercises browse, bulk progress, and projection/region studio functions.
+ * Knowledge-region inspect helpers + overlay Data Studio retirement locks.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  buildStudioProjectionView,
-  evaluateStudioRegionGeometry,
-  matchesStudioPowFilter,
-  matchesStudioPowToSessionLink,
-  paginateSlice,
-  parseDataStudioTab,
-  parsePositiveInt,
-  parseStudioSessionLinkInput,
-  parseStudioSortDirection,
-  sortStudioRows,
-  summarizeXaiOrgRows,
-  toggleStudioSort,
-} from "@/lib/admin/data-studio";
+import { buildStudioProjectionView } from "@/lib/admin/data-studio";
 import { createCustomVerificationModelFromVectors } from "@/lib/knowledge-config";
 import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
-import { encodeFlowEmbedding, encodeFlowRaw, encodeTextsToFlowVector } from "@/lib/flow-embedding-encode";
+import { encodeFlowEmbedding } from "@/lib/flow-embedding-encode";
 import { cosineThresholdToL2, l2Distance, l2Normalize } from "@/lib/knowledge-config/math";
 import { availableWorkspaceSections } from "@/lib/workspace-sections";
 import { DASHBOARD_NAV_GROUPS } from "@/lib/dashboard-nav";
@@ -41,14 +27,11 @@ import {
   STUDIO_SIMULATED_FILL,
   studioHighDimRegionMembership,
   studioPointInsideHighDimRegion,
-  includeLearningStudioEmbedding,
   inspectStudioEmbedding,
   parseDataStudioSpace,
   DATA_STUDIO_SPACE_OPTIONS,
   dataStudioSpaceLabel,
-  presentDashboardDataStudio,
   projectStudioEmbeddings2D,
-  scopeLearningStudioEmbeddings,
   studioEmbeddingVector,
   studioRegionsForSpace,
   studioFlowOptions,
@@ -80,180 +63,6 @@ function unitVector(seed: number): number[] {
   );
   return l2Normalize(v);
 }
-
-describe("data studio browse helpers (pure)", () => {
-  it("paginateSlice pages and clamps", async () => {
-    const items = Array.from({ length: 10 }, (_, i) => i);
-    const page1 = paginateSlice(items, 1, 3);
-    expect(page1.items).toEqual([0, 1, 2]);
-    expect(page1.totalPages).toBe(4);
-    const pageLast = paginateSlice(items, 99, 3);
-    expect(pageLast.page).toBe(4);
-    expect(pageLast.items).toEqual([9]);
-  });
-
-  it("matchesStudioPowFilter by workspace, type, and search", () => {
-    const row = {
-      workspace_id: "ws1",
-      proof_of_work_type: "tool",
-      file_name: "trace.json",
-      tool_name: "editor",
-      device_name: null,
-    };
-    expect(matchesStudioPowFilter(row, { workspaceId: "ws1" })).toBe(true);
-    expect(matchesStudioPowFilter(row, { workspaceId: "ws2" })).toBe(false);
-    expect(matchesStudioPowFilter(row, { proofOfWorkType: "tool" })).toBe(true);
-    expect(matchesStudioPowFilter(row, { search: "editor" })).toBe(true);
-    expect(matchesStudioPowFilter(row, { search: "missing" })).toBe(false);
-  });
-
-  it("parsePositiveInt and tabs", async () => {
-    expect(parsePositiveInt("12", 1, 50)).toBe(12);
-    expect(parsePositiveInt("nope", 5)).toBe(5);
-    expect(parsePositiveInt("999", 1, 100)).toBe(100);
-    expect(parseDataStudioTab("bulk")).toBe("overview");
-    expect(parseDataStudioTab("nope")).toBe("overview");
-  });
-
-  it("summarizeXaiOrgRows counts ready keys and collections", async () => {
-    const s = summarizeXaiOrgRows([
-      { xai_api_key_status: "ready", xai_collection_status: "pending" },
-      { xai_api_key_status: "error", xai_collection_status: "ready" },
-      { xai_api_key_status: "ready", xai_collection_status: "ready" },
-    ]);
-    expect(s.organizationsWithXaiKey).toBe(2);
-    expect(s.organizationsWithXaiCollection).toBe(2);
-  });
-});
-
-describe("studio session link parse + PoW match (pure)", () => {
-  it("parseStudioSessionLinkInput extracts TAP/TAP Learning tokens from URLs and bare tokens", async () => {
-    expect(parseStudioSessionLinkInput("")).toBeNull();
-    expect(parseStudioSessionLinkInput("  ")).toBeNull();
-
-    const bare = parseStudioSessionLinkInput("QPhnhE7qCFgITvWPDNy0fBp7db0G8MBY");
-    expect(bare).toEqual({
-      token: "QPhnhE7qCFgITvWPDNy0fBp7db0G8MBY",
-      kind: null,
-    });
-
-    const tap = parseStudioSessionLinkInput(
-      "http://localhost:3000/tap/session/abcTOKEN123456",
-    );
-    expect(tap).toEqual({ token: "abcTOKEN123456", kind: "tap" });
-
-    const ile = parseStudioSessionLinkInput(
-      "https://uncertain.systems/ile/session/ileTok_xyz98765",
-    );
-    expect(ile).toEqual({ token: "ileTok_xyz98765", kind: "ile" });
-
-    const pathOnly = parseStudioSessionLinkInput("/tap/session/pathTokenABCDEF");
-    expect(pathOnly?.kind).toBe("tap");
-    expect(pathOnly?.token).toBe("pathTokenABCDEF");
-  });
-
-  it("matchesStudioPowToSessionLink uses session_id, source_link, and legacy metadata", () => {
-    const resolved = {
-      kind: "tap" as const,
-      linkId: "link-uuid-1",
-      sessionId: "link-uuid-1",
-      workspaceId: "ws-1",
-    };
-
-    expect(
-      matchesStudioPowToSessionLink(
-        { session_id: "link-uuid-1", metadata: {} },
-        resolved,
-      ),
-    ).toBe(true);
-
-    expect(
-      matchesStudioPowToSessionLink(
-        {
-          session_id: "other",
-          metadata: { source_link_kind: "tap", source_link_id: "link-uuid-1" },
-        },
-        resolved,
-      ),
-    ).toBe(true);
-
-    expect(
-      matchesStudioPowToSessionLink(
-        { session_id: null, metadata: { tap_session_id: "link-uuid-1" } },
-        resolved,
-      ),
-    ).toBe(true);
-
-    expect(
-      matchesStudioPowToSessionLink(
-        { session_id: "nope", metadata: { source_link_id: "other" } },
-        resolved,
-      ),
-    ).toBe(false);
-
-    const ile = {
-      kind: "ile" as const,
-      linkId: "ile-link-9",
-      sessionId: "sess-9",
-      workspaceId: "ws-2",
-    };
-    expect(
-      matchesStudioPowToSessionLink(
-        { session_id: "sess-9", metadata: null },
-        ile,
-      ),
-    ).toBe(true);
-    expect(
-      matchesStudioPowToSessionLink(
-        { session_id: null, metadata: { ile_link_id: "ile-link-9" } },
-        ile,
-      ),
-    ).toBe(true);
-  });
-});
-
-describe("sortStudioRows (pure)", () => {
-  const rows = [
-    { id: "a", name: "Charlie", created_at: "2026-01-03T00:00:00Z", n: 2 },
-    { id: "b", name: "Alice", created_at: "2026-01-01T00:00:00Z", n: 10 },
-    { id: "c", name: "Bob", created_at: "2026-01-02T00:00:00Z", n: 5 },
-  ];
-
-  it("sorts by string and number columns asc/desc and is stable", async () => {
-    const byName = sortStudioRows(rows, { column: "name", direction: "asc" }, (r, c) =>
-      c === "name" ? r.name : null,
-    );
-    expect(byName.map((r) => r.id)).toEqual(["b", "c", "a"]);
-
-    const byNDesc = sortStudioRows(rows, { column: "n", direction: "desc" }, (r, c) =>
-      c === "n" ? r.n : null,
-    );
-    expect(byNDesc.map((r) => r.id)).toEqual(["b", "c", "a"]);
-
-    const byWhen = sortStudioRows(
-      rows,
-      { column: "created_at", direction: "asc" },
-      (r, c) => (c === "created_at" ? r.created_at : null),
-    );
-    expect(byWhen.map((r) => r.id)).toEqual(["b", "c", "a"]);
-  });
-
-  it("toggleStudioSort and parseStudioSortDirection", async () => {
-    expect(parseStudioSortDirection("asc")).toBe("asc");
-    expect(parseStudioSortDirection("DESC")).toBe("desc");
-    expect(parseStudioSortDirection("nope", "asc")).toBe("asc");
-    expect(toggleStudioSort(null, "name", "asc")).toEqual({
-      column: "name",
-      direction: "asc",
-    });
-    expect(
-      toggleStudioSort({ column: "name", direction: "asc" }, "name"),
-    ).toEqual({ column: "name", direction: "desc" });
-    expect(
-      toggleStudioSort({ column: "name", direction: "desc" }, "created_at", "desc"),
-    ).toEqual({ column: "created_at", direction: "desc" });
-  });
-});
 
 describe("studio projection + region geometry (shipped)", () => {
   it("buildStudioProjectionView yields finite screen coords and region radii", async () => {
@@ -312,22 +121,6 @@ describe("studio projection + region geometry (shipped)", () => {
       displayMode: "latest",
     });
     expect(latest.coords.length).toBe(1);
-  });
-
-  it("evaluateStudioRegionGeometry scores centroid inside region", async () => {
-    const vectors = [unitVector(10), unitVector(11), unitVector(12)];
-    const model = createCustomVerificationModelFromVectors({
-      name: "experts",
-      vectors,
-    });
-    const { score, knowledge_distance } = evaluateStudioRegionGeometry({
-      model,
-      vector: model.centroid,
-    });
-    expect(score.in_region).toBe(true);
-    expect(score.validation_score).toBeGreaterThan(50);
-    expect(knowledge_distance.knowledge_distance).toBeLessThan(0.5);
-    expect(Number.isFinite(knowledge_distance.l2_distance)).toBe(true);
   });
 });
 
@@ -425,47 +218,7 @@ async function studioRow(input: {
   };
 }
 
-/** Matches `app/api/dashboard/data-studio/route.ts` mapping of StoredFlowEmbedding. */
-async function dashboardApiEmbedding(input: {
-  id: string;
-  flowKind?: string;
-  flowId?: string | null;
-  runId?: string | null;
-  identity?: string | null;
-  prompt: string;
-  workspaceId?: string;
-}) : Promise<DataStudioEmbeddingRow> {
-  const record = await encodeFlowEmbedding({
-    flowKind: (input.flowKind as "verify" | "calibrate" | "learn") || "verify",
-    pow: [
-      {
-        type: "tool",
-        tool_name: "tap-speech-segment",
-        tool_action: "speech_stop",
-        timestamp_ms: 1,
-        payload: input.prompt,
-        metadata: { transcript: input.prompt, text: input.prompt },
-      },
-    ],
-  });
-  return {
-    id: input.id,
-    workspace_id: input.workspaceId ?? "ws-1",
-    flow_kind: input.flowKind ?? "verify",
-    flow_id: input.flowId ?? "flow-a",
-    run_id: input.runId ?? "run-1",
-    identity: input.identity ?? "ada",
-    vector: record.vector,
-    vector_path_text: record.vector_path_text,
-    channel_vectors: record.channel_vectors,
-    raw: record.raw,
-    embedding_model_id: record.embedding_model_id,
-    created_at: "2026-10-01T00:00:00.000Z",
-    source: null,
-  };
-}
-
-describe("studio flow/run filters, inspect, projection, learning scope", () => {
+describe("studio flow/run filters, inspect, projection", () => {
   it("keeps all-together, drops other flows and runs, and retains identity", async () => {
     const ada = await studioRow({ id: "e1", flowId: "flow-a", runId: "run-1", identity: "ada", prompt: "a" });
     const bea = await studioRow({
@@ -576,9 +329,9 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
     expect(inspect?.vector).toEqual(row.vector);
     expect(inspect?.vector.length).toBe(FLOW_EMBEDDING_DIM);
     const pathText = inspectStudioEmbedding(row, "path_text");
-    expect(pathText?.space).toBe("path_text");
-    expect(pathText?.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
-    expect(pathText?.vector).not.toEqual(row.vector);
+    expect(pathText?.space).toBe("path");
+    expect(pathText?.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(pathText?.vector).toEqual(row.vector);
     expect(pathText?.speech).toContain("spoken proof of limits");
     expect(inspect?.raw).toEqual(row.raw);
     expect(inspect?.pow.length).toBeGreaterThan(0);
@@ -683,19 +436,16 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
     expect(overlay.membershipScreenRadius).toBeGreaterThan(overlay.screenRadius);
   });
 
-  it("switches Path and Path + Text spaces and overlays only matching regions", async () => {
-    expect(DATA_STUDIO_SPACE_OPTIONS).toEqual([
-      { id: "path", label: "Path" },
-      { id: "path_text", label: "Path + Text" },
-    ]);
+  it("offers Path only and overlays Path regions", async () => {
+    expect(DATA_STUDIO_SPACE_OPTIONS).toEqual([{ id: "path", label: "Path" }]);
     expect(dataStudioSpaceLabel("path")).toBe("Path");
-    expect(dataStudioSpaceLabel("path_text")).toBe("Path + Text");
-    expect(parseDataStudioSpace("path_text")).toBe("path_text");
+    expect(dataStudioSpaceLabel("path_text")).toBe("Path");
+    expect(parseDataStudioSpace("path_text")).toBe("path");
     expect(parseDataStudioSpace("nope")).toBe("path");
     const a = await studioRow({ id: "p1", prompt: "alpha spoken", identity: "ada" });
     const b = await studioRow({ id: "p2", prompt: "beta spoken", identity: "bea", runId: "run-2" });
     expect(studioEmbeddingVector(a, "path")).toEqual(studioEmbeddingVector(b, "path"));
-    expect(studioEmbeddingVector(a, "path_text")).not.toEqual(studioEmbeddingVector(b, "path_text"));
+    expect(studioEmbeddingVector(a, "path_text")).toEqual(studioEmbeddingVector(a, "path"));
     const pathRegions = [
       {
         id: "path-region",
@@ -708,7 +458,7 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       {
         id: "text-region",
         name: "Speech",
-        centroid: studioEmbeddingVector(a, "path_text"),
+        centroid: studioEmbeddingVector(a, "path"),
         mean_radius: 0.25,
         cosine_threshold: 0.5,
         embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
@@ -718,7 +468,7 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       "path-region",
     ]);
     expect(studioRegionsForSpace(pathRegions, "path_text").map((region) => region.id)).toEqual([
-      "text-region",
+      "path-region",
     ]);
     const pathView = buildDataStudioProjectionView({
       embeddings: [a, b],
@@ -735,9 +485,9 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       screen: { width: 800, height: 500, margin: 32 },
     });
     expect(pathView.regionOverlays.map((region) => region.id)).toEqual(["path-region"]);
-    expect(textView.regionOverlays.map((region) => region.id)).toEqual(["text-region"]);
+    expect(textView.regionOverlays.map((region) => region.id)).toEqual(["path-region"]);
     expect(pathView.coords[0].screenX).toBe(pathView.coords[1].screenX);
-    expect(textView.coords[0].screenX).not.toBe(textView.coords[1].screenX);
+    expect(textView.coords[0].screenX).toBe(textView.coords[1].screenX);
   });
 
   it("labels dashed rays with high-dim L2 and hides selected regions", async () => {
@@ -852,87 +602,6 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
     expect(members.get("p2")?.inRegion).toBe(false);
   });
 
-  it("includes play-copy Learn rows and drops authored maps", async () => {
-    const play = await studioRow({
-      id: "play-1",
-      flowKind: "learn",
-      prompt: "played copy",
-      workspaceId: "copy-1",
-      isPlayCopy: true,
-      ownerUserId: "me",
-      userId: "me",
-    });
-    const ownAuthored = await studioRow({
-      id: "own-1",
-      flowKind: "learn",
-      prompt: "I played my map",
-      workspaceId: "authored-1",
-      isPlayCopy: false,
-      ownerUserId: "me",
-      userId: "me",
-    });
-    const buyer = await studioRow({
-      id: "buyer-1",
-      flowKind: "learn",
-      prompt: "buyer session",
-      workspaceId: "authored-1",
-      isPlayCopy: false,
-      ownerUserId: "me",
-      userId: "buyer",
-    });
-    const scoped = scopeLearningStudioEmbeddings([play, ownAuthored, buyer], {
-      viewerUserId: "me",
-      workspaces: [
-        { id: "copy-1", owner_user_id: "me", is_play_copy: true },
-        { id: "authored-1", owner_user_id: "me", is_play_copy: false },
-      ],
-    });
-    expect(scoped.map((row) => row.id)).toEqual(["play-1"]);
-  });
-
-  it("excludes API-shaped authored Learn rows that have no user_id", async () => {
-    const playCopyWorkspace = {
-      id: "copy-1",
-      owner_user_id: "me",
-      user_id: "me",
-      is_play_copy: true,
-    };
-    const authoredWorkspace = {
-      id: "authored-1",
-      owner_user_id: "me",
-      user_id: "me",
-      is_play_copy: false,
-    };
-    const play = await dashboardApiEmbedding({
-      id: "play-api",
-      flowKind: "learn",
-      prompt: "played copy",
-      workspaceId: "copy-1",
-    });
-    const authoredAnonymous = await dashboardApiEmbedding({
-      id: "authored-api",
-      flowKind: "learn",
-      prompt: "org play on sold map",
-      workspaceId: "authored-1",
-    });
-    expect("user_id" in play).toBe(false);
-    expect("user_id" in authoredAnonymous).toBe(false);
-    expect(
-      includeLearningStudioEmbedding({
-        viewerUserId: "me",
-        workspace: playCopyWorkspace,
-        embedding: play,
-      }),
-    ).toBe(true);
-    expect(
-      includeLearningStudioEmbedding({
-        viewerUserId: "me",
-        workspace: authoredWorkspace,
-        embedding: authoredAnonymous,
-      }),
-    ).toBe(false);
-  });
-
   it("author studio keeps invite and contributed Path rows and hides private play-copy rows", async () => {
     expect(
       persistMapPlayDataAccessUpdates({ playSharePow: true }),
@@ -1010,16 +679,6 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
         embedding: contributed,
       }),
     ).toBe(true);
-    const presented = presentDashboardDataStudio({
-      product: "verification",
-      viewerUserId: "author-1",
-      workspaces: [],
-      embeddings: [invite, privatePlay, contributed],
-    });
-    expect(presented.embeddings.map((row) => row.id).sort()).toEqual([
-      "invite-1",
-      "play-path",
-    ]);
   });
 });
 

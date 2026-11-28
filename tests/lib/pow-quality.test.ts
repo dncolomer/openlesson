@@ -14,9 +14,6 @@ import {
   matchesPowQualityFilter,
   POW_INVALIDATED_METADATA_KEY,
 } from "@/lib/pow-api/pow-quality";
-import {
-  buildStudioPowPatch,
-} from "@/lib/pow-api/studio-pow-mutate";
 import { aggregateProofOfWorkStats, type ProofOfWorkStatsRow } from "@/lib/pow-api/proof-of-work-stats";
 
 const ROOT = process.cwd();
@@ -79,19 +76,19 @@ describe("pow-quality snapshot exclusion", () => {
     expect(classifyPowQuality({ invalidated: true })).toBe("invalidated");
   });
 
-  it("buildStudioPowPatch drives invalidate without inventing SQL columns", () => {
-    const patch = buildStudioPowPatch(
+  it("invalidation is metadata-only", () => {
+    const marked = markPowMetadataInvalidated(
       { text: "work", tool: "math" },
-      { invalidate: true, invalidateOptions: { by: "admin-1" } },
+      { by: "admin-1" },
     );
-    expect(patch.fields).toHaveProperty("metadata");
-    expect(patch.fields).not.toHaveProperty("invalidated");
-    expect(patch.metadata.invalidated).toBe(true);
-    expect(patch.metadata.invalidated_by).toBe("admin-1");
-    expect(patch.metadata.text).toBe("work");
+    expect(marked.invalidated).toBe(true);
+    expect(marked.invalidated_by).toBe("admin-1");
+    expect(marked.text).toBe("work");
+    expect(isInvalidatedPoWMetadata(marked)).toBe(true);
 
-    const cleared = buildStudioPowPatch(patch.metadata, { clearInvalidated: true });
-    expect(cleared.metadata.invalidated).toBeUndefined();
+    const cleared = clearPowMetadataInvalidated(marked);
+    expect(cleared.invalidated).toBeUndefined();
+    expect(isInvalidatedPoWMetadata(cleared)).toBe(false);
   });
 });
 

@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       return jsonError(500, "Images uploaded but failed to save on organization");
     }
 
-    return NextResponse.json(presentAesthetics(stored));
+    return NextResponse.json({ ...presentAesthetics(stored), added: published });
   } catch (error) {
     console.error("Organization aesthetics upload error:", error);
     return jsonError(500, "Internal server error");

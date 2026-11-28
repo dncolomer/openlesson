@@ -43,7 +43,9 @@ import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasCenterScroll,
   ileWorkCanvasContentBounds,
+  ILE_WORK_CANVAS_STROKE_COLOR,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasRestyleChromeInk,
   ileWorkCanvasLiveVersionSignature,
   ileWorkCanvasPersistSignature,
   ileWorkCanvasShouldRestoreEmptyBoard,
@@ -207,6 +209,7 @@ export function ExcalidrawCanvas({
   const canvasChrome = sessionCanvasExcalidrawChrome(sidebarStyle.canvas);
   const canvasChromeRef = useRef(canvasChrome);
   canvasChromeRef.current = canvasChrome;
+  const liveStrokeRef = useRef(canvasChrome.currentItemStrokeColor);
   const excalidrawAPIRef = useRef<LiveExcalidrawAPI | null>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
@@ -498,6 +501,20 @@ export function ExcalidrawCanvas({
     }
     if (liveCanvasChrome || !String(source?.currentItemStrokeColor || "").trim()) {
       patch.currentItemStrokeColor = chrome.currentItemStrokeColor;
+    }
+    if (liveCanvasChrome) {
+      const nextStroke = chrome.currentItemStrokeColor;
+      const current = [...(api.getSceneElements() ?? [])];
+      const restyled = ileWorkCanvasRestyleChromeInk(
+        current,
+        [liveStrokeRef.current, ILE_WORK_CANVAS_STROKE_COLOR],
+        nextStroke,
+      );
+      liveStrokeRef.current = nextStroke;
+      if (restyled !== current) {
+        api.updateScene({ elements: restyled, appState: patch });
+        return;
+      }
     }
     api.updateScene({ appState: patch });
   }, [

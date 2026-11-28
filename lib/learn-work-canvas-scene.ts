@@ -277,6 +277,32 @@ export function withIleWorkCanvasGridAppState(
   return next;
 }
 
+/** Restyle MAGI/previous chrome ink so a live stroke picker is visible on existing marks. */
+export function ileWorkCanvasRestyleChromeInk<T extends { strokeColor?: unknown }>(
+  elements: readonly T[],
+  fromColors: readonly string[],
+  nextStroke: string,
+): T[] {
+  const next = String(nextStroke || "").trim();
+  if (!next) return elements as T[];
+  const from = new Set(
+    fromColors
+      .map((color) => String(color || "").trim().toLowerCase())
+      .filter(Boolean),
+  );
+  if (from.size === 0) return elements as T[];
+  let changed = false;
+  const mapped = elements.map((element) => {
+    const stroke = String(element.strokeColor || "").trim();
+    if (!stroke || !from.has(stroke.toLowerCase()) || stroke.toLowerCase() === next.toLowerCase()) {
+      return element;
+    }
+    changed = true;
+    return { ...element, strokeColor: next };
+  });
+  return changed ? mapped : (elements as T[]);
+}
+
 function ileWorkCanvasStoredToolType(activeTool: unknown): string {
   if (typeof activeTool === "string") return activeTool.trim();
   if (activeTool && typeof activeTool === "object" && !Array.isArray(activeTool)) {

@@ -22,6 +22,8 @@ export function ProtocolSettingsEditor({
   const [name, setName] = useState(style.selected?.name || "");
   const locked = protocolSettingLocked(style.selected);
   const canEdit = style.isOrgAdmin && !locked;
+  const brandStill =
+    !locked && style.sidebarStyle.backgroundImage ? [style.sidebarStyle.backgroundImage] : [];
 
   return (
     <div
@@ -35,13 +37,13 @@ export function ProtocolSettingsEditor({
         <div className="absolute inset-0">
           <ProtocolSettingsCanvasMock
             style={style.sidebarStyle}
-            urls={locked ? [] : style.aestheticUrls}
+            urls={brandStill}
             viewOnly={locked}
           />
         </div>
       </section>
       <aside
-        className="console-copy flex w-full min-w-0 shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 lg:w-[18rem]"
+        className="console-copy flex w-full min-h-0 min-w-0 shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 lg:h-full lg:w-[18rem]"
         data-org-protocol-settings-rail=""
       >
         <div className="flex flex-col gap-2" data-org-protocol-settings-name="">
@@ -92,10 +94,10 @@ export function ProtocolSettingsEditor({
             </button>
           ) : null}
         </div>
-        <div data-org-protocol-settings-editor-actions="">
+        <div className="min-w-0" data-org-protocol-settings-editor-actions="">
           <CustomAestheticsStyler
               compact
-              urls={locked ? [] : style.aestheticUrls}
+              urls={brandStill}
               style={style.sidebarStyle}
               prompt={style.sidebarPrompt}
               onPromptChange={style.setSidebarPrompt}
@@ -119,11 +121,11 @@ export function ProtocolSettingsEditor({
                 helper: t("organization.protocolSettingsEditorHelper"),
                 prompt: t("organization.sidebarStylePrompt"),
                 promptPlaceholder: t("organization.sidebarStylePromptPlaceholder"),
-                apply: t("organization.sidebarStyleApply"),
-                applying: t("organization.sidebarStyleApplying"),
+                apply: t("organization.protocolSettingsGenerate"),
+                applying: t("organization.protocolSettingsGenerating"),
                 reset: t("organization.protocolSettingsResetToDefault"),
-                upload: t("organization.uploadAesthetics"),
-                uploading: t("organization.uploadingAesthetics"),
+                upload: t("organization.protocolSettingsUploadImage"),
+                uploading: t("organization.protocolSettingsUploadingImage"),
                 empty: t("organization.noCustomAesthetics"),
                 remove: t("organization.removeAesthetic"),
                 removing: t("organization.removingAesthetic"),

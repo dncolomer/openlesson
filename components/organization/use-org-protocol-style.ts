@@ -90,12 +90,16 @@ export function useOrgProtocolStyle() {
     applySetting(preferred);
   };
 
-  const applyAestheticsPayload = (data: {
-    images?: unknown;
-    style?: unknown;
-    setting?: unknown;
-  }) => {
+  const applyAestheticsPayload = (
+    data: {
+      images?: unknown;
+      style?: unknown;
+      setting?: unknown;
+    },
+    options?: { applyStyle?: boolean },
+  ) => {
     if (data.images) setAestheticUrls(readCustomAestheticUrls(data.images));
+    if (options?.applyStyle === false) return;
     if (data.setting && typeof data.setting === "object") {
       const setting = presentProtocolSetting(data.setting as Record<string, unknown>);
       setSettings((current) => {
@@ -178,7 +182,7 @@ export function useOrgProtocolStyle() {
   }, []);
 
   const handleAestheticUpload = async (files: FileList | null) => {
-    const list = files ? Array.from(files) : [];
+    const list = files ? Array.from(files).slice(0, 1) : [];
     if (list.length === 0) return;
     for (const file of list) {
       const err = validateAestheticFile(file);
@@ -200,7 +204,31 @@ export function useOrgProtocolStyle() {
         alert(apiErrorMessage(data, t("organization.aestheticUploadError")));
         return;
       }
-      applyAestheticsPayload(data);
+      const previousUrls = new Set(aestheticUrls);
+      applyAestheticsPayload(data, { applyStyle: false });
+      const uploaded = readCustomAestheticUrls(
+        (data as { added?: unknown }).added,
+      );
+      const storedUrls = readCustomAestheticUrls(data.images);
+      const nextUrl =
+        uploaded.at(-1) ||
+        storedUrls.find((url) => !previousUrls.has(url)) ||
+        storedUrls.at(-1) ||
+        "";
+      if (!nextUrl || protocolSettingLocked(selected)) return;
+      setSidebarStyle((prev) => ({ ...prev, backgroundImage: nextUrl }));
+      const saved = await fetch(stylePath(selected?.id || "default"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ backgroundImage: nextUrl }),
+      });
+      const savedBody = await saved.json().catch(() => ({}));
+      if (!saved.ok) {
+        alert(apiErrorMessage(savedBody, t("organization.sidebarStyleError")));
+        return;
+      }
+      applyAestheticsPayload(savedBody);
+      setSidebarStyle((prev) => ({ ...prev, backgroundImage: nextUrl }));
     } catch (uploadErr) {
       console.error("Custom aesthetic upload error:", uploadErr);
       alert(t("organization.aestheticUploadError"));
@@ -222,7 +250,10 @@ export function useOrgProtocolStyle() {
         alert(apiErrorMessage(data, t("organization.aestheticRemoveError")));
         return;
       }
-      applyAestheticsPayload(data);
+      applyAestheticsPayload(data, { applyStyle: false });
+      setSidebarStyle((prev) =>
+        prev.backgroundImage === url ? { ...prev, backgroundImage: null } : prev,
+      );
     } catch (removeErr) {
       console.error("Custom aesthetic remove error:", removeErr);
       alert(t("organization.aestheticRemoveError"));

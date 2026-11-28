@@ -116,6 +116,7 @@ describe("named protocol settings", () => {
     expect(editor).toContain("data-org-protocol-settings-editor-actions");
     expect(editor).toContain("data-org-protocol-settings-rail");
     expect(editor).toContain("lg:w-[18rem]");
+    expect(editor).toContain("min-h-0");
     expect(editor).toContain("lg:h-[calc(100dvh-6rem)]");
     expect(editor.match(/className="console-copy/g)?.length).toBe(2);
     expect(editor).toContain("ProtocolSettingsCanvasMock");
@@ -149,7 +150,13 @@ describe("named protocol settings", () => {
     expect(mock).toContain("FALLBACK_AESTHETIC_IMAGES");
     expect(mock).toContain("backgroundImage: null");
     expect(mock).not.toContain("sessionMarkMode");
-    expect(editor).toContain("urls={locked ? [] : style.aestheticUrls}");
+    expect(editor).toContain("urls={brandStill}");
+    expect(mock).toContain("image={brandStill || null}");
+    expect(mock).toContain("key={brandStill || \"system\"}");
+    expect(mock).toContain("boardStyle.backgroundImage || urls[0]");
+    expect(editor).toContain("protocolSettingsUploadImage");
+    expect(editor).toContain("protocolSettingsGenerate");
+    expect(editor).not.toContain("style.aestheticUrls");
     const page = read("app/dashboard/page.tsx");
     expect(page).toContain("overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8");
     expect(page).not.toContain("protocolSettingsEditorOpen");

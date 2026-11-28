@@ -117,21 +117,23 @@ export function CustomAestheticsStyler({
                 >
                   {generating ? labels.applying : labels.apply}
                 </button>
-                <button
-                  type="button"
-                  data-org-sidebar-style-reset
-                  disabled={generating}
-                  onClick={() => onReset()}
-                  className={`console-button inline-flex h-9 items-center justify-center px-4 text-sm text-neutral-200 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 ${compact ? "w-full" : ""}`}
-                >
-                  {labels.reset}
-                </button>
+                {compact ? null : (
+                  <button
+                    type="button"
+                    data-org-sidebar-style-reset
+                    disabled={generating}
+                    onClick={() => onReset()}
+                    className="console-button inline-flex h-9 items-center justify-center px-4 text-sm text-neutral-200 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {labels.reset}
+                  </button>
+                )}
                 <label className={`console-button inline-flex h-9 cursor-pointer items-center px-4 text-sm text-neutral-300 transition hover:border-white/80 hover:text-white ${compact ? "w-full justify-center" : ""}`}>
                   <input
                     data-org-aesthetic-upload
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
-                    multiple
+                    multiple={!compact}
                     className="hidden"
                     disabled={uploading || generating}
                     onChange={(e) => {
@@ -209,31 +211,17 @@ export function CustomAestheticsStyler({
             </div>
           </div>
         </div>
-        {editable && urls.length === 0 ? (
+        {compact ? null : editable && urls.length === 0 ? (
           <p className="mt-3 text-xs text-neutral-400">{labels.empty}</p>
         ) : null}
-        {urls.length > 0 ? (
+        {compact || urls.length === 0 ? null : (
           <ul
-            className={
-              compact
-                ? "mt-3 grid min-w-0 grid-cols-1 gap-2"
-                : "mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1"
-            }
+            className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1"
+            data-org-custom-aesthetics-assets=""
           >
             {urls.map((url) => (
-              <li
-                key={url}
-                className={
-                  compact
-                    ? "console-copy min-w-0 overflow-hidden"
-                    : "console-copy w-24 shrink-0 overflow-hidden"
-                }
-              >
-                <img
-                  src={url}
-                  alt=""
-                  className={`w-full object-cover ${compact ? "aspect-[16/10] h-auto max-w-full" : "h-16"}`}
-                />
+              <li key={url} className="console-copy w-24 shrink-0 overflow-hidden">
+                <img src={url} alt="" className="h-16 w-full object-cover" />
                 {editable ? (
                   <div className="flex justify-end p-1">
                     <button
@@ -250,7 +238,7 @@ export function CustomAestheticsStyler({
               </li>
             ))}
           </ul>
-        ) : null}
+        )}
       </div>
     </section>
   );

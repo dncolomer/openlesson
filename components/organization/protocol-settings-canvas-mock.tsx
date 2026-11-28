@@ -41,8 +41,12 @@ export function ProtocolSettingsCanvasMock({
       canvas: { ...parseSessionCanvasStyle(next.canvas), zenMode: false },
     };
   }, [style, viewOnly]);
-  const topicUrls = viewOnly ? [] : urls;
-  const systemImages = viewOnly ? FALLBACK_AESTHETIC_IMAGES : undefined;
+  const brandStill = viewOnly
+    ? ""
+    : String(boardStyle.backgroundImage || urls[0] || "").trim();
+  const topicUrls = brandStill ? [brandStill] : [];
+  const systemImages =
+    viewOnly || topicUrls.length === 0 ? FALLBACK_AESTHETIC_IMAGES : undefined;
   return (
     <div data-org-protocol-settings-preview className="flex h-full min-h-0 min-w-0 flex-1">
       <SessionCommandBridgeProvider>
@@ -52,8 +56,10 @@ export function ProtocolSettingsCanvasMock({
           sidebarStyle={boardStyle}
           chapters={
             <SessionTopicCard
+              key={brandStill || "system"}
               id="protocol-settings"
               title="Protocol"
+              image={brandStill || null}
               customUrls={topicUrls}
               systemImages={systemImages}
               sidebarStyle={boardStyle}

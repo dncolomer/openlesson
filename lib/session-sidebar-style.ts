@@ -161,16 +161,16 @@ export function parseSessionSidebarStyle(value: unknown): SessionSidebarStyle {
   const prompt = String(row.prompt || "").trim().slice(0, SESSION_SIDEBAR_STYLE_PROMPT_MAX);
   const generatedAt = String(row.generatedAt || row.generated_at || "").trim() || null;
   const backgroundImage = String(row.backgroundImage || row.background_image || "").trim() || null;
-  const canvas = parseSessionCanvasStyle(
-    row.canvas && typeof row.canvas === "object"
-      ? row.canvas
-      : {
-          canvasBackground: row.canvasBackground,
-          canvasStroke: row.canvasStroke,
-          zenMode: row.zenMode ?? row.zenModeEnabled,
-          gridMode: row.gridMode ?? row.gridModeEnabled,
-        },
-  );
+  const nested =
+    row.canvas && typeof row.canvas === "object" && !Array.isArray(row.canvas)
+      ? (row.canvas as Record<string, unknown>)
+      : {};
+  const canvas = parseSessionCanvasStyle({
+    background: nested.background ?? nested.canvasBackground ?? row.canvasBackground,
+    stroke: nested.stroke ?? nested.canvasStroke ?? row.canvasStroke,
+    zenMode: nested.zenMode ?? nested.zenModeEnabled ?? row.zenMode ?? row.zenModeEnabled,
+    gridMode: nested.gridMode ?? nested.gridModeEnabled ?? row.gridMode ?? row.gridModeEnabled,
+  });
   return { prompt, generatedAt, backgroundImage, tokens, canvas };
 }
 

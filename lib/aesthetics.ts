@@ -254,6 +254,10 @@ export function aestheticImageForId(id: string, images: readonly string[] = FALL
   return images[hash % images.length];
 }
 
+function isSystemAestheticUrl(url: string): boolean {
+  return url.startsWith("/aesthetics/");
+}
+
 /** Dock chip, map tile, voice bar, and Work widget share this still for a chapter. */
 export function resolveIleWorkAestheticImage(input: {
   id: string;
@@ -265,6 +269,8 @@ export function resolveIleWorkAestheticImage(input: {
   const pool = explicitPool ?? [...FALLBACK_AESTHETIC_IMAGES];
   const assigned = String(input.assigned || "").trim();
   if (assigned && (!explicitPool || explicitPool.includes(assigned))) return assigned;
+  // Pinned generated/uploaded stills stay even when the visible pool is factory stills.
+  if (assigned && !isSystemAestheticUrl(assigned)) return assigned;
   return aestheticImageForId(input.id, pool);
 }
 

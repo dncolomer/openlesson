@@ -18,6 +18,7 @@ export type SidebarStyleMutationBody = {
   prompt?: unknown;
   reset?: unknown;
   canvas?: unknown;
+  backgroundImage?: unknown;
 };
 
 export async function applySidebarStyleBody(input: {
@@ -44,6 +45,19 @@ export async function applySidebarStyleBody(input: {
         ...input.style,
         canvas: parseSessionCanvasStyle(body.canvas),
       },
+    };
+  }
+
+  if (
+    body.backgroundImage != null &&
+    !clampSidebarStylePrompt(body.prompt) &&
+    body.reset !== true
+  ) {
+    const backgroundImage = String(body.backgroundImage || "").trim() || null;
+    return {
+      ok: true,
+      urls: input.urls,
+      style: { ...input.style, backgroundImage },
     };
   }
 

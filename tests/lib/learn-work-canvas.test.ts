@@ -37,6 +37,7 @@ import {
   serializeIleWorkCanvasScene,
   writeIleChapterWorkCanvas,
   withIleWorkCanvasGridAppState,
+  ileWorkCanvasRestyleChromeInk,
   emptyIleWorkCanvasScene,
   clampIleCanvasTimerSeconds,
   formatIleWorkCanvasTimer,
@@ -53,6 +54,7 @@ import {
   BOARD_INSTRUCTION_NOTE_BODY_FILL,
   BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT,
   ILE_WORK_CANVAS_END_ARROWHEAD,
+  ILE_WORK_CANVAS_STROKE_COLOR,
   ILE_WORK_CANVAS_STROKE_WIDTH,
   EXCALIDRAW_DEFAULT_STROKE_WIDTH,
   ILE_WORK_CANVAS_ROUNDNESS,
@@ -333,9 +335,23 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     );
     expect(keptSceneZen.zenModeEnabled).toBe(true);
     expect(keptSceneZen.currentItemStrokeColor).toBe("#111111");
+    expect(
+      ileWorkCanvasRestyleChromeInk(
+        [
+          { id: "a", strokeColor: ILE_WORK_CANVAS_STROKE_COLOR },
+          { id: "b", strokeColor: "#00ffaa" },
+        ],
+        [ILE_WORK_CANVAS_STROKE_COLOR],
+        "#abcdef",
+      ),
+    ).toEqual([
+      { id: "a", strokeColor: "#abcdef" },
+      { id: "b", strokeColor: "#00ffaa" },
+    ]);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("withIleWorkCanvasGridAppState");
+    expect(canvas).toContain("ileWorkCanvasRestyleChromeInk");
     expect(canvas).toContain("@/app/learn-excalidraw-theme.css");
     const globals = read("app/globals.css");
     expect(globals).toContain("learn-excalidraw-theme.css");

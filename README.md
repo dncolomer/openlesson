@@ -28,9 +28,8 @@ Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP c
 - **Embeddable Knowledge Verification Protocols** — public protocol runs with The Protocol Challenge
 - **Knowledge Regions** — domain geometry for protocols, without a type field
 - **Public agent APIs + MCP** — Protocol API (`/api/v3/protocols`) and Knowledge Regions API (`/api/v3/knowledge-regions`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
-- **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
-- **Muse EEG and face tracking** — optional biosignals on session proof of work
-- **unsys** — practice dialogue in Learn sessions and workspace chat
+- **Work Canvas** — Excalidraw-based verification canvas with capture and proof-of-work tracking
+- **Muse EEG** — optional biosignal channel on verification proof of work
 
 ## Tech Stack
 
@@ -45,7 +44,6 @@ Agents authorize with a Bearer key (ChatGPT, Claude, coding agents, or any MCP c
 | Payments | Stripe |
 | Canvas | Excalidraw (`@excalidraw/excalidraw`) |
 | EEG | Muse headband via Web Bluetooth |
-| Face Tracking | MediaPipe |
 | Deployment | Vercel |
 
 ## Getting Started
@@ -117,14 +115,16 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # REST/MCP routes (workspaces, Calibrate/Learn/Verify, PoW/Snapshot/Stash, admin)
-│   ├── workspace/        # Workspace views; create at /workspace/new
-│   ├── session/          # Learn tutoring session pages
-│   ├── tap/              # Legacy Calibrate/Verify session redirects
+│   ├── api/              # REST/MCP routes (protocols, knowledge-regions, verify, orgs, billing, LTI)
+│   ├── protocols/        # Protocol authoring & management
+│   ├── regions/          # Knowledge Region authoring, inspection & simulation
+│   ├── v/                # Public verification protocol runner
+│   ├── verify/           # Guest verification session runner
 │   ├── dashboard/        # User dashboard & API key management
-│   └── docs/             # Interactive Learning Map API reference
+│   └── docs/             # Interactive Proof-of-Work & Protocol API reference
 ├── components/           # React components
-│   ├── SessionView.tsx   # Learn session UI
+│   ├── TapScoreClient.tsx # Verification session runner UI
+│   ├── ExcalidrawCanvas.tsx # Verification work canvas
 │   ├── product-flow/     # Protocol & Knowledge Region views
 │   └── thought-ui/       # Shared dialogue / thought components
 ├── lib/                  # Product runtime (PoW, Calibrate/Learn/Verify, xAI, maps, billing)

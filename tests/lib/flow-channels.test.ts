@@ -92,7 +92,7 @@ describe("flow enforced channels", () => {
       "data-flow-canvas-capture",
     );
     expect(
-      existsSync(join(root, "supabase/migrations/20261117120000_flow_enforced_channels.sql")),
+      existsSync(join(root, "supabase/archive/migrations-pre-20261128/20261117120000_flow_enforced_channels.sql")),
     ).toBe(true);
   });
 

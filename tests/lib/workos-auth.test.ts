@@ -162,7 +162,7 @@ describe("WorkOS login and org surfaces", () => {
     expect(org).toContain("/api/organization/workos/sso");
     expect(org).toContain("setupUrl");
 
-    expect(read("supabase/migrations/20261121190000_workos_sso.sql")).toContain("workos_user_id");
+    expect(read("supabase/archive/migrations-pre-20261128/20261121190000_workos_sso.sql")).toContain("workos_user_id");
     expect(read("messages/en.json")).toContain('"ssoSignIn": "Sign in with company SSO"');
   });
 });

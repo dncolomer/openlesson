@@ -166,7 +166,7 @@ describe("flowcfg-v1-d96 embeddings", () => {
     expect(withEeg.vector).toEqual(spoken.vector);
     expect(vectorForFlowSpace(withEeg, "path+audio+eeg")).toEqual(withEeg.vector);
     expect(
-      existsSync(join(ROOT, "supabase/migrations/20261118120000_session_embedding_channel_vectors.sql")),
+      existsSync(join(ROOT, "supabase/archive/migrations-pre-20261128/20261118120000_session_embedding_channel_vectors.sql")),
     ).toBe(true);
   });
 });

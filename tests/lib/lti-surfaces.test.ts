@@ -16,7 +16,7 @@ describe("lti surfaces", () => {
     expect(existsSync(join(ROOT, "app/lti/launch/route.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "app/lti/jwks/route.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "app/lti/deep-link/page.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "supabase/migrations/20261121180000_lti_advantage.sql"))).toBe(
+    expect(existsSync(join(ROOT, "supabase/archive/migrations-pre-20261128/20261121180000_lti_advantage.sql"))).toBe(
       true,
     );
     expect(read("app/lti/login/route.ts")).toContain("parseLoginInitiation");

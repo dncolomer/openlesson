@@ -209,7 +209,7 @@ describe("flow exact problem on canvas", () => {
     if (!verify.ok) return;
     expect(verify.flow?.exactProblemOnCanvas).toBe(true);
 
-    const sql = read("supabase/migrations/20261115120000_flow_exact_problem_on_canvas.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261115120000_flow_exact_problem_on_canvas.sql");
     expect(sql).toContain("exact_problem_on_canvas");
     expect(sql).toContain("verify_flows");
 
@@ -324,7 +324,7 @@ describe("flow opening canvas", () => {
     const alreadyLive = seedPreparedOpeningCanvas(seeded.scene, stored);
     expect(alreadyLive.seeded).toBe(false);
 
-    const sql = read("supabase/migrations/20261121140000_flow_opening_canvas_scene.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261121140000_flow_opening_canvas_scene.sql");
     expect(sql).toContain("opening_canvas_scene");
     expect(sql).toContain("solve_flows");
     expect(sql).toContain("verify_flows");
@@ -384,7 +384,7 @@ describe("flow opening canvas", () => {
 
 describe("flow topic migration", () => {
   it("adds artifacts on all three tables and copies first question into topic", () => {
-    const sql = read("supabase/migrations/20261108120000_flow_problem_artifacts.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261108120000_flow_problem_artifacts.sql");
     expect(sql).toContain("solve_flows");
     expect(sql).toContain("verify_flows");
     expect(sql).toContain("calibrate_flows");

@@ -782,10 +782,10 @@ describe("custom aesthetic surfaces", () => {
     expect(route).toContain("addCustomAestheticUrls");
     expect(route).toContain("added: published");
 
-    const migration = read("supabase/migrations/20260923120000_organization_custom_aesthetics.sql");
+    const migration = read("supabase/archive/migrations-pre-20261128/20260923120000_organization_custom_aesthetics.sql");
     expect(migration).toContain("custom_aesthetic_urls");
     expect(migration).toContain("org-aesthetics");
-    expect(read("supabase/migrations/20261126160000_sidebar_style.sql")).toContain("sidebar_style");
+    expect(read("supabase/archive/migrations-pre-20261128/20261126160000_sidebar_style.sql")).toContain("sidebar_style");
     expect(read("lib/organization/apply-sidebar-style.ts")).toContain("generateSessionSidebarStyle");
     expect(read("app/api/organization/protocol-settings/[id]/style/route.ts")).toContain(
       "applySidebarStyleBody",

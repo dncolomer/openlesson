@@ -527,7 +527,7 @@ describe("access resolution rejects revoked links", () => {
 
 describe("static wiring: migration, APIs, UI", () => {
   it("migration allows TAP status revoked", () => {
-    const mig = read("supabase/migrations/20260724140000_tap_session_status_revoked.sql");
+    const mig = read("supabase/archive/migrations-pre-20261128/20260724140000_tap_session_status_revoked.sql");
     expect(mig).toContain("revoked");
     expect(mig).toContain("workspace_tap_sessions");
     expect(mig).toContain("workspace_tap_sessions_status_check");

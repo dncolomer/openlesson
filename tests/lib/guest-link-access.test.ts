@@ -258,7 +258,7 @@ describe("session page wiring (static)", () => {
     const { join } = await import("node:path");
     const mig = join(
       __dirname,
-      "../../supabase/migrations/20260724120000_guest_link_access_mode.sql",
+      "../../supabase/archive/migrations-pre-20261128/20260724120000_guest_link_access_mode.sql",
     );
     expect(existsSync(mig)).toBe(true);
     const sql = readFileSync(mig, "utf8");

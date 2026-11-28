@@ -137,7 +137,7 @@ describe("knowledge verification protocols only", () => {
   it("keeps verification embeddings only", () => {
     expect([...EMBEDDING_FAMILIES]).toEqual(["verify"]);
     expect([...EMBEDDING_MODEL_IDS]).toEqual([VERIFY_EMBEDDING_MODEL_ID]);
-    const migration = read("supabase/migrations/20261126120000_protocols_only.sql");
+    const migration = read("supabase/archive/migrations-pre-20261128/20261126120000_protocols_only.sql");
     expect(migration).toContain("DROP TABLE IF EXISTS public.solve_flows");
     expect(migration).toContain("DROP TABLE IF EXISTS public.calibrate_flows");
     expect(migration).toContain("DROP TABLE IF EXISTS public.insights");

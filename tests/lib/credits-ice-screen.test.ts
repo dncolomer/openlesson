@@ -93,7 +93,7 @@ describe("insufficient credits ice screen", () => {
 
   it("register return path and guest starter credit migration stay wired", () => {
     expect(read("app/register/page.tsx")).toContain("safeInternalReturnPath");
-    expect(read("supabase/migrations/20261102140000_guest_starter_credits.sql")).toContain(
+    expect(read("supabase/archive/migrations-pre-20261128/20261102140000_guest_starter_credits.sql")).toContain(
       "guest_starter",
     );
   });

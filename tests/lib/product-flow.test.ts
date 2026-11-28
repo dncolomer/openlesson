@@ -277,7 +277,7 @@ describe("product flow owner_user_id", () => {
     const create = read("app/api/dashboard/protocols/route.ts");
     const update = read("app/api/dashboard/protocols/[id]/route.ts");
     const generate = read("app/api/dashboard/protocols/unsys-seed/route.ts");
-    const sql = read("supabase/migrations/20261116140000_flow_answers_model_seed.sql");
+    const sql = read("supabase/archive/migrations-pre-20261128/20261116140000_flow_answers_model_seed.sql");
     expect(wizard).toContain("FlowUnsysModelStep");
     expect(wizard).toContain('step === "model"');
     expect(wizard).toContain("answersModelSeed: accepted.answersModelSeed");

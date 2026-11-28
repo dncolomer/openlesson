@@ -78,14 +78,14 @@ describe("Organization tab BYOK surface", () => {
     const legacy = read("app/organization/page.tsx");
     expect(legacy).toContain("/dashboard?tab=organization");
 
-    const migration = read("supabase/migrations/20261120120000_organization_backends.sql");
+    const migration = read("supabase/archive/migrations-pre-20261128/20261120120000_organization_backends.sql");
     expect(migration).toContain("llm_api_key_ciphertext");
     expect(migration).toContain("blob_api_key_ciphertext");
     expect(migration).toContain("llm_backend");
     expect(migration).toContain("blob_backend");
 
     const openrouterMigration = read(
-      "supabase/migrations/20261125120000_organization_openrouter.sql",
+      "supabase/archive/migrations-pre-20261128/20261125120000_organization_openrouter.sql",
     );
     expect(openrouterMigration).toContain("openrouter_api_key_ciphertext");
     expect(openrouterMigration).toContain("openrouter_api_key_last_four");

@@ -145,7 +145,7 @@ describe("flow canvas capture", () => {
   });
 
   it("wires authoring, claim, and run progress bars", () => {
-    expect(existsSync(join(root, "supabase/migrations/20261125140000_flow_canvas_capture.sql"))).toBe(
+    expect(existsSync(join(root, "supabase/archive/migrations-pre-20261128/20261125140000_flow_canvas_capture.sql"))).toBe(
       true,
     );
     expect(read("components/product-flow/flow-channels-fields.tsx")).toContain("data-flow-canvas-capture");

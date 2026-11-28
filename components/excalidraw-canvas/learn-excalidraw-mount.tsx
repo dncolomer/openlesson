@@ -121,14 +121,14 @@ const IleExcalidrawStable = memo(function IleExcalidrawStable({
 });
 
 class IleExcalidrawErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
-  state = { crashed: false };
+  override state = { crashed: false };
   static getDerivedStateFromError() {
     return { crashed: true };
   }
-  componentDidCatch(error: unknown) {
+  override componentDidCatch(error: unknown) {
     console.error("[ExcalidrawCanvas] crashed:", error);
   }
-  render() {
+  override render() {
     if (this.state.crashed) {
       return (
         <div
